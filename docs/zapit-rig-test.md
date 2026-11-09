@@ -20,7 +20,7 @@ rig-control, `test` mouse, Training Stage 4 (Tom's 5), optogenetics unticked; ~2
 ## 2. Optogenetics on
 
 Same, optogenetics ticked with `zapitConditionsPath` and `laserPowerMw`; at least 30 trials (the first 20, `trialsBeforeLaser`, are all 0 mW: galvos move, laser off).
-With nobody at the wheel every trial times out after 12 s (`trialStructure.closedLoopDuration`).
+With nobody at the wheel every trial times out after 12 s (`trialStructure.timeLimitSeconds`).
 **Pass:**
 - `BonsaiData_ZapitReplies` log: StartStimulus (command 1) then StopStimulus (command 0) on every trial, alternating, `isError` False.
 - Trial rows: `laserCondition` on every trial; `laserPowerMw` the task's `laserPowerMw` on about 40% of trials after the first 20, 0 on the rest.

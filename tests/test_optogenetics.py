@@ -1,5 +1,5 @@
 """The optogenetics settings' rules (zapit-v2): laser_leads_stimulus_by_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap longer than the
-longest trial (trialStructure.closedLoopDuration + laser_leads_stimulus_by_seconds), and the places main.bonsai and
+longest trial (trialStructure.timeLimitSeconds + laser_leads_stimulus_by_seconds), and the places main.bonsai and
 InitialiseOptoTrial.cs share those rules."""
 import copy
 import re
@@ -25,7 +25,7 @@ def params(closed_loop=None, **opto):
     doc = copy.deepcopy(TASK)
     doc["optogenetics"].update({"enabled": True, "zapitConditionsPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
     if closed_loop is not None:
-        doc["trialStructure"]["closedLoopDuration"] = closed_loop
+        doc["trialStructure"]["timeLimitSeconds"] = closed_loop
     return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
 
 
@@ -53,7 +53,7 @@ def test_a_cap_that_would_end_a_timed_out_trial_early_is_refused(closed_loop, la
 
 def test_the_cap_rule_only_applies_with_optogenetics_on():
     doc = copy.deepcopy(TASK)
-    doc["trialStructure"]["closedLoopDuration"] = 30
+    doc["trialStructure"]["timeLimitSeconds"] = 30
     assert UclOpenCoenDomeNavigationTaskParameters.model_validate(doc).optogenetics.enabled is False
 
 
@@ -63,16 +63,16 @@ def test_laser_max_seconds_must_be_finite():
 
 
 def test_the_workflow_time_limit_is_closed_loop_duration():
-    """MaxTrialTimeSec, the timeout the cap rule assumes, comes from trialStructure.closedLoopDuration."""
+    """MaxTrialTimeSec, the timeout the cap rule assumes, comes from trialStructure.timeLimitSeconds."""
     text = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
-    assert re.search(r"TimeSpan\.FromSeconds\(it\.TrialStructure\.ClosedLoopDuration\)", text)
+    assert re.search(r"TimeSpan\.FromSeconds\(it\.TrialStructure\.TimeLimitSeconds\)", text)
 
 
 def test_initialise_opto_trial_checks_the_same_rules():
     text = (ROOT / "src" / "Extensions" / "InitialiseOptoTrial.cs").read_text(encoding="utf-8")
     assert float(re.search(r"const double StimDurationMarginSec = ([\d.]+);", text).group(1)) == STIM_DURATION_MARGIN_SEC
     assert float(re.search(r"const double BeepIntervalSec = ([\d.]+);", text).group(1)) == BEEP_INTERVAL_SEC
-    assert "TrialStructure.ClosedLoopDuration" in text and "Math.Round(beeps) <= 4" in text
+    assert "TrialStructure.TimeLimitSeconds" in text and "Math.Round(beeps) <= 4" in text
 
 
 def test_the_stimulus_config_is_saved_as_json():

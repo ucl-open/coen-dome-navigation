@@ -12,7 +12,7 @@ using UclOpenCoenDomeNavigationTask;
 // Now a task file edited on the form could ask for another sweep, and the workflow would play the
 // committed tones under the task's numbers with no error: so the experiment stops at Go instead.
 [Combinator]
-[Description("Passes the task parameters on when src\\waveforms (its sweep.txt) was made for their startFreq, endFreq, nFreqBins and amplitude; otherwise stops the workflow saying what differs.")]
+[Description("Passes the task parameters on when src\\waveforms (its sweep.txt) was made for their sweepStartHz, sweepEndHz, sweepSteps and amplitude; otherwise stops the workflow saying what differs.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CheckWaveforms
 {
@@ -37,11 +37,11 @@ public class CheckWaveforms
             int end = int.Parse(made[1], CultureInfo.InvariantCulture);
             int bins = int.Parse(made[2], CultureInfo.InvariantCulture);
             double amplitude = double.Parse(made[3], CultureInfo.InvariantCulture);
-            if (start != p.StartFreq || end != p.EndFreq || bins != p.NFreqBins || Math.Abs(amplitude - p.Amplitude) > 1e-9)
+            if (start != p.SweepStartHz || end != p.SweepEndHz || bins != p.SweepSteps || Math.Abs(amplitude - p.Amplitude) > 1e-9)
             {
                 throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
                     "The task asks for a {0}-{1} Hz sweep in {2} tones at amplitude {3}, but src\\waveforms was made for {4}-{5} Hz in {6} at {7}. Use those values, or run `uv run generate-waveforms` for the new ones and commit.",
-                    p.StartFreq, p.EndFreq, p.NFreqBins, p.Amplitude, start, end, bins, amplitude));
+                    p.SweepStartHz, p.SweepEndHz, p.SweepSteps, p.Amplitude, start, end, bins, amplitude));
             }
             return p;
         });

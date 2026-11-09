@@ -50,7 +50,7 @@
         },
         "laserMaxSeconds": {
           "default": 12.5,
-          "description": "Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
+          "description": "Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
           "exclusiveMinimum": 0,
           "title": "LaserMaxSeconds",
           "type": "number"
@@ -188,7 +188,7 @@
           "type": "boolean"
         },
         "timeLimit": {
-          "description": "Whether a trial ends at trialStructure.closedLoopDuration",
+          "description": "Whether a trial ends at trialStructure.timeLimitSeconds",
           "title": "TimeLimit",
           "type": "boolean"
         },
@@ -237,18 +237,18 @@
     "TrialStructure": {
       "description": "Timing of each trial.",
       "properties": {
-        "itiMin": {
+        "itiMinSeconds": {
           "default": 0.0,
           "description": "Lower bound of the uniformly drawn inter-trial interval, in seconds",
           "minimum": 0,
-          "title": "ItiMin",
+          "title": "ItiMinSeconds",
           "type": "number"
         },
-        "itiMax": {
+        "itiMaxSeconds": {
           "default": 1.0,
           "description": "Upper bound of the uniformly drawn inter-trial interval, in seconds",
           "minimum": 0,
-          "title": "ItiMax",
+          "title": "ItiMaxSeconds",
           "type": "number"
         },
         "quiescentSeconds": {
@@ -258,11 +258,11 @@
           "title": "QuiescentSeconds",
           "type": "number"
         },
-        "closedLoopDuration": {
+        "timeLimitSeconds": {
           "default": 12.0,
           "description": "On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)",
           "exclusiveMinimum": 0,
-          "title": "ClosedLoopDuration",
+          "title": "TimeLimitSeconds",
           "type": "number"
         },
         "trackLengthsCm": {
@@ -353,27 +353,27 @@
           "title": "Modality",
           "type": "string"
         },
-        "startFreq": {
+        "sweepStartHz": {
           "default": 2000,
           "description": "Start frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
           "maximum": 25000,
           "minimum": 1,
-          "title": "StartFreq",
+          "title": "SweepStartHz",
           "type": "integer"
         },
-        "endFreq": {
+        "sweepEndHz": {
           "default": 25000,
           "description": "End frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
           "maximum": 25000,
           "minimum": 1,
-          "title": "EndFreq",
+          "title": "SweepEndHz",
           "type": "integer"
         },
-        "nFreqBins": {
+        "sweepSteps": {
           "default": 100,
           "description": "Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
           "minimum": 10,
-          "title": "NFreqBins",
+          "title": "SweepSteps",
           "type": "integer"
         },
         "amplitude": {
@@ -392,11 +392,11 @@
           "title": "BackgroundNoiseLevel",
           "type": "number"
         },
-        "quantizeBinSize": {
+        "positionStepCm": {
           "default": 1,
           "description": "The distance run is rounded to this before it sets the frequency, in cm",
           "minimum": 1,
-          "title": "QuantizeBinSize",
+          "title": "PositionStepCm",
           "type": "integer"
         },
         "wheelDiameterMm": {
@@ -416,10 +416,10 @@
         "trialStructure": {
           "$ref": "#/$defs/TrialStructure",
           "default": {
-            "itiMin": 0.0,
-            "itiMax": 1.0,
+            "itiMinSeconds": 0.0,
+            "itiMaxSeconds": 1.0,
             "quiescentSeconds": 1.0,
-            "closedLoopDuration": 12.0,
+            "timeLimitSeconds": 12.0,
             "trackLengthsCm": [
               80.0,
               100.0,

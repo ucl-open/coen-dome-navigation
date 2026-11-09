@@ -31,7 +31,7 @@ public class CreateTaskRandom
 }
 
 [Combinator]
-[Description("Draws the trial's inter-trial interval evenly between trialStructure.itiMin and itiMax.")]
+[Description("Draws the trial's inter-trial interval evenly between trialStructure.itiMinSeconds and itiMaxSeconds.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class DrawIti
 {
@@ -42,7 +42,7 @@ public class DrawIti
             var structure = value.Item2.TrialStructure;
             double u;
             lock (value.Item1.Random) u = value.Item1.Random.NextDouble();
-            return TimeSpan.FromSeconds(structure.ItiMin + (structure.ItiMax - structure.ItiMin) * u);
+            return TimeSpan.FromSeconds(structure.ItiMinSeconds + (structure.ItiMaxSeconds - structure.ItiMinSeconds) * u);
         });
     }
 }

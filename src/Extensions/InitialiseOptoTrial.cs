@@ -122,13 +122,13 @@ public class InitialiseOptoTrial
                 "optogenetics.laserLeadsStimulusBySeconds must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LaserLeadsStimulusBySeconds));
         }
         // The laser is meant to stay on until the outcome, so the cap must be longer than the longest trial: the time limit
-        // (trialStructure.closedLoopDuration, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LaserLeadsStimulusBySeconds after onset) plus a margin.
-        var timeLimit = parameters.TrialStructure != null ? parameters.TrialStructure.ClosedLoopDuration : 12.0;
+        // (trialStructure.timeLimitSeconds, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LaserLeadsStimulusBySeconds after onset) plus a margin.
+        var timeLimit = parameters.TrialStructure != null ? parameters.TrialStructure.TimeLimitSeconds : 12.0;
         var shortestCap = timeLimit + optogenetics.LaserLeadsStimulusBySeconds + StimDurationMarginSec;
         if (!(optogenetics.LaserMaxSeconds >= shortestCap - 1e-9) || double.IsInfinity(optogenetics.LaserMaxSeconds))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.closedLoopDuration, {1} s from the first tone pip, plus laserLeadsStimulusBySeconds, "
+                "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.timeLimitSeconds, {1} s from the first tone pip, plus laserLeadsStimulusBySeconds, "
                 + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, StimDurationMarginSec, optogenetics.LaserMaxSeconds));
         }
     }

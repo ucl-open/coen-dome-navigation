@@ -81,7 +81,7 @@ itiSeconds:
   type: double
   unit: s
   formerly: [ITIDrawnSec]
-  description: The inter-trial interval drawn before this trial, evenly between trialStructure.itiMin and itiMax (Tom Childs' workflow drew 0 or 1 s until 9 Nov 2026). On a stage with quiescent the trial also waited for quiescentSeconds without licks.
+  description: The inter-trial interval drawn before this trial, evenly between trialStructure.itiMinSeconds and itiMaxSeconds (Tom Childs' workflow drew 0 or 1 s until 9 Nov 2026). On a stage with quiescent the trial also waited for quiescentSeconds without licks.
 trialStartTime:
   type: double
   unit: s

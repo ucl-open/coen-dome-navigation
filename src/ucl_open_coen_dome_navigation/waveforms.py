@@ -1,7 +1,7 @@
 """The sounds the workflow plays, made once from config/task-abstract-av-corridor.yml and committed in src/waveforms.
 
 Tom Childs' gen_session.py wrote the tones again before every experiment. They depend only on the task's
-start_freq, end_freq, n_freq_bins and amplitude, so they are made here once, as gen_session made them:
+sweep_start_hz, sweep_end_hz, sweep_steps and amplitude, so they are made here once, as gen_session made them:
 the tones and the error tone at the task's amplitude (the workflow scales the tones by the amplitude
 again, so a pip peaks at amplitude squared, as it always has). sweep.txt records the four values and
 the workflow stops at Go if the task file's differ. Run `uv run generate-waveforms` after changing any
@@ -27,9 +27,9 @@ ERROR_TONE_SEED = 1  # Tom's error tone was unseeded; seeded here so the committ
 NOISE_SEED = 0  # as Tom's gen-background-noise.ipynb
 
 
-def tone_frequencies(start_freq: int, end_freq: int, n_freq_bins: int) -> np.ndarray:
-    """The sweep's tone frequencies: n_freq_bins log-spaced from start_freq to end_freq, rounded to whole Hz."""
-    return np.round(np.logspace(np.log10(start_freq), np.log10(end_freq), n_freq_bins)).astype(int)
+def tone_frequencies(sweep_start_hz: int, sweep_end_hz: int, sweep_steps: int) -> np.ndarray:
+    """The sweep's tone frequencies: sweep_steps log-spaced from sweep_start_hz to sweep_end_hz, rounded to whole Hz."""
+    return np.round(np.logspace(np.log10(sweep_start_hz), np.log10(sweep_end_hz), sweep_steps)).astype(int)
 
 
 def tones(frequencies: np.ndarray, amplitude: float) -> np.ndarray:
@@ -55,21 +55,21 @@ def background_noise() -> np.ndarray:
     return np.random.default_rng(NOISE_SEED).uniform(-1.0, 1.0, SAMPLE_RATE * NOISE_SECONDS).astype(np.float32)
 
 
-def sweep_line(start_freq: int, end_freq: int, n_freq_bins: int, amplitude: float) -> str:
+def sweep_line(sweep_start_hz: int, sweep_end_hz: int, sweep_steps: int, amplitude: float) -> str:
     """sweep.txt's one line, which the workflow's CheckWaveforms reads: start end bins amplitude."""
-    return f"{start_freq} {end_freq} {n_freq_bins} {amplitude!r}\n"
+    return f"{sweep_start_hz} {sweep_end_hz} {sweep_steps} {amplitude!r}\n"
 
 
-def write(start_freq: int, end_freq: int, n_freq_bins: int, amplitude: float, out_dir: Path = OUT_DIR) -> None:
+def write(sweep_start_hz: int, sweep_end_hz: int, sweep_steps: int, amplitude: float, out_dir: Path = OUT_DIR) -> None:
     """Write all_waveforms.bin (n x 2400 float32, row-major, no header), frequencies.txt, error_tone.wav
     (int16 mono), background_noise.bin (float32 mono, no header) and sweep.txt."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    frequencies = tone_frequencies(start_freq, end_freq, n_freq_bins)
+    frequencies = tone_frequencies(sweep_start_hz, sweep_end_hz, sweep_steps)
     tones(frequencies, amplitude).tofile(out_dir / "all_waveforms.bin")
     (out_dir / "frequencies.txt").write_text("".join(f"{f}\n" for f in frequencies), encoding="utf-8")
     wavfile.write(out_dir / "error_tone.wav", SAMPLE_RATE, error_tone(float(frequencies[0]), float(frequencies[-1]), amplitude))
     background_noise().tofile(out_dir / "background_noise.bin")
-    (out_dir / "sweep.txt").write_text(sweep_line(start_freq, end_freq, n_freq_bins, amplitude), encoding="utf-8")
+    (out_dir / "sweep.txt").write_text(sweep_line(sweep_start_hz, sweep_end_hz, sweep_steps, amplitude), encoding="utf-8")
 
 
 def task_parameters(task_file: Path = TASK_FILE):
@@ -81,8 +81,8 @@ def task_parameters(task_file: Path = TASK_FILE):
 def main() -> None:
     """Write the waveforms for config/task-abstract-av-corridor.yml's sweep."""
     p = task_parameters()
-    write(p.start_freq, p.end_freq, p.n_freq_bins, p.amplitude)
-    print(f"Wrote {p.n_freq_bins} tones from {p.start_freq} to {p.end_freq} Hz at amplitude {p.amplitude}, the error tone and the background noise to {OUT_DIR}")
+    write(p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps, p.amplitude)
+    print(f"Wrote {p.sweep_steps} tones from {p.sweep_start_hz} to {p.sweep_end_hz} Hz at amplitude {p.amplitude}, the error tone and the background noise to {OUT_DIR}")
 
 
 if __name__ == "__main__":

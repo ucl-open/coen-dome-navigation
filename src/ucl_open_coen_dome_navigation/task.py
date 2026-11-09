@@ -16,7 +16,7 @@ from swc.aeon.schema import BaseSchema
 from ucl_open_coen_dome_navigation import __semver__
 
 BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (HarpBeat)
-STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial (closedLoopDuration + laser_leads_stimulus_by_seconds) the laser_max_seconds cap must be
+STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial (timeLimitSeconds + laser_leads_stimulus_by_seconds) the laser_max_seconds cap must be
 
 STAGE_COUNT = 6
 
@@ -24,14 +24,14 @@ STAGE_COUNT = 6
 class TrialStructure(BaseSchema):
     """Timing of each trial."""
 
-    iti_min: float = Field(default=0.0, ge=0, description="Lower bound of the uniformly drawn inter-trial interval, in seconds")
-    iti_max: float = Field(default=1.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds")
+    iti_min_seconds: float = Field(default=0.0, ge=0, description="Lower bound of the uniformly drawn inter-trial interval, in seconds")
+    iti_max_seconds: float = Field(default=1.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds")
     quiescent_seconds: float = Field(
         default=1.0,
         ge=0,
         description="On a stage with quiescent, the next trial waits until the mouse has gone this long without licking (uncapped), so licks for the last reward cannot carry into the next trial",
     )
-    closed_loop_duration: float = Field(
+    time_limit_seconds: float = Field(
         default=12.0, gt=0, description="On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)"
     )
     track_lengths_cm: List[float] = Field(
@@ -40,8 +40,8 @@ class TrialStructure(BaseSchema):
 
     @model_validator(mode="after")
     def _iti_ordered(self) -> "TrialStructure":
-        if self.iti_max < self.iti_min:
-            raise ValueError("iti_max must be >= iti_min")
+        if self.iti_max_seconds < self.iti_min_seconds:
+            raise ValueError("iti_max_seconds must be >= iti_min_seconds")
         return self
 
 
@@ -131,7 +131,7 @@ class OptogeneticsConfig(BaseSchema):
     laser_max_seconds: float = Field(
         default=12.5,
         gt=0,
-        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
+        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
     )
     laser_leads_stimulus_by_seconds: float = Field(
         default=0.1,
@@ -186,7 +186,7 @@ class TrainingStage(BaseSchema):
         description="Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage"
     )
     quiescent: bool = Field(description="Whether the next trial waits for trialStructure.quiescentSeconds without licks")
-    time_limit: bool = Field(description="Whether a trial ends at trialStructure.closedLoopDuration")
+    time_limit: bool = Field(description="Whether a trial ends at trialStructure.timeLimitSeconds")
     track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
     track_length_scale: float = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
@@ -205,19 +205,19 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     modality: Literal["auditory", "visual", "audiovisual"] = Field(
         default="auditory", description="What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)"
     )
-    start_freq: int = Field(
+    sweep_start_hz: int = Field(
         default=2000,
         description="Start frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
         ge=1,
         le=25000,
     )
-    end_freq: int = Field(
+    sweep_end_hz: int = Field(
         default=25000,
         description="End frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
         ge=1,
         le=25000,
     )
-    n_freq_bins: int = Field(
+    sweep_steps: int = Field(
         default=100,
         description="Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
         ge=10,
@@ -231,7 +231,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     background_noise_level: float = Field(
         default=0.5, description="Constant background white noise RMS, as a fraction of the beep RMS (0 = off)", ge=0.0, le=1.0
     )
-    quantize_bin_size: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
+    position_step_cm: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
     wheel_diameter_mm: Optional[float] = Field(
         default=75.0,
         gt=0,
@@ -253,23 +253,23 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     @model_validator(mode="after")
     def _stim_duration_outlasts_the_trial(self):
         # The laser is meant to stay on until the outcome: the cap must be longer than the longest trial, the time limit
-        # (closedLoopDuration, counted from the first tone pip) plus laser_leads_stimulus_by_seconds (zapit-v2)
+        # (timeLimitSeconds, counted from the first tone pip) plus laser_leads_stimulus_by_seconds (zapit-v2)
         opto = self.optogenetics
-        shortest = self.trial_structure.closed_loop_duration + opto.laser_leads_stimulus_by_seconds + STIM_DURATION_MARGIN_SEC
+        shortest = self.trial_structure.time_limit_seconds + opto.laser_leads_stimulus_by_seconds + STIM_DURATION_MARGIN_SEC
         if opto.enabled and opto.laser_max_seconds < shortest - 1e-9:
             raise ValueError(
-                f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: trialStructure.closedLoopDuration "
-                f"({self.trial_structure.closed_loop_duration:g} s) counts from the first tone pip, laser_leads_stimulus_by_seconds ({opto.laser_leads_stimulus_by_seconds} s) after onset"
+                f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: trialStructure.timeLimitSeconds "
+                f"({self.trial_structure.time_limit_seconds:g} s) counts from the first tone pip, laser_leads_stimulus_by_seconds ({opto.laser_leads_stimulus_by_seconds} s) after onset"
             )
         return self
 
     @model_validator(mode="after")
     def _zones_inside_sweep(self):
-        if self.start_freq >= self.end_freq:
-            raise ValueError("start_freq must be less than end_freq")
+        if self.sweep_start_hz >= self.sweep_end_hz:
+            raise ValueError("sweep_start_hz must be less than sweep_end_hz")
         for i, stage in enumerate(self.training_stages):
-            if stage.reward_floor_hz <= self.start_freq or stage.reward_ceiling_hz > self.end_freq:
-                raise ValueError(f"training_stages[{i}]'s reward zone is not inside the sweep ({self.start_freq} to {self.end_freq} Hz)")
+            if stage.reward_floor_hz <= self.sweep_start_hz or stage.reward_ceiling_hz > self.sweep_end_hz:
+                raise ValueError(f"training_stages[{i}]'s reward zone is not inside the sweep ({self.sweep_start_hz} to {self.sweep_end_hz} Hz)")
         return self
 
     @field_validator("training_stages")

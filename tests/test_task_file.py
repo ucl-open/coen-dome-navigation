@@ -38,7 +38,7 @@ def test_the_stage_rows_keep_tom_s_reward_zones():
 def test_the_shared_blocks_have_av_dome_s_names():
     # Pip, 9 Nov 2026: the lab's tasks name the same things the same way.
     p = task()["taskParameters"]
-    assert {"itiMin", "itiMax", "closedLoopDuration"} <= set(p["trialStructure"])
+    assert {"itiMinSeconds", "itiMaxSeconds", "timeLimitSeconds"} <= set(p["trialStructure"])
     assert list(p["punishment"]) == ["timeoutSeconds", "sound"] and {"enabled", "path", "gain"} <= set(p["punishment"]["sound"])
     assert "rngSeed" in p and "rewardSizeUl" in p["trainingStages"][0]
 
@@ -46,11 +46,11 @@ def test_the_shared_blocks_have_av_dome_s_names():
 def test_the_committed_waveforms_are_the_task_file_s():
     p = UclOpenCoenDomeNavigationTaskLogic.model_validate(task()).task_parameters
     assert (WAVES / "sweep.txt").read_text(encoding="utf-8") == waveforms.sweep_line(
-        p.start_freq, p.end_freq, p.n_freq_bins, p.amplitude
+        p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps, p.amplitude
     )
-    freqs = waveforms.tone_frequencies(p.start_freq, p.end_freq, p.n_freq_bins)
+    freqs = waveforms.tone_frequencies(p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps)
     assert [int(x) for x in (WAVES / "frequencies.txt").read_text(encoding="utf-8").split()] == list(freqs)
-    committed = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(p.n_freq_bins, -1)
+    committed = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(p.sweep_steps, -1)
     assert np.array_equal(committed, waveforms.tones(freqs, p.amplitude))
     assert committed.shape[1] == 2400  # the workflow's MatrixReader BufferLength
     rate, error = wavfile.read(WAVES / "error_tone.wav")

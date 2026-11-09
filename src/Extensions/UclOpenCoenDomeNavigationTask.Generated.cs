@@ -261,11 +261,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome
+        /// Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserMaxSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserMaxSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome")]
+        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome")]
         public double LaserMaxSeconds
         {
             get
@@ -773,11 +773,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Whether a trial ends at trialStructure.closedLoopDuration
+        /// Whether a trial ends at trialStructure.timeLimitSeconds
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("timeLimit", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeLimit")]
-        [System.ComponentModel.DescriptionAttribute("Whether a trial ends at trialStructure.closedLoopDuration")]
+        [System.ComponentModel.DescriptionAttribute("Whether a trial ends at trialStructure.timeLimitSeconds")]
         public bool TimeLimit
         {
             get
@@ -915,67 +915,67 @@ namespace UclOpenCoenDomeNavigationTask
     public partial class TrialStructure
     {
     
-        private double _itiMin;
+        private double _itiMinSeconds;
     
-        private double _itiMax;
+        private double _itiMaxSeconds;
     
         private double _quiescentSeconds;
     
-        private double _closedLoopDuration;
+        private double _timeLimitSeconds;
     
         private System.Collections.Generic.List<double> _trackLengthsCm;
     
         public TrialStructure()
         {
-            _itiMin = 0D;
-            _itiMax = 1D;
+            _itiMinSeconds = 0D;
+            _itiMaxSeconds = 1D;
             _quiescentSeconds = 1D;
-            _closedLoopDuration = 12D;
+            _timeLimitSeconds = 12D;
             _trackLengthsCm = new System.Collections.Generic.List<double>();
         }
     
         protected TrialStructure(TrialStructure other)
         {
-            _itiMin = other._itiMin;
-            _itiMax = other._itiMax;
+            _itiMinSeconds = other._itiMinSeconds;
+            _itiMaxSeconds = other._itiMaxSeconds;
             _quiescentSeconds = other._quiescentSeconds;
-            _closedLoopDuration = other._closedLoopDuration;
+            _timeLimitSeconds = other._timeLimitSeconds;
             _trackLengthsCm = other._trackLengthsCm;
         }
     
         /// <summary>
         /// Lower bound of the uniformly drawn inter-trial interval, in seconds
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("itiMin")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMin")]
+        [Newtonsoft.Json.JsonPropertyAttribute("itiMinSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMinSeconds")]
         [System.ComponentModel.DescriptionAttribute("Lower bound of the uniformly drawn inter-trial interval, in seconds")]
-        public double ItiMin
+        public double ItiMinSeconds
         {
             get
             {
-                return _itiMin;
+                return _itiMinSeconds;
             }
             set
             {
-                _itiMin = value;
+                _itiMinSeconds = value;
             }
         }
     
         /// <summary>
         /// Upper bound of the uniformly drawn inter-trial interval, in seconds
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("itiMax")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMax")]
+        [Newtonsoft.Json.JsonPropertyAttribute("itiMaxSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMaxSeconds")]
         [System.ComponentModel.DescriptionAttribute("Upper bound of the uniformly drawn inter-trial interval, in seconds")]
-        public double ItiMax
+        public double ItiMaxSeconds
         {
             get
             {
-                return _itiMax;
+                return _itiMaxSeconds;
             }
             set
             {
-                _itiMax = value;
+                _itiMaxSeconds = value;
             }
         }
     
@@ -1002,19 +1002,19 @@ namespace UclOpenCoenDomeNavigationTask
         /// <summary>
         /// On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("closedLoopDuration")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="closedLoopDuration")]
+        [Newtonsoft.Json.JsonPropertyAttribute("timeLimitSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeLimitSeconds")]
         [System.ComponentModel.DescriptionAttribute("On a stage with timeLimit, the longest a trial runs from its start, in seconds (a" +
             "v-dome\'s name for its response period)")]
-        public double ClosedLoopDuration
+        public double TimeLimitSeconds
         {
             get
             {
-                return _closedLoopDuration;
+                return _timeLimitSeconds;
             }
             set
             {
-                _closedLoopDuration = value;
+                _timeLimitSeconds = value;
             }
         }
     
@@ -1050,10 +1050,10 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("ItiMin = " + _itiMin + ", ");
-            stringBuilder.Append("ItiMax = " + _itiMax + ", ");
+            stringBuilder.Append("ItiMinSeconds = " + _itiMinSeconds + ", ");
+            stringBuilder.Append("ItiMaxSeconds = " + _itiMaxSeconds + ", ");
             stringBuilder.Append("QuiescentSeconds = " + _quiescentSeconds + ", ");
-            stringBuilder.Append("ClosedLoopDuration = " + _closedLoopDuration + ", ");
+            stringBuilder.Append("TimeLimitSeconds = " + _timeLimitSeconds + ", ");
             stringBuilder.Append("TrackLengthsCm = " + _trackLengthsCm);
             return true;
         }
@@ -1168,17 +1168,17 @@ namespace UclOpenCoenDomeNavigationTask
     
         private UclOpenCoenDomeNavigationTaskParametersModality _modality;
     
-        private int _startFreq;
+        private int _sweepStartHz;
     
-        private int _endFreq;
+        private int _sweepEndHz;
     
-        private int _nFreqBins;
+        private int _sweepSteps;
     
         private double _amplitude;
     
         private double _backgroundNoiseLevel;
     
-        private int _quantizeBinSize;
+        private int _positionStepCm;
     
         private double? _wheelDiameterMm;
     
@@ -1195,12 +1195,12 @@ namespace UclOpenCoenDomeNavigationTask
         public UclOpenCoenDomeNavigationTaskParameters()
         {
             _modality = UclOpenCoenDomeNavigationTaskParametersModality.Auditory;
-            _startFreq = 2000;
-            _endFreq = 25000;
-            _nFreqBins = 100;
+            _sweepStartHz = 2000;
+            _sweepEndHz = 25000;
+            _sweepSteps = 100;
             _amplitude = 0.05D;
             _backgroundNoiseLevel = 0.5D;
-            _quantizeBinSize = 1;
+            _positionStepCm = 1;
             _wheelDiameterMm = 75D;
             _trialStructure = new TrialStructure();
             _punishment = new Punishment();
@@ -1213,12 +1213,12 @@ namespace UclOpenCoenDomeNavigationTask
         {
             _rngSeed = other._rngSeed;
             _modality = other._modality;
-            _startFreq = other._startFreq;
-            _endFreq = other._endFreq;
-            _nFreqBins = other._nFreqBins;
+            _sweepStartHz = other._sweepStartHz;
+            _sweepEndHz = other._sweepEndHz;
+            _sweepSteps = other._sweepSteps;
             _amplitude = other._amplitude;
             _backgroundNoiseLevel = other._backgroundNoiseLevel;
-            _quantizeBinSize = other._quantizeBinSize;
+            _positionStepCm = other._positionStepCm;
             _wheelDiameterMm = other._wheelDiameterMm;
             _trialStructure = other._trialStructure;
             _punishment = other._punishment;
@@ -1267,57 +1267,57 @@ namespace UclOpenCoenDomeNavigationTask
         /// <summary>
         /// Start frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("startFreq")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="startFreq")]
+        [Newtonsoft.Json.JsonPropertyAttribute("sweepStartHz")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sweepStartHz")]
         [System.ComponentModel.DescriptionAttribute("Start frequency of the sweep (Hz). The tone files in src/waveforms are made for t" +
             "his value: the workflow stops at Go if they differ")]
-        public int StartFreq
+        public int SweepStartHz
         {
             get
             {
-                return _startFreq;
+                return _sweepStartHz;
             }
             set
             {
-                _startFreq = value;
+                _sweepStartHz = value;
             }
         }
     
         /// <summary>
         /// End frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("endFreq")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="endFreq")]
+        [Newtonsoft.Json.JsonPropertyAttribute("sweepEndHz")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sweepEndHz")]
         [System.ComponentModel.DescriptionAttribute("End frequency of the sweep (Hz). The tone files in src/waveforms are made for thi" +
             "s value: the workflow stops at Go if they differ")]
-        public int EndFreq
+        public int SweepEndHz
         {
             get
             {
-                return _endFreq;
+                return _sweepEndHz;
             }
             set
             {
-                _endFreq = value;
+                _sweepEndHz = value;
             }
         }
     
         /// <summary>
         /// Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("nFreqBins")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="nFreqBins")]
+        [Newtonsoft.Json.JsonPropertyAttribute("sweepSteps")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sweepSteps")]
         [System.ComponentModel.DescriptionAttribute("Number of frequency bins for quantization. The tone files in src/waveforms are ma" +
             "de for this value: the workflow stops at Go if they differ")]
-        public int NFreqBins
+        public int SweepSteps
         {
             get
             {
-                return _nFreqBins;
+                return _sweepSteps;
             }
             set
             {
-                _nFreqBins = value;
+                _sweepSteps = value;
             }
         }
     
@@ -1361,18 +1361,18 @@ namespace UclOpenCoenDomeNavigationTask
         /// <summary>
         /// The distance run is rounded to this before it sets the frequency, in cm
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("quantizeBinSize")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="quantizeBinSize")]
+        [Newtonsoft.Json.JsonPropertyAttribute("positionStepCm")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="positionStepCm")]
         [System.ComponentModel.DescriptionAttribute("The distance run is rounded to this before it sets the frequency, in cm")]
-        public int QuantizeBinSize
+        public int PositionStepCm
         {
             get
             {
-                return _quantizeBinSize;
+                return _positionStepCm;
             }
             set
             {
-                _quantizeBinSize = value;
+                _positionStepCm = value;
             }
         }
     
@@ -1504,12 +1504,12 @@ namespace UclOpenCoenDomeNavigationTask
         {
             stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
             stringBuilder.Append("Modality = " + _modality + ", ");
-            stringBuilder.Append("StartFreq = " + _startFreq + ", ");
-            stringBuilder.Append("EndFreq = " + _endFreq + ", ");
-            stringBuilder.Append("NFreqBins = " + _nFreqBins + ", ");
+            stringBuilder.Append("SweepStartHz = " + _sweepStartHz + ", ");
+            stringBuilder.Append("SweepEndHz = " + _sweepEndHz + ", ");
+            stringBuilder.Append("SweepSteps = " + _sweepSteps + ", ");
             stringBuilder.Append("Amplitude = " + _amplitude + ", ");
             stringBuilder.Append("BackgroundNoiseLevel = " + _backgroundNoiseLevel + ", ");
-            stringBuilder.Append("QuantizeBinSize = " + _quantizeBinSize + ", ");
+            stringBuilder.Append("PositionStepCm = " + _positionStepCm + ", ");
             stringBuilder.Append("WheelDiameterMm = " + _wheelDiameterMm + ", ");
             stringBuilder.Append("TrialStructure = " + _trialStructure + ", ");
             stringBuilder.Append("Punishment = " + _punishment + ", ");
