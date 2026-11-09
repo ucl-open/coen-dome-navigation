@@ -106,3 +106,27 @@ def test_stimulus_state_reaches_disk_row_by_row():
                if e.get(XSI) == "IncludeWorkflow" and e.get("Path") == "OpenRigs.Logging:LogData.bonsai")
     assert log.findtext(W + "LogName") == "StimulusState"
     assert log.findtext(W + "AutoFlush") == "true"
+
+
+def test_spout_positions_fall_back_to_production_s():
+    # BLUE-OPTO-2 has no calibration\ beside rig.yml: every mouse's positions are in production's
+    # C:\RigConfigs\LickSpoutPositions, and ReadPositions, finding no file, read none (Pip, 9 Nov 2026).
+    workflow = group("Commands").find(W + "Workflow")
+    nodes = list(workflow.find(W + "Nodes"))
+    edges = [(int(e.get("From")), int(e.get("To"))) for e in workflow.find(W + "Edges")]
+    read = next(i for i, e in enumerate(nodes) if e.findtext(W + "Name") == "ReadPositions")
+    (into,) = [a for a, b in edges if b == read]
+    choose = nodes[into].find(W + "Combinator")
+    ext = "{clr-namespace:;assembly=Extensions}"
+    assert choose.get(XSI) == "ext:SpoutPositionsToRead"
+    assert choose.findtext(ext + "FallbackFolder") == r"C:\RigConfigs\LickSpoutPositions"
+    (source,) = [a for a, b in edges if b == into]
+    assert nodes[source].findtext(W + "Name") == "SpoutPositionFileName"
+
+
+def test_the_manifest_hashes_the_calibration_files_the_workflow_reads():
+    mf = "{clr-namespace:OpenRigs.Manifest;assembly=OpenRigs.Manifest}"
+    files = next(e for e in MAIN.iter(W + "Expression") if e.findtext(W + "Name") == "ExperimentManifest").findtext(mf + "ConfigFiles").split(";")
+    assert r"C:\RigConfigs\MeshMap.csv" in files and r"C:\RigConfigs\gammalut.bmp" in files  # rig.yml's projectionCalibration
+    assert r"C:\RigConfigs\LickSpoutPositions\{SubjectId}.csv" in files
+    assert r"C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\LickSpoutPositions\{SubjectId}.csv" in files
