@@ -1909,13 +1909,21 @@
               <ControlEndpoint>@tcp://127.0.0.1:5561</ControlEndpoint>
               <Parameters>
                 <Parameter>
+                  <Name>TrainingStage</Name>
+                  <Value>0</Value>
+                  <Description>Row of the task file's trainingStages to run, 0 to 5 (Tom Childs' stages 1 to 6; a row past the end uses the last): suggested from the mouse's earlier experiments of the modality.</Description>
+                  <Minimum>0</Minimum>
+                  <Maximum>5</Maximum>
+                  <WholeNumber>true</WholeNumber>
+                </Parameter>
+                <Parameter>
                   <Name>ManualRewardUl</Name>
                   <Value>3</Value>
-                  <Description>Microlitres RewardLeft and RewardRight deliver before Go, taken live; after Go too. The task's own rewards are the task file's rewardSizeUl.</Description>
+                  <Description>Microlitres RewardLeft and RewardRight deliver before Go, taken live; after Go too. The task's own rewards are this stage's rewardSizeUl (trainingStages).</Description>
                   <Minimum>0</Minimum>
                 </Parameter>
                 <Parameter>
-                  <Name>StepSize</Name>
+                  <Name>SpoutStepSize</Name>
                   <Value>150</Value>
                   <Description>Motor steps each spout nudge command moves, taken live while ready.</Description>
                   <Minimum>1</Minimum>
@@ -1949,43 +1957,43 @@
                 </Command>
                 <Command>
                   <Name>LeftUp</Name>
-                  <Description>Nudge the left spout up by StepSize.</Description>
+                  <Description>Nudge the left spout up by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>LeftDown</Name>
-                  <Description>Nudge the left spout down by StepSize.</Description>
+                  <Description>Nudge the left spout down by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>RightUp</Name>
-                  <Description>Nudge the right spout up by StepSize.</Description>
+                  <Description>Nudge the right spout up by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>RightDown</Name>
-                  <Description>Nudge the right spout down by StepSize.</Description>
+                  <Description>Nudge the right spout down by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>LeftFront</Name>
-                  <Description>Nudge the left spout forward by StepSize.</Description>
+                  <Description>Nudge the left spout forward by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>LeftBack</Name>
-                  <Description>Nudge the left spout back by StepSize.</Description>
+                  <Description>Nudge the left spout back by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>RightFront</Name>
-                  <Description>Nudge the right spout forward by StepSize.</Description>
+                  <Description>Nudge the right spout forward by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>RightBack</Name>
-                  <Description>Nudge the right spout back by StepSize.</Description>
+                  <Description>Nudge the right spout back by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>BaseLeft</Name>
-                  <Description>Nudge the spout base left by StepSize.</Description>
+                  <Description>Nudge the spout base left by SpoutStepSize.</Description>
                 </Command>
                 <Command>
                   <Name>BaseRight</Name>
-                  <Description>Nudge the spout base right by StepSize.</Description>
+                  <Description>Nudge the spout base right by SpoutStepSize.</Description>
                 </Command>
               </Commands>
             </Expression>
@@ -2088,7 +2096,7 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="orcl:OnParameterSet">
-                <orcl:Name>StepSize</orcl:Name>
+                <orcl:Name>SpoutStepSize</orcl:Name>
               </Combinator>
             </Expression>
             <Expression xsi:type="scr:ExpressionTransform">
@@ -2197,7 +2205,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Task</Name>
-        <Description>At Go: reads the task file (TaskPath, rig-control's copy of config\task-abstract-av-corridor.yml with the form's edits; from the editor config\task-abstract-av-corridor.yml), publishes it as TaskConfig and its taskParameters as TaskParams once CheckWaveforms has found src\waveforms made for its sweep, and from them Modality, ShapingStage and which stimuli are active. InitVars declares the task's state and loads the tones and error tone. Tom Childs' Params, read from session-schemas before.</Description>
+        <Description>At Go: reads the task file (TaskPath, rig-control's copy of config\task-abstract-av-corridor.yml with the form's edits; from the editor config\task-abstract-av-corridor.yml), publishes it as TaskConfig and its taskParameters as TaskParams once CheckWaveforms has found src\waveforms made for its sweep, and from them Modality, which stimuli are active, TrainingStage (the experiment setting, at Go) with StageRow (that row of trainingStages: what the stage does) and TaskRandom (every draw, from rngSeed). InitVars declares the task's state and loads the tones and error tone. Tom Childs' Params, read from session-schemas before.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -2557,10 +2565,12 @@
                         <Expression xsi:type="rx:BehaviorSubject">
                           <Name>HitEndOfTrack</Name>
                         </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="TimeSpanProperty">
-                            <Value>PT12S</Value>
-                          </Combinator>
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>TaskParams</Name>
+                        </Expression>
+                        <Expression xsi:type="scr:ExpressionTransform">
+                          <scr:Name>TimeLimit</scr:Name>
+                          <scr:Expression>TimeSpan.FromSeconds(it.TrialStructure.ClosedLoopDuration)</scr:Expression>
                         </Expression>
                         <Expression xsi:type="rx:BehaviorSubject">
                           <Name>MaxTrialTimeSec</Name>
@@ -2633,7 +2643,7 @@
                         </Expression>
                         <Expression xsi:type="Annotation">
                           <Name>ErrorTone loaded once</Name>
-                          <Text><![CDATA[Read into memory once at startup instead of from disk on every punishment, so the relative path cannot fail mid-session if the working directory changes and crash the workflow on an error trial.]]></Text>
+                          <Text><![CDATA[Read into memory once, at Go (punishment.sound.path in the task file), instead of from disk on every punishment, so the relative path cannot fail mid-session if the working directory changes and crash the workflow on an error trial.]]></Text>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="al:AudioReader">
@@ -2656,6 +2666,17 @@
                         </Expression>
                         <Expression xsi:type="rx:BehaviorSubject" TypeArguments="ext:OptoTrial">
                           <rx:Name>OptoTrial</rx:Name>
+                        </Expression>
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>TaskParams</Name>
+                        </Expression>
+                        <Expression xsi:type="MemberSelector">
+                          <Selector>Punishment.Sound.Path</Selector>
+                        </Expression>
+                        <Expression xsi:type="PropertyMapping">
+                          <PropertyMappings>
+                            <Property Name="FileName" />
+                          </PropertyMappings>
                         </Expression>
                       </Nodes>
                       <Edges>
@@ -2681,16 +2702,20 @@
                         <Edge From="34" To="35" Label="Source1" />
                         <Edge From="36" To="37" Label="Source1" />
                         <Edge From="38" To="39" Label="Source1" />
-                        <Edge From="40" To="41" Label="Source1" />
-                        <Edge From="42" To="43" Label="Source1" />
-                        <Edge From="44" To="45" Label="Source1" />
-                        <Edge From="46" To="47" Label="Source1" />
-                        <Edge From="48" To="49" Label="Source1" />
-                        <Edge From="50" To="51" Label="Source1" />
-                        <Edge From="53" To="54" Label="Source1" />
-                        <Edge From="55" To="56" Label="Source1" />
-                        <Edge From="59" To="60" Label="Source1" />
+                        <Edge From="43" To="44" Label="Source1" />
+                        <Edge From="45" To="46" Label="Source1" />
+                        <Edge From="47" To="48" Label="Source1" />
+                        <Edge From="49" To="50" Label="Source1" />
+                        <Edge From="51" To="52" Label="Source1" />
+                        <Edge From="54" To="55" Label="Source1" />
+                        <Edge From="56" To="57" Label="Source1" />
                         <Edge From="60" To="61" Label="Source1" />
+                        <Edge From="61" To="62" Label="Source1" />
+                        <Edge From="40" To="41" Label="Source1" />
+                        <Edge From="41" To="42" Label="Source1" />
+                        <Edge From="65" To="66" Label="Source1" />
+                        <Edge From="66" To="67" Label="Source1" />
+                        <Edge From="67" To="60" Label="Source1" />
                       </Edges>
                     </Workflow>
                   </Expression>
@@ -2702,13 +2727,13 @@
               <Name>Modality</Name>
             </Expression>
             <Expression xsi:type="scr:ExpressionTransform">
-              <scr:Expression>Convert.ToDouble((it == "A" || it == "AV"))</scr:Expression>
+              <scr:Expression>Convert.ToDouble((it == "Auditory" || it == "Audiovisual"))</scr:Expression>
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject">
               <Name>AudioStimActive</Name>
             </Expression>
             <Expression xsi:type="scr:ExpressionTransform">
-              <scr:Expression>Convert.ToDouble((it == "V" || it == "AV"))</scr:Expression>
+              <scr:Expression>Convert.ToDouble((it == "Visual" || it == "Audiovisual"))</scr:Expression>
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject">
               <Name>VisualStimActive</Name>
@@ -2720,13 +2745,47 @@
               <Combinator xsi:type="rx:SubscribeWhen" />
             </Expression>
             <Expression xsi:type="SubscribeSubject">
+              <Name>ExperimentGo</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ParameterValue">
+                <orcl:Name>TrainingStage</orcl:Name>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="scr:ExpressionTransform">
+              <scr:Name>StageToInt</scr:Name>
+              <scr:Expression>Convert.ToInt32(it)</scr:Expression>
+            </Expression>
+            <Expression xsi:type="rx:BehaviorSubject">
+              <Name>TrainingStage</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TaskParams</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TrainingStage</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Zip" />
+            </Expression>
+            <Expression xsi:type="scr:ExpressionTransform">
+              <scr:Name>StageRowOf</scr:Name>
+              <scr:Expression>it.Item1.TrainingStages[Math.Min(Math.Max(it.Item2, 0), it.Item1.TrainingStages.Count - 1)]</scr:Expression>
+            </Expression>
+            <Expression xsi:type="rx:BehaviorSubject">
+              <Name>StageRow</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
               <Name>TaskParams</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>ShapingStage</Selector>
+              <Selector>RngSeed</Selector>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="ext:CreateTaskRandom" />
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject">
-              <Name>ShapingStage</Name>
+              <Name>TaskRandom</Name>
             </Expression>
           </Nodes>
           <Edges>
@@ -2740,20 +2799,28 @@
             <Edge From="15" To="16" Label="Source1" />
             <Edge From="16" To="17" Label="Source2" />
             <Edge From="17" To="18" Label="Source2" />
-            <Edge From="19" To="20" Label="Source1" />
-            <Edge From="20" To="21" Label="Source1" />
             <Edge From="0" To="1" Label="Source1" />
             <Edge From="1" To="2" Label="Source1" />
             <Edge From="2" To="3" Label="Source1" />
             <Edge From="4" To="5" Label="Source1" />
             <Edge From="5" To="6" Label="Source1" />
             <Edge From="6" To="7" Label="Source1" />
+            <Edge From="19" To="20" Label="Source1" />
+            <Edge From="20" To="21" Label="Source1" />
+            <Edge From="21" To="22" Label="Source1" />
+            <Edge From="23" To="25" Label="Source1" />
+            <Edge From="24" To="25" Label="Source2" />
+            <Edge From="25" To="26" Label="Source1" />
+            <Edge From="26" To="27" Label="Source1" />
+            <Edge From="28" To="29" Label="Source1" />
+            <Edge From="29" To="30" Label="Source1" />
+            <Edge From="30" To="31" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Commands</Name>
-        <Description>The controller's commands, while ready or recording: rewards (flushes) on either spout, the spouts home, in and out, nudging each spout and the base by StepSize, and saving this mouse's spout positions. The valve and stepper logic is the old GUI's; only its sources changed, from buttons to OnCommand.</Description>
+        <Description>The controller's commands, while ready or recording: rewards (flushes) on either spout, the spouts home, in and out, nudging each spout and the base by SpoutStepSize, and saving this mouse's spout positions. The valve and stepper logic is the old GUI's; only its sources changed, from buttons to OnCommand.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="Annotation">
@@ -4317,21 +4384,21 @@
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="SubscribeSubject">
-                    <Name>TaskParams</Name>
+                    <Name>StageRow</Name>
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
                     <scr:Name>ComputeThreshold</scr:Name>
-                    <scr:Expression>it.ShapingStage == 1 ? Convert.ToDouble(it.ThresholdFrequencies.Stage1.Floor) : it.ShapingStage == 2 ? Convert.ToDouble(it.ThresholdFrequencies.Stage2.Floor) : it.ShapingStage == 3 ? Convert.ToDouble(it.ThresholdFrequencies.Stage3.Floor) : it.ShapingStage == 4 ? Convert.ToDouble(it.ThresholdFrequencies.Stage4.Floor) :  Convert.ToDouble(it.ThresholdFrequencies.Stage5.Floor)</scr:Expression>
+                    <scr:Expression>Convert.ToDouble(it.RewardFloorHz)</scr:Expression>
                   </Expression>
                   <Expression xsi:type="MulticastSubject">
                     <Name>RewardFloorFreq</Name>
                   </Expression>
                   <Expression xsi:type="SubscribeSubject">
-                    <Name>TaskParams</Name>
+                    <Name>StageRow</Name>
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
                     <scr:Name>ComputeThreshold</scr:Name>
-                    <scr:Expression>it.ShapingStage == 1 ? Convert.ToDouble(it.ThresholdFrequencies.Stage1.Ceiling) : it.ShapingStage == 2 ? Convert.ToDouble(it.ThresholdFrequencies.Stage2.Ceiling) : it.ShapingStage == 3 ? Convert.ToDouble(it.ThresholdFrequencies.Stage3.Ceiling) : it.ShapingStage == 4 ? Convert.ToDouble(it.ThresholdFrequencies.Stage4.Ceiling) :  Convert.ToDouble(it.ThresholdFrequencies.Stage5.Ceiling)</scr:Expression>
+                    <scr:Expression>Convert.ToDouble(it.RewardCeilingHz)</scr:Expression>
                   </Expression>
                   <Expression xsi:type="MulticastSubject">
                     <Name>RewardCeilFreq</Name>
@@ -4475,7 +4542,7 @@
                     </Combinator>
                   </Expression>
                   <Expression xsi:type="SubscribeSubject">
-                    <Name>ShapingStage</Name>
+                    <Name>TrainingStage</Name>
                   </Expression>
                   <Expression xsi:type="Combinator">
                     <Combinator xsi:type="rx:WithLatestFrom" />
@@ -5062,26 +5129,22 @@
                             </Edges>
                           </Workflow>
                         </Expression>
-                        <Expression xsi:type="ExternalizedMapping">
-                          <Property Name="RangeMin" />
-                          <Property Name="RangeMax" />
-                          <Property Name="Count" />
-                        </Expression>
-                        <Expression xsi:type="IncludeWorkflow" Path="BonVision:Primitives.ParameterRange.bonsai">
-                          <Count>2</Count>
-                          <RangeMin>0</RangeMin>
-                          <RangeMax>1</RangeMax>
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="num:Permutation" />
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>TaskRandom</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:Take">
                             <rx:Count>1</rx:Count>
                           </Combinator>
                         </Expression>
-                        <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Expression>TimeSpan.FromSeconds(it)</scr:Expression>
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>TaskParams</Name>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:WithLatestFrom" />
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="ext:DrawIti" />
                         </Expression>
                         <Expression xsi:type="MulticastSubject">
                           <Name>InterTrialInterval</Name>
@@ -5155,7 +5218,7 @@
                               </Expression>
                               <Expression xsi:type="rx:SelectMany">
                                 <Name>WaitForNoLicks</Name>
-                                <Description>Stages 4-6 only: holds the next trial until the animal has gone without licking for the Throttle DueTime below (default PT1S), so consummatory licking from the previous reward cannot carry into the next response window. Deliberately uncapped - a mouse that keeps licking keeps delaying the next trial. Stages 1-3 pass straight through. The seeded Merge is required: without it Throttle never fires for a mouse that does not lick at all, and the task would stall.</Description>
+                                <Description>On a stage with quiescent: holds the next trial until the animal has gone without licking for trialStructure.quiescentSeconds (Throttle's DueTime), so consummatory licking from the previous reward cannot carry into the next response window. Deliberately uncapped - a mouse that keeps licking keeps delaying the next trial. Other stages pass straight through. The seeded Merge is required: without it Throttle never fires for a mouse that does not lick at all, and the task would stall.</Description>
                                 <Workflow>
                                   <Nodes>
                                     <Expression xsi:type="SubscribeSubject">
@@ -5197,11 +5260,11 @@
                                       <Name>Source1</Name>
                                     </Expression>
                                     <Expression xsi:type="rx:Condition">
-                                      <Name>IsStage4or5or6</Name>
+                                      <Name>Quiescent?</Name>
                                       <Workflow>
                                         <Nodes>
                                           <Expression xsi:type="SubscribeSubject">
-                                            <Name>ShapingStage</Name>
+                                            <Name>StageRow</Name>
                                           </Expression>
                                           <Expression xsi:type="WorkflowInput">
                                             <Name>Source1</Name>
@@ -5210,7 +5273,7 @@
                                             <Combinator xsi:type="rx:Sample" />
                                           </Expression>
                                           <Expression xsi:type="scr:ExpressionTransform">
-                                            <scr:Expression>((it &gt;= 4) &amp;&amp; (it &lt;= 6))</scr:Expression>
+                                            <scr:Expression>it.Quiescent</scr:Expression>
                                           </Expression>
                                           <Expression xsi:type="WorkflowOutput" />
                                         </Nodes>
@@ -5226,11 +5289,11 @@
                                       <Combinator xsi:type="rx:SubscribeWhen" />
                                     </Expression>
                                     <Expression xsi:type="rx:Condition">
-                                      <Name>IsStage1or2or3</Name>
+                                      <Name>NoQuiescent?</Name>
                                       <Workflow>
                                         <Nodes>
                                           <Expression xsi:type="SubscribeSubject">
-                                            <Name>ShapingStage</Name>
+                                            <Name>StageRow</Name>
                                           </Expression>
                                           <Expression xsi:type="WorkflowInput">
                                             <Name>Source1</Name>
@@ -5239,7 +5302,7 @@
                                             <Combinator xsi:type="rx:Sample" />
                                           </Expression>
                                           <Expression xsi:type="scr:ExpressionTransform">
-                                            <scr:Expression>((it &gt;= 1) &amp;&amp; (it &lt;= 3))</scr:Expression>
+                                            <scr:Expression>!it.Quiescent</scr:Expression>
                                           </Expression>
                                           <Expression xsi:type="WorkflowOutput" />
                                         </Nodes>
@@ -5260,6 +5323,18 @@
                                       <Combinator xsi:type="rx:Merge" />
                                     </Expression>
                                     <Expression xsi:type="WorkflowOutput" />
+                                    <Expression xsi:type="SubscribeSubject">
+                                      <Name>TaskParams</Name>
+                                    </Expression>
+                                    <Expression xsi:type="scr:ExpressionTransform">
+                                      <scr:Name>QuiescentWait</scr:Name>
+                                      <scr:Expression>TimeSpan.FromSeconds(it.TrialStructure.QuiescentSeconds)</scr:Expression>
+                                    </Expression>
+                                    <Expression xsi:type="PropertyMapping">
+                                      <PropertyMappings>
+                                        <Property Name="DueTime" />
+                                      </PropertyMappings>
+                                    </Expression>
                                   </Nodes>
                                   <Edges>
                                     <Edge From="0" To="1" Label="Source1" />
@@ -5275,6 +5350,9 @@
                                     <Edge From="9" To="10" Label="Source1" />
                                     <Edge From="10" To="11" Label="Source2" />
                                     <Edge From="11" To="12" Label="Source1" />
+                                    <Edge From="13" To="14" Label="Source1" />
+                                    <Edge From="14" To="15" Label="Source1" />
+                                    <Edge From="15" To="4" Label="Source2" />
                                   </Edges>
                                 </Workflow>
                               </Expression>
@@ -5949,11 +6027,6 @@
                       </Nodes>
                       <Edges>
                         <Edge From="0" To="11" Label="Source1" />
-                        <Edge From="1" To="2" Label="Source1" />
-                        <Edge From="2" To="3" Label="Source1" />
-                        <Edge From="3" To="4" Label="Source1" />
-                        <Edge From="4" To="5" Label="Source1" />
-                        <Edge From="5" To="6" Label="Source1" />
                         <Edge From="6" To="7" Label="Source1" />
                         <Edge From="7" To="8" Label="Source1" />
                         <Edge From="8" To="59" Label="Source1" />
@@ -6000,6 +6073,11 @@
                         <Edge From="60" To="9" Label="Source1" />
                         <Edge From="12" To="61" Label="Source1" />
                         <Edge From="61" To="62" Label="Source1" />
+                        <Edge From="1" To="2" Label="Source1" />
+                        <Edge From="2" To="4" Label="Source1" />
+                        <Edge From="3" To="4" Label="Source2" />
+                        <Edge From="4" To="5" Label="Source1" />
+                        <Edge From="5" To="6" Label="Source1" />
                       </Edges>
                     </Workflow>
                   </Expression>
@@ -6034,38 +6112,25 @@
                     <Name>Random Track Length</Name>
                     <Workflow>
                       <Nodes>
-                        <Expression xsi:type="IncludeWorkflow" Path="BonVision:Primitives.ParameterRange.bonsai">
-                          <Count>3</Count>
-                          <RangeMin>80</RangeMin>
-                          <RangeMax>120</RangeMax>
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="num:Permutation" />
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>TaskRandom</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:Take">
                             <rx:Count>1</rx:Count>
                           </Combinator>
                         </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="num:CreateRandom">
-                            <num:Seed xsi:nil="true" />
-                          </Combinator>
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>TaskParams</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="dist:CreateContinuousUniform">
-                            <dist:Lower>0</dist:Lower>
-                            <dist:Upper>1</dist:Upper>
-                          </Combinator>
+                          <Combinator xsi:type="rx:WithLatestFrom" />
                         </Expression>
                         <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="dist:Sample" />
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="rx:Zip" />
+                          <Combinator xsi:type="ext:DrawTrackLength" />
                         </Expression>
                         <Expression xsi:type="SubscribeSubject">
-                          <Name>ShapingStage</Name>
+                          <Name>StageRow</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:WithLatestFrom" />
@@ -6077,8 +6142,8 @@
                           <Combinator xsi:type="rx:WithLatestFrom" />
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Name>HalveInStage1or2</scr:Name>
-                          <scr:Expression>it.Item1.Item2 &lt;= 2 ? 0.125 * Convert.ToDouble(it.Item1.Item1.Item1) : Convert.ToDouble(it.Item1.Item1.Item1)</scr:Expression>
+                          <scr:Name>ScaleForStage</scr:Name>
+                          <scr:Expression>it.Item1.Item2.TrackLengthScale * Convert.ToDouble(it.Item1.Item1.Item1)</scr:Expression>
                         </Expression>
                         <Expression xsi:type="MulticastSubject">
                           <Name>TrackLength</Name>
@@ -6086,7 +6151,7 @@
                         <Expression xsi:type="WorkflowOutput" />
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>TruncationPoint</scr:Name>
-                          <scr:Expression>it.Item1.Item2 == 6 &amp;&amp; it.Item1.Item1.Item2 &lt; it.Item2.Truncation.Fraction &amp;&amp; it.Item2.Truncation.Points.Count &gt; 0 ? it.Item2.Truncation.Points[Convert.ToInt32(Math.Floor(it.Item1.Item1.Item2 / it.Item2.Truncation.Fraction * it.Item2.Truncation.Points.Count))] : 1.0</scr:Expression>
+                          <scr:Expression>it.Item1.Item2.TruncationFraction &gt; 0 &amp;&amp; it.Item1.Item1.Item2 &lt; it.Item1.Item2.TruncationFraction &amp;&amp; it.Item2.Truncation.Points.Count &gt; 0 ? it.Item2.Truncation.Points[Convert.ToInt32(Math.Floor(it.Item1.Item1.Item2 / it.Item1.Item2.TruncationFraction * it.Item2.Truncation.Points.Count))] : 1.0</scr:Expression>
                         </Expression>
                         <Expression xsi:type="MulticastSubject">
                           <Name>TruncationPoint</Name>
@@ -6094,21 +6159,18 @@
                       </Nodes>
                       <Edges>
                         <Edge From="0" To="1" Label="Source1" />
-                        <Edge From="1" To="2" Label="Source1" />
-                        <Edge From="2" To="3" Label="Source1" />
-                        <Edge From="2" To="6" Label="Source1" />
+                        <Edge From="1" To="3" Label="Source1" />
+                        <Edge From="2" To="3" Label="Source2" />
                         <Edge From="3" To="4" Label="Source1" />
-                        <Edge From="4" To="5" Label="Source1" />
+                        <Edge From="4" To="6" Label="Source1" />
                         <Edge From="5" To="6" Label="Source2" />
                         <Edge From="6" To="8" Label="Source1" />
                         <Edge From="7" To="8" Label="Source2" />
-                        <Edge From="8" To="10" Label="Source1" />
-                        <Edge From="9" To="10" Label="Source2" />
+                        <Edge From="8" To="9" Label="Source1" />
+                        <Edge From="8" To="12" Label="Source1" />
+                        <Edge From="9" To="10" Label="Source1" />
                         <Edge From="10" To="11" Label="Source1" />
-                        <Edge From="10" To="14" Label="Source1" />
-                        <Edge From="11" To="12" Label="Source1" />
                         <Edge From="12" To="13" Label="Source1" />
-                        <Edge From="14" To="15" Label="Source1" />
                       </Edges>
                     </Workflow>
                   </Expression>
@@ -6129,21 +6191,19 @@
                     <scr:Expression>it.Item2.Item2*Math.Pow(it.Item2.Item3/it.Item2.Item2, Math.Max(0, Math.Min(1, it.Item2.Item1 &lt;= 0 ? 0 : it.Item1 / it.Item2.Item1)))</scr:Expression>
                   </Expression>
                   <Expression xsi:type="rx:Condition">
-                    <Name>IsTrial1</Name>
+                    <Name>DriftStage?</Name>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">
-                          <Name>ShapingStage</Name>
+                          <Name>StageRow</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:Take">
                             <rx:Count>1</rx:Count>
                           </Combinator>
                         </Expression>
-                        <Expression xsi:type="Equal">
-                          <Operand xsi:type="IntProperty">
-                            <Value>1</Value>
-                          </Operand>
+                        <Expression xsi:type="scr:ExpressionTransform">
+                          <scr:Expression>it.FrequencyDrift</scr:Expression>
                         </Expression>
                         <Expression xsi:type="WorkflowOutput" />
                       </Nodes>
@@ -6306,21 +6366,19 @@
                     </Workflow>
                   </Expression>
                   <Expression xsi:type="rx:Condition">
-                    <Name>IsNotTrial1</Name>
+                    <Name>NoDriftStage?</Name>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">
-                          <Name>ShapingStage</Name>
+                          <Name>StageRow</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:Take">
                             <rx:Count>1</rx:Count>
                           </Combinator>
                         </Expression>
-                        <Expression xsi:type="NotEqual">
-                          <Operand xsi:type="IntProperty">
-                            <Value>1</Value>
-                          </Operand>
+                        <Expression xsi:type="scr:ExpressionTransform">
+                          <scr:Expression>!it.FrequencyDrift</scr:Expression>
                         </Expression>
                         <Expression xsi:type="WorkflowOutput" />
                       </Nodes>
@@ -6600,7 +6658,7 @@
                           </Builder>
                         </Expression>
                         <Expression xsi:type="SubscribeSubject">
-                          <Name>ShapingStage</Name>
+                          <Name>StageRow</Name>
                         </Expression>
                         <Expression xsi:type="SubscribeSubject">
                           <Name>BeepTimer</Name>
@@ -6624,11 +6682,11 @@
                           </Combinator>
                         </Expression>
                         <Expression xsi:type="rx:Condition">
-                          <Name>IsStage1or2</Name>
+                          <Name>ZoneEntryRewarded?</Name>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="SubscribeSubject">
-                                <Name>ShapingStage</Name>
+                                <Name>StageRow</Name>
                               </Expression>
                               <Expression xsi:type="WorkflowInput">
                                 <Name>Source1</Name>
@@ -6638,7 +6696,7 @@
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Name>IsStage1or2</scr:Name>
-                                <scr:Expression>((it &gt;= 1) &amp;&amp; (it &lt;= 2))</scr:Expression>
+                                <scr:Expression>!it.LickToReward</scr:Expression>
                               </Expression>
                               <Expression xsi:type="WorkflowOutput" />
                             </Nodes>
@@ -6704,11 +6762,11 @@
                           </Workflow>
                         </Expression>
                         <Expression xsi:type="rx:Condition">
-                          <Name>IsStage3</Name>
+                          <Name>LickRewarded?</Name>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="SubscribeSubject">
-                                <Name>ShapingStage</Name>
+                                <Name>StageRow</Name>
                               </Expression>
                               <Expression xsi:type="WorkflowInput">
                                 <Name>Source1</Name>
@@ -6716,10 +6774,8 @@
                               <Expression xsi:type="Combinator">
                                 <Combinator xsi:type="rx:Sample" />
                               </Expression>
-                              <Expression xsi:type="Equal">
-                                <Operand xsi:type="IntProperty">
-                                  <Value>3</Value>
-                                </Operand>
+                              <Expression xsi:type="scr:ExpressionTransform">
+                                <scr:Expression>it.LickToReward &amp;&amp; it.WrongLickLimit == 0</scr:Expression>
                               </Expression>
                               <Expression xsi:type="WorkflowOutput" />
                             </Nodes>
@@ -6795,11 +6851,11 @@
                           </Workflow>
                         </Expression>
                         <Expression xsi:type="rx:Condition">
-                          <Name>IsStage4or5or6</Name>
+                          <Name>LickWithLimit?</Name>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="SubscribeSubject">
-                                <Name>ShapingStage</Name>
+                                <Name>StageRow</Name>
                               </Expression>
                               <Expression xsi:type="WorkflowInput">
                                 <Name>Source1</Name>
@@ -6809,7 +6865,7 @@
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Name>Is4or5or6</scr:Name>
-                                <scr:Expression>((it &gt;= 4) &amp;&amp; (it &lt;= 6))</scr:Expression>
+                                <scr:Expression>it.LickToReward &amp;&amp; it.WrongLickLimit &gt; 0</scr:Expression>
                               </Expression>
                               <Expression xsi:type="WorkflowOutput" />
                             </Nodes>
@@ -6943,11 +6999,11 @@
                                 <Name>LickCount</Name>
                               </Expression>
                               <Expression xsi:type="SubscribeSubject">
-                                <Name>TaskParams</Name>
+                                <Name>StageRow</Name>
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Name>WrongLickLimit</scr:Name>
-                                <scr:Expression>it.ShapingStage == 4 ? Convert.ToDouble(it.Punishment.Stage4PunishedLick) : it.ShapingStage &gt;= 5 ? Convert.ToDouble(it.Punishment.Stage5PunishedLick) : Convert.ToDouble(1000)</scr:Expression>
+                                <scr:Expression>Convert.ToDouble(it.WrongLickLimit)</scr:Expression>
                               </Expression>
                               <Expression xsi:type="Combinator">
                                 <Combinator xsi:type="rx:WithLatestFrom" />
@@ -6969,7 +7025,7 @@
                               </Expression>
                               <Expression xsi:type="Disable">
                                 <Builder xsi:type="SubscribeSubject">
-                                  <Name>ShapingStage</Name>
+                                  <Name>StageRow</Name>
                                 </Builder>
                               </Expression>
                               <Expression xsi:type="Disable">
@@ -7020,7 +7076,7 @@
                         <Expression xsi:type="WorkflowOutput" />
                         <Expression xsi:type="Disable">
                           <Builder xsi:type="SubscribeSubject">
-                            <Name>ShapingStage</Name>
+                            <Name>StageRow</Name>
                           </Builder>
                         </Expression>
                         <Expression xsi:type="Disable">
@@ -7119,7 +7175,7 @@
                             <Workflow>
                               <Nodes>
                                 <Expression xsi:type="SubscribeSubject">
-                                  <Name>ShapingStage</Name>
+                                  <Name>StageRow</Name>
                                 </Expression>
                                 <Expression xsi:type="WorkflowInput">
                                   <Name>Source1</Name>
@@ -7203,7 +7259,7 @@
                             <Workflow>
                               <Nodes>
                                 <Expression xsi:type="SubscribeSubject">
-                                  <Name>ShapingStage</Name>
+                                  <Name>StageRow</Name>
                                 </Expression>
                                 <Expression xsi:type="WorkflowInput">
                                   <Name>Source1</Name>
@@ -7300,7 +7356,7 @@
                             <Workflow>
                               <Nodes>
                                 <Expression xsi:type="SubscribeSubject">
-                                  <Name>ShapingStage</Name>
+                                  <Name>StageRow</Name>
                                 </Expression>
                                 <Expression xsi:type="WorkflowInput">
                                   <Name>Source1</Name>
@@ -7456,7 +7512,7 @@
                                 </Expression>
                                 <Expression xsi:type="scr:ExpressionTransform">
                                   <scr:Name>WrongLickLimit</scr:Name>
-                                  <scr:Expression>it.ShapingStage == 4 ? Convert.ToDouble(it.Punishment.Stage4PunishedLick) : it.ShapingStage &gt;= 5 ? Convert.ToDouble(it.Punishment.Stage5PunishedLick) : Convert.ToDouble(1000)</scr:Expression>
+                                  <scr:Expression>Convert.ToDouble(it.WrongLickLimit)</scr:Expression>
                                 </Expression>
                                 <Expression xsi:type="Combinator">
                                   <Combinator xsi:type="rx:WithLatestFrom" />
@@ -7478,7 +7534,7 @@
                                 </Expression>
                                 <Expression xsi:type="Disable">
                                   <Builder xsi:type="SubscribeSubject">
-                                    <Name>ShapingStage</Name>
+                                    <Name>StageRow</Name>
                                   </Builder>
                                 </Expression>
                                 <Expression xsi:type="Disable">
@@ -7783,11 +7839,11 @@
                           <Combinator xsi:type="rx:SubscribeWhen" />
                         </Expression>
                         <Expression xsi:type="rx:Condition">
-                          <Name>IsNotStage1-3</Name>
+                          <Name>TimeLimit?</Name>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="SubscribeSubject">
-                                <Name>ShapingStage</Name>
+                                <Name>StageRow</Name>
                               </Expression>
                               <Expression xsi:type="WorkflowInput">
                                 <Name>Source1</Name>
@@ -7797,7 +7853,7 @@
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Name>IsNotStage1-3</scr:Name>
-                                <scr:Expression>(it &gt; 3)</scr:Expression>
+                                <scr:Expression>it.TimeLimit</scr:Expression>
                               </Expression>
                               <Expression xsi:type="WorkflowOutput" />
                             </Nodes>
@@ -7970,11 +8026,11 @@
                           <Combinator xsi:type="rx:CombineLatest" />
                         </Expression>
                         <Expression xsi:type="rx:Condition">
-                          <Name>IsNotStage1or2</Name>
+                          <Name>TrackEndEnds?</Name>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="SubscribeSubject">
-                                <Name>ShapingStage</Name>
+                                <Name>StageRow</Name>
                               </Expression>
                               <Expression xsi:type="WorkflowInput">
                                 <Name>Source1</Name>
@@ -7984,7 +8040,7 @@
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Name>IsNotStage1or2</scr:Name>
-                                <scr:Expression>(it &gt; 2)</scr:Expression>
+                                <scr:Expression>it.TrackEndEndsTrial</scr:Expression>
                               </Expression>
                               <Expression xsi:type="WorkflowOutput" />
                             </Nodes>
@@ -8401,7 +8457,7 @@
                                 <Name>DeliverRewardCommand</Name>
                               </Expression>
                               <Expression xsi:type="SubscribeSubject">
-                                <Name>TaskParams</Name>
+                                <Name>StageRow</Name>
                               </Expression>
                               <Expression xsi:type="MemberSelector">
                                 <Selector>RewardSizeUl</Selector>
@@ -8483,14 +8539,12 @@
                               <Expression xsi:type="SubscribeSubject">
                                 <Name>ErrorTone</Name>
                               </Expression>
-                              <Expression xsi:type="Combinator">
-                                <Combinator xsi:type="DoubleProperty">
-                                  <Value>32767</Value>
-                                </Combinator>
+                              <Expression xsi:type="SubscribeSubject">
+                                <Name>TaskParams</Name>
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
-                                <scr:Name>S16 to F32</scr:Name>
-                                <scr:Expression>1/it</scr:Expression>
+                                <scr:Name>ToneScale</scr:Name>
+                                <scr:Expression>it.Punishment.Sound.Enabled ? it.Punishment.Sound.Gain / 32767.0 : 0.0</scr:Expression>
                               </Expression>
                               <Expression xsi:type="PropertyMapping">
                                 <PropertyMappings>
@@ -8536,7 +8590,7 @@
                                 <Name>TaskParams</Name>
                               </Expression>
                               <Expression xsi:type="MemberSelector">
-                                <Selector>Punishment.TimeoutSec</Selector>
+                                <Selector>Punishment.TimeoutSeconds</Selector>
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Expression>TimeSpan.FromSeconds(it)</scr:Expression>
@@ -8592,7 +8646,7 @@
                           </Workflow>
                         </Expression>
                         <Expression xsi:type="SubscribeSubject">
-                          <Name>ShapingStage</Name>
+                          <Name>StageRow</Name>
                         </Expression>
                         <Expression xsi:type="rx:Condition">
                           <Name>OffTarget</Name>
@@ -8619,7 +8673,7 @@
                           </Combinator>
                         </Expression>
                         <Expression xsi:type="rx:Condition">
-                          <Name>IsStage4or5or6</Name>
+                          <Name>PunishWrongZone?</Name>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="WorkflowInput">
@@ -8627,7 +8681,7 @@
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Name>Is4or5or6</scr:Name>
-                                <scr:Expression>((it &gt;= 4) &amp;&amp; (it &lt;= 6))</scr:Expression>
+                                <scr:Expression>it.PunishWrongZone</scr:Expression>
                               </Expression>
                               <Expression xsi:type="WorkflowOutput" />
                             </Nodes>
@@ -8644,14 +8698,12 @@
                               <Expression xsi:type="SubscribeSubject">
                                 <Name>ErrorTone</Name>
                               </Expression>
-                              <Expression xsi:type="Combinator">
-                                <Combinator xsi:type="DoubleProperty">
-                                  <Value>32767</Value>
-                                </Combinator>
+                              <Expression xsi:type="SubscribeSubject">
+                                <Name>TaskParams</Name>
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
-                                <scr:Name>S16 to F32</scr:Name>
-                                <scr:Expression>1/it</scr:Expression>
+                                <scr:Name>ToneScale</scr:Name>
+                                <scr:Expression>it.Punishment.Sound.Enabled ? it.Punishment.Sound.Gain / 32767.0 : 0.0</scr:Expression>
                               </Expression>
                               <Expression xsi:type="PropertyMapping">
                                 <PropertyMappings>
@@ -8697,7 +8749,7 @@
                                 <Name>TaskParams</Name>
                               </Expression>
                               <Expression xsi:type="MemberSelector">
-                                <Selector>Punishment.TimeoutSec</Selector>
+                                <Selector>Punishment.TimeoutSeconds</Selector>
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Expression>TimeSpan.FromSeconds(it)</scr:Expression>
@@ -8753,7 +8805,7 @@
                           </Workflow>
                         </Expression>
                         <Expression xsi:type="rx:Condition">
-                          <Name>IsNotStage4or5or6?</Name>
+                          <Name>NoPunishWrongZone?</Name>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="WorkflowInput">
@@ -8761,7 +8813,7 @@
                               </Expression>
                               <Expression xsi:type="scr:ExpressionTransform">
                                 <scr:Name>IsNot4or5or6</scr:Name>
-                                <scr:Expression>(it &lt; 4)</scr:Expression>
+                                <scr:Expression>!it.PunishWrongZone</scr:Expression>
                               </Expression>
                               <Expression xsi:type="WorkflowOutput" />
                             </Nodes>
@@ -8915,21 +8967,19 @@
                     <scr:Expression>it.Item2.Item2*Math.Pow(it.Item2.Item3/it.Item2.Item2, Math.Max(0, Math.Min(1, it.Item2.Item1 &lt;= 0 ? 0 : it.Item1 / it.Item2.Item1)))</scr:Expression>
                   </Expression>
                   <Expression xsi:type="rx:Condition">
-                    <Name>IsTrial1</Name>
+                    <Name>DriftStage?</Name>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">
-                          <Name>ShapingStage</Name>
+                          <Name>StageRow</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:Take">
                             <rx:Count>1</rx:Count>
                           </Combinator>
                         </Expression>
-                        <Expression xsi:type="Equal">
-                          <Operand xsi:type="IntProperty">
-                            <Value>1</Value>
-                          </Operand>
+                        <Expression xsi:type="scr:ExpressionTransform">
+                          <scr:Expression>it.FrequencyDrift</scr:Expression>
                         </Expression>
                         <Expression xsi:type="WorkflowOutput" />
                       </Nodes>
@@ -9083,21 +9133,19 @@
                     </Workflow>
                   </Expression>
                   <Expression xsi:type="rx:Condition">
-                    <Name>IsNotTrial1</Name>
+                    <Name>NoDriftStage?</Name>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">
-                          <Name>ShapingStage</Name>
+                          <Name>StageRow</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:Take">
                             <rx:Count>1</rx:Count>
                           </Combinator>
                         </Expression>
-                        <Expression xsi:type="NotEqual">
-                          <Operand xsi:type="IntProperty">
-                            <Value>1</Value>
-                          </Operand>
+                        <Expression xsi:type="scr:ExpressionTransform">
+                          <scr:Expression>!it.FrequencyDrift</scr:Expression>
                         </Expression>
                         <Expression xsi:type="WorkflowOutput" />
                       </Nodes>
@@ -9837,7 +9885,7 @@
               <Combinator xsi:type="rx:WithLatestFrom" />
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>ShapingStage</Name>
+              <Name>StageRow</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -9862,12 +9910,6 @@
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>TrialDistance</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:WithLatestFrom" />
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>LickCount</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -9915,12 +9957,6 @@
               <Combinator xsi:type="rx:WithLatestFrom" />
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>TrialStartWheelDistance</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:WithLatestFrom" />
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
               <Name>CueOnsetHarp</Name>
             </Expression>
             <Expression xsi:type="Combinator">
@@ -9958,7 +9994,7 @@
             </Expression>
             <Expression xsi:type="scr:ExpressionTransform">
               <scr:Name>BuildTrialRow</scr:Name>
-              <scr:Expression>new(Convert.ToInt32(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trialNumber, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.ToString() == &quot;AV&quot; ? &quot;audiovisual&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.ToString() == &quot;V&quot; ? &quot;visual&quot; : &quot;auditory&quot;) as trialType, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;Correct&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 || it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 || it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 &lt;= 2 ? &quot;NoResponse&quot; : &quot;Incorrect&quot;) as outcome, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;EndOfTrack&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;Timeout&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 &lt;= 2 ? &quot;FreqReached&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;CorrectLick&quot; : &quot;WrongLickLimit&quot;) as endReason, it.Item1.Item1.Item1.Item2 as punishSound, (it.Item1.Item1.Item1.Item2 ? Convert.ToDouble(it.Item1.Item1.Item2.Punishment.TimeoutSec) : 0.0) as punishTimeoutSeconds, Convert.ToInt32(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as lickCount, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trackLengthCm, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as endPositionCm, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as audioEndFrequencyHz, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as visualEndSpatialFrequencyCpd, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as truncationFraction, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as itiStartTime, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.TotalSeconds as itiSeconds, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as trialStartTime, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trialStartWheelCm, it.Item1.Item1.Item1.Item1.Item1.Item2 as stimulusOnsetTime, it.Item1.Item1.Item1.Item1.Item2 as outcomeTime, it.Item1.Item1.Item2.RewardSizeUl as rewardSizeUl, it.Item1.Item2.OptogeneticCondition as optoCondition)</scr:Expression>
+              <scr:Expression>new(Convert.ToInt32(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trialNumber, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.ToString().ToLower() as trialType, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;Correct&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 || it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 || !it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.LickToReward ? &quot;NoResponse&quot; : &quot;Incorrect&quot;) as outcome, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;EndOfTrack&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;Timeout&quot; : !it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.LickToReward ? &quot;FreqReached&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;CorrectLick&quot; : &quot;WrongLickLimit&quot;) as endReason, it.Item1.Item1.Item1.Item2 &amp;&amp; it.Item1.Item1.Item2.Punishment.Sound.Enabled as punishSound, (it.Item1.Item1.Item1.Item2 ? it.Item1.Item1.Item2.Punishment.TimeoutSeconds : 0.0) as punishTimeoutSeconds, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trackLengthCm, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as endPositionCm, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as audioEndFrequencyHz, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as visualEndSpatialFrequencyCpd, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as truncationFraction, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as itiStartTime, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.TotalSeconds as itiSeconds, it.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as trialStartTime, it.Item1.Item1.Item1.Item1.Item1.Item2 as stimulusOnsetTime, it.Item1.Item1.Item1.Item1.Item2 as outcomeTime, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.RewardSizeUl as rewardSizeUl, it.Item1.Item2.OptogeneticCondition as optoCondition)</scr:Expression>
             </Expression>
             <Expression xsi:type="MemberSelector">
               <Selector>Item2</Selector>
@@ -9989,7 +10025,6 @@
             <Edge From="12" To="13" Label="Source2" />
             <Edge From="13" To="15" Label="Source1" />
             <Edge From="14" To="15" Label="Source2" />
-            <Edge From="15" To="17" Label="Source1" />
             <Edge From="16" To="17" Label="Source2" />
             <Edge From="17" To="19" Label="Source1" />
             <Edge From="18" To="19" Label="Source2" />
@@ -10003,7 +10038,6 @@
             <Edge From="26" To="27" Label="Source2" />
             <Edge From="27" To="29" Label="Source1" />
             <Edge From="28" To="29" Label="Source2" />
-            <Edge From="29" To="31" Label="Source1" />
             <Edge From="30" To="31" Label="Source2" />
             <Edge From="31" To="33" Label="Source1" />
             <Edge From="32" To="33" Label="Source2" />
@@ -10015,16 +10049,14 @@
             <Edge From="38" To="39" Label="Source2" />
             <Edge From="39" To="41" Label="Source1" />
             <Edge From="40" To="41" Label="Source2" />
+            <Edge From="41" To="42" Label="Source1" />
             <Edge From="41" To="43" Label="Source1" />
-            <Edge From="42" To="43" Label="Source2" />
-            <Edge From="43" To="45" Label="Source1" />
-            <Edge From="44" To="45" Label="Source2" />
+            <Edge From="42" To="44" Label="Source1" />
+            <Edge From="43" To="44" Label="Source2" />
+            <Edge From="44" To="45" Label="Source1" />
             <Edge From="45" To="46" Label="Source1" />
-            <Edge From="45" To="47" Label="Source1" />
-            <Edge From="46" To="48" Label="Source1" />
-            <Edge From="47" To="48" Label="Source2" />
-            <Edge From="48" To="49" Label="Source1" />
-            <Edge From="49" To="50" Label="Source1" />
+            <Edge From="29" To="31" Label="Source1" />
+            <Edge From="15" To="17" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -10429,6 +10461,30 @@
                     <Name>Settings_Experiment</Name>
                     <Extension>json</Extension>
                   </Expression>
+                  <Expression xsi:type="SubscribeSubject">
+                    <Name>TaskRandom</Name>
+                  </Expression>
+                  <Expression xsi:type="MemberSelector">
+                    <Name>RngSeed</Name>
+                    <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once.</Description>
+                    <Selector>Seed</Selector>
+                  </Expression>
+                  <Expression xsi:type="Combinator">
+                    <Combinator xsi:type="rx:Take">
+                      <rx:Count>1</rx:Count>
+                    </Combinator>
+                  </Expression>
+                  <Expression xsi:type="Combinator">
+                    <Combinator xsi:type="orl:CreateAsyncEvent">
+                      <orl:Event>RngSeed</orl:Event>
+                    </Combinator>
+                  </Expression>
+                  <Expression xsi:type="IncludeWorkflow" Path="Bonsai.Harp:WithLatestTimestamp.bonsai">
+                    <Name>Timestamp</Name>
+                  </Expression>
+                  <Expression xsi:type="MulticastSubject">
+                    <Name>AsyncEvents</Name>
+                  </Expression>
                 </Nodes>
                 <Edges>
                   <Edge From="4" To="5" Label="Source1" />
@@ -10443,6 +10499,11 @@
                   <Edge From="18" To="19" Label="Source1" />
                   <Edge From="20" To="21" Label="Source1" />
                   <Edge From="21" To="22" Label="Source1" />
+                  <Edge From="23" To="24" Label="Source1" />
+                  <Edge From="24" To="25" Label="Source1" />
+                  <Edge From="25" To="26" Label="Source1" />
+                  <Edge From="26" To="27" Label="Source1" />
+                  <Edge From="27" To="28" Label="Source1" />
                 </Edges>
               </Workflow>
             </Expression>

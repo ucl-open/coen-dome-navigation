@@ -1,11 +1,13 @@
-"""The shaping stage to suggest for a mouse's next experiment, from its earlier ones of the same
+"""The training stage to suggest for a mouse's next experiment, from its earlier ones of the same
 modality: Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
 unchanged, reading both this workflow's BonsaiData_Trial and the old workflow's TrialLog files.
 
-rig-control asks for it when a mouse and modality are chosen and fills the task's shapingStage with
-it; the experimenter can change it before Go. As a command:
+Stages are the task file's trainingStages rows, from 0 (Pip, 9 Nov 2026: as av-dome's): Tom's stages 1
+to 6 are 0 to 5, and his old logs are read one lower. rig-control asks for it when a mouse and modality
+are chosen and fills the TrainingStage setting with it; the experimenter can change it before Go. As a
+command:
 
-    uv run suggest-stage --subject TC003 --modality A [--root DIR ...] [--legacy-root DIR ...]
+    uv run suggest-stage --subject TC003 --modality auditory [--root DIR ...] [--legacy-root DIR ...]
 
 prints one JSON line, {"value": 3, "why": "..."}: the contract of rig-control's [task.suggest]. If
 a share among the roots does not answer, or an experiment there has only its manifest left (its data
@@ -13,10 +15,10 @@ ingested elsewhere), value is null and why names it: no stage is guessed, since 
 may be only there (rig-sync deletes a rig's copy after 72 h).
 
 The rules: the latest experiment of the modality with trials decides. Under 50 trials keeps its stage.
-Stage 2 advances only after two experiments in a row each with at least 50 rewarded trials, and falls
-back to 1 under 50% rewarded. Stages 3 and 4 also advance on 70% over the first 100 or 150 trials
-(mice stop licking late on). Otherwise 70% over the experiment advances, below keeps. Stage 5 never
-advances on its own; 6 is only chosen by hand and then kept.
+Stage 1 advances only after two experiments in a row each with at least 50 rewarded trials, and falls
+back to 0 under 50% rewarded. Stages 2 and 3 also advance on 70% over the first 100 or 150 trials
+(mice stop licking late on). Otherwise 70% over the experiment advances, below keeps. Stage 4 never
+advances on its own; 5 is only chosen by hand and then kept.
 """
 
 import argparse
@@ -26,12 +28,14 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-MAX_SHAPING_STAGE = 6
-MAX_AUTO_STAGE = 5
+MAX_STAGE = 5
+MAX_AUTO_STAGE = 4
 MIN_TRIALS = 50
 ADVANCE_RATE = 0.7
-STAGE2_REWARDED = 50
-STAGE2_REGRESS_RATE = 0.5
+TWO_IN_A_ROW_STAGE = 1  # Tom's stage 2
+TWO_IN_A_ROW_REWARDED = 50
+REGRESS_RATE = 0.5
+EARLY_ADVANCE_FROM = 2  # Tom's stage 3: stages 2 and 3 also advance on their first 100 or 150 trials
 
 # This workflow's experiments: on the rig until rig-sync copies them, then in the server's staging.
 ROOTS = [Path(r"C:\Coen-Lab-Local\Acquired-Data"), Path(r"\\128.40.51.157\rigs\staging")]
@@ -68,34 +72,31 @@ def _read(csv_file: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-# The trial log's trialType (the modality shown, in words, as av-dome's trialType), as the task file's code.
-MODALITY_CODES = {"auditory": "A", "visual": "V", "audiovisual": "AV"}
+# Tom Childs' TrialLog wrote the modality as a code; the trial log and the task file now say it in words.
+LEGACY_MODALITY = {"A": "auditory", "V": "visual", "AV": "audiovisual"}
 
 
 def read_new(folder: Path) -> Experiment | None:
-    """An experiment of this workflow: BonsaiData\\BonsaiData_Trial_*.csv (outcome Correct is rewarded),
-    its stage from Settings\\Settings_Task_*.json (fixed for the experiment, so not a trial column)."""
+    """An experiment of this workflow: BonsaiData\\BonsaiData_Trial_*.csv (trialType the modality, outcome Correct
+    is rewarded), its stage the TrainingStage setting in Settings\\Settings_Experiment_*.json (fixed for the
+    experiment, so not a trial column)."""
     logs = sorted(folder.glob("BonsaiData/BonsaiData_Trial*.csv"))
     if not logs:
         return None
     rows = [r for log in logs for r in _read(log)]
     if not rows or "trialType" not in rows[0]:
         return None
-    task = sorted(folder.glob("Settings/Settings_Task*.json"))
-    if not task:
-        raise FileNotFoundError(f"{folder} has trials but no Settings\\Settings_Task_*.json")
-    stage = int(json.loads(task[-1].read_text(encoding="utf-8-sig"))["taskParameters"]["shapingStage"])
-    return Experiment(
-        folder.name,
-        _when(folder.name),
-        [MODALITY_CODES[r["trialType"]] for r in rows],
-        [stage] * len(rows),
-        [r["outcome"] == "Correct" for r in rows],
-    )
+    settings = sorted(folder.glob("Settings/Settings_Experiment*.json"))
+    if not settings:
+        raise FileNotFoundError(f"{folder} has trials but no Settings\\Settings_Experiment_*.json")
+    stage = int(float(json.loads(settings[-1].read_text(encoding="utf-8-sig"))["parameters"]["TrainingStage"]))
+    return Experiment(folder.name, _when(folder.name), [r["trialType"] for r in rows], [stage] * len(rows),
+                      [r["outcome"] == "Correct" for r in rows])
 
 
 def read_legacy(folder: Path) -> Experiment | None:
-    """An experiment of the old workflow: its latest TrialLog_*.csv (columns Modality, ShapingStage, WasRewarded)."""
+    """An experiment of the old workflow: its latest TrialLog_*.csv (columns Modality, ShapingStage, WasRewarded),
+    the modality in words and the stage one lower (Tom's 1 to 6 are 0 to 5)."""
     logs = list(folder.glob("**/TrialLog_*.csv"))
     if not logs:
         return None
@@ -105,8 +106,8 @@ def read_legacy(folder: Path) -> Experiment | None:
     return Experiment(
         folder.name,
         _when(folder.name),
-        [r["Modality"] for r in rows],
-        [int(r["ShapingStage"]) for r in rows],
+        [LEGACY_MODALITY[r["Modality"]] for r in rows],
+        [int(r["ShapingStage"]) - 1 for r in rows],
         [_bool(r["WasRewarded"]) for r in rows],
     )
 
@@ -179,7 +180,7 @@ def suggest(history: list[Experiment], modality: str) -> tuple[int, str]:
     """(stage, why) for the next experiment of this modality, from the mouse's experiments newest first."""
     same = [e for e in history if e.rewarded and e.modality[-1] == modality]
     if not same:
-        return 1, f"No Earlier {modality} Experiment With Trials: Stage 1"
+        return 0, f"No Earlier {modality.title()} Experiment With Trials: Stage 0"
     last = same[0]
     stage = last.stage[-1]
     # Trials of the experiment's last stage only (a stage changed mid-experiment uses the last)
@@ -190,14 +191,15 @@ def suggest(history: list[Experiment], modality: str) -> tuple[int, str]:
     where = f"{last.name}: {total} trials, {rate:.0%} rewarded at stage {stage}"
     if total < MIN_TRIALS:
         return stage, f"Under {MIN_TRIALS} Trials ({where}): Stage {stage} Again"
-    if stage == 2:
-        before = [r for r, s in zip(same[1].rewarded, same[1].stage) if s == 2] if len(same) > 1 else []
-        if sum(rewarded) >= STAGE2_REWARDED and sum(before) >= STAGE2_REWARDED:
-            return 3, f"{STAGE2_REWARDED}+ Rewarded in Two Experiments in a Row ({where}): Stage 3"
-        if rate < STAGE2_REGRESS_RATE:
-            return 1, f"Under {STAGE2_REGRESS_RATE:.0%} Rewarded ({where}): Back to Stage 1"
-        return 2, f"Stage 2 Needs {STAGE2_REWARDED}+ Rewarded in Two Experiments in a Row ({where}, before {sum(before)}): Stage 2 Again"
-    if 3 <= stage < MAX_AUTO_STAGE:
+    if stage == TWO_IN_A_ROW_STAGE:
+        s2, n = TWO_IN_A_ROW_STAGE, TWO_IN_A_ROW_REWARDED
+        before = [r for r, s in zip(same[1].rewarded, same[1].stage) if s == s2] if len(same) > 1 else []
+        if sum(rewarded) >= n and sum(before) >= n:
+            return s2 + 1, f"{n}+ Rewarded in Two Experiments in a Row ({where}): Stage {s2 + 1}"
+        if rate < REGRESS_RATE:
+            return s2 - 1, f"Under {REGRESS_RATE:.0%} Rewarded ({where}): Back to Stage {s2 - 1}"
+        return s2, f"Stage {s2} Needs {n}+ Rewarded in Two Experiments in a Row ({where}, before {sum(before)}): Stage {s2} Again"
+    if EARLY_ADVANCE_FROM <= stage < MAX_AUTO_STAGE:
         for n in (100, 150):
             early = rewarded[:n]
             if _rate(early) >= ADVANCE_RATE:
@@ -213,7 +215,7 @@ def main() -> None:
     """Print the suggestion for --subject and --modality as one JSON line."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--subject", required=True)
-    parser.add_argument("--modality", required=True, choices=["A", "V", "AV"])
+    parser.add_argument("--modality", required=True, choices=["auditory", "visual", "audiovisual"])
     parser.add_argument("--root", action="append", type=Path, help="where this workflow's experiments are (repeatable)")
     parser.add_argument("--legacy-root", action="append", type=Path, help="where the old workflow's Logs are (repeatable)")
     args = parser.parse_args()

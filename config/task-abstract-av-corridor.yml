@@ -1,46 +1,42 @@
 # yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_dome_navigation_task.json
-# The task file: rig-control copies it at Go with the form's edits (Modality and Shaping Stage on
-# the form; the stage is suggested from the mouse's earlier experiments) and the workflow reads the
-# copy (TaskPath). From the editor, the workflow reads this file as it is.
+# The task file: rig-control copies it at Go with the form's edits (Modality on the form; the
+# stage is the Training Stage setting, suggested from the mouse's earlier experiments) and the
+# workflow reads the copy (TaskPath). From the editor, the workflow reads this file as it is.
 #
-# Not every rule is in the schema: tests\test_task_file.py checks this file against the pydantic
-# model (src\ucl_open_coen_dome_navigation\task.py), which also says what each field does.
+# Laid out as av-dome's (Pip, 9 Nov 2026): each trainingStages row says what its stage does; Tom
+# Childs' stages 1 to 6 are rows 0 to 5. Not every rule is in the schema: tests\test_task_file.py
+# checks this file against the pydantic model (src\ucl_open_coen_dome_navigation\task.py), which
+# also says what each field does.
 version: 0.0.0-rc1
 name: UclOpenCoenDomeNavigation
 taskParameters:
-  modality: A                 # A (auditory), V (visual) or AV
-  shapingStage: 1             # 1-6; 6 is stage 5 with truncated trials, only ever chosen by hand
+  modality: auditory          # auditory (the tone sweep), visual (the grating) or audiovisual
+  rngSeed: null               # null = rig-control draws one at Go; each seed used is a RngSeed event in BonsaiData_Async
   # The sweep and its loudness. src\waveforms is made for these four: change them only together
   # with `uv run generate-waveforms` and a commit, or the workflow stops at Go.
   startFreq: 2000             # Hz
   endFreq: 25000              # Hz
   nFreqBins: 100
   amplitude: 0.05             # a tone pip peaks at amplitude squared
-  centerFreq: 18000           # Hz, the middle of every reward window
-  rewardWindowSize: 6000      # Hz
-  # The reward zone per stage, as task.py derives it from centerFreq, rewardWindowSize and endFreq
-  # (the workflow does not derive it): change them together, and tests\test_task_file.py checks.
-  thresholdFrequencies:
-    stage1: { floor: 18000, ceiling: 25000 }   # rewarded on reaching the zone, no lick needed
-    stage2: { floor: 18000, ceiling: 25000 }
-    stage3: { floor: 15248, ceiling: 25000 }   # a lick anywhere above the floor
-    stage4: { floor: 15248, ceiling: 21248 }   # the ceiling comes in; wrong licks punished
-    stage5: { floor: 15248, ceiling: 21248 }   # stage 6 uses stage 5's
-  rewardSizeUl: 2.0           # ul per reward on the left spout
+  backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
+  quantizeBinSize: 1          # cm: the distance run is rounded to this before it sets the frequency
   # The wheel diameter distances are worked out at; null takes rig.yml's (170 mm on every corridor
   # rig). 75 is what Tom's workflow used, so tracks take the wheel turns the mice trained on.
   wheelDiameterMm: 75.0
+  trialStructure:
+    itiMin: 0.0               # s; Tom's workflow drew 0 or 1 s, now evenly between (Pip, 9 Nov 2026)
+    itiMax: 1.0               # s
+    quiescentSeconds: 1.0     # s without licks before the next trial, on stages with quiescent
+    closedLoopDuration: 12.0  # s, the time limit on stages with timeLimit
+    trackLengthsCm: [80, 100, 120]   # one drawn per trial, times the stage's trackLengthScale
   punishment:
-    timeoutSec: 2
-    stage4PunishedLick: 8
-    stage5PunishedLick: 5
-  truncation:                 # stage 6 only
-    fraction: 0.16
+    timeoutSeconds: 2.0       # s after a punished trial
+    sound:                    # the error tone, on a punished trial
+      enabled: true
+      path: waveforms\error_tone.wav
+      gain: 1.0
+  truncation:                 # on a stage's truncated trials
     points: [0.4, 0.6]
-  engagement:                 # unused: Tom's report of engaged trials, never the stage rule
-    rollWindow: 25
-    rollThreshold: 0.5
-    minEpoch: 10
   optogenetics:               # av-dome's block; the laser lasts the trial (stopped at the outcome)
     enabled: false
     zapitConfigPath: ''       # the Zapit stimulus config loaded in Zapit
@@ -50,5 +46,84 @@ taskParameters:
     excludeRepeats: true      # av-dome's; this task has no repeat trials
     pseudorandomSelection: true
     warmupTrials: 0
-  backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
-  quantizeBinSize: 1          # Hz
+  # Rows by the Training Stage setting (a setting past the end uses the last row). The reward zones are
+  # Tom's: centred on 18 kHz in log space, a 6 kHz window from stage 2 (task.py's old derivation).
+  trainingStages:
+    - label: Stage 0 (Tom's 1)   # rewarded on reaching the zone, no lick; short tracks; the frequency drifts too
+      rewardFloorHz: 18000
+      rewardCeilingHz: 25000
+      rewardSizeUl: 2.0
+      lickToReward: false
+      wrongLickLimit: 0
+      punishWrongZone: false
+      quiescent: false
+      timeLimit: false
+      trackEndEndsTrial: false
+      trackLengthScale: 0.125
+      frequencyDrift: true
+      truncationFraction: 0.0
+    - label: Stage 1 (Tom's 2)   # as stage 0, no drift
+      rewardFloorHz: 18000
+      rewardCeilingHz: 25000
+      rewardSizeUl: 2.0
+      lickToReward: false
+      wrongLickLimit: 0
+      punishWrongZone: false
+      quiescent: false
+      timeLimit: false
+      trackEndEndsTrial: false
+      trackLengthScale: 0.125
+      frequencyDrift: false
+      truncationFraction: 0.0
+    - label: Stage 2 (Tom's 3)   # a lick anywhere above the floor; full tracks; the end of the track ends the trial
+      rewardFloorHz: 15248
+      rewardCeilingHz: 25000
+      rewardSizeUl: 2.0
+      lickToReward: true
+      wrongLickLimit: 0
+      punishWrongZone: false
+      quiescent: false
+      timeLimit: false
+      trackEndEndsTrial: true
+      trackLengthScale: 1.0
+      frequencyDrift: false
+      truncationFraction: 0.0
+    - label: Stage 3 (Tom's 4)   # the ceiling comes in; wrong licks and slowness punished
+      rewardFloorHz: 15248
+      rewardCeilingHz: 21248
+      rewardSizeUl: 2.0
+      lickToReward: true
+      wrongLickLimit: 8
+      punishWrongZone: true
+      quiescent: true
+      timeLimit: true
+      trackEndEndsTrial: true
+      trackLengthScale: 1.0
+      frequencyDrift: false
+      truncationFraction: 0.0
+    - label: Stage 4 (Tom's 5)   # fewer wrong licks allowed
+      rewardFloorHz: 15248
+      rewardCeilingHz: 21248
+      rewardSizeUl: 2.0
+      lickToReward: true
+      wrongLickLimit: 5
+      punishWrongZone: true
+      quiescent: true
+      timeLimit: true
+      trackEndEndsTrial: true
+      trackLengthScale: 1.0
+      frequencyDrift: false
+      truncationFraction: 0.0
+    - label: Stage 5 (Tom's 6)   # stage 4 with 16% truncated trials; only ever chosen by hand
+      rewardFloorHz: 15248
+      rewardCeilingHz: 21248
+      rewardSizeUl: 2.0
+      lickToReward: true
+      wrongLickLimit: 5
+      punishWrongZone: true
+      quiescent: true
+      timeLimit: true
+      trackEndEndsTrial: true
+      trackLengthScale: 1.0
+      frequencyDrift: false
+      truncationFraction: 0.16

@@ -1,6 +1,6 @@
 # coen-dome-navigation
 
-Tom Childs' auditory (and visual) VR corridor task on the lab's open-rigs platform, run from rig-control. A head-fixed mouse runs on a wheel through a virtual track while a tone sweeps up in frequency (and a grating's spatial frequency changes) with its position; it licks in the reward zone for a reward. Shaping stages 1 to 6 are as before (see `src\ucl_open_coen_dome_navigation\task.py`).
+Tom Childs' auditory (and visual) VR corridor task on the lab's open-rigs platform, run from rig-control. A head-fixed mouse runs on a wheel through a virtual track while a tone sweeps up in frequency (and a grating's spatial frequency changes) with its position; it licks in the reward zone for a reward. The stage is the Training Stage setting, a row of the task file's `trainingStages` from 0: Tom's shaping stages 1 to 6 are rows 0 to 5, each saying what its stage does (see `src\ucl_open_coen_dome_navigation\task.py`).
 
 Converted on 9 Nov 2026 from `ucl-open/auditory-vr-corridor` (`main` b67a1f6 with `zapit-integration` 1782543), which stays as it is: Tom's original, read only. The rig, control, commands and logging are av-dome's `pip/main-switchover` (6c5a885), which runs the same domes and BLUE-OPTO rigs; the task is Tom's, its groups kept as they were.
 

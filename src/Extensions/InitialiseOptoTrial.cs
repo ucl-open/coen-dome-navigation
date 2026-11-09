@@ -20,7 +20,7 @@ public class InitialiseOptoTrial
         Seed = -1;
     }
 
-    [Description("Seed for the stimulation draws. Set to -1 for a random seed (recommended). The draw for every trial is in BonsaiData_Trial (optoCondition, 0 when not stimulated), so an experiment can be reconstructed either way.")]
+    [Description("Seed for the stimulation draws. -1 (the default) seeds them from the task's rngSeed, or randomly when it is null. The draw for every trial is in BonsaiData_Trial (optoCondition, 0 when not stimulated), so an experiment can be reconstructed either way.")]
     public int Seed { get; set; }
 
     // Instance state, as in av-dome's InitialiseTrial: this operator sits inside TaskLogic's per-trial Defer, which calls Process again on every trial,
@@ -42,7 +42,11 @@ public class InitialiseOptoTrial
 
             if (trialNumber == 1 || rand == null)
             {
-                rand = Seed != -1 ? new Random(Seed) : new Random(Guid.NewGuid().GetHashCode());
+                // Seed, else the task's rngSeed (one on from TaskRandom's, so the stimulation draws are not
+                // the trial draws over again; Pip, 9 Nov 2026), else a random one.
+                rand = Seed != -1 ? new Random(Seed)
+                    : input.Item2.RngSeed.HasValue ? new Random(unchecked((int)input.Item2.RngSeed.Value + 1))
+                    : new Random(Guid.NewGuid().GetHashCode());
                 conditionQueue.Clear();
                 configLoaded = false;
             }

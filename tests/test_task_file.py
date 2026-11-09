@@ -8,7 +8,8 @@ import yaml
 from scipy.io import wavfile
 
 from ucl_open_coen_dome_navigation import waveforms
-from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic, UclOpenCoenDomeNavigationTaskParameters
+from ucl_open_coen_dome_navigation.helpers import calc_log_window
+from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic
 
 ROOT = Path(__file__).parent.parent
 TASK = ROOT / "config" / "task-abstract-av-corridor.yml"
@@ -23,12 +24,22 @@ def test_the_task_file_validates():
     UclOpenCoenDomeNavigationTaskLogic.model_validate(task())
 
 
-def test_the_task_file_s_reward_zones_are_the_ones_the_model_derives():
-    # The workflow reads thresholdFrequencies as written; rig-control does not run the model.
-    params = task()["taskParameters"]
-    written = params.pop("thresholdFrequencies")
-    derived = UclOpenCoenDomeNavigationTaskParameters.model_validate(params).threshold_frequencies
-    assert written == derived.model_dump(by_alias=True)
+def test_the_stage_rows_keep_tom_s_reward_zones():
+    # Tom Childs' zones: from 18 kHz to the sweep's end at his stages 1-2, then a window centred on 18 kHz in
+    # log space (6 kHz wide), its floor from stage 3 and its ceiling from stage 4 (rows 0-5 are his 1-6).
+    floor, ceiling = calc_log_window(center_freq=18000, window_size=6000)
+    rows = task()["taskParameters"]["trainingStages"]
+    assert len(rows) == 6
+    zones = [(r["rewardFloorHz"], r["rewardCeilingHz"]) for r in rows]
+    assert zones == [(18000, 25000)] * 2 + [(floor, 25000)] + [(floor, ceiling)] * 3
+
+
+def test_the_shared_blocks_have_av_dome_s_names():
+    # Pip, 9 Nov 2026: the lab's tasks name the same things the same way.
+    p = task()["taskParameters"]
+    assert {"itiMin", "itiMax", "closedLoopDuration"} <= set(p["trialStructure"])
+    assert list(p["punishment"]) == ["timeoutSeconds", "sound"] and {"enabled", "path", "gain"} <= set(p["punishment"]["sound"])
+    assert "rngSeed" in p and "rewardSizeUl" in p["trainingStages"][0]
 
 
 def test_the_committed_waveforms_are_the_task_file_s():
