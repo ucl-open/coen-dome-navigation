@@ -97,3 +97,12 @@ def test_no_async_event_sender_completes_async_events():
                       and nodes[a].find(W + "Combinator").get(XSI) in ("rx:Take", "rx:TakeLast", "rx:First", "rx:Last")]
             assert not finite, f"an AsyncEvents sender completes after {finite}"
     assert senders == 3  # RngSeed, RewardDelivered, Control
+
+
+def test_stimulus_state_reaches_disk_row_by_row():
+    # Buffered, it reached disk in 4 KB blocks: the manifest's end-of-run write, before this writer
+    # closes, recorded a size short of the file (test-1802 and test-1813, 9 Nov 2026).
+    log = next(e for e in group("StimulusLogger").iter(W + "Expression")
+               if e.get(XSI) == "IncludeWorkflow" and e.get("Path") == "OpenRigs.Logging:LogData.bonsai")
+    assert log.findtext(W + "LogName") == "StimulusState"
+    assert log.findtext(W + "AutoFlush") == "true"

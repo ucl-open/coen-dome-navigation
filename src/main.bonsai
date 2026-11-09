@@ -9572,7 +9572,7 @@
                   <Expression xsi:type="WorkflowOutput" />
                   <Expression xsi:type="GroupWorkflow">
                     <Name>StimulusLogger</Name>
-                    <Description>Writes StimulusState\StimulusState_&lt;time&gt;.csv (OpenRigs.Logging LogData): one row per beep while the trial is active, stamped with the Harp time of the beep, built by LogStimulus. Here rather than in Logging because StimulusLogRow is declared inside this group, as in Tom Childs' workflow (a logger in Logging cannot subscribe to a subject declared in TaskLogic: Bonsai reports a circular definition). Not part of the repeating trial chain, so it writes one file per experiment, created with its first row.</Description>
+                    <Description>Writes StimulusState\StimulusState_&lt;time&gt;.csv (OpenRigs.Logging LogData): one row per beep while the trial is active, stamped with the Harp time of the beep, built by LogStimulus. Here rather than in Logging because StimulusLogRow is declared inside this group, as in Tom Childs' workflow (a logger in Logging cannot subscribe to a subject declared in TaskLogic: Bonsai reports a circular definition). Not part of the repeating trial chain, so it writes one file per experiment, created with its first row. AutoFlush writes each row to disk as it comes (about 20 a second, which LogData's AutoFlush is for): without it the file reached disk in 4 KB blocks, so the manifest's end-of-run write, which comes before this writer closes, recorded a size that stopped at the last full block (test-1802 and test-1813, 9 Nov 2026), and a Bonsai ended by force would lose up to 4 KB of beeps.</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">
@@ -9593,6 +9593,7 @@
                         <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogData.bonsai">
                           <LogName>StimulusState</LogName>
                           <Selector />
+                          <AutoFlush>true</AutoFlush>
                           <Extension>csv</Extension>
                         </Expression>
                       </Nodes>
