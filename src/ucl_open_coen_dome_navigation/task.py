@@ -68,17 +68,17 @@ class Truncation(BaseSchema):
     zone without the stimulus.
     """
 
-    points: List[float] = Field(
+    sweep_fractions: List[float] = Field(
         default=[0.4, 0.6],
         min_length=1,
         description="Where the stimulus switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
     )
 
-    @field_validator("points")
+    @field_validator("sweep_fractions")
     @classmethod
-    def _points_inside(cls, value: List[float]) -> List[float]:
-        if any(not 0 < point < 1 for point in value):
-            raise ValueError("Truncation points must be between 0 and 1")
+    def _fractions_inside(cls, value: List[float]) -> List[float]:
+        if any(not 0 < fraction < 1 for fraction in value):
+            raise ValueError("Truncation sweep fractions must be between 0 and 1")
         return value
 
 
@@ -190,7 +190,7 @@ class TrainingStage(BaseSchema):
     track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
     track_length_scale: float = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
-    truncation_fraction: float = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.points)")
+    truncation_fraction: float = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")
 
     @model_validator(mode="after")
     def _zone_ordered(self) -> "TrainingStage":

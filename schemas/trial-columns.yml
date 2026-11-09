@@ -71,7 +71,7 @@ visualEndSpatialFrequencyCpd:
 truncationFraction:
   type: double
   formerly: [TruncationPoint]
-  description: Where the stimulus switched off, as a fraction of the sweep (one of truncation.points, on the stage's truncationFraction of trials); 1 on an untruncated trial.
+  description: Where the stimulus switched off, as a fraction of the sweep (one of truncation.sweepFractions, on the stage's truncationFraction of trials); 1 on an untruncated trial.
 itiStartTime:
   type: double
   unit: s

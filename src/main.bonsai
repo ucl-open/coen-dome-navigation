@@ -6440,7 +6440,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         <Expression xsi:type="WorkflowOutput" />
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>TruncationPoint</scr:Name>
-                          <scr:Expression>it.Item1.Item2.TruncationFraction &gt; 0 &amp;&amp; it.Item1.Item1.Item2 &lt; it.Item1.Item2.TruncationFraction &amp;&amp; it.Item2.Truncation.Points.Count &gt; 0 ? it.Item2.Truncation.Points[Convert.ToInt32(Math.Floor(it.Item1.Item1.Item2 / it.Item1.Item2.TruncationFraction * it.Item2.Truncation.Points.Count))] : 1.0</scr:Expression>
+                          <scr:Expression>it.Item1.Item2.TruncationFraction &gt; 0 &amp;&amp; it.Item1.Item1.Item2 &lt; it.Item1.Item2.TruncationFraction &amp;&amp; it.Item2.Truncation.SweepFractions.Count &gt; 0 ? it.Item2.Truncation.SweepFractions[Convert.ToInt32(Math.Floor(it.Item1.Item1.Item2 / it.Item1.Item2.TruncationFraction * it.Item2.Truncation.SweepFractions.Count))] : 1.0</scr:Expression>
                         </Expression>
                         <Expression xsi:type="MulticastSubject">
                           <Name>TruncationPoint</Name>

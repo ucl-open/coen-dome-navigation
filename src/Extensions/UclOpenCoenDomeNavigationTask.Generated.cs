@@ -845,11 +845,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Fraction of trials whose stimulus switches off early (truncation.points)
+        /// Fraction of trials whose stimulus switches off early (truncation.sweepFractions)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("truncationFraction", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncationFraction")]
-        [System.ComponentModel.DescriptionAttribute("Fraction of trials whose stimulus switches off early (truncation.points)")]
+        [System.ComponentModel.DescriptionAttribute("Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")]
         public double TruncationFraction
         {
             get
@@ -1091,35 +1091,35 @@ namespace UclOpenCoenDomeNavigationTask
     public partial class Truncation
     {
     
-        private System.Collections.Generic.List<double> _points;
+        private System.Collections.Generic.List<double> _sweepFractions;
     
         public Truncation()
         {
-            _points = new System.Collections.Generic.List<double>();
+            _sweepFractions = new System.Collections.Generic.List<double>();
         }
     
         protected Truncation(Truncation other)
         {
-            _points = other._points;
+            _sweepFractions = other._sweepFractions;
         }
     
         /// <summary>
         /// Where the stimulus switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("points")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="points")]
+        [Newtonsoft.Json.JsonPropertyAttribute("sweepFractions")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sweepFractions")]
         [System.ComponentModel.DescriptionAttribute("Where the stimulus switches off, as a fraction of the sweep on a log scale, split" +
             " evenly over truncated trials. The reward floor is at about 0.8")]
-        public System.Collections.Generic.List<double> Points
+        public System.Collections.Generic.List<double> SweepFractions
         {
             get
             {
-                return _points;
+                return _sweepFractions;
             }
             set
             {
-                _points = value;
+                _sweepFractions = value;
             }
         }
     
@@ -1135,7 +1135,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Points = " + _points);
+            stringBuilder.Append("SweepFractions = " + _sweepFractions);
             return true;
         }
     

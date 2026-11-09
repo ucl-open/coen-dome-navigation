@@ -209,7 +209,7 @@
           "type": "boolean"
         },
         "truncationFraction": {
-          "description": "Fraction of trials whose stimulus switches off early (truncation.points)",
+          "description": "Fraction of trials whose stimulus switches off early (truncation.sweepFractions)",
           "maximum": 1,
           "minimum": 0,
           "title": "TruncationFraction",
@@ -286,7 +286,7 @@
     "Truncation": {
       "description": "Where the stimulus switches off on a truncated trial (a stage's truncationFraction says how many).\n\nOn a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the stimulus.",
       "properties": {
-        "points": {
+        "sweepFractions": {
           "default": [
             0.4,
             0.6
@@ -296,7 +296,7 @@
             "type": "number"
           },
           "minItems": 1,
-          "title": "Points",
+          "title": "SweepFractions",
           "type": "array"
         }
       },
@@ -443,7 +443,7 @@
         "truncation": {
           "$ref": "#/$defs/Truncation",
           "default": {
-            "points": [
+            "sweepFractions": [
               0.4,
               0.6
             ]
