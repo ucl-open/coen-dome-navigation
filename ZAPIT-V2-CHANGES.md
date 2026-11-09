@@ -1,5 +1,7 @@
 # zapit-v2: changes and why
 
+> Written before the renames of 9 Nov 2026 (Pip): "sham trial" now reads "laser-off trial", `optoCondition` is `laserCondition`, `optoStimulated` became `laserPowerMw`, the `Zapit\` log is `BonsaiData\BonsaiData_ZapitReplies`, and the optogenetics fields are renamed (BACKLOG.md, Decided). This file keeps the names it was written with.
+
 The Zapit optogenetics from `ucl-open/auditory-vr-corridor` branch `zapit-integration-v2`, on Pip's `main`: first ported onto 5f8a3d6, rebuilt on 35910fc (his stages as av-dome's). Pip's structure and conventions are kept: rig.yml's `zapit:` block, the trigger pulsed at beep 0 on every trial, the `optoCondition` trial column, the `Zapit\` log, the `trainingStages` rows, `trialStructure` and `rngSeed` (InitialiseOptoTrial's draws are seeded from it, as in his version).
 
 ## Laser behaviour

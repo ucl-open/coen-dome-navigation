@@ -57,7 +57,7 @@ class Experiment:
     stage: list[int]
     rewarded: list[bool]
     laser: list[bool] = field(default_factory=list)  # laser-on trials (laserPowerMw > 0); empty when there were none
-    optogenetics: bool = False  # an optogenetics experiment: every trial had a Zapit condition, laser on or sham
+    optogenetics: bool = False  # an optogenetics experiment: every trial had a Zapit condition, laser on or laser-off
 
 
 def _laser(e: "Experiment") -> list[bool]:

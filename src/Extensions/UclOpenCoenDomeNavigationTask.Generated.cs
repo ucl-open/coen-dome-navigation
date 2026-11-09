@@ -126,7 +126,7 @@ namespace UclOpenCoenDomeNavigationTask
     ///The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser
     ///power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and
     ///logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
-    ///an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as sham trials
+    ///an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as laser-off trials
     ///with the laser off, so galvo noise and masking light are the same on every trial. "Stimulus" is the tone and
     ///grating; the laser is continuous: it starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered
     ///rig), laser_leads_stimulus_by_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
@@ -140,7 +140,7 @@ namespace UclOpenCoenDomeNavigationTask
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser
     power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and
     logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
-    an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as sham trials
+    an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as laser-off trials
     with the laser off, so galvo noise and masking light are the same on every trial. ""Stimulus"" is the tone and
     grating; the laser is continuous: it starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered
     rig), laser_leads_stimulus_by_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
@@ -225,11 +225,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the conditions file's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on sham trials). Required with optogenetics on
+        /// Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the conditions file's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on laser-off trials). Required with optogenetics on
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserPowerMw")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserPowerMw")]
-        [System.ComponentModel.DescriptionAttribute(@"Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the conditions file's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on sham trials). Required with optogenetics on")]
+        [System.ComponentModel.DescriptionAttribute(@"Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the conditions file's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on laser-off trials). Required with optogenetics on")]
         public double? LaserPowerMw
         {
             get
@@ -243,11 +243,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are sham trials: Zapit is sent a condition with the laser off. Conditions come from shuffled queues, one for laser-on and one for sham trials, so each is used equally often
+        /// Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are laser-off trials: Zapit is sent a condition with the laser off. Conditions come from shuffled queues, one for laser-on and one for laser-off trials, so each is used equally often
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserOnProbability")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserOnProbability")]
-        [System.ComponentModel.DescriptionAttribute(@"Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are sham trials: Zapit is sent a condition with the laser off. Conditions come from shuffled queues, one for laser-on and one for sham trials, so each is used equally often")]
+        [System.ComponentModel.DescriptionAttribute(@"Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are laser-off trials: Zapit is sent a condition with the laser off. Conditions come from shuffled queues, one for laser-on and one for laser-off trials, so each is used equally often")]
         public double LaserOnProbability
         {
             get
@@ -279,11 +279,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_leads_stimulus_by_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip
+        /// How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_leads_stimulus_by_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserLeadsStimulusBySeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserLeadsStimulusBySeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_leads_stimulus_by_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip")]
+        [System.ComponentModel.DescriptionAttribute(@"How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_leads_stimulus_by_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip")]
         public double LaserLeadsStimulusBySeconds
         {
             get

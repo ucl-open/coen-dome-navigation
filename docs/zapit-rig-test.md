@@ -42,7 +42,7 @@ trial start; with the galvos visible or a photodiode, the stimulus starts at the
 
 ## 5. Laser on (power meter or photodiode)
 
-Laser trials reach the set power; sham trials stay dark; at every offset the light fades over the ramp-down (not a cut: the fade
+Laser trials reach the set power; laser-off trials stay dark; at every offset the light fades over the ramp-down (not a cut: the fade
 is what prevents rebound); a Training Stage 1-2 (no time limit) `test` trial with the wheel still goes dark 12.5 s after onset (the cap).
 
 ## If Bonsai dies mid-experiment

@@ -8,14 +8,14 @@ using UclOpenCoenDomeNavigationTask;
 // The optogenetics part of av-dome's InitialiseTrial operator, rewritten for this task (zapit-v2). The rest of the trial is
 // drawn by main.bonsai, so this only decides, for each new trial, whether the laser is on and which Zapit condition is presented.
 // Differences from av-dome:
-// - Sham trials: in an optogenetics experiment every trial sends a StartStimulus. Laser-off trials (the first trialsBeforeLaser included) still get
+// - Laser-off trials: in an optogenetics experiment every trial sends a StartStimulus. Laser-off trials (the first trialsBeforeLaser included) still get
 //   a real condition, so the galvos move and the masking light comes on exactly as on laser-on trials.
-// - Laser-on and sham conditions are drawn from separate shuffled queues, so each set is balanced on its own.
+// - Laser-on and laser-off conditions are drawn from separate shuffled queues, so each set is balanced on its own.
 // - OptogeneticMaxDuration (laserMaxSeconds) is set on every trial: Bonsai stops the stimulus at the outcome or after this many
 //   seconds, whichever comes first. Zapit itself only ever gets continuous stimuli (it ignores StopStimulus for timed ones).
 // - Conditions come from ZapitConditions (no YAML library), which also checks they are numbered 1 to N.
 [Combinator]
-[Description("Draws the optogenetics for each new trial: laser on or off, and which condition from the Zapit conditions file to present. In an optogenetics experiment every trial gets a condition (laser-off trials are sham stimuli). Input is the trial number (from 1) and the task parameters.")]
+[Description("Draws the optogenetics for each new trial: laser on or off, and which condition from the Zapit conditions file to present. In an optogenetics experiment every trial gets a condition (laser-off trials included). Input is the trial number (from 1) and the task parameters.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class InitialiseOptoTrial
 {
@@ -32,8 +32,8 @@ public class InitialiseOptoTrial
     // with a fresh random stream and fresh queues.
     private Random random;
     private List<int> conditions; // null until read from the Zapit conditions file, on the first trial of an optogenetics experiment
-    private readonly ConditionQueue stimQueue = new ConditionQueue();
-    private readonly ConditionQueue shamQueue = new ConditionQueue();
+    private readonly ConditionQueue laserOnQueue = new ConditionQueue();
+    private readonly ConditionQueue laserOffQueue = new ConditionQueue();
 
     public IObservable<OptoTrial> Process(IObservable<Tuple<int, UclOpenCoenDomeNavigationTaskParameters>> source)
     {
@@ -77,7 +77,7 @@ public class InitialiseOptoTrial
         var laserOn = trialNumber > optogenetics.TrialsBeforeLaser && random.NextDouble() < optogenetics.LaserOnProbability;
         trial.OptogeneticEnabled = laserOn;
         trial.OptogeneticLaserPowerMw = laserOn ? optogenetics.LaserPowerMw.Value : 0;
-        trial.OptogeneticCondition = (laserOn ? stimQueue : shamQueue).Next(conditions, random);
+        trial.OptogeneticCondition = (laserOn ? laserOnQueue : laserOffQueue).Next(conditions, random);
         trial.OptogeneticMaxDuration = optogenetics.LaserMaxSeconds;
         return trial;
     }
@@ -90,8 +90,8 @@ public class InitialiseOptoTrial
             : parameters.RngSeed.HasValue ? new Random(unchecked((int)parameters.RngSeed.Value + 1))
             : new Random(Guid.NewGuid().GetHashCode());
         conditions = null;
-        stimQueue.Clear();
-        shamQueue.Clear();
+        laserOnQueue.Clear();
+        laserOffQueue.Clear();
     }
 
     const double BeepIntervalSec = 0.05;        // HarpBeat's beep; task.py BEEP_INTERVAL_SEC
@@ -172,8 +172,8 @@ public class InitialiseOptoTrial
 public class OptoTrial
 {
     public int TrialNumber;  // Trial this draw is for, as in the TrialNumber subject
-    public bool OptogeneticEnabled;  // Laser on. False on sham (laser-off) trials and in experiments without optogenetics
-    public double OptogeneticLaserPowerMw;  // Laser power sent with StartStimulus, in mW (the task's laserPowerMw). 0 on sham trials and when optogenetics is off
+    public bool OptogeneticEnabled;  // Laser on. False on laser-off trials and in experiments without optogenetics
+    public double OptogeneticLaserPowerMw;  // Laser power sent with StartStimulus, in mW (the task's laserPowerMw). 0 on laser-off trials and when optogenetics is off
     public int OptogeneticCondition;  // Zapit condition (its stimLocations number) presented on this trial, laser on or off. 0 when optogenetics is off
     public double OptogeneticMaxDuration;  // Longest the stimulus stays on, in seconds; normally stopped at the outcome. 0 when optogenetics is off
 

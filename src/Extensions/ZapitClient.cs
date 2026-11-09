@@ -8,7 +8,7 @@ using System.Reactive.Linq;
 
 // This copy differs from av-dome's ZapitClient.cs in one way: when the connection closes (the workflow stops, or the
 // session ends with an error) it first sends Zapit a StopStimulus. This task only sends continuous stimuli, which Zapit
-// plays until it is told to stop, so a session stopped mid-trial would otherwise leave the laser or the sham stimulus
+// plays until it is told to stop, so a session stopped mid-trial would otherwise leave the laser or the laser-off stimulus
 // (galvos and masking light) running after Bonsai has gone. The stop is best effort: it waits about a second for Zapit's
 // reply, ignores any error (Zapit closed or unreachable), and then closes the socket as before. No command is sent after it.
 [Combinator]

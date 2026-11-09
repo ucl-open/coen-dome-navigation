@@ -37,7 +37,7 @@ taskParameters:
       gain: 1.0
   truncation:                 # on a stage's truncated trials
     points: [0.4, 0.6]
-  optogenetics:               # Zapit; the laser runs from beep 0 to the outcome (or laserMaxSeconds), sham trials laser off
+  optogenetics:               # Zapit; the laser runs from beep 0 to the outcome (or laserMaxSeconds), laser-off trials laser off
     enabled: false
     zapitConditionsPath: ''   # the Zapit conditions file loaded in Zapit
     laserPowerMw: null        # mW on laser-on trials, every condition; required with optogenetics on
