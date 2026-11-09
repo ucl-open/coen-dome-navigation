@@ -52,7 +52,7 @@ hitEndOfTrack:
 lickCount:
   type: int
   formerly: [LickCount]
-  description: Licks on the left spout during the trial.
+  description: Licks on the left spout from the trial's start to the outcome (Seconds). Tom Childs' LickCount was read 2 s later, so it also counted the licks while the mouse drank, and a stage 1-2 trial rewarded without a lick now reads 0 (his engagement label used LickCount > 0). Every lick is in the LicketySplit-Left Harp log.
 trackLengthCm:
   type: double
   unit: cm

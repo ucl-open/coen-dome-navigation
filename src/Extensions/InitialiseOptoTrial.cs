@@ -20,7 +20,7 @@ public class InitialiseOptoTrial
         Seed = -1;
     }
 
-    [Description("Seed for the stimulation draws. Set to -1 for a random seed (recommended). The draw for every trial is logged in the TrialLog, so a session can be reconstructed either way.")]
+    [Description("Seed for the stimulation draws. Set to -1 for a random seed (recommended). The draw for every trial is in BonsaiData_Trial (optoStimulated, optoCondition), so an experiment can be reconstructed either way.")]
     public int Seed { get; set; }
 
     // Instance state, as in av-dome's InitialiseTrial: this operator sits inside TaskLogic's per-trial Defer, which calls Process again on every trial,
@@ -88,7 +88,8 @@ public class InitialiseOptoTrial
 
     private static void LoadZapitConditions(string configPath, List<int> zapitConditions)
     {
-        // A session that is meant to stimulate stops here rather than running without stimulation. gen_session.py checks the same file first.
+        // An experiment that is meant to stimulate stops here rather than running without stimulation. The task schema refuses
+        // an empty path before Go (rig-control checks it); a path that names no file is only found here, at trial 1.
         if (string.IsNullOrEmpty(configPath) || !File.Exists(configPath))
         {
             throw new InvalidOperationException("Optogenetics is enabled but the Zapit stimulus config was not found: '" + configPath + "'");

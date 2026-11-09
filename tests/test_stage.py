@@ -95,6 +95,31 @@ def test_an_experiment_with_only_its_manifest_left_gives_no_stage(tmp_path):
     assert unread == ["ses-003D1_2026-11-12T09-00-00 (Only Its Manifest Is Left)"]
 
 
+@pytest.mark.parametrize("destination_first", [True, False])
+def test_an_ingested_experiment_whose_data_is_in_another_root_is_read_in_any_order(tmp_path, destination_first):
+    # Audit round 3, 9 Nov 2026: with ingest's destination added after staging, staging's manifest
+    # answered "Only Its Manifest Is Left" first and every suggestion stayed null.
+    name = "ses-003D1_2026-11-12T09-00-00"
+    staging, destination = tmp_path / "staging", tmp_path / "destination"
+    (staging / "sub-TC9" / name).mkdir(parents=True)
+    (staging / "sub-TC9" / name / "manifest.json").write_text("{}", encoding="utf-8")
+    write(destination / "sub-TC9" / name / "BonsaiData" / "BonsaiData_Trial_x.csv",
+          ["modality", "shapingStage", "outcome"], [["A", 3, "Rewarded"]] * 100)
+    unread = []
+    roots = [destination, staging] if destination_first else [staging, destination]
+    found = experiments("TC9", roots, [], unread)
+    assert unread == [] and [e.name for e in found] == [name]
+
+
+def test_another_workflow_s_ingested_experiment_never_decides(tmp_path):
+    # Audit round 3, 9 Nov 2026: an av-dome experiment of the same mouse, ingested, blocked the suggestion.
+    folder = tmp_path / "sub-TC9" / "ses-009_2026-11-12T09-00-00"
+    folder.mkdir(parents=True)
+    (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/av-dome.git"}}), encoding="utf-8")
+    unread = []
+    assert experiments("TC9", [tmp_path], [], unread) == [] and unread == []
+
+
 def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
     from ucl_open_coen_av_corridor.stage import unanswered
 

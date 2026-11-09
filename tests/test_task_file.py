@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import jsonschema
 import numpy as np
 import pydantic
 import yaml
@@ -50,6 +51,33 @@ def test_a_tone_pip_keeps_the_old_loudness():
     # gen_session wrote pips at amplitude and the workflow scales them by amplitude again.
     pips = waveforms.tones(np.array([18000]), 0.05)
     assert abs(float(np.max(np.abs(pips))) - 0.05) < 1e-3
+
+
+def _closed(node):
+    """rig-control's taskfile.closed: every object that lists properties refuses others."""
+    if isinstance(node, dict):
+        node = {k: _closed(v) for k, v in node.items()}
+        if isinstance(node.get("properties"), dict) and "additionalProperties" not in node:
+            node["additionalProperties"] = False
+    elif isinstance(node, list):
+        node = [_closed(v) for v in node]
+    return node
+
+
+def test_the_schema_refuses_zapit_ticked_with_no_config_path():
+    # rig-control checks the task file against the schema, not the model; this used to reach Go and
+    # stop the workflow at trial 1 (audit, 9 Nov 2026, round 3).
+    schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_av_corridor_task.json").read_text(encoding="utf-8")))
+    validator = jsonschema.Draft202012Validator(schema)
+
+    def problems(**opto):
+        doc = task()
+        doc["taskParameters"]["optogenetics"].update(opto)
+        return [e.message for e in validator.iter_errors(doc)]
+
+    assert problems() == []
+    assert problems(enabled=True) == ["'' should be non-empty"]
+    assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml") == []
 
 
 def test_the_committed_task_schema_is_the_model_s():

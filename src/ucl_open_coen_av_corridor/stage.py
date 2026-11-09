@@ -113,10 +113,22 @@ def unanswered(root: Path) -> bool:
         return True
 
 
+def ours(manifest: Path) -> bool:
+    """Whether an experiment's manifest.json is this workflow's (source.repo); one that cannot be
+    read counts as ours, so no history is passed over unseen."""
+    try:
+        repo = json.loads(manifest.read_text(encoding="utf-8-sig")).get("source", {}).get("repo") or ""
+    except (OSError, ValueError, AttributeError):
+        return True
+    return not repo or "coen-av-corridor" in repo
+
+
 def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unread: list[str] | None = None) -> list[Experiment]:
     """Every experiment of the mouse in the roots, newest first; a folder seen twice (on the rig and in
-    staging) counts once. A share that does not answer is added to `unread`."""
+    staging) counts once. A share that does not answer is added to `unread`, as is an experiment of
+    this workflow with only its manifest left and its data in none of the roots."""
     found: dict[str, Experiment] = {}
+    manifest_only: list[str] = []
     for reader, bases in ((read_new, roots), (read_legacy, legacy_roots)):
         for base in bases:
             try:
@@ -133,8 +145,11 @@ def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unrea
                 if reader is read_new and (folder / "manifest.json").is_file() and not (folder / "BonsaiData").is_dir():
                     # Ingested: staging keeps only the manifest, so an older experiment would decide
                     # (audit round 2, 9 Nov 2026). Every experiment writes BonsaiData (Go is logged).
-                    if unread is not None:
-                        unread.append(f"{folder.name} (Only Its Manifest Is Left)")
+                    # Said only once every root is read, if its data is in none (an ingest
+                    # destination among the roots, in any order), and only for this workflow's
+                    # (another workflow's never decides) (audit round 3).
+                    if ours(folder / "manifest.json"):
+                        manifest_only.append(folder.name)
                     continue
                 try:
                     e = reader(folder)
@@ -142,6 +157,8 @@ def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unrea
                     continue
                 if e is not None:
                     found[folder.name] = e
+    if unread is not None:
+        unread.extend(f"{name} (Only Its Manifest Is Left)" for name in dict.fromkeys(manifest_only) if name not in found)
     return sorted(found.values(), key=lambda e: e.when, reverse=True)
 
 

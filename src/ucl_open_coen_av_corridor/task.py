@@ -4,7 +4,7 @@ field does in the task is unchanged unless its description says otherwise."""
 
 from typing import Literal, Optional
 
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 from swc.aeon.schema import BaseSchema
 
 from ucl_open_coen_av_corridor import __semver__
@@ -107,6 +107,17 @@ class OptogeneticsConfig(BaseSchema):
     stopped at the trial outcome, or after stim_duration if that comes first. Zapit's host and port are rig.yml's
     zapit block.
     """
+
+    # The same rule as validate_lead_time's, in the JSON schema: rig-control checks the task file
+    # against the schema, not this model, so a ticked Zapit with no config path was sent at Go and
+    # the workflow stopped at trial 1 (audit, 9 Nov 2026, round 3). additionalProperties is spelt
+    # out because rig-control closes every object that lists properties.
+    model_config = ConfigDict(
+        json_schema_extra={
+            "if": {"properties": {"enabled": {"const": True}}, "required": ["enabled"], "additionalProperties": True},
+            "then": {"properties": {"zapitConfigPath": {"minLength": 1}}, "additionalProperties": True},
+        }
+    )
 
     enabled: bool = Field(
         default=False, description="Whether optogenetic stimulation runs this session. When false, Bonsai does not connect to Zapit"

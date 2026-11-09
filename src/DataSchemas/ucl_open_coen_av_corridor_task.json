@@ -32,6 +32,17 @@
     },
     "OptogeneticsConfig": {
       "description": "Zapit optogenetic stimulation. Field names follow the av-dome task schema.\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws\none per stimulated trial. On a stimulated trial the laser comes on lead_time before the first tone pip and is\nstopped at the trial outcome, or after stim_duration if that comes first. Zapit's host and port are rig.yml's\nzapit block.",
+      "if": {
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
       "properties": {
         "enabled": {
           "default": false,
@@ -78,6 +89,14 @@
           "minimum": 0,
           "title": "WarmupTrials",
           "type": "integer"
+        }
+      },
+      "then": {
+        "additionalProperties": true,
+        "properties": {
+          "zapitConfigPath": {
+            "minLength": 1
+          }
         }
       },
       "title": "OptogeneticsConfig",

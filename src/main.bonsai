@@ -5754,7 +5754,7 @@
                                 </Workflow>
                               </Expression>
                               <Expression xsi:type="Format">
-                                <Format>Zapit refused StartStimulus (reply value {0}). Check the MATLAB window: is the stimulus config from the session JSON loaded in Zapit?</Format>
+                                <Format>Zapit refused StartStimulus (reply value {0}). Check the MATLAB window: is the stimulus config the task file names (zapitConfigPath) loaded in Zapit?</Format>
                                 <Selector>Value</Selector>
                               </Expression>
                               <Expression xsi:type="Combinator">

@@ -27,7 +27,10 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = [
+    "jsonschema>=4.26.0",
+    "pytest",
+]
 
 [project.scripts]
 regenerate-schemas = "ucl_open_coen_av_corridor.regenerate:main"
