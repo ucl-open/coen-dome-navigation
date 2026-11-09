@@ -25,7 +25,7 @@ What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided).
 
 | Path | What |
 |---|---|
-| `src\main.bonsai` | The workflow. Top level in data-flow order: RigSetup, Declarations, Initialization, Task, Commands, Wheel, ComputeRewardZone, LickCounter, TaskState, HarpClock, TrialEventTimes, Audio, TaskLogic, StartTrials, VirtualPosition, Grating, TrialRow, Logging, LiveView |
+| `src\main.bonsai` | The workflow. Top level in data-flow order: RigSetup, Declarations, Initialization, Task, Commands, Wheel (with ComputeRewardZone), LickCounter (with TaskState), HarpClock, TrialEventTimes, Audio (with TaskLogic), StartTrials, VirtualPosition, Grating, TrialRow, Logging, LiveView |
 | `config\task.yml` | The task file rig-control copies at Go with the form's edits |
 | `config\rig-template.yml` | av-dome's rig template: both workflows read the same `C:\Coen-Lab-Local\RigConfigs\<MACHINE>\rig.yml` |
 | `schemas\trial-columns.yml` | What each `BonsaiData_Trial` column means |

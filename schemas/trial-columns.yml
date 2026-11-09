@@ -1,5 +1,5 @@
 # What each BonsaiData_Trial column this workflow writes means (the TrialRow group builds the row
-# when TrialEnded turns true). ExperimentManifest (TrialColumns) copies this file into every
+# when the trial's outcome is known, TrialOutcome). ExperimentManifest (TrialColumns) copies this file into every
 # experiment's manifest.json at Start, so each experiment carries the meaning of its own trial log.
 #
 # Each column: type (int, double, bool or string), and where they apply values, unit, formerly
@@ -13,7 +13,7 @@ Seconds:
   type: double
   unit: s
   formerly: [HarpTime]
-  description: Harp time the row was stamped, when TrialEnded turned true (about 2 s after the outcome, as the TrialLog was).
+  description: Harp time the row was built, when the outcome was known - at once on a reward, after the timeout on a punishment. Tom Childs' TrialLog was stamped 2 s later.
 trialNumber:
   type: int
   formerly: [Trial]
@@ -62,7 +62,7 @@ endPositionCm:
   type: double
   unit: cm
   formerly: [TrialEndPosCm]
-  description: Distance run in the trial when it ended.
+  description: Distance run in the trial when the row was built (Seconds). Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
 rewardFloorHz:
   type: double
   unit: Hz
@@ -115,7 +115,7 @@ cueOnsetTime:
   type: double
   unit: s
   formerly: [CueOnsetHarp]
-  description: Harp time of the trial's first tone pip or grating frame.
+  description: Harp time of the trial's first beep (beep 0), as Tom Childs' CueOnsetHarp. In an optogenetics session that is the laser onset, and the first tone pip or grating frame comes leadTime later.
 outcomeTime:
   type: double
   unit: s

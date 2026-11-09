@@ -254,12 +254,161 @@
                           <Property Name="CountsPerRev" />
                           <Property Name="WheelDiameterMm" />
                         </Expression>
-                        <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.RunningWheel.bonsai">
-                          <CommandsSubjectName>BehaviorBoard-Main.Commands</CommandsSubjectName>
-                          <EventsSubjectName>BehaviorBoard-Main.Data</EventsSubjectName>
-                          <CountsPerRev>4096</CountsPerRev>
-                          <WheelDiameterMm>170</WheelDiameterMm>
-                          <WheelDistanceSubjectName>BoardWheelDistanceCm</WheelDistanceSubjectName>
+                        <Expression xsi:type="GroupWorkflow">
+                          <Name>RunningWheel</Name>
+                          <Description>OpenRigs.Devices' BehaviorBoard.RunningWheel with the encoder in Position mode, as Tom Childs' workflow and coen-behaviour-box set it: the include sets Displacement and then differences and accumulates, which gives a speed sample, not a distance (audit, 9 Nov 2026). Position mode: AnalogData's Encoder is the absolute count, differenced across its 16-bit wrap and accumulated into the distance in cm at CountsPerRev and WheelDiameterMm (rig.yml), published as BoardWheelDistanceCm.</Description>
+                          <Workflow>
+                            <Nodes>
+                        <Expression xsi:type="beh:CreateMessage">
+                          <harp:MessageType>Write</harp:MessageType>
+                          <harp:Payload xsi:type="beh:CreateEnableEncodersPayload">
+                            <beh:EnableEncoders>EncoderPort2</beh:EnableEncoders>
+                          </harp:Payload>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:Take">
+                            <rx:Count>1</rx:Count>
+                          </Combinator>
+                        </Expression>
+                        <Expression xsi:type="beh:CreateMessage">
+                          <harp:MessageType>Write</harp:MessageType>
+                          <harp:Payload xsi:type="beh:CreateEncoderModePayload">
+                            <beh:EncoderMode>Position</beh:EncoderMode>
+                          </harp:Payload>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:Take">
+                            <rx:Count>1</rx:Count>
+                          </Combinator>
+                        </Expression>
+                        <Expression xsi:type="beh:CreateMessage">
+                          <harp:MessageType>Write</harp:MessageType>
+                          <harp:Payload xsi:type="beh:CreateEncoderResetPayload">
+                            <beh:EncoderReset>EncoderPort2</beh:EncoderReset>
+                          </harp:Payload>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:Take">
+                            <rx:Count>1</rx:Count>
+                          </Combinator>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:Concat" />
+                        </Expression>
+                        <Expression xsi:type="MulticastSubject">
+                          <Name>BehaviorBoard-Main.Commands</Name>
+                        </Expression>
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>BehaviorBoard-Main.Data</Name>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:SubscribeWhen" />
+                        </Expression>
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>BehaviorBoard-Main.Data</Name>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:DelaySubscription">
+                            <rx:DueTime>PT0.1S</rx:DueTime>
+                          </Combinator>
+                        </Expression>
+                        <Expression xsi:type="beh:Parse">
+                          <harp:Register xsi:type="beh:AnalogData" />
+                        </Expression>
+                        <Expression xsi:type="MemberSelector">
+                          <Selector>Encoder</Selector>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="dsp:Difference">
+                            <dsp:Order>1</dsp:Order>
+                          </Combinator>
+                        </Expression>
+                        <Expression xsi:type="scr:ExpressionTransform">
+                          <scr:Name>ConvertSigned</scr:Name>
+                          <scr:Expression>it &gt; 32768.0 ? it - 65536.0 : (it &lt; -32768.0 ? it + 65536.0 : it)</scr:Expression>
+                        </Expression>
+                        <Expression xsi:type="rx:Accumulate" />
+                        <Expression xsi:type="ExternalizedMapping">
+                          <Property Name="CountsPerRev" />
+                          <Property Name="WheelDiameterMm" />
+                        </Expression>
+                        <Expression xsi:type="GroupWorkflow">
+                          <Name>TicksToCentimeters</Name>
+                          <Description>Converts steps on a quadrature encoder to a distance in cm, published to a Subject</Description>
+                          <Workflow>
+                            <Nodes>
+                              <Expression xsi:type="WorkflowInput">
+                                <Name>Source1</Name>
+                              </Expression>
+                              <Expression xsi:type="ExternalizedMapping">
+                                <Property Name="Value" DisplayName="CountsPerRev" Description="The number of steps recorded on the quadrature encoder in a full revolution" Category="Running Wheel" />
+                              </Expression>
+                              <Expression xsi:type="Divide">
+                                <Operand xsi:type="WorkflowProperty" TypeArguments="sys:Int16">
+                                  <Value>4096</Value>
+                                </Operand>
+                              </Expression>
+                              <Expression xsi:type="ExternalizedMapping">
+                                <Property Name="Value" DisplayName="WheelDiameterMm" Description="The diameter of the wheel, in millimetres" Category="Running Wheel" />
+                              </Expression>
+                              <Expression xsi:type="Combinator">
+                                <Combinator xsi:type="IntProperty">
+                                  <Value>170</Value>
+                                </Combinator>
+                              </Expression>
+                              <Expression xsi:type="scr:ExpressionTransform">
+                                <scr:Name>CircumferenceCm</scr:Name>
+                                <scr:Expression>(it*Math.Pi)/10</scr:Expression>
+                              </Expression>
+                              <Expression xsi:type="PropertyMapping">
+                                <PropertyMappings>
+                                  <Property Name="Value" />
+                                </PropertyMappings>
+                              </Expression>
+                              <Expression xsi:type="Multiply">
+                                <Operand xsi:type="FloatProperty">
+                                  <Value>53.407074</Value>
+                                </Operand>
+                              </Expression>
+                              <Expression xsi:type="WorkflowOutput" />
+                            </Nodes>
+                            <Edges>
+                              <Edge From="0" To="2" Label="Source2" />
+                              <Edge From="1" To="2" Label="Source3" />
+                              <Edge From="2" To="7" Label="Source1" />
+                              <Edge From="3" To="4" Label="Source1" />
+                              <Edge From="4" To="5" Label="Source1" />
+                              <Edge From="5" To="6" Label="Source1" />
+                              <Edge From="6" To="7" Label="Source2" />
+                              <Edge From="7" To="8" Label="Source1" />
+                            </Edges>
+                          </Workflow>
+                        </Expression>
+                        <Expression xsi:type="rx:PublishSubject">
+                          <Name>BoardWheelDistanceCm</Name>
+                        </Expression>
+                            </Nodes>
+                            <Edges>
+                          <Edge From="0" To="1" Label="Source1" />
+                          <Edge From="1" To="6" Label="Source1" />
+                          <Edge From="2" To="3" Label="Source1" />
+                          <Edge From="3" To="6" Label="Source2" />
+                          <Edge From="4" To="5" Label="Source1" />
+                          <Edge From="5" To="6" Label="Source3" />
+                          <Edge From="6" To="7" Label="Source1" />
+                          <Edge From="7" To="9" Label="Source1" />
+                          <Edge From="8" To="9" Label="Source2" />
+                          <Edge From="10" To="11" Label="Source1" />
+                          <Edge From="11" To="12" Label="Source1" />
+                          <Edge From="12" To="13" Label="Source1" />
+                          <Edge From="13" To="14" Label="Source1" />
+                          <Edge From="14" To="15" Label="Source1" />
+                          <Edge From="15" To="16" Label="Source1" />
+                          <Edge From="16" To="18" Label="Source1" />
+                          <Edge From="17" To="18" Label="Source2" />
+                          <Edge From="18" To="19" Label="Source1" />
+                            </Edges>
+                          </Workflow>
                         </Expression>
                         <Expression xsi:type="ExternalizedMapping">
                           <Property Name="PulseDO1" />
@@ -1698,7 +1847,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Declarations</Name>
-        <Description>Typed subjects shared across groups: whether the spouts are zeroed, and the Zapit command and reply streams.</Description>
+        <Description>Typed subjects shared across groups: whether the spouts are zeroed, the Zapit command and reply streams, and TrialOutcome (true once a trial's outcome, rewarded or not, is known: TrialRow builds the row then, so a Stop during the 2 s before TrialEnded does not lose it).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Boolean">
@@ -1709,6 +1858,9 @@
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject" TypeArguments="ext:ZapitReply">
               <rx:Name>ZapitReplies</rx:Name>
+            </Expression>
+            <Expression xsi:type="rx:PublishSubject" TypeArguments="sys:Boolean">
+              <rx:Name>TrialOutcome</rx:Name>
             </Expression>
           </Nodes>
           <Edges />
@@ -1759,7 +1911,7 @@
                 <Parameter>
                   <Name>ManualRewardUl</Name>
                   <Value>3</Value>
-                  <Description>Microlitres RewardLeft and RewardRight deliver before Go, taken live; after Go a manual reward is the current trial's size. The task's own reward sizes are the task file's (trainingStages rewardSizeUl).</Description>
+                  <Description>Microlitres RewardLeft and RewardRight deliver before Go, taken live; after Go too. The task's own rewards are the task file's rewardSizeUl.</Description>
                   <Minimum>0</Minimum>
                 </Parameter>
                 <Parameter>
@@ -4422,7 +4574,7 @@
             </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>HarpClock</Name>
-        <Description>Harp time (seconds on the synchronised Harp clock, as in the Harp binaries) of the latest Behavior board AnalogData sample, about every 1 ms. Timestamps the TrialLog and StimulusLog.</Description>
+        <Description>Harp time (seconds on the synchronised Harp clock, as in the Harp binaries) of the latest Behavior board AnalogData sample, about every 1 ms. Timestamps BonsaiData_Trial and Stimulus.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
@@ -4459,7 +4611,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TrialEventTimes</Name>
-        <Description>Harp times of each trial's ITI start (TrialActive set to 1), trial start (StartTime set, track position zero) and outcome (TrialActive set to 0), read by the TrialLogger. Per-trial values are cleared at each ITI start.</Description>
+        <Description>Harp times of each trial's ITI start (TrialActive set to 1), trial start (StartTime set, track position zero) and outcome (TrialActive set to 0), read by TrialRow. Per-trial values are cleared at each ITI start.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
@@ -8721,8 +8873,12 @@
                         <Expression xsi:type="MulticastSubject">
                           <Name>ZapitCommands</Name>
                         </Expression>
+                        <Expression xsi:type="MulticastSubject">
+                          <Name>TrialOutcome</Name>
+                        </Expression>
                       </Nodes>
                       <Edges>
+                        <Edge From="31" To="44" Label="Source1" />
                         <Edge From="0" To="1" Label="Source1" />
                         <Edge From="1" To="5" Label="Source1" />
                         <Edge From="2" To="4" Label="Source1" />
@@ -9392,8 +9548,7 @@
                   <Expression xsi:type="WorkflowOutput" />
                   <Expression xsi:type="GroupWorkflow">
                     <Name>StimulusLogger</Name>
-      <Description>Writes Stimulus\Stimulus_&lt;time&gt;.csv (OpenRigs.Logging LogData): one row per beep while the trial is active, stamped with the Harp time of the beep, built by LogStimulus. Here rather than in Logging because StimulusLogRow is declared inside this group, as in Tom Childs' workflow.</Description>
-                    <Description>Writes the StimulusLog: one row per beep with the stimulus actually presented, built by LogStimulus. Sits here rather than in Logging because a logger there cannot subscribe to a subject declared in TaskLogic (Bonsai reports a circular definition). Not part of the repeating trial chain, so it writes one file per session. AudBin (declared in InitVars) is published by MakeSoundwave.</Description>
+                    <Description>Writes Stimulus\Stimulus_&lt;time&gt;.csv (OpenRigs.Logging LogData): one row per beep while the trial is active, stamped with the Harp time of the beep, built by LogStimulus. Here rather than in Logging because StimulusLogRow is declared inside this group, as in Tom Childs' workflow (a logger in Logging cannot subscribe to a subject declared in TaskLogic: Bonsai reports a circular definition). Not part of the repeating trial chain, so it writes one file per experiment, created with its first row.</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">
@@ -9695,14 +9850,14 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TrialRow</Name>
-        <Description>Each trial's BonsaiData_Trial row (TrialRow), built when TrialEnded turns true from the latest value of each subject, as Tom Childs' TrialLog was, and stamped with the Harp time then (Seconds). Columns are named and typed as the lab's list allows (K:\config\data-dictionary.json) and described in schemas\trial-columns.yml. outcome is Rewarded or Unrewarded, so rig-control's performance is Tom's success rate.</Description>
+        <Description>Each trial's BonsaiData_Trial row (TrialRow), built when the trial's outcome is known (TrialOutcome: at once on a reward, after the timeout on a punishment) from the latest value of each subject, and stamped with the Harp time then (Seconds). Tom Childs' TrialLog was built 2 s later, at TrialEnded, so a Stop in between lost the trial (audit, 9 Nov 2026). Columns are named and typed as the lab's list allows (K:\config\data-dictionary.json) and described in schemas\trial-columns.yml. outcome is Rewarded or Unrewarded, so rig-control's performance is Tom's success rate.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
-              <Name>TrialEnded</Name>
+              <Name>TrialOutcome</Name>
             </Expression>
             <Expression xsi:type="rx:Condition">
-              <Name>Ended?</Name>
+              <Name>Outcome?</Name>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="WorkflowInput">
@@ -10010,12 +10165,12 @@
             </Expression>
             <Expression xsi:type="rx:SelectMany">
               <Name>ExperimentLogs</Name>
-              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix. TrialParameters writes BonsaiData_Trial (LogTrial): one row per trial, built in ExecuteTrial when the choice is made (TrialRow, a BehaviorSubject, so the row made before the folder exists is written too; a ReplaySubject here is completed when trial 1's branch ends, and every later row is lost): what was drawn for it, the choice, its outcome, the speaker that played, and two Harp times, stimulusOnsetTime and choiceTime, with Seconds the time the outcome was known. Its columns are named and typed as the lab's list allows (K:\config\data-dictionary.json; rig-control checks before launch), and what each means (codes, units, former names) is schemas\trial-columns.yml, which ExperimentManifest copies into each experiment's manifest; settings that are the same throughout the experiment are not columns, being in the experiment's settings files (Settings\Settings_Rig_, Settings_Task_ and Settings_Experiment_&lt;DateTime&gt;.json: rig.yml as read, the task as read at Go, and from ExperimentSettings the subject, session, workflow, commit, who launched and sent Go and every ExperimentControl parameter at Go), and the RNG seed is logged once, as the RngSeed event in BonsaiData_Async. Subjects that already hold a value (BehaviorSubject, AsyncSubject) hand it to the late subscriber. Values set at startup, such as the Zapit startup replies and the first trial draw, are therefore logged when the experiment logs start, about a second after Go, with that time. Add new loggers inside this group.</Description>
+              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix. TrialParameters writes BonsaiData_Trial (LogTrial): one row per trial, built by the TrialRow group when the outcome is known (TrialRow, a PublishSubject: trials start only after PathPrefix, so no row comes before the folder): the trial's draws, stage, outcome and why it ended, positions and frequencies, and its Harp times (itiStartTime, trialStartTime, cueOnsetTime, outcomeTime), with Seconds the time the row was built. Its columns are named and typed as the lab's list allows (K:\config\data-dictionary.json; rig-control checks before launch), and what each means (codes, units, former names) is schemas\trial-columns.yml, which ExperimentManifest copies into each experiment's manifest; settings that are the same throughout the experiment are not columns, being in the experiment's settings files (Settings\Settings_Rig_, Settings_Task_ and Settings_Experiment_&lt;DateTime&gt;.json: rig.yml as read, the task as read at Go, and from ExperimentSettings the subject, session, workflow, commit, who launched and sent Go and every ExperimentControl parameter at Go), and each trial's optogenetic draw is in its optoStimulated and optoCondition columns. Subjects that already hold a value (BehaviorSubject, AsyncSubject) hand it to the late subscriber. Values set at startup, such as the Zapit startup replies and the first trial draw, are therefore logged when the experiment logs start, about a second after Go, with that time. Add new loggers inside this group.</Description>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="GroupWorkflow">
                     <Name>TrialParameters</Name>
-                    <Description>Writes each trial's row (TrialRow, built in ExecuteTrial when the choice is made, stamped then) into BonsaiData_Trial.</Description>
+                    <Description>Writes each trial's row (TrialRow, built by the TrialRow group when the outcome is known, stamped then) into BonsaiData_Trial.</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">

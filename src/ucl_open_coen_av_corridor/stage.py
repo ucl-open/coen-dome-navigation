@@ -7,7 +7,9 @@ it; the experimenter can change it before Go. As a command:
 
     uv run suggest-stage --subject TC003 --modality A [--root DIR ...] [--legacy-root DIR ...]
 
-prints one JSON line, {"value": 3, "why": "..."}: the contract of rig-control's [task.suggest].
+prints one JSON line, {"value": 3, "why": "..."}: the contract of rig-control's [task.suggest]. If
+a share among the roots does not answer, value is null and why names it: no stage is guessed, since
+the mouse's history may be only there (rig-sync deletes a rig's copy after 72 h).
 
 The rules: the latest experiment of the modality with trials decides. Under 50 trials keeps its stage.
 Stage 2 advances only after two experiments in a row each with at least 50 rewarded trials, and falls
@@ -99,15 +101,30 @@ def read_legacy(folder: Path) -> Experiment | None:
     )
 
 
-def experiments(subject: str, roots: list[Path], legacy_roots: list[Path]) -> list[Experiment]:
+def unanswered(root: Path) -> bool:
+    """A share (\\\\server\\...) that cannot be listed: glob reads it as empty, which would look like a
+    mouse with no history. A local folder that is not there just has none."""
+    if not str(root).startswith("\\\\"):
+        return False
+    try:
+        return not root.is_dir()
+    except OSError:
+        return True
+
+
+def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unread: list[str] | None = None) -> list[Experiment]:
     """Every experiment of the mouse in the roots, newest first; a folder seen twice (on the rig and in
-    staging) counts once."""
+    staging) counts once. A share that does not answer is added to `unread`."""
     found: dict[str, Experiment] = {}
     for reader, bases in ((read_new, roots), (read_legacy, legacy_roots)):
         for base in bases:
             try:
+                if unanswered(base):
+                    raise OSError(base)
                 folders = [*base.glob(f"sub-{subject}/ses-*"), *base.glob(f"*/sub-{subject}/ses-*")]
             except OSError:
+                if unread is not None:
+                    unread.append(str(base))
                 continue
             for folder in folders:
                 if folder.name in found or not folder.is_dir():
@@ -167,7 +184,13 @@ def main() -> None:
     parser.add_argument("--root", action="append", type=Path, help="where this workflow's experiments are (repeatable)")
     parser.add_argument("--legacy-root", action="append", type=Path, help="where the old workflow's Logs are (repeatable)")
     args = parser.parse_args()
-    history = experiments(args.subject, args.root or ROOTS, args.legacy_root or LEGACY_ROOTS)
+    unread: list[str] = []
+    history = experiments(args.subject, args.root or ROOTS, args.legacy_root or LEGACY_ROOTS, unread)
+    if unread:
+        # The mouse's history may be there alone (a rig keeps its copy 72 h): no guess (audit, 9 Nov 2026,
+        # a trained mouse was offered Stage 1).
+        print(json.dumps({"value": None, "why": f"{' and '.join(unread)} Did Not Answer: Choose the Stage by Hand"}))
+        return
     stage, why = suggest(history, args.modality)
     print(json.dumps({"value": stage, "why": why}))
 

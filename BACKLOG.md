@@ -12,11 +12,16 @@ is in `git log`.
   `wheelDiameterMm: 75` keeps each track the wheel turns the mice trained on. Measure the wheel; if
   it is 170 mm, either keep 75 (the numbers stay "Tom cm") or set it null and scale the track
   lengths by 170/75.
-- **Reward size.** Tom's valve opened a fixed time (`RigConfigs.cs` ValveOpenTime 55 ms on
-  BLUE-OPTO-1, his PulseController's 80 ms elsewhere). Rewards now go through the lab's reward line
+- **Reward size.** Tom's valve opened a fixed time (`RigConfigs.cs` ValveOpenTime 80 ms on
+  BLUE-OPTO-1 and GREEN-DOME-2, both marked uncalibrated, 95 ms on BLUE-OPTO-2). Rewards now go through the lab's reward line
   (`DeliverRewardCommand`, av-dome's): the task's `rewardSizeUl` (2.0) through the left valve's
   calibration, or one pulse of rig.yml's DO1 width (40 ms on the BLUE-OPTO rigs) per 2 ul when the
-  valve is uncalibrated. Calibrate the left valves, or set rewardSizeUl to what Tom's mice got.
+  valve is uncalibrated, so roughly half Tom's opening or less. Calibrate the left valves, or set
+  rewardSizeUl to what Tom's mice got.
+- **Lick thresholds.** Tom's workflow left both Lickety Split thresholds at 255/255 (its include's
+  values); this one maps rig.yml's, 0/0 on BLUE-OPTO-1 and in the template. The threshold decides
+  what counts as a lick, so the stage 3+ reward, the wrong-lick limits and WaitForNoLicks. Check
+  what 0 does on the board, then set rig.yml (production config, not this repo) or keep it.
 - **IntervalLog dropped.** Tom's IntervalLog (wheel, licks, tone and grating on the PC clock at
   every change) is not written: the wheel and licks are in the Harp logs and the tone, grating and
   position are in `Stimulus` every 50 ms on the Harp clock. Bring it back if Tom's analysis needs
@@ -37,6 +42,19 @@ is in `git log`.
   SDK, then commit it (`.bonsai\Setup.ps1` copies it).
 - Old sessions' history: `stage.py` reads the old TrialLogs from each rig's
   `C:\Github\Coen-Lab\auditory-vr-corridor\Logs` and the project share; check those paths on a rig.
+  A share that does not answer gives no stage (the form says which), so check the rig's account can
+  list `\\128.40.51.157\rigs\staging` and the RDSS path, or every suggestion on it says so.
+- The wheel: `RigSetup` has its own RunningWheel group in Position mode, because OpenRigs.Devices'
+  include sets Displacement and then differences and accumulates, a speed sample, not a distance
+  (coen-behaviour-box does the same). av-dome's `pip/main-switchover` uses the include: whether its
+  `BoardWheelDistanceCm` matters there, and fixing the include in lib-open-rigs, are for Pip.
+
+### Smaller
+
+- A Go then Stop before trial 1's first beep leaves no `Stimulus\` folder (LogData makes it with its
+  first row), and the manifest expects one, so rig-sync holds that experiment with an alarm.
+- No current-trial metrics: av-dome's Status group (ReportMetric) was not kept, so rig-control's
+  Current Trial line is blank until a row lands. Report the trial number and stage.
 
 ## Decided
 
@@ -59,3 +77,17 @@ is in `git log`.
   workflow's.
 - **Devices.** Both Lickety Splits and all three cameras are opened and recorded, as av-dome does,
   because the manifest expects a folder for each device in rig.yml.
+- **Trial row at the outcome** (audit, 9 Nov 2026): built when WasRewarded is known (TrialOutcome),
+  not 2 s later at TrialEnded as Tom's TrialLog was, so a Stop in between no longer loses a trial
+  whose reward is logged. `Seconds` and `endPositionCm` are read then.
+
+### Not changed on audit (9 Nov 2026, round 1)
+
+- Trials start 0.5 s after the experiment folder exists, not on Tom's Start button: decided above.
+- Zapit's hardware trigger is a pulse on `zapit.triggerLine`: same 5 ms width; off on BLUE-OPTO-1.
+- Background noise fades in from Go, not launch: at most trial 1's first second.
+- Waveform paths relative to `src`: av-dome's `src\LocalFiles` resolve the same under rig-control.
+- The suggestion not kept across an agent restart, and `test` getting one: edits are kept; harmless.
+- Legacy TrialLog picked by mtime, not Tom's ctime: the same file in practice.
+- `cueOnsetTime` is beep 0 (the laser onset in an optogenetics session), as Tom's CueOnsetHarp:
+  value kept, description corrected.

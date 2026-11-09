@@ -1,4 +1,5 @@
 import csv
+import json
 from pathlib import Path
 
 import pytest
@@ -69,6 +70,25 @@ def test_new_and_old_experiments_are_read_newest_first(tmp_path):
     found = experiments("TC9", [new], [old])
     assert [e.name for e in found] == ["ses-002D1_2026-11-10T09-00-00", "ses-A6_date-2026-10-01T09-00-00"]
     assert suggest(found, "A")[0] == 4
+
+
+def test_a_share_that_does_not_answer_gives_no_stage(tmp_path, monkeypatch, capsys):
+    # Audit, 9 Nov 2026: an unreachable share read as no history, and a trained mouse was offered Stage 1.
+    from ucl_open_coen_av_corridor import stage
+
+    share = Path(r"\\server\rigs\staging")
+    monkeypatch.setattr(stage, "unanswered", lambda root: root == share)
+    monkeypatch.setattr("sys.argv", ["suggest-stage", "--subject", "TC9", "--modality", "A",
+                                     "--root", str(tmp_path), "--root", str(share), "--legacy-root", str(tmp_path)])
+    stage.main()
+    answer = json.loads(capsys.readouterr().out)
+    assert answer["value"] is None and str(share) in answer["why"]
+
+
+def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
+    from ucl_open_coen_av_corridor.stage import unanswered
+
+    assert not unanswered(tmp_path / "missing")
 
 
 def test_a_rig_folder_under_staging_is_read(tmp_path):
