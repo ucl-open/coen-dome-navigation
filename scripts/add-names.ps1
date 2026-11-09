@@ -31,7 +31,9 @@ foreach ($p in $cols.PSObject.Properties) {
     $added += "column $($p.Name)"
 }
 $streams = @($prev.streams)
-if ($streams -notcontains 'StimulusState') { $streams += 'StimulusState'; $added += 'stream StimulusState' }
+# This workflow's own streams: StimulusState, and zapit-v2's copy of the Zapit stimulus config at Go.
+$ownStreams = @('StimulusState', 'Settings_ZapitStimConfig')
+foreach ($s in $ownStreams) { if ($streams -notcontains $s) { $streams += $s; $added += "stream $s" } }
 $es = [ordered]@{}; foreach ($p in $prev.experimentSettings.PSObject.Properties) { $es[$p.Name] = $p.Value }
 # usedBy as it was, with this repo on each of its names (its streams: StimulusState and the lab's
 # Settings_* and calibration streams it already writes are tagged by whoever saves the list).
@@ -47,7 +49,7 @@ function Add-Tag([string]$Section, [string]$Name) {
     if ($tags -notcontains $me) { $usedBy[$Section][$Name] = @(@($tags) + $me | Sort-Object); $script:tagged += $Name }
 }
 foreach ($name in $cols.PSObject.Properties.Name) { Add-Tag 'trialColumns' $name }
-Add-Tag 'streams' 'StimulusState'
+foreach ($s in $ownStreams) { Add-Tag 'streams' $s }
 $body = [ordered]@{ streams = $streams; experimentSettings = $es; trialColumns = $tc; usedBy = $usedBy }
 "would add $($added.Count): $($added -join ', ')"
 "would tag $($tagged.Count) with ${me}: $($tagged -join ', ')"
