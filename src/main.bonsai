@@ -2960,7 +2960,7 @@
             </Expression>
             <Expression xsi:type="Annotation">
               <Name>Spout positions file</Name>
-              <Text><![CDATA[This mouse's spout positions: <RigConfigDirectory>\calibration\LickSpoutPositions\<SubjectId>.csv, written by SaveSpoutPositions and read at Start (ReadPositions). When the mouse has no file there, ReadPositions reads production's, C:\RigConfigs\LickSpoutPositions\<SubjectId>.csv (where auditory-vr-corridor keeps them), chosen by SpoutPositionsToRead; production's files are only read, never written. A rig without calibration\ read no mouse's positions at all (Pip, 9 Nov 2026).]]></Text>
+              <Text><![CDATA[This mouse's spout positions: <RigConfigDirectory>\calibration\LickSpoutPositions\<SubjectId>.csv, written by SaveSpoutPositions and read at Start (ReadPositions); a mouse without one gets rig.yml's lickSpoutDefaultPosition. Tom's mice's files were copied there from C:\RigConfigs\LickSpoutPositions, where auditory-vr-corridor keeps them, on BLUE-OPTO-2 on 9 Nov 2026 (BACKLOG); copy them on each other corridor rig before it runs a mouse of Tom's.]]></Text>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>RigConfigDirectory</Name>
@@ -4279,11 +4279,6 @@
                 </Edges>
               </Workflow>
             </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:SpoutPositionsToRead">
-                <ext:FallbackFolder>C:\RigConfigs\LickSpoutPositions</ext:FallbackFolder>
-              </Combinator>
-            </Expression>
           </Nodes>
           <Edges>
             <Edge From="1" To="2" Label="Source1" />
@@ -4328,8 +4323,7 @@
             <Edge From="45" To="47" Label="Source1" />
             <Edge From="46" To="47" Label="Source2" />
             <Edge From="47" To="48" Label="Source2" />
-            <Edge From="49" To="51" Label="Source1" />
-            <Edge From="51" To="50" Label="Source1" />
+            <Edge From="49" To="50" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -10605,9 +10599,9 @@
             </Expression>
             <Expression xsi:type="mf:ExperimentManifest">
               <Name>ExperimentManifest</Name>
-              <Description>Writes manifest.json into the experiment folder (OpenRigs.Manifest), as av-dome's: the machine, this repo's commit, who launched it and sent Go, rig.yml and the calibration files the workflow reads by hash: MeshMap.csv and gammalut.bmp where rig.yml's projectionCalibration names them (production's, C:\RigConfigs, on every rig not yet switched over; change these two with rig.yml when one is), and this mouse's spout positions in both places SpoutPositionsToRead reads them from (calibration\ beside rig.yml first, else production's C:\RigConfigs\LickSpoutPositions), so the calibration\ one is noted not found until this workflow saves the mouse's positions. They pointed at calibration\ alone, which BLUE-OPTO-2 never had, and every file read was noted missing (Pip, 9 Nov 2026). Then what each BonsaiData_Trial column means (schemas\trial-columns.yml), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files, BonsaiData and StimulusState.</Description>
+              <Description>Writes manifest.json into the experiment folder (OpenRigs.Manifest), as av-dome's: the machine, this repo's commit, who launched it and sent Go, rig.yml and the calibration files the workflow reads by hash: MeshMap.csv and gammalut.bmp where rig.yml's projectionCalibration names them (production's, C:\RigConfigs, on every rig not yet switched over; change these two with rig.yml when one is), and this mouse's spout positions (calibration\LickSpoutPositions beside rig.yml). MeshMap.csv and gammalut.bmp pointed at calibration\, which BLUE-OPTO-2 never had, so they were noted missing though the workflow read them (9 Nov 2026). Then what each BonsaiData_Trial column means (schemas\trial-columns.yml), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files, BonsaiData and StimulusState.</Description>
               <mf:IngestScript>coen-dome-navigation</mf:IngestScript>
-              <mf:ConfigFiles>C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\rig.yml;C:\RigConfigs\MeshMap.csv;C:\RigConfigs\gammalut.bmp;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\LickSpoutPositions\{SubjectId}.csv;C:\RigConfigs\LickSpoutPositions\{SubjectId}.csv</mf:ConfigFiles>
+              <mf:ConfigFiles>C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\rig.yml;C:\RigConfigs\MeshMap.csv;C:\RigConfigs\gammalut.bmp;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\LickSpoutPositions\{SubjectId}.csv</mf:ConfigFiles>
               <mf:ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/;StimulusState/</mf:ExpectedFiles>
               <mf:TrialColumns>schemas\trial-columns.yml</mf:TrialColumns>
             </Expression>
