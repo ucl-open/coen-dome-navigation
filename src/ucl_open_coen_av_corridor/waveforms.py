@@ -1,11 +1,11 @@
-"""The sounds the workflow plays, made once from config/task.yml and committed in src/waveforms.
+"""The sounds the workflow plays, made once from config/abstract-av-corridor.yml and committed in src/waveforms.
 
 Tom Childs' gen_session.py wrote the tones again before every experiment. They depend only on the task's
 start_freq, end_freq, n_freq_bins and amplitude, so they are made here once, as gen_session made them:
 the tones and the error tone at the task's amplitude (the workflow scales the tones by the amplitude
 again, so a pip peaks at amplitude squared, as it always has). sweep.txt records the four values and
 the workflow stops at Go if the task file's differ. Run `uv run generate-waveforms` after changing any
-of them in config/task.yml, and commit.
+of them in config/abstract-av-corridor.yml, and commit.
 """
 
 from pathlib import Path
@@ -19,7 +19,7 @@ from ucl_open_coen_av_corridor.task import UclOpenCoenAvCorridorTaskLogic
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "src" / "waveforms"
-TASK_FILE = ROOT / "config" / "task.yml"
+TASK_FILE = ROOT / "config" / "abstract-av-corridor.yml"
 SAMPLE_RATE = 48000  # the mixer's
 TONE_MS = 50  # one tone pip; the pips are 50 ms apart
 NOISE_SECONDS = 60
@@ -73,13 +73,13 @@ def write(start_freq: int, end_freq: int, n_freq_bins: int, amplitude: float, ou
 
 
 def task_parameters(task_file: Path = TASK_FILE):
-    """The task parameters config/task.yml gives."""
+    """The task parameters config/abstract-av-corridor.yml gives."""
     data = yaml.safe_load(task_file.read_text(encoding="utf-8"))
     return UclOpenCoenAvCorridorTaskLogic.model_validate(data).task_parameters
 
 
 def main() -> None:
-    """Write the waveforms for config/task.yml's sweep."""
+    """Write the waveforms for config/abstract-av-corridor.yml's sweep."""
     p = task_parameters()
     write(p.start_freq, p.end_freq, p.n_freq_bins, p.amplitude)
     print(f"Wrote {p.n_freq_bins} tones from {p.start_freq} to {p.end_freq} Hz at amplitude {p.amplitude}, the error tone and the background noise to {OUT_DIR}")

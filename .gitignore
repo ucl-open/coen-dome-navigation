@@ -87,5 +87,5 @@ ipython_config.py
 #   intended to run in multiple environments; otherwise, check them in:
 # .python-version
 # The tone pips, error tone and background noise the workflow plays: generated once by
-# ucl_open_coen_av_corridor.waveforms from config/task.yml, committed (tests check them).
+# ucl_open_coen_av_corridor.waveforms from config/abstract-av-corridor.yml, committed (tests check them).
 !src/waveforms/*.bin

@@ -11,7 +11,7 @@ from ucl_open_coen_av_corridor import waveforms
 from ucl_open_coen_av_corridor.task import UclOpenCoenAvCorridorTaskLogic, UclOpenCoenAvCorridorTaskParameters
 
 ROOT = Path(__file__).parent.parent
-TASK = ROOT / "config" / "task.yml"
+TASK = ROOT / "config" / "abstract-av-corridor.yml"
 WAVES = ROOT / "src" / "waveforms"
 
 
