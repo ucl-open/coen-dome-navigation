@@ -10,7 +10,7 @@
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a quantity ends in its unit.
 #
 # Only what changes from trial to trial (Pip, 9 Nov 2026): the task file's values fixed for the
-# experiment (the stage's row, amplitude) are in Settings\Settings_Task_*.json and the stage itself
+# experiment (the stage's row, toneAmplitude) are in Settings\Settings_Task_*.json and the stage itself
 # is TrainingStage in Settings\Settings_Experiment_*.json; no column repeats another or sums the Harp logs (lickCount, trialStartWheelCm until 9 Nov 2026).
 # With laser-off trials (zapit-v2) every trial of an optogenetics experiment has a condition, so laser on is
 # laserPowerMw > 0, not laserCondition > 0 (laserPowerMw replaced optoStimulated, Pip, 9 Nov 2026).
@@ -58,10 +58,10 @@ endPositionCm:
   unit: cm
   formerly: [TrialEndPosCm]
   description: Distance run in the trial when the row was built (Seconds). Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
-audioEndFrequencyHz:
+toneEndFrequencyHz:
   type: double
   unit: Hz
-  formerly: [TrialEndAudFreq]
+  formerly: [TrialEndAudFreq, audioEndFrequencyHz]
   description: The sweep's frequency when the trial ended.
 visualEndSpatialFrequencyCpd:
   type: double
@@ -91,7 +91,7 @@ stimulusOnsetTime:
   type: double
   unit: s
   formerly: [CueOnsetHarp]
-  description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame (beep 1, 50 ms after the trial's start at beep 0), as Tom Childs' CueOnsetHarp. In an optogenetics experiment the laser trigger is at beep 0 and the laser stimDelay after it. The physical onset is in the hardware logs.
+  description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame (beep 1, 50 ms after the trial's start at beep 0), as Tom Childs' CueOnsetHarp. In an optogenetics experiment the laser comes on laserLeadsStimulusBySeconds before it. The physical onset is in the hardware logs.
 outcomeTime:
   type: double
   unit: s

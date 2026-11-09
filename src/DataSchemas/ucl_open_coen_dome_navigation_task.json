@@ -376,12 +376,12 @@
           "title": "SweepSteps",
           "type": "integer"
         },
-        "amplitude": {
+        "toneAmplitude": {
           "default": 0.05,
-          "description": "Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
+          "description": "Tone amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
           "maximum": 1.0,
           "minimum": 0.0,
-          "title": "Amplitude",
+          "title": "ToneAmplitude",
           "type": "number"
         },
         "backgroundNoiseLevel": {

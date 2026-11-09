@@ -46,15 +46,15 @@ def test_the_shared_blocks_have_av_dome_s_names():
 def test_the_committed_waveforms_are_the_task_file_s():
     p = UclOpenCoenDomeNavigationTaskLogic.model_validate(task()).task_parameters
     assert (WAVES / "sweep.txt").read_text(encoding="utf-8") == waveforms.sweep_line(
-        p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps, p.amplitude
+        p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps, p.tone_amplitude
     )
     freqs = waveforms.tone_frequencies(p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps)
     assert [int(x) for x in (WAVES / "frequencies.txt").read_text(encoding="utf-8").split()] == list(freqs)
     committed = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(p.sweep_steps, -1)
-    assert np.array_equal(committed, waveforms.tones(freqs, p.amplitude))
+    assert np.array_equal(committed, waveforms.tones(freqs, p.tone_amplitude))
     assert committed.shape[1] == 2400  # the workflow's MatrixReader BufferLength
     rate, error = wavfile.read(WAVES / "error_tone.wav")
-    assert rate == 48000 and np.array_equal(error, waveforms.error_tone(float(freqs[0]), float(freqs[-1]), p.amplitude))
+    assert rate == 48000 and np.array_equal(error, waveforms.error_tone(float(freqs[0]), float(freqs[-1]), p.tone_amplitude))
     noise = np.fromfile(WAVES / "background_noise.bin", dtype=np.float32)
     assert np.array_equal(noise, waveforms.background_noise())
 

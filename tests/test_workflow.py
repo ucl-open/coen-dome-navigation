@@ -139,7 +139,7 @@ def test_stimulus_state_is_in_bonsai_data_with_its_units():
     # the grating's 0/1 opacity follow from them), named with the trial row's audio/visual prefixes.
     text = (Path(__file__).parents[1] / "src" / "main.bonsai").read_text(encoding="utf-8")
     row = re.search(r"new\(new\(it\.Item2 as trialNumber.*?\) as Row", text).group(0)
-    assert re.findall(r" as (\w+)", row)[:-1] == ["trialNumber", "positionCm", "audioFrequencyHz", "stimulusActive",
+    assert re.findall(r" as (\w+)", row)[:-1] == ["trialNumber", "positionCm", "toneFrequencyHz", "stimulusActive",
                                              "visualSpatialFrequencyCpd"]
     assert "StimulusState/" not in text and "<LogName>StimulusState</LogName>" not in text
     assert "<LogName>BonsaiData_ZapitReplies</LogName>" in text and "<LogName>Zapit</LogName>" not in text

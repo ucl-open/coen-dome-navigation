@@ -17,7 +17,7 @@ taskParameters:
   sweepStartHz: 2000
   sweepEndHz: 25000
   sweepSteps: 100             # log-spaced tone frequencies from sweepStartHz to sweepEndHz
-  amplitude: 0.05             # a tone pip peaks at amplitude squared
+  toneAmplitude: 0.05         # a tone pip peaks at toneAmplitude squared
   backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
   positionStepCm: 1           # the distance run is rounded to this before it sets the frequency
   # The wheel diameter distances are worked out at; null takes rig.yml's (170 mm on every corridor

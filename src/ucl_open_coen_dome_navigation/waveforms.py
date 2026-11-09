@@ -1,7 +1,7 @@
 """The sounds the workflow plays, made once from config/task-abstract-av-corridor.yml and committed in src/waveforms.
 
 Tom Childs' gen_session.py wrote the tones again before every experiment. They depend only on the task's
-sweep_start_hz, sweep_end_hz, sweep_steps and amplitude, so they are made here once, as gen_session made them:
+sweep_start_hz, sweep_end_hz, sweep_steps and tone_amplitude, so they are made here once, as gen_session made them:
 the tones and the error tone at the task's amplitude (the workflow scales the tones by the amplitude
 again, so a pip peaks at amplitude squared, as it always has). sweep.txt records the four values and
 the workflow stops at Go if the task file's differ. Run `uv run generate-waveforms` after changing any
@@ -81,8 +81,8 @@ def task_parameters(task_file: Path = TASK_FILE):
 def main() -> None:
     """Write the waveforms for config/task-abstract-av-corridor.yml's sweep."""
     p = task_parameters()
-    write(p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps, p.amplitude)
-    print(f"Wrote {p.sweep_steps} tones from {p.sweep_start_hz} to {p.sweep_end_hz} Hz at amplitude {p.amplitude}, the error tone and the background noise to {OUT_DIR}")
+    write(p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps, p.tone_amplitude)
+    print(f"Wrote {p.sweep_steps} tones from {p.sweep_start_hz} to {p.sweep_end_hz} Hz at amplitude {p.tone_amplitude}, the error tone and the background noise to {OUT_DIR}")
 
 
 if __name__ == "__main__":

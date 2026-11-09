@@ -222,9 +222,9 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         description="Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
         ge=10,
     )
-    amplitude: float = Field(
+    tone_amplitude: float = Field(
         default=0.05,
-        description="Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
+        description="Tone amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
         ge=0.0,
         le=1.0,
     )

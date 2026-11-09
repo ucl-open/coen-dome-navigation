@@ -1174,7 +1174,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private int _sweepSteps;
     
-        private double _amplitude;
+        private double _toneAmplitude;
     
         private double _backgroundNoiseLevel;
     
@@ -1198,7 +1198,7 @@ namespace UclOpenCoenDomeNavigationTask
             _sweepStartHz = 2000;
             _sweepEndHz = 25000;
             _sweepSteps = 100;
-            _amplitude = 0.05D;
+            _toneAmplitude = 0.05D;
             _backgroundNoiseLevel = 0.5D;
             _positionStepCm = 1;
             _wheelDiameterMm = 75D;
@@ -1216,7 +1216,7 @@ namespace UclOpenCoenDomeNavigationTask
             _sweepStartHz = other._sweepStartHz;
             _sweepEndHz = other._sweepEndHz;
             _sweepSteps = other._sweepSteps;
-            _amplitude = other._amplitude;
+            _toneAmplitude = other._toneAmplitude;
             _backgroundNoiseLevel = other._backgroundNoiseLevel;
             _positionStepCm = other._positionStepCm;
             _wheelDiameterMm = other._wheelDiameterMm;
@@ -1322,21 +1322,21 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
+        /// Tone amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("amplitude")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="amplitude")]
-        [System.ComponentModel.DescriptionAttribute("Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this v" +
-            "alue: the workflow stops at Go if they differ")]
-        public double Amplitude
+        [Newtonsoft.Json.JsonPropertyAttribute("toneAmplitude")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="toneAmplitude")]
+        [System.ComponentModel.DescriptionAttribute("Tone amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this va" +
+            "lue: the workflow stops at Go if they differ")]
+        public double ToneAmplitude
         {
             get
             {
-                return _amplitude;
+                return _toneAmplitude;
             }
             set
             {
-                _amplitude = value;
+                _toneAmplitude = value;
             }
         }
     
@@ -1507,7 +1507,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("SweepStartHz = " + _sweepStartHz + ", ");
             stringBuilder.Append("SweepEndHz = " + _sweepEndHz + ", ");
             stringBuilder.Append("SweepSteps = " + _sweepSteps + ", ");
-            stringBuilder.Append("Amplitude = " + _amplitude + ", ");
+            stringBuilder.Append("ToneAmplitude = " + _toneAmplitude + ", ");
             stringBuilder.Append("BackgroundNoiseLevel = " + _backgroundNoiseLevel + ", ");
             stringBuilder.Append("PositionStepCm = " + _positionStepCm + ", ");
             stringBuilder.Append("WheelDiameterMm = " + _wheelDiameterMm + ", ");
