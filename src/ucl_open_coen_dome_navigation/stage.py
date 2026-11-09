@@ -68,7 +68,7 @@ def _read(csv_file: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-# The trial log's modality, spelled out as av-dome's are, as the task file's code.
+# The trial log's trialType (the modality shown, in words, as av-dome's trialType), as the task file's code.
 MODALITY_CODES = {"auditory": "A", "visual": "V", "audiovisual": "AV"}
 
 
@@ -78,12 +78,12 @@ def read_new(folder: Path) -> Experiment | None:
     if not logs:
         return None
     rows = [r for log in logs for r in _read(log)]
-    if not rows or "modality" not in rows[0]:
+    if not rows or "trialType" not in rows[0]:
         return None
     return Experiment(
         folder.name,
         _when(folder.name),
-        [MODALITY_CODES[r["modality"]] for r in rows],
+        [MODALITY_CODES[r["trialType"]] for r in rows],
         [int(r["trainingStage"]) for r in rows],
         [r["outcome"] == "Correct" for r in rows],
     )

@@ -18,11 +18,11 @@ trialNumber:
   type: int
   formerly: [Trial]
   description: The trial's number in the experiment, from 1.
-modality:
+trialType:
   type: string
   values: [auditory, visual, audiovisual]
   formerly: [Modality]
-  description: The task's modality - auditory (tone sweep), visual (grating) or both; the task file's A, V or AV spelled out, as av-dome's modalities are.
+  description: What the trial showed, in words, as av-dome's trialType - auditory (the tone sweep), visual (the grating) or both; the task file's modality, A, V or AV.
 trainingStage:
   type: int
   formerly: [ShapingStage]
