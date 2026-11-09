@@ -149,8 +149,8 @@ class OptogeneticsConfig(BaseSchema):
     lead_time: float = Field(
         default=0.1,
         ge=0.05,
-        le=1.0,
-        description="How long the stimulus runs before the first tone pip, in seconds: a multiple of the 50 ms beep, from 0.05 to 1. The first pip moves to beep lead_time / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials",
+        le=0.2,
+        description="How long the stimulus runs before the first tone pip, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep lead_time / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip",
     )
     exclude_repeats: bool = Field(
         default=True, description="Whether repeat trials are excluded from stimulation (av-dome's; this task has no repeat trials)"

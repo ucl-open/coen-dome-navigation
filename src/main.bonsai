@@ -10773,11 +10773,10 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                     <Selector>TaskParameters.Optogenetics.ZapitConfigPath</Selector>
                   </Expression>
                   <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rig:ReadTextFile" />
+                    <Combinator xsi:type="ext:ZapitStimConfigSnapshot" />
                   </Expression>
                   <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogDataSchema.bonsai">
                     <Name>Settings_ZapitStimConfig</Name>
-                    <Extension>yml</Extension>
                   </Expression>
                 </Nodes>
                 <Edges>

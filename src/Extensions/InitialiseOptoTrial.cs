@@ -116,12 +116,14 @@ public class InitialiseOptoTrial
                 "optogenetics.stimDelay must be 0 (Zapit ignores a start delay for the continuous stimulus this task uses); got {0}.",
                 optogenetics.StimDelay));
         }
-        // The stimulus starts on a beep and the first tone pip comes LeadTime later, so LeadTime must be 1 to 20 whole beeps.
+        // The stimulus starts on a beep and the first tone pip comes LeadTime later, so LeadTime must be 1 to 4 whole beeps.
+        // At most 4 (0.2 s): licks before the first pip count toward the wrong-lick limits, and a longer lead could end a
+        // trial before its first pip, which leaves the trial loop without an outcome.
         var beeps = optogenetics.LeadTime / BeepIntervalSec;
-        if (!(Math.Abs(beeps - Math.Round(beeps)) < 1e-6 && Math.Round(beeps) >= 1 && Math.Round(beeps) <= 20))
+        if (!(Math.Abs(beeps - Math.Round(beeps)) < 1e-6 && Math.Round(beeps) >= 1 && Math.Round(beeps) <= 4))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.leadTime must be a multiple of 0.05 s from 0.05 to 1; got {0}.", optogenetics.LeadTime));
+                "optogenetics.leadTime must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LeadTime));
         }
         // The laser is meant to stay on until the outcome, so the cap must be longer than the longest trial: the workflow's
         // MaxTrialTimeSec (12 s, counted from the first tone pip, LeadTime after onset, on trial 1 and one beep earlier later) plus a margin.

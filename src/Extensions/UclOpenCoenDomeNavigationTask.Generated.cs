@@ -416,11 +416,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// How long the stimulus runs before the first tone pip, in seconds: a multiple of the 50 ms beep, from 0.05 to 1. The first pip moves to beep lead_time / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials
+        /// How long the stimulus runs before the first tone pip, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep lead_time / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("leadTime")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="leadTime")]
-        [System.ComponentModel.DescriptionAttribute(@"How long the stimulus runs before the first tone pip, in seconds: a multiple of the 50 ms beep, from 0.05 to 1. The first pip moves to beep lead_time / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials")]
+        [System.ComponentModel.DescriptionAttribute(@"How long the stimulus runs before the first tone pip, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep lead_time / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip")]
         public double LeadTime
         {
             get

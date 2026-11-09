@@ -17,23 +17,23 @@ from ucl_open_coen_dome_navigation.task import (
 ROOT = Path(__file__).parent.parent
 
 
-@pytest.mark.parametrize("lead_time", [0.05, 0.1, 0.15, 0.3, 0.5, 1.0])
+@pytest.mark.parametrize("lead_time", [0.05, 0.1, 0.15, 0.2])
 def test_lead_time_in_whole_beeps_is_accepted(lead_time):
     assert OptogeneticsConfig(lead_time=lead_time, stim_duration=13.5).lead_time == lead_time
 
 
-@pytest.mark.parametrize("lead_time", [0.0, 0.07, 0.125, 1.05])
+@pytest.mark.parametrize("lead_time", [0.0, 0.07, 0.125, 0.25, 0.5, 1.0])
 def test_other_lead_times_are_refused(lead_time):
     with pytest.raises(pydantic.ValidationError, match="lead_time"):
         OptogeneticsConfig(lead_time=lead_time, stim_duration=13.5)
 
 
-@pytest.mark.parametrize("lead_time, stim_duration", [(0.1, 12.35), (0.1, 12.5), (0.25, 12.5), (1.0, 13.25)])
+@pytest.mark.parametrize("lead_time, stim_duration", [(0.1, 12.35), (0.1, 12.5), (0.2, 12.45), (0.2, 13.0)])
 def test_a_cap_longer_than_the_longest_trial_is_accepted(lead_time, stim_duration):
     assert OptogeneticsConfig(lead_time=lead_time, stim_duration=stim_duration).stim_duration == stim_duration
 
 
-@pytest.mark.parametrize("lead_time, stim_duration", [(0.1, 12.0), (0.3, 12.5), (1.0, 13.0), (0.1, float("inf"))])
+@pytest.mark.parametrize("lead_time, stim_duration", [(0.1, 12.0), (0.2, 12.4), (0.15, 12.3), (0.1, float("inf"))])
 def test_a_cap_that_would_end_a_timeout_trial_early_is_refused(lead_time, stim_duration):
     with pytest.raises(pydantic.ValidationError, match="stim_duration"):
         OptogeneticsConfig(lead_time=lead_time, stim_duration=stim_duration)
@@ -71,3 +71,10 @@ def test_initialise_opto_trial_checks_the_same_rules():
     assert float(re.search(r"const double MaxTrialTimeSec = ([\d.]+);", text).group(1)) == MAX_TRIAL_TIME_SEC
     assert float(re.search(r"const double StimDurationMarginSec = ([\d.]+);", text).group(1)) == STIM_DURATION_MARGIN_SEC
     assert float(re.search(r"const double BeepIntervalSec = ([\d.]+);", text).group(1)) == BEEP_INTERVAL_SEC
+
+
+def test_the_stimulus_config_is_saved_as_json():
+    # LogDataSchema writes Settings\<Name>_<time>.json and parses its input as JSON, so the YAML goes in wrapped
+    text = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
+    block = text[text.index("TaskParameters.Optogenetics.ZapitConfigPath"):text.index("<Name>Settings_ZapitStimConfig</Name>")]
+    assert "ext:ZapitStimConfigSnapshot" in block and "ReadTextFile" not in block
