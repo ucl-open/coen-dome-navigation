@@ -10472,7 +10472,7 @@
                   </Expression>
                   <Expression xsi:type="MemberSelector">
                     <Name>RngSeed</Name>
-                    <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once.</Description>
+                    <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once: the Take(1) is after the multicast, not before it. A MulticastSubject passes on its source's completion, and a Take(1) ahead of it completed the shared AsyncEvents subject a second after Go, so no reward, Stop or other Async event was logged after RngSeed and rig-control counted no water (test-1802, 9 Nov 2026). After the multicast, the Take(1) unsubscribes as the seed passes, and TaskRandom (a BehaviorSubject) never completes.</Description>
                     <Selector>Seed</Selector>
                   </Expression>
                   <Expression xsi:type="Combinator">
@@ -10506,10 +10506,10 @@
                   <Edge From="20" To="21" Label="Source1" />
                   <Edge From="21" To="22" Label="Source1" />
                   <Edge From="23" To="24" Label="Source1" />
-                  <Edge From="24" To="25" Label="Source1" />
-                  <Edge From="25" To="26" Label="Source1" />
+                  <Edge From="24" To="26" Label="Source1" />
                   <Edge From="26" To="27" Label="Source1" />
                   <Edge From="27" To="28" Label="Source1" />
+                  <Edge From="28" To="25" Label="Source1" />
                 </Edges>
               </Workflow>
             </Expression>

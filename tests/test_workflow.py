@@ -70,3 +70,30 @@ def test_the_trial_outcome_is_not_completed_at_the_end_of_trial_1():
     take = nodes[after[0]].find(W + "Combinator")
     assert take is not None and take.get(XSI) == "rx:Take"
     assert take.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Count") == "1"
+
+
+def test_no_async_event_sender_completes_async_events():
+    # A MulticastSubject passes on its source's completion. RngSeed's Take(1) sat ahead of its
+    # multicast and completed the shared AsyncEvents subject a second after Go: no reward or Stop
+    # was logged after it, and rig-control counted no water (test-1802, 9 Nov 2026). A sender that
+    # logs once takes its one value after the multicast.
+    senders = 0
+    for workflow in MAIN.iter(W + "Workflow"):
+        nodes = list(workflow.find(W + "Nodes"))
+        edges = [(int(e.get("From")), int(e.get("To"))) for e in workflow.find(W + "Edges")]
+        for i, node in enumerate(nodes):
+            if node.get(XSI) != "MulticastSubject" or node.findtext(W + "Name") != "AsyncEvents":
+                continue
+            senders += 1
+            upstream, frontier = set(), [i]
+            while frontier:
+                to = frontier.pop()
+                for a, b in edges:
+                    if b == to and a not in upstream:
+                        upstream.add(a)
+                        frontier.append(a)
+            finite = [nodes[a].find(W + "Combinator").get(XSI) for a in upstream
+                      if nodes[a].find(W + "Combinator") is not None
+                      and nodes[a].find(W + "Combinator").get(XSI) in ("rx:Take", "rx:TakeLast", "rx:First", "rx:Last")]
+            assert not finite, f"an AsyncEvents sender completes after {finite}"
+    assert senders == 3  # RngSeed, RewardDelivered, Control
