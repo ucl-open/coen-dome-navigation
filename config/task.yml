@@ -41,12 +41,13 @@ taskParameters:
     rollWindow: 25
     rollThreshold: 0.5
     minEpoch: 10
-  optogenetics:
+  optogenetics:               # av-dome's block, run as av-dome runs it
     enabled: false
     zapitConfigPath: ''       # the Zapit stimulus config loaded in Zapit
     stimProbability: 0.75
-    stimDuration: 12.0        # s
-    leadTime: 0.1             # s before the first tone pip; a multiple of 0.05
+    stimDelay: 0.0            # s from the trial's start (beep 0) to the laser
+    stimDuration: 1.5         # s; Zapit stops the laser itself, whatever the outcome
+    excludeRepeats: true      # av-dome's; this task has no repeat trials
     pseudorandomSelection: true
     warmupTrials: 0
   backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off

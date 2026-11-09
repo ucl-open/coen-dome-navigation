@@ -10,7 +10,6 @@ from swc.aeon.schema import BaseSchema
 from ucl_open_coen_av_corridor import __semver__
 from ucl_open_coen_av_corridor.helpers import calc_log_window
 
-BEEP_INTERVAL_SEC = 0.05  # The tone pips are 50 ms apart on the Harp clock (every 50th Behavior board sample)
 MAX_SHAPING_STAGE = 6
 
 
@@ -99,16 +98,18 @@ class EngagementConfig(BaseSchema):
 
 
 class OptogeneticsConfig(BaseSchema):
-    """Zapit optogenetic stimulation. Field names follow the av-dome task schema.
+    """Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser run as
+    av-dome runs it (Pip, 9 Nov 2026).
 
     The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
     here. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws
-    one per stimulated trial. On a stimulated trial the laser comes on lead_time before the first tone pip and is
-    stopped at the trial outcome, or after stim_duration if that comes first. Zapit's host and port are rig.yml's
-    zapit block.
+    one per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and
+    stim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the
+    command on a rig without hardware triggering) and stops it itself after stim_duration, whatever the trial's
+    outcome. Zapit's host, port and triggering are rig.yml's zapit block.
     """
 
-    # The same rule as validate_lead_time's, in the JSON schema: rig-control checks the task file
+    # The same rule as validate_config_path's, in the JSON schema: rig-control checks the task file
     # against the schema, not this model, so a ticked Zapit with no config path was sent at Go and
     # the workflow stopped at trial 1 (audit, 9 Nov 2026, round 3). additionalProperties is spelt
     # out because rig-control closes every object that lists properties.
@@ -119,39 +120,19 @@ class OptogeneticsConfig(BaseSchema):
         }
     )
 
-    enabled: bool = Field(
-        default=False, description="Whether optogenetic stimulation runs this experiment. When false, Bonsai does not connect to Zapit"
+    enabled: bool = Field(default=False, description="Whether optogenetic stimulation is enabled")
+    zapit_config_path: str = Field(default="", description="Path to the Zapit YAML config listing stimulation conditions")
+    stim_probability: float = Field(default=0.75, ge=0, le=1, description="Probability that a trial receives stimulation")
+    stim_delay: float = Field(default=0.0, ge=0, description="Delay from trial start to stimulation onset, in seconds")
+    stim_duration: float = Field(default=1.5, ge=0, description="Stimulation duration, in seconds")
+    exclude_repeats: bool = Field(
+        default=True, description="Whether repeat trials are excluded from stimulation (av-dome's; this task has no repeat trials)"
     )
-    zapit_config_path: str = Field(
-        default="", description="Path to the Zapit stimulus config YAML loaded in Zapit, listing the stimulation conditions"
-    )
-    stim_probability: float = Field(default=0.75, ge=0.0, le=1.0, description="Probability that a trial receives stimulation")
-    stim_duration: float = Field(
-        default=12.0,
-        gt=0,
-        description="Longest the laser stays on in one trial, in seconds. It normally stops earlier, at the trial outcome",
-    )
-    lead_time: float = Field(
-        default=0.1,
-        description=(
-            "How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, "
-            "from 0.05 to 1. Applied to every trial of an optogenetics experiment, stimulated or not, so trial timing "
-            "does not reveal which trials are stimulated"
-        ),
-    )
-    pseudorandom_selection: bool = Field(
-        default=True,
-        description="Draw conditions from a shuffled queue, so each is used equally often, rather than independently each trial",
-    )
+    pseudorandom_selection: bool = Field(default=True, description="Draw conditions from a shuffled queue rather than independently")
     warmup_trials: int = Field(default=0, ge=0, description="Trials at the experiment's start with no stimulation")
 
     @model_validator(mode="after")
-    def validate_lead_time(self):
-        beeps = self.lead_time / BEEP_INTERVAL_SEC
-        if abs(beeps - round(beeps)) > 1e-6 or not 1 <= round(beeps) <= 20:
-            raise ValueError(
-                f"lead_time ({self.lead_time}) must be a multiple of the {BEEP_INTERVAL_SEC} s beep interval, from 0.05 to 1 s"
-            )
+    def validate_config_path(self):
         if self.enabled and not self.zapit_config_path:
             raise ValueError("optogenetics is enabled but zapit_config_path is empty")
         return self

@@ -38,7 +38,8 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - **Task file.** Read at Go from `TaskPath` (YAML) instead of `session-schemas\...json` at start; `thresholdFrequencies` written out in `config\task.yml` because rig-control does not run the pydantic model. Subject and session come from rig-control (`LogConfig` dropped).
 - **Waveforms** made once and committed; `CheckWaveforms` stops at Go if the task's sweep or amplitude is not the one they were made for. Tones keep Tom's loudness (written at amplitude and scaled by it again).
 - **Mixer** is av-dome's (rig.yml's device, the 3 s start delay before the dome's sound card).
-- **Zapit** host, port, hardware triggering and trigger line from rig.yml's `zapit:`; the laser onset pulses `zapit.triggerLine` through the lab's PulseController (`TriggerPulse`) when `hardwareTriggered` is on (BLUE-OPTO-2: see above).
+- **Zapit** host, port, hardware triggering and trigger line from rig.yml's `zapit:`.
+- **The laser is run as av-dome runs it** (Pip, 9 Nov 2026): the task's `optogenetics` block is av-dome's field for field (`stimDelay` and `excludeRepeats` added, `leadTime` dropped; `excludeRepeats` does nothing, as this task has no repeat trials). Each stimulated trial's StartStimulus carries `stimDelay` (StartDelay) and `stimDuration`; `zapit.triggerLine` is pulsed at every trial's start (beep 0), opto or not and on every rig, as av-dome's StartLaser does; Zapit starts the laser `stimDelay` later and stops it itself after `stimDuration`, and nothing stops it at the outcome. Before, as Tom's design: the laser came on `leadTime` (0.1 s) before the cue, the cue was delayed by it on every trial of an optogenetics experiment, and StopStimulus ended the laser at the outcome (12 s cap). The cue now starts at beep 1 in every experiment. Set `stimDuration` (1.5 s, av-dome's default) for what Tom's experiment needs: a fixed duration can run past a quick outcome or end before a slow one. av-dome arms and pulses 0.1 s apart and runs the trial 0.5 s later; here arming is in the ITI and waits for Zapit's answer, and the pulse is at beep 0.
 - **Trials start** once the experiment folder exists and the tones are loaded, 0.5 s later.
 - **Trial log** is the lab's `BonsaiData_Trial`, one row per trial as Tom's TrialLog (built at the outcome, below); `outcome` is Rewarded/Unrewarded so rig-control's performance is Tom's success rate.
 - **Tom's SessionStats and EngagementStats** and the GUI are rig-control's (its view), not the workflow's. The task's `engagement` block is Tom's model's, unused.
@@ -48,7 +49,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 ### Not changed on audit (9 Nov 2026, round 1)
 
 - Trials start 0.5 s after the experiment folder exists, not on Tom's Start button: decided above.
-- Zapit's hardware trigger is a pulse on `zapit.triggerLine`, its width rig.yml's (5 ms in Tom's; 3000 ms on BLUE-OPTO-2, see above); off on BLUE-OPTO-1.
+- Zapit's hardware trigger is a pulse on `zapit.triggerLine`, its width rig.yml's (5 ms in Tom's; 3000 ms on BLUE-OPTO-2, see above). (Since the laser follows av-dome, the line is pulsed on every trial and every rig.)
 - Background noise fades in from Go, not launch: at most trial 1's first second.
 - Waveform paths relative to `src`: av-dome's `src\LocalFiles` resolve the same under rig-control.
 - The suggestion not kept across an agent restart, and `test` getting one: edits are kept; harmless.

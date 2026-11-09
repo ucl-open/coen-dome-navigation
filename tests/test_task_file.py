@@ -80,6 +80,13 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
     assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml") == []
 
 
+def test_the_optogenetics_block_is_av_dome_s():
+    # Pip, 9 Nov 2026: the same parameter names as av-dome's OptogeneticsSettings (pip/main-switchover 6c5a885).
+    av_dome = ["enabled", "zapitConfigPath", "stimProbability", "stimDelay", "stimDuration", "excludeRepeats",
+               "pseudorandomSelection", "warmupTrials"]
+    assert list(task()["taskParameters"]["optogenetics"]) == av_dome
+
+
 def test_the_committed_task_schema_is_the_model_s():
     committed = json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_av_corridor_task.json").read_text(encoding="utf-8"))
     model = pydantic.RootModel[UclOpenCoenAvCorridorTaskLogic].model_json_schema(

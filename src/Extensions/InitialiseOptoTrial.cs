@@ -79,7 +79,8 @@ public class InitialiseOptoTrial
                     trialData.OptogeneticCondition = zapitConditions[rand.Next(zapitConditions.Count)];
                 }
 
-                // The laser stops at the trial outcome; this caps it in case the outcome is late
+                // As av-dome's InitialiseTrial: Zapit starts the laser StimDelay after the trigger and stops it after StimDuration
+                trialData.OptogeneticDelay = optogenetics.StimDelay;
                 trialData.OptogeneticDuration = optogenetics.StimDuration;
             }
             return trialData;
@@ -128,6 +129,7 @@ public class InitialiseOptoTrial
     {
         trialData.OptogeneticEnabled = false;
         trialData.OptogeneticCondition = 0;
+        trialData.OptogeneticDelay = 0;
         trialData.OptogeneticDuration = 0;
     }
 
@@ -163,5 +165,6 @@ public class OptoTrial
     public int TrialNumber;  // Trial this draw is for, as in the TrialNumber subject
     public bool OptogeneticEnabled;  // Whether this trial is stimulated
     public int OptogeneticCondition;  // Zapit condition (its stimLocations number), 0 when not stimulated
-    public double OptogeneticDuration;  // Longest the laser stays on, in seconds; it is stopped at the outcome. 0 when not stimulated
+    public double OptogeneticDelay;  // Seconds from the trigger (beep 0) to the laser, Zapit's StartDelay. 0 when not stimulated
+    public double OptogeneticDuration;  // Seconds the laser stays on, timed by Zapit. 0 when not stimulated
 }

@@ -31,7 +31,7 @@
       "type": "object"
     },
     "OptogeneticsConfig": {
-      "description": "Zapit optogenetic stimulation. Field names follow the av-dome task schema.\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws\none per stimulated trial. On a stimulated trial the laser comes on lead_time before the first tone pip and is\nstopped at the trial outcome, or after stim_duration if that comes first. Zapit's host and port are rig.yml's\nzapit block.",
+      "description": "Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser run as\nav-dome runs it (Pip, 9 Nov 2026).\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws\none per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and\nstim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the\ncommand on a rig without hardware triggering) and stops it itself after stim_duration, whatever the trial's\noutcome. Zapit's host, port and triggering are rig.yml's zapit block.",
       "if": {
         "additionalProperties": true,
         "properties": {
@@ -46,40 +46,47 @@
       "properties": {
         "enabled": {
           "default": false,
-          "description": "Whether optogenetic stimulation runs this experiment. When false, Bonsai does not connect to Zapit",
+          "description": "Whether optogenetic stimulation is enabled",
           "title": "Enabled",
           "type": "boolean"
         },
         "zapitConfigPath": {
           "default": "",
-          "description": "Path to the Zapit stimulus config YAML loaded in Zapit, listing the stimulation conditions",
+          "description": "Path to the Zapit YAML config listing stimulation conditions",
           "title": "ZapitConfigPath",
           "type": "string"
         },
         "stimProbability": {
           "default": 0.75,
           "description": "Probability that a trial receives stimulation",
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "StimProbability",
           "type": "number"
         },
+        "stimDelay": {
+          "default": 0.0,
+          "description": "Delay from trial start to stimulation onset, in seconds",
+          "minimum": 0,
+          "title": "StimDelay",
+          "type": "number"
+        },
         "stimDuration": {
-          "default": 12.0,
-          "description": "Longest the laser stays on in one trial, in seconds. It normally stops earlier, at the trial outcome",
-          "exclusiveMinimum": 0,
+          "default": 1.5,
+          "description": "Stimulation duration, in seconds",
+          "minimum": 0,
           "title": "StimDuration",
           "type": "number"
         },
-        "leadTime": {
-          "default": 0.1,
-          "description": "How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogenetics experiment, stimulated or not, so trial timing does not reveal which trials are stimulated",
-          "title": "LeadTime",
-          "type": "number"
+        "excludeRepeats": {
+          "default": true,
+          "description": "Whether repeat trials are excluded from stimulation (av-dome's; this task has no repeat trials)",
+          "title": "ExcludeRepeats",
+          "type": "boolean"
         },
         "pseudorandomSelection": {
           "default": true,
-          "description": "Draw conditions from a shuffled queue, so each is used equally often, rather than independently each trial",
+          "description": "Draw conditions from a shuffled queue rather than independently",
           "title": "PseudorandomSelection",
           "type": "boolean"
         },
@@ -285,9 +292,10 @@
             },
             "optogenetics": {
               "enabled": false,
-              "leadTime": 0.1,
+              "excludeRepeats": true,
               "pseudorandomSelection": true,
-              "stimDuration": 12.0,
+              "stimDelay": 0.0,
+              "stimDuration": 1.5,
               "stimProbability": 0.75,
               "warmupTrials": 0,
               "zapitConfigPath": ""
@@ -431,8 +439,9 @@
             "enabled": false,
             "zapitConfigPath": "",
             "stimProbability": 0.75,
-            "stimDuration": 12.0,
-            "leadTime": 0.1,
+            "stimDelay": 0.0,
+            "stimDuration": 1.5,
+            "excludeRepeats": true,
             "pseudorandomSelection": true,
             "warmupTrials": 0
           },

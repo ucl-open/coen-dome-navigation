@@ -22,6 +22,18 @@ def test_the_behavior_board_encoder_counts_position_not_displacement():
     assert "BoardWheelDistanceCm" in wheel
 
 
+def test_the_laser_is_run_as_av_dome_runs_it():
+    # Pip, 9 Nov 2026: av-dome's parameters and behaviour. Zapit gets StartDelay and StimDuration and
+    # stops the laser itself (no StopStimulus at the outcome); the trigger is pulsed on every trial
+    # (the opto-only condition disabled, as av-dome's StartLaser); the cue no longer waits a lead time.
+    text = ET.tostring(MAIN, encoding="unicode")
+    assert "CreateStopStimulus" not in text and "LeadTime" not in text and "CueStartBeep" not in text
+    assert text.count('Selector="OptogeneticDelay"') == 2  # both StartStimulus: armed and software-timed
+    onset = group("OptoOnset").find(W + "Workflow").find(W + "Nodes")
+    pulse_gate = next(e for e in onset if e.get(XSI) == "Disable")
+    assert pulse_gate.find(W + "Builder").findtext(W + "Name") == "HardwareTriggeredOptoTrial?"
+
+
 def test_the_trial_row_is_built_at_the_outcome_not_two_seconds_later():
     # A Stop in the 2 s before TrialEnded lost the trial's row, its reward already logged.
     first = group("TrialRow").find(W + "Workflow").find(W + "Nodes")[0]

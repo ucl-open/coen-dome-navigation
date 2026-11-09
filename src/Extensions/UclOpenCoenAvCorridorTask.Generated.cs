@@ -250,22 +250,26 @@ namespace UclOpenCoenAvCorridorTask
 
 
     /// <summary>
-    /// Zapit optogenetic stimulation. Field names follow the av-dome task schema.
+    /// Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser run as
+    ///av-dome runs it (Pip, 9 Nov 2026).
     ///
     ///The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
     ///here. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws
-    ///one per stimulated trial. On a stimulated trial the laser comes on lead_time before the first tone pip and is
-    ///stopped at the trial outcome, or after stim_duration if that comes first. Zapit's host and port are rig.yml's
-    ///zapit block.
+    ///one per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and
+    ///stim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the
+    ///command on a rig without hardware triggering) and stops it itself after stim_duration, whatever the trial's
+    ///outcome. Zapit's host, port and triggering are rig.yml's zapit block.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Zapit optogenetic stimulation. Field names follow the av-dome task schema.
+    [System.ComponentModel.DescriptionAttribute(@"Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser run as
+    av-dome runs it (Pip, 9 Nov 2026).
 
     The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
     here. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws
-    one per stimulated trial. On a stimulated trial the laser comes on lead_time before the first tone pip and is
-    stopped at the trial outcome, or after stim_duration if that comes first. Zapit's host and port are rig.yml's
-    zapit block.")]
+    one per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and
+    stim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the
+    command on a rig without hardware triggering) and stops it itself after stim_duration, whatever the trial's
+    outcome. Zapit's host, port and triggering are rig.yml's zapit block.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class OptogeneticsConfig
@@ -277,9 +281,11 @@ namespace UclOpenCoenAvCorridorTask
     
         private double _stimProbability;
     
+        private double _stimDelay;
+    
         private double _stimDuration;
     
-        private double _leadTime;
+        private bool _excludeRepeats;
     
         private bool _pseudorandomSelection;
     
@@ -290,8 +296,9 @@ namespace UclOpenCoenAvCorridorTask
             _enabled = false;
             _zapitConfigPath = "";
             _stimProbability = 0.75D;
-            _stimDuration = 12D;
-            _leadTime = 0.1D;
+            _stimDelay = 0D;
+            _stimDuration = 1.5D;
+            _excludeRepeats = true;
             _pseudorandomSelection = true;
             _warmupTrials = 0;
         }
@@ -301,19 +308,19 @@ namespace UclOpenCoenAvCorridorTask
             _enabled = other._enabled;
             _zapitConfigPath = other._zapitConfigPath;
             _stimProbability = other._stimProbability;
+            _stimDelay = other._stimDelay;
             _stimDuration = other._stimDuration;
-            _leadTime = other._leadTime;
+            _excludeRepeats = other._excludeRepeats;
             _pseudorandomSelection = other._pseudorandomSelection;
             _warmupTrials = other._warmupTrials;
         }
     
         /// <summary>
-        /// Whether optogenetic stimulation runs this experiment. When false, Bonsai does not connect to Zapit
+        /// Whether optogenetic stimulation is enabled
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("enabled")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="enabled")]
-        [System.ComponentModel.DescriptionAttribute("Whether optogenetic stimulation runs this experiment. When false, Bonsai does not" +
-            " connect to Zapit")]
+        [System.ComponentModel.DescriptionAttribute("Whether optogenetic stimulation is enabled")]
         public bool Enabled
         {
             get
@@ -327,12 +334,11 @@ namespace UclOpenCoenAvCorridorTask
         }
     
         /// <summary>
-        /// Path to the Zapit stimulus config YAML loaded in Zapit, listing the stimulation conditions
+        /// Path to the Zapit YAML config listing stimulation conditions
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("zapitConfigPath")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="zapitConfigPath")]
-        [System.ComponentModel.DescriptionAttribute("Path to the Zapit stimulus config YAML loaded in Zapit, listing the stimulation c" +
-            "onditions")]
+        [System.ComponentModel.DescriptionAttribute("Path to the Zapit YAML config listing stimulation conditions")]
         public string ZapitConfigPath
         {
             get
@@ -364,12 +370,29 @@ namespace UclOpenCoenAvCorridorTask
         }
     
         /// <summary>
-        /// Longest the laser stays on in one trial, in seconds. It normally stops earlier, at the trial outcome
+        /// Delay from trial start to stimulation onset, in seconds
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("stimDelay")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimDelay")]
+        [System.ComponentModel.DescriptionAttribute("Delay from trial start to stimulation onset, in seconds")]
+        public double StimDelay
+        {
+            get
+            {
+                return _stimDelay;
+            }
+            set
+            {
+                _stimDelay = value;
+            }
+        }
+    
+        /// <summary>
+        /// Stimulation duration, in seconds
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("stimDuration")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimDuration")]
-        [System.ComponentModel.DescriptionAttribute("Longest the laser stays on in one trial, in seconds. It normally stops earlier, a" +
-            "t the trial outcome")]
+        [System.ComponentModel.DescriptionAttribute("Stimulation duration, in seconds")]
         public double StimDuration
         {
             get
@@ -383,33 +406,30 @@ namespace UclOpenCoenAvCorridorTask
         }
     
         /// <summary>
-        /// How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogenetics experiment, stimulated or not, so trial timing does not reveal which trials are stimulated
+        /// Whether repeat trials are excluded from stimulation (av-dome's; this task has no repeat trials)
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("leadTime")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="leadTime")]
-        [System.ComponentModel.DescriptionAttribute("How long before the first tone pip the laser comes on, in seconds. A multiple of " +
-            "the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogeneti" +
-            "cs experiment, stimulated or not, so trial timing does not reveal which trials a" +
-            "re stimulated")]
-        public double LeadTime
+        [Newtonsoft.Json.JsonPropertyAttribute("excludeRepeats")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="excludeRepeats")]
+        [System.ComponentModel.DescriptionAttribute("Whether repeat trials are excluded from stimulation (av-dome\'s; this task has no " +
+            "repeat trials)")]
+        public bool ExcludeRepeats
         {
             get
             {
-                return _leadTime;
+                return _excludeRepeats;
             }
             set
             {
-                _leadTime = value;
+                _excludeRepeats = value;
             }
         }
     
         /// <summary>
-        /// Draw conditions from a shuffled queue, so each is used equally often, rather than independently each trial
+        /// Draw conditions from a shuffled queue rather than independently
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("pseudorandomSelection")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="pseudorandomSelection")]
-        [System.ComponentModel.DescriptionAttribute("Draw conditions from a shuffled queue, so each is used equally often, rather than" +
-            " independently each trial")]
+        [System.ComponentModel.DescriptionAttribute("Draw conditions from a shuffled queue rather than independently")]
         public bool PseudorandomSelection
         {
             get
@@ -455,8 +475,9 @@ namespace UclOpenCoenAvCorridorTask
             stringBuilder.Append("Enabled = " + _enabled + ", ");
             stringBuilder.Append("ZapitConfigPath = " + _zapitConfigPath + ", ");
             stringBuilder.Append("StimProbability = " + _stimProbability + ", ");
+            stringBuilder.Append("StimDelay = " + _stimDelay + ", ");
             stringBuilder.Append("StimDuration = " + _stimDuration + ", ");
-            stringBuilder.Append("LeadTime = " + _leadTime + ", ");
+            stringBuilder.Append("ExcludeRepeats = " + _excludeRepeats + ", ");
             stringBuilder.Append("PseudorandomSelection = " + _pseudorandomSelection + ", ");
             stringBuilder.Append("WarmupTrials = " + _warmupTrials);
             return true;
