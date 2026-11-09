@@ -13,6 +13,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - **av-dome's Async log stops a second after Go** (fixed here in 9d04d77). In `pip/main-switchover`, the RngSeed sender in `ExperimentLogs` has its `Take(1)` before `MulticastSubject AsyncEvents`; a MulticastSubject passes on its source's completion, so the shared `AsyncEvents` subject completes after the seed and nothing later is logged (no RewardDelivered rows; rig-control counts 0 water). Seen here on BLUE-OPTO-2; av-dome's sender is the same (not run there). Fix: move the `Take(1)` after the multicast (edges `21->22, 22->23` become `21->23, 25->22`); `tests\test_workflow.py::test_no_async_event_sender_completes_async_events` checks it.
 - **Calibration folder switch-over** (rig-setup's): BLUE-OPTO-2 done by hand (MeshMap.csv, gammalut.bmp and LickSpoutPositions copied from `C:\RigConfigs` into `calibration\`, rig.yml's `projectionCalibration` pointed there). BLUE-OPTO-1 and GREEN-DOME-2 still need it; whether rig-setup should do the copy is yours.
 - **rig.yml's wheel diameter** is 170 mm on BLUE-OPTO-1, GREEN-DOME-1 and GREEN-DOME-2; the wheels are 75 mm (BLUE-OPTO-2 corrected).
+- **Zapit on BLUE-OPTO-2, before any optogenetics with a mouse** (affects av-dome too): the masking light lasts DO3's 3 s pulse while this task's laser lasts the trial; the laser glows on sham trials (Zapit's off is 0 V, this laser's dark is -0.04 V); the laser's offset is not logged. Details and fixes in zapit-v2's BACKLOG.md.
 
 ### For Pip and Tom to decide
 
