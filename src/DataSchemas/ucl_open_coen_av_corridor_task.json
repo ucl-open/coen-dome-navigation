@@ -31,7 +31,7 @@
       "type": "object"
     },
     "OptogeneticsConfig": {
-      "description": "Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser run as\nav-dome runs it (Pip, 9 Nov 2026).\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws\none per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and\nstim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the\ncommand on a rig without hardware triggering) and stops it itself after stim_duration, whatever the trial's\noutcome. Zapit's host, port and triggering are rig.yml's zapit block.",
+      "description": "Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser started as\nav-dome starts it (Pip, 9 Nov 2026), but lasting the whole trial.\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws\none per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and\nstim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the\ncommand on a rig without hardware triggering). The workflow stops it at the trial's outcome, so it covers the\ntrial, as Tom Childs' did; stim_duration only caps it. Zapit's host, port and triggering are rig.yml's zapit block.",
       "if": {
         "additionalProperties": true,
         "properties": {
@@ -72,8 +72,8 @@
           "type": "number"
         },
         "stimDuration": {
-          "default": 1.5,
-          "description": "Stimulation duration, in seconds",
+          "default": 12.0,
+          "description": "Longest the stimulation lasts, in seconds: the laser is stopped at the trial's outcome, so it covers the trial, and this caps it if the outcome is late (av-dome: the stimulation duration)",
           "minimum": 0,
           "title": "StimDuration",
           "type": "number"
@@ -295,7 +295,7 @@
               "excludeRepeats": true,
               "pseudorandomSelection": true,
               "stimDelay": 0.0,
-              "stimDuration": 1.5,
+              "stimDuration": 12.0,
               "stimProbability": 0.75,
               "warmupTrials": 0,
               "zapitConfigPath": ""
@@ -440,7 +440,7 @@
             "zapitConfigPath": "",
             "stimProbability": 0.75,
             "stimDelay": 0.0,
-            "stimDuration": 1.5,
+            "stimDuration": 12.0,
             "excludeRepeats": true,
             "pseudorandomSelection": true,
             "warmupTrials": 0

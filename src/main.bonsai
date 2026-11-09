@@ -5503,7 +5503,7 @@
                         </Expression>
                         <Expression xsi:type="Annotation">
                           <Name>Optogenetics</Name>
-                          <Text><![CDATA[At ITI start the stimulation for the new trial is drawn (InitialiseOptoTrial, ported from av-dome's InitialiseTrial). ArmZapit runs alongside InitITI; OptoOnset pulses the trigger at beep 0 (every trial, as av-dome); Zapit starts the laser stimDelay later and stops it after stimDuration, as in av-dome.]]></Text>
+                          <Text><![CDATA[At ITI start the stimulation for the new trial is drawn (InitialiseOptoTrial, ported from av-dome's InitialiseTrial). ArmZapit runs alongside InitITI; OptoOnset pulses the trigger at beep 0 (every trial, as av-dome); Zapit starts the laser stimDelay later; ProcessTrialEnd stops it at the outcome, so it covers the trial (stimDuration caps it).]]></Text>
                         </Expression>
                         <Expression xsi:type="SubscribeSubject">
                           <Name>TaskParams</Name>
@@ -5816,7 +5816,7 @@
                         </Expression>
                         <Expression xsi:type="rx:SelectMany">
                           <Name>OptoOnset</Name>
-                          <Description>At beep 0, the trial's start, as av-dome's StartLaser: pulses zapit.triggerLine on every trial (the condition that limits it to hardware-triggered opto trials is disabled, as in av-dome), which fires the waveform ArmZapit loaded on a hardware-triggered rig, so the trigger is on the Harp clock and in the Behavior board log. Without hardware triggering, a stimulated trial's StartStimulus is sent here instead. Either way Zapit starts the laser stimDelay later (StartDelay) and stops it itself after stimDuration (StimDuration), whatever the outcome: nothing sends StopStimulus, as in av-dome. DO3 is set directly because the PulseController include only pulses DO0-DO2 through TriggerValve; it is pulse-enabled there, with the width from RigConfigs ZapitTriggerPulseWidth.</Description>
+                          <Description>At beep 0, the trial's start, as av-dome's StartLaser: pulses zapit.triggerLine on every trial (the condition that limits it to hardware-triggered opto trials is disabled, as in av-dome), which fires the waveform ArmZapit loaded on a hardware-triggered rig, so the trigger is on the Harp clock and in the Behavior board log. Without hardware triggering, a stimulated trial's StartStimulus is sent here instead. Either way Zapit starts the laser stimDelay later (StartDelay). Unlike av-dome, ProcessTrialEnd stops it at the trial's outcome (StopStimulus), so it covers the whole trial; stimDuration (StimDuration) caps it if the outcome is late. DO3 is set directly because the PulseController include only pulses DO0-DO2 through TriggerValve; it is pulse-enabled there, with the width from RigConfigs ZapitTriggerPulseWidth.</Description>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="WorkflowInput">
@@ -8809,12 +8809,46 @@
                         <Expression xsi:type="MulticastSubject">
                           <Name>TrialActive</Name>
                         </Expression>
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>OptoTrial</Name>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:WithLatestFrom" />
+                        </Expression>
+                        <Expression xsi:type="MemberSelector">
+                          <Selector>Item2</Selector>
+                        </Expression>
+                        <Expression xsi:type="rx:Condition">
+                          <Name>OptoTrial?</Name>
+                          <Description>Stops the laser at the outcome of a stimulated trial, so it covers the whole trial (Pip, 9 Nov 2026: av-dome's parameters, but in this task the laser lasts the trial). Zapit ramps it down over offRampDownDuration_ms from its stimulus config; stimDuration caps it if the outcome is late.</Description>
+                          <Workflow>
+                            <Nodes>
+                              <Expression xsi:type="WorkflowInput">
+                                <Name>Source1</Name>
+                              </Expression>
+                              <Expression xsi:type="MemberSelector">
+                                <Selector>OptogeneticEnabled</Selector>
+                              </Expression>
+                              <Expression xsi:type="WorkflowOutput" />
+                            </Nodes>
+                            <Edges>
+                              <Edge From="0" To="1" Label="Source1" />
+                              <Edge From="1" To="2" Label="Source1" />
+                            </Edges>
+                          </Workflow>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="ext:CreateStopStimulus" />
+                        </Expression>
+                        <Expression xsi:type="MulticastSubject">
+                          <Name>ZapitCommands</Name>
+                        </Expression>
                         <Expression xsi:type="MulticastSubject">
                           <Name>TrialOutcome</Name>
                         </Expression>
                       </Nodes>
                       <Edges>
-                        <Edge From="31" To="38" Label="Source1" />
+                        <Edge From="31" To="44" Label="Source1" />
                         <Edge From="0" To="1" Label="Source1" />
                         <Edge From="1" To="5" Label="Source1" />
                         <Edge From="2" To="4" Label="Source1" />
@@ -8855,6 +8889,12 @@
                         <Edge From="33" To="34" Label="Source1" />
                         <Edge From="34" To="35" Label="Source1" />
                         <Edge From="36" To="37" Label="Source1" />
+                        <Edge From="37" To="39" Label="Source1" />
+                        <Edge From="38" To="39" Label="Source2" />
+                        <Edge From="39" To="40" Label="Source1" />
+                        <Edge From="40" To="41" Label="Source1" />
+                        <Edge From="41" To="42" Label="Source1" />
+                        <Edge From="42" To="43" Label="Source1" />
                       </Edges>
                     </Workflow>
                   </Expression>

@@ -98,15 +98,15 @@ class EngagementConfig(BaseSchema):
 
 
 class OptogeneticsConfig(BaseSchema):
-    """Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser run as
-    av-dome runs it (Pip, 9 Nov 2026).
+    """Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser started as
+    av-dome starts it (Pip, 9 Nov 2026), but lasting the whole trial.
 
     The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
     here. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws
     one per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and
     stim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the
-    command on a rig without hardware triggering) and stops it itself after stim_duration, whatever the trial's
-    outcome. Zapit's host, port and triggering are rig.yml's zapit block.
+    command on a rig without hardware triggering). The workflow stops it at the trial's outcome, so it covers the
+    trial, as Tom Childs' did; stim_duration only caps it. Zapit's host, port and triggering are rig.yml's zapit block.
     """
 
     # The same rule as validate_config_path's, in the JSON schema: rig-control checks the task file
@@ -124,7 +124,11 @@ class OptogeneticsConfig(BaseSchema):
     zapit_config_path: str = Field(default="", description="Path to the Zapit YAML config listing stimulation conditions")
     stim_probability: float = Field(default=0.75, ge=0, le=1, description="Probability that a trial receives stimulation")
     stim_delay: float = Field(default=0.0, ge=0, description="Delay from trial start to stimulation onset, in seconds")
-    stim_duration: float = Field(default=1.5, ge=0, description="Stimulation duration, in seconds")
+    stim_duration: float = Field(
+        default=12.0,
+        ge=0,
+        description="Longest the stimulation lasts, in seconds: the laser is stopped at the trial's outcome, so it covers the trial, and this caps it if the outcome is late (av-dome: the stimulation duration)",
+    )
     exclude_repeats: bool = Field(
         default=True, description="Whether repeat trials are excluded from stimulation (av-dome's; this task has no repeat trials)"
     )

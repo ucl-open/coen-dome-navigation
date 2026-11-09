@@ -22,12 +22,14 @@ def test_the_behavior_board_encoder_counts_position_not_displacement():
     assert "BoardWheelDistanceCm" in wheel
 
 
-def test_the_laser_is_run_as_av_dome_runs_it():
-    # Pip, 9 Nov 2026: av-dome's parameters and behaviour. Zapit gets StartDelay and StimDuration and
-    # stops the laser itself (no StopStimulus at the outcome); the trigger is pulsed on every trial
-    # (the opto-only condition disabled, as av-dome's StartLaser); the cue no longer waits a lead time.
+def test_the_laser_starts_as_av_dome_s_and_lasts_the_trial():
+    # Pip, 9 Nov 2026: av-dome's parameters, and its start: Zapit gets StartDelay and StimDuration, the
+    # trigger is pulsed on every trial (the opto-only condition disabled, as av-dome's StartLaser), the
+    # cue no longer waits a lead time. But in this task the laser lasts the trial: StopStimulus at the outcome.
     text = ET.tostring(MAIN, encoding="unicode")
-    assert "CreateStopStimulus" not in text and "LeadTime" not in text and "CueStartBeep" not in text
+    assert "LeadTime" not in text and "CueStartBeep" not in text
+    end = ET.tostring(group("ProcessTrialEnd"), encoding="unicode")
+    assert "CreateStopStimulus" in end and ">TrialActive<" in end
     assert text.count('Selector="OptogeneticDelay"') == 2  # both StartStimulus: armed and software-timed
     onset = group("OptoOnset").find(W + "Workflow").find(W + "Nodes")
     pulse_gate = next(e for e in onset if e.get(XSI) == "Disable")

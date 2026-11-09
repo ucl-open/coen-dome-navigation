@@ -250,26 +250,26 @@ namespace UclOpenCoenAvCorridorTask
 
 
     /// <summary>
-    /// Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser run as
-    ///av-dome runs it (Pip, 9 Nov 2026).
+    /// Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser started as
+    ///av-dome starts it (Pip, 9 Nov 2026), but lasting the whole trial.
     ///
     ///The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
     ///here. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws
     ///one per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and
     ///stim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the
-    ///command on a rig without hardware triggering) and stops it itself after stim_duration, whatever the trial's
-    ///outcome. Zapit's host, port and triggering are rig.yml's zapit block.
+    ///command on a rig without hardware triggering). The workflow stops it at the trial's outcome, so it covers the
+    ///trial, as Tom Childs' did; stim_duration only caps it. Zapit's host, port and triggering are rig.yml's zapit block.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser run as
-    av-dome runs it (Pip, 9 Nov 2026).
+    [System.ComponentModel.DescriptionAttribute(@"Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser started as
+    av-dome starts it (Pip, 9 Nov 2026), but lasting the whole trial.
 
     The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
     here. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws
     one per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and
     stim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the
-    command on a rig without hardware triggering) and stops it itself after stim_duration, whatever the trial's
-    outcome. Zapit's host, port and triggering are rig.yml's zapit block.")]
+    command on a rig without hardware triggering). The workflow stops it at the trial's outcome, so it covers the
+    trial, as Tom Childs' did; stim_duration only caps it. Zapit's host, port and triggering are rig.yml's zapit block.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class OptogeneticsConfig
@@ -297,7 +297,7 @@ namespace UclOpenCoenAvCorridorTask
             _zapitConfigPath = "";
             _stimProbability = 0.75D;
             _stimDelay = 0D;
-            _stimDuration = 1.5D;
+            _stimDuration = 12D;
             _excludeRepeats = true;
             _pseudorandomSelection = true;
             _warmupTrials = 0;
@@ -388,11 +388,13 @@ namespace UclOpenCoenAvCorridorTask
         }
     
         /// <summary>
-        /// Stimulation duration, in seconds
+        /// Longest the stimulation lasts, in seconds: the laser is stopped at the trial's outcome, so it covers the trial, and this caps it if the outcome is late (av-dome: the stimulation duration)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("stimDuration")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimDuration")]
-        [System.ComponentModel.DescriptionAttribute("Stimulation duration, in seconds")]
+        [System.ComponentModel.DescriptionAttribute("Longest the stimulation lasts, in seconds: the laser is stopped at the trial\'s ou" +
+            "tcome, so it covers the trial, and this caps it if the outcome is late (av-dome:" +
+            " the stimulation duration)")]
         public double StimDuration
         {
             get
