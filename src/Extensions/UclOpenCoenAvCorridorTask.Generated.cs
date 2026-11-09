@@ -120,16 +120,18 @@ namespace UclOpenCoenAvCorridorTask
 
 
     /// <summary>
-    /// How engagement is labelled when the next stage is chosen (stage.py): whether the animal is still
-    ///attempting the task.
+    /// How engagement is labelled: whether the animal is still attempting the task. Kept from Tom Childs'
+    ///model, whose gen_session.py printed an engaged success rate beside the stage; the stage rules
+    ///(stage.py) never used it, and nothing here reads it now.
     ///
     ///A mouse partway through a session often keeps running but stops licking. Those trials are not failures (it
     ///is not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read
     ///from whether each trial contained a lick, smoothed over a window of trials.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"How engagement is labelled when the next stage is chosen (stage.py): whether the animal is still
-    attempting the task.
+    [System.ComponentModel.DescriptionAttribute(@"How engagement is labelled: whether the animal is still attempting the task. Kept from Tom Childs'
+    model, whose gen_session.py printed an engaged success rate beside the stage; the stage rules
+    (stage.py) never used it, and nothing here reads it now.
 
     A mouse partway through a session often keeps running but stops licking. Those trials are not failures (it
     is not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read

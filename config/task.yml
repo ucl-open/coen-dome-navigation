@@ -37,7 +37,7 @@ taskParameters:
   truncation:                 # stage 6 only
     fraction: 0.16
     points: [0.4, 0.6]
-  engagement:                 # how stage.py labels engaged trials
+  engagement:                 # unused: Tom's report of engaged trials, never the stage rule
     rollWindow: 25
     rollThreshold: 0.5
     minEpoch: 10

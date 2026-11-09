@@ -9850,7 +9850,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TrialRow</Name>
-        <Description>Each trial's BonsaiData_Trial row (TrialRow), built when the trial's outcome is known (TrialOutcome: at once on a reward, after the timeout on a punishment) from the latest value of each subject, and stamped with the Harp time then (Seconds). Tom Childs' TrialLog was built 2 s later, at TrialEnded, so a Stop in between lost the trial (audit, 9 Nov 2026). Columns are named and typed as the lab's list allows (K:\config\data-dictionary.json) and described in schemas\trial-columns.yml. outcome is Rewarded or Unrewarded, so rig-control's performance is Tom's success rate.</Description>
+        <Description>Each trial's BonsaiData_Trial row (TrialRow), built when the trial's outcome is known (TrialOutcome: after the reward tone on a reward, after the error tone and timeout on a punishment, at once otherwise) from the latest value of each subject, and stamped with the Harp time then (Seconds). Tom Childs' TrialLog was built 2 s later, at TrialEnded, so a Stop in between lost the trial (audit, 9 Nov 2026). Columns are named and typed as the lab's list allows (K:\config\data-dictionary.json) and described in schemas\trial-columns.yml. outcome is Rewarded or Unrewarded, so rig-control's performance is Tom's success rate.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">

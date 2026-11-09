@@ -85,6 +85,16 @@ def test_a_share_that_does_not_answer_gives_no_stage(tmp_path, monkeypatch, caps
     assert answer["value"] is None and str(share) in answer["why"]
 
 
+def test_an_experiment_with_only_its_manifest_left_gives_no_stage(tmp_path):
+    # Audit round 2, 9 Nov 2026: ingest clears staging but the manifest, so an older session would decide.
+    folder = tmp_path / "sub-TC9" / "ses-003D1_2026-11-12T09-00-00"
+    folder.mkdir(parents=True)
+    (folder / "manifest.json").write_text("{}", encoding="utf-8")
+    unread = []
+    assert experiments("TC9", [tmp_path], [], unread) == []
+    assert unread == ["ses-003D1_2026-11-12T09-00-00 (Only Its Manifest Is Left)"]
+
+
 def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
     from ucl_open_coen_av_corridor.stage import unanswered
 

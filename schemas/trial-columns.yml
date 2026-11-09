@@ -13,7 +13,7 @@ Seconds:
   type: double
   unit: s
   formerly: [HarpTime]
-  description: Harp time the row was built, when the outcome was known - at once on a reward, after the timeout on a punishment. Tom Childs' TrialLog was stamped 2 s later.
+  description: Harp time the row was built, when the outcome was known - after the reward tone on a reward, after the error tone and timeout on a punishment, at once otherwise. Tom Childs' TrialLog was stamped 2 s later.
 trialNumber:
   type: int
   formerly: [Trial]

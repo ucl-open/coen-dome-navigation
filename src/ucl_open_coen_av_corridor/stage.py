@@ -8,8 +8,9 @@ it; the experimenter can change it before Go. As a command:
     uv run suggest-stage --subject TC003 --modality A [--root DIR ...] [--legacy-root DIR ...]
 
 prints one JSON line, {"value": 3, "why": "..."}: the contract of rig-control's [task.suggest]. If
-a share among the roots does not answer, value is null and why names it: no stage is guessed, since
-the mouse's history may be only there (rig-sync deletes a rig's copy after 72 h).
+a share among the roots does not answer, or an experiment there has only its manifest left (its data
+ingested elsewhere), value is null and why names it: no stage is guessed, since the mouse's history
+may be only there (rig-sync deletes a rig's copy after 72 h).
 
 The rules: the latest experiment of the modality with trials decides. Under 50 trials keeps its stage.
 Stage 2 advances only after two experiments in a row each with at least 50 rewarded trials, and falls
@@ -124,10 +125,16 @@ def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unrea
                 folders = [*base.glob(f"sub-{subject}/ses-*"), *base.glob(f"*/sub-{subject}/ses-*")]
             except OSError:
                 if unread is not None:
-                    unread.append(str(base))
+                    unread.append(f"{base} (No Answer)")
                 continue
             for folder in folders:
                 if folder.name in found or not folder.is_dir():
+                    continue
+                if reader is read_new and (folder / "manifest.json").is_file() and not (folder / "BonsaiData").is_dir():
+                    # Ingested: staging keeps only the manifest, so an older experiment would decide
+                    # (audit round 2, 9 Nov 2026). Every experiment writes BonsaiData (Go is logged).
+                    if unread is not None:
+                        unread.append(f"{folder.name} (Only Its Manifest Is Left)")
                     continue
                 try:
                     e = reader(folder)
@@ -189,7 +196,7 @@ def main() -> None:
     if unread:
         # The mouse's history may be there alone (a rig keeps its copy 72 h): no guess (audit, 9 Nov 2026,
         # a trained mouse was offered Stage 1).
-        print(json.dumps({"value": None, "why": f"{' and '.join(unread)} Did Not Answer: Choose the Stage by Hand"}))
+        print(json.dumps({"value": None, "why": f"Could Not Read {' and '.join(unread)}: Choose the Stage by Hand"}))
         return
     stage, why = suggest(history, args.modality)
     print(json.dumps({"value": stage, "why": why}))
