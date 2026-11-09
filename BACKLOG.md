@@ -1,6 +1,6 @@
 # Backlog
 
-Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file kept its name, `config\abstract-av-corridor.yml`.
+Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
 ## Open
 
@@ -35,7 +35,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 ## Decided
 
 - **Base.** av-dome `pip/main-switchover` for everything that is not the task (rig.yml, devices, ExperimentControl, spout commands, reward lines, logging, manifest, live view), because every corridor rig is one of its rigs; Tom's task groups kept node for node.
-- **Task file.** Read at Go from `TaskPath` (YAML) instead of `session-schemas\...json` at start; `thresholdFrequencies` written out in `config\abstract-av-corridor.yml` because rig-control does not run the pydantic model. Subject and session come from rig-control (`LogConfig` dropped).
+- **Task file.** Read at Go from `TaskPath` (YAML) instead of `session-schemas\...json` at start; `thresholdFrequencies` written out in `config\task-abstract-av-corridor.yml` because rig-control does not run the pydantic model. Subject and session come from rig-control (`LogConfig` dropped).
 - **Waveforms** made once and committed; `CheckWaveforms` stops at Go if the task's sweep or amplitude is not the one they were made for. Tones keep Tom's loudness (written at amplitude and scaled by it again).
 - **Mixer** is av-dome's (rig.yml's device, the 3 s start delay before the dome's sound card).
 - **Zapit** host, port, hardware triggering and trigger line from rig.yml's `zapit:`.

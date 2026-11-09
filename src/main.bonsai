@@ -1869,7 +1869,7 @@
       <Expression xsi:type="ExternalizedMapping">
         <Property Name="SubjectId" Description="The mouse; the launch's own, from rig-control." />
         <Property Name="SessionId" Description="The session number; the launch's own, from rig-control." />
-        <Property Name="TaskPath" Description="The task file read at Go: rig-control's copy of the one chosen at launch, with the form's edits (lib-open-rigs settings-files plan); from the editor, config\abstract-av-corridor.yml." />
+        <Property Name="TaskPath" Description="The task file read at Go: rig-control's copy of the one chosen at launch, with the form's edits (lib-open-rigs settings-files plan); from the editor, config\task-abstract-av-corridor.yml." />
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
@@ -2045,7 +2045,7 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="StringProperty">
-                <Value>..\config\abstract-av-corridor.yml</Value>
+                <Value>..\config\task-abstract-av-corridor.yml</Value>
               </Combinator>
             </Expression>
             <Expression xsi:type="Combinator">
@@ -2154,7 +2154,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="ExternalizedMapping">
-              <Property Name="Value" DisplayName="TaskPath" Description="The task file read at Go: rig-control's copy of the one chosen at launch, with the form's edits; from the editor, config\abstract-av-corridor.yml." />
+              <Property Name="Value" DisplayName="TaskPath" Description="The task file read at Go: rig-control's copy of the one chosen at launch, with the form's edits; from the editor, config\task-abstract-av-corridor.yml." />
             </Expression>
           </Nodes>
           <Edges>
@@ -2197,7 +2197,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Task</Name>
-        <Description>At Go: reads the task file (TaskPath, rig-control's copy of config\abstract-av-corridor.yml with the form's edits; from the editor config\abstract-av-corridor.yml), publishes it as TaskConfig and its taskParameters as TaskParams once CheckWaveforms has found src\waveforms made for its sweep, and from them Modality, ShapingStage and which stimuli are active. InitVars declares the task's state and loads the tones and error tone. Tom Childs' Params, read from session-schemas before.</Description>
+        <Description>At Go: reads the task file (TaskPath, rig-control's copy of config\task-abstract-av-corridor.yml with the form's edits; from the editor config\task-abstract-av-corridor.yml), publishes it as TaskConfig and its taskParameters as TaskParams once CheckWaveforms has found src\waveforms made for its sweep, and from them Modality, ShapingStage and which stimuli are active. InitVars declares the task's state and loads the tones and error tone. Tom Childs' Params, read from session-schemas before.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">

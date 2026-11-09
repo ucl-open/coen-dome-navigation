@@ -1,4 +1,4 @@
-"""The task file's schema: config/abstract-av-corridor.yml, which rig-control copies with the form's edits and the
+"""The task file's schema: config/task-abstract-av-corridor.yml, which rig-control copies with the form's edits and the
 workflow reads at Go (TaskPath). Ported from Tom Childs' auditory-vr-corridor task.py; what each
 field does in the task is unchanged unless its description says otherwise."""
 

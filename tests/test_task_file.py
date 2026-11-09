@@ -11,7 +11,7 @@ from ucl_open_coen_dome_navigation import waveforms
 from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic, UclOpenCoenDomeNavigationTaskParameters
 
 ROOT = Path(__file__).parent.parent
-TASK = ROOT / "config" / "abstract-av-corridor.yml"
+TASK = ROOT / "config" / "task-abstract-av-corridor.yml"
 WAVES = ROOT / "src" / "waveforms"
 
 

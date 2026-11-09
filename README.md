@@ -6,7 +6,7 @@ Converted on 9 Nov 2026 from `ucl-open/auditory-vr-corridor` (`main` b67a1f6 wit
 
 ## Running it
 
-From rig-control: choose the rig and the mouse, then this workflow and `config\abstract-av-corridor.yml`. The form shows the task's Modality and Shaping Stage; the stage is suggested from the mouse's earlier experiments of that modality (`uv run suggest-stage --subject <ID> --modality A`, Tom's rules from `gen_session.py`, reading both this workflow's data and the old TrialLogs). Launch puts the rig in ready mode (hardware armed, cameras on, nothing recorded); Go reads the task file and starts the trials once the experiment folder exists.
+From rig-control: choose the rig and the mouse, then this workflow and `config\task-abstract-av-corridor.yml`. The form shows the task's Modality and Shaping Stage; the stage is suggested from the mouse's earlier experiments of that modality (`uv run suggest-stage --subject <ID> --modality A`, Tom's rules from `gen_session.py`, reading both this workflow's data and the old TrialLogs). Launch puts the rig in ready mode (hardware armed, cameras on, nothing recorded); Go reads the task file and starts the trials once the experiment folder exists.
 
 What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided).
 
@@ -15,7 +15,7 @@ What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided).
 | Path | What |
 |---|---|
 | `src\main.bonsai` | The workflow. Top level in data-flow order: RigSetup, Declarations, Initialization, Task, Commands, Wheel (with ComputeRewardZone), LickCounter (with TaskState), HarpClock, TrialEventTimes, Audio (with TaskLogic), StartTrials, VirtualPosition, Grating, TrialRow, Logging, LiveView |
-| `config\abstract-av-corridor.yml` | The task file rig-control copies at Go with the form's edits |
+| `config\task-abstract-av-corridor.yml` | The task file rig-control copies at Go with the form's edits |
 | `config\rig-template.yml` | av-dome's rig template: both workflows read the same `C:\Coen-Lab-Local\RigConfigs\<MACHINE>\rig.yml` |
 | `schemas\trial-columns.yml` | What each `BonsaiData_Trial` column means |
 | `src\waveforms` | The tone pips, error tone and background noise, made by `uv run generate-waveforms` and committed |
