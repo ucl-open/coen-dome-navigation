@@ -27,6 +27,9 @@ taskParameters:
     stage4: { floor: 15248, ceiling: 21248 }   # the ceiling comes in; wrong licks punished
     stage5: { floor: 15248, ceiling: 21248 }   # stage 6 uses stage 5's
   rewardSizeUl: 2.0           # ul per reward on the left spout
+  # The wheel diameter distances are worked out at; null takes rig.yml's (170 mm on every corridor
+  # rig). 75 is what Tom's workflow used, so tracks take the wheel turns the mice trained on.
+  wheelDiameterMm: 75.0
   punishment:
     timeoutSec: 2
     stage4PunishedLick: 8

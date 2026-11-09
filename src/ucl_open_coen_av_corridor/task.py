@@ -193,6 +193,16 @@ class UclOpenCoenAvCorridorTaskParameters(BaseSchema):
             "an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)"
         ),
     )
+    wheel_diameter_mm: Optional[float] = Field(
+        default=75.0,
+        gt=0,
+        description=(
+            "Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel "
+            "wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's "
+            "rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real "
+            "diameter is settled"
+        ),
+    )
     punishment: PunishmentConfig = PunishmentConfig()
     truncation: TruncationConfig = TruncationConfig()
     engagement: EngagementConfig = EngagementConfig()

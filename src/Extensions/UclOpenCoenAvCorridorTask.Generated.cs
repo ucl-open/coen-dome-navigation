@@ -965,6 +965,8 @@ namespace UclOpenCoenAvCorridorTask
     
         private double _rewardSizeUl;
     
+        private double? _wheelDiameterMm;
+    
         private PunishmentConfig _punishment;
     
         private TruncationConfig _truncation;
@@ -989,6 +991,7 @@ namespace UclOpenCoenAvCorridorTask
             _centerFreq = 18000;
             _rewardWindowSize = 6000;
             _rewardSizeUl = 2D;
+            _wheelDiameterMm = 75D;
             _punishment = new PunishmentConfig();
             _truncation = new TruncationConfig();
             _engagement = new EngagementConfig();
@@ -1009,6 +1012,7 @@ namespace UclOpenCoenAvCorridorTask
             _rewardWindowSize = other._rewardWindowSize;
             _thresholdFrequencies = other._thresholdFrequencies;
             _rewardSizeUl = other._rewardSizeUl;
+            _wheelDiameterMm = other._wheelDiameterMm;
             _punishment = other._punishment;
             _truncation = other._truncation;
             _engagement = other._engagement;
@@ -1185,6 +1189,24 @@ namespace UclOpenCoenAvCorridorTask
             }
         }
     
+        /// <summary>
+        /// Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("wheelDiameterMm")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelDiameterMm")]
+        [System.ComponentModel.DescriptionAttribute(@"Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled")]
+        public double? WheelDiameterMm
+        {
+            get
+            {
+                return _wheelDiameterMm;
+            }
+            set
+            {
+                _wheelDiameterMm = value;
+            }
+        }
+    
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("punishment")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="punishment")]
@@ -1321,6 +1343,7 @@ namespace UclOpenCoenAvCorridorTask
             stringBuilder.Append("RewardWindowSize = " + _rewardWindowSize + ", ");
             stringBuilder.Append("ThresholdFrequencies = " + _thresholdFrequencies + ", ");
             stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl + ", ");
+            stringBuilder.Append("WheelDiameterMm = " + _wheelDiameterMm + ", ");
             stringBuilder.Append("Punishment = " + _punishment + ", ");
             stringBuilder.Append("Truncation = " + _truncation + ", ");
             stringBuilder.Append("Engagement = " + _engagement + ", ");

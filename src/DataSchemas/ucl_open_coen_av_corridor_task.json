@@ -246,6 +246,7 @@
               }
             },
             "rewardSizeUl": 2.0,
+            "wheelDiameterMm": 75.0,
             "punishment": {
               "stage4PunishedLick": 8,
               "stage5PunishedLick": 5,
@@ -361,6 +362,20 @@
           "exclusiveMinimum": 0,
           "title": "RewardSizeUl",
           "type": "number"
+        },
+        "wheelDiameterMm": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 75.0,
+          "description": "Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled",
+          "title": "WheelDiameterMm"
         },
         "punishment": {
           "$ref": "#/$defs/PunishmentConfig",

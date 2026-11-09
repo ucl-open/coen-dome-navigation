@@ -1,6 +1,8 @@
-# yaml-language-server: $schema=../src/DataSchemas/ucl_open_av_dome.json
+# yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_av_corridor.json
 #
-# av-dome rig configuration TEMPLATE
+# coen-av-corridor rig configuration TEMPLATE: av-dome's (pip/main-switchover), unchanged. Every
+# corridor rig is a dome or BLUE-OPTO rig with av-dome's rig.yml, and both workflows read the one
+# file, so keep this template and av-dome's the same (tests\test_rig_schema.py validates it).
 #
 # Per-rig configuration files are NOT committed to this repo. To deploy a rig:
 #   1. Copy this file to <ConfigRoot>\<MACHINE-NAME>\rig.yml, where ConfigRoot is
