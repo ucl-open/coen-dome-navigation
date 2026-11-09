@@ -86,7 +86,7 @@ def read_new(folder: Path) -> Experiment | None:
 
 
 def read_legacy(folder: Path) -> Experiment | None:
-    """A session of the old workflow: its latest TrialLog_*.csv (columns Modality, ShapingStage, WasRewarded)."""
+    """An experiment of the old workflow: its latest TrialLog_*.csv (columns Modality, ShapingStage, WasRewarded)."""
     logs = list(folder.glob("**/TrialLog_*.csv"))
     if not logs:
         return None

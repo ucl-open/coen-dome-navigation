@@ -1,7 +1,7 @@
 {
   "$defs": {
     "EngagementConfig": {
-      "description": "How engagement is labelled: whether the animal is still attempting the task. Kept from Tom Childs'\nmodel, whose gen_session.py printed an engaged success rate beside the stage; the stage rules\n(stage.py) never used it, and nothing here reads it now.\n\nA mouse partway through a session often keeps running but stops licking. Those trials are not failures (it\nis not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read\nfrom whether each trial contained a lick, smoothed over a window of trials.",
+      "description": "How engagement is labelled: whether the animal is still attempting the task. Kept from Tom Childs'\nmodel, whose gen_session.py printed an engaged success rate beside the stage; the stage rules\n(stage.py) never used it, and nothing here reads it now.\n\nA mouse partway through an experiment often keeps running but stops licking. Those trials are not failures (it\nis not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read\nfrom whether each trial contained a lick, smoothed over a window of trials.",
       "properties": {
         "rollWindow": {
           "default": 25,
@@ -46,7 +46,7 @@
       "properties": {
         "enabled": {
           "default": false,
-          "description": "Whether optogenetic stimulation runs this session. When false, Bonsai does not connect to Zapit",
+          "description": "Whether optogenetic stimulation runs this experiment. When false, Bonsai does not connect to Zapit",
           "title": "Enabled",
           "type": "boolean"
         },
@@ -73,7 +73,7 @@
         },
         "leadTime": {
           "default": 0.1,
-          "description": "How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogenetics session, stimulated or not, so trial timing does not reveal which trials are stimulated",
+          "description": "How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogenetics experiment, stimulated or not, so trial timing does not reveal which trials are stimulated",
           "title": "LeadTime",
           "type": "number"
         },
@@ -85,7 +85,7 @@
         },
         "warmupTrials": {
           "default": 0,
-          "description": "Trials at session start with no stimulation",
+          "description": "Trials at the experiment's start with no stimulation",
           "minimum": 0,
           "title": "WarmupTrials",
           "type": "integer"

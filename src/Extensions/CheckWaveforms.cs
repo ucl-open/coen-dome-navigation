@@ -8,7 +8,7 @@ using UclOpenCoenAvCorridorTask;
 
 // The tone files in src\waveforms are made once, by ucl_open_coen_av_corridor.waveforms, for one
 // sweep and loudness, and committed; sweep.txt records them as "start end bins amplitude". Before,
-// gen_session.py wrote them again before every session, so they always matched the session's task.
+// gen_session.py wrote them again before every experiment, so they always matched its task.
 // Now a task file edited on the form could ask for another sweep, and the workflow would play the
 // committed tones under the task's numbers with no error: so the experiment stops at Go instead.
 [Combinator]

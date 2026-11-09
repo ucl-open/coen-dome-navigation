@@ -78,7 +78,7 @@ endFrequencyHz:
   unit: Hz
   formerly: [TrialEndAudFreq]
   description: The sweep's frequency when the trial ended.
-endSpatialFrequency:
+endSpatialFrequencyCpd:
   type: double
   unit: cycles/deg
   formerly: [TrialEndVisFreq]
@@ -111,11 +111,11 @@ trialStartWheelCm:
   unit: cm
   formerly: [TrialStartWheelDistanceCm]
   description: Wheel distance since the start of the experiment when the trial started.
-cueOnsetTime:
+stimulusOnsetTime:
   type: double
   unit: s
   formerly: [CueOnsetHarp]
-  description: Harp time of the trial's first beep (beep 0), as Tom Childs' CueOnsetHarp. In an optogenetics session that is the laser onset, and the first tone pip or grating frame comes leadTime later.
+  description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame (beep 1, or leadTime after beep 0 in an optogenetics experiment, when the laser comes on at beep 0), as Tom Childs' CueOnsetHarp. The physical onset is in the hardware logs.
 outcomeTime:
   type: double
   unit: s

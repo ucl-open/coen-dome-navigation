@@ -77,7 +77,7 @@ class EngagementConfig(BaseSchema):
     model, whose gen_session.py printed an engaged success rate beside the stage; the stage rules
     (stage.py) never used it, and nothing here reads it now.
 
-    A mouse partway through a session often keeps running but stops licking. Those trials are not failures (it
+    A mouse partway through an experiment often keeps running but stops licking. Those trials are not failures (it
     is not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read
     from whether each trial contained a lick, smoothed over a window of trials.
     """
@@ -120,7 +120,7 @@ class OptogeneticsConfig(BaseSchema):
     )
 
     enabled: bool = Field(
-        default=False, description="Whether optogenetic stimulation runs this session. When false, Bonsai does not connect to Zapit"
+        default=False, description="Whether optogenetic stimulation runs this experiment. When false, Bonsai does not connect to Zapit"
     )
     zapit_config_path: str = Field(
         default="", description="Path to the Zapit stimulus config YAML loaded in Zapit, listing the stimulation conditions"
@@ -135,7 +135,7 @@ class OptogeneticsConfig(BaseSchema):
         default=0.1,
         description=(
             "How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, "
-            "from 0.05 to 1. Applied to every trial of an optogenetics session, stimulated or not, so trial timing "
+            "from 0.05 to 1. Applied to every trial of an optogenetics experiment, stimulated or not, so trial timing "
             "does not reveal which trials are stimulated"
         ),
     )
@@ -143,7 +143,7 @@ class OptogeneticsConfig(BaseSchema):
         default=True,
         description="Draw conditions from a shuffled queue, so each is used equally often, rather than independently each trial",
     )
-    warmup_trials: int = Field(default=0, ge=0, description="Trials at session start with no stimulation")
+    warmup_trials: int = Field(default=0, ge=0, description="Trials at the experiment's start with no stimulation")
 
     @model_validator(mode="after")
     def validate_lead_time(self):

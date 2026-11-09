@@ -24,7 +24,7 @@ public class InitialiseOptoTrial
     public int Seed { get; set; }
 
     // Instance state, as in av-dome's InitialiseTrial: this operator sits inside TaskLogic's per-trial Defer, which calls Process again on every trial,
-    // so state kept inside Process would be lost between trials. It is reset on trial 1, so each session starts with a fresh queue.
+    // so state kept inside Process would be lost between trials. It is reset on trial 1, so each experiment starts with a fresh queue.
     private Random rand;
     private readonly List<int> zapitConditions = new List<int>();
     private readonly List<int> conditionQueue = new List<int>();

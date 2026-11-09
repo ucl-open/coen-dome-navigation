@@ -124,7 +124,7 @@ namespace UclOpenCoenAvCorridorTask
     ///model, whose gen_session.py printed an engaged success rate beside the stage; the stage rules
     ///(stage.py) never used it, and nothing here reads it now.
     ///
-    ///A mouse partway through a session often keeps running but stops licking. Those trials are not failures (it
+    ///A mouse partway through an experiment often keeps running but stops licking. Those trials are not failures (it
     ///is not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read
     ///from whether each trial contained a lick, smoothed over a window of trials.
     /// </summary>
@@ -133,7 +133,7 @@ namespace UclOpenCoenAvCorridorTask
     model, whose gen_session.py printed an engaged success rate beside the stage; the stage rules
     (stage.py) never used it, and nothing here reads it now.
 
-    A mouse partway through a session often keeps running but stops licking. Those trials are not failures (it
+    A mouse partway through an experiment often keeps running but stops licking. Those trials are not failures (it
     is not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read
     from whether each trial contained a lick, smoothed over a window of trials.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
@@ -308,12 +308,12 @@ namespace UclOpenCoenAvCorridorTask
         }
     
         /// <summary>
-        /// Whether optogenetic stimulation runs this session. When false, Bonsai does not connect to Zapit
+        /// Whether optogenetic stimulation runs this experiment. When false, Bonsai does not connect to Zapit
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("enabled")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="enabled")]
-        [System.ComponentModel.DescriptionAttribute("Whether optogenetic stimulation runs this session. When false, Bonsai does not co" +
-            "nnect to Zapit")]
+        [System.ComponentModel.DescriptionAttribute("Whether optogenetic stimulation runs this experiment. When false, Bonsai does not" +
+            " connect to Zapit")]
         public bool Enabled
         {
             get
@@ -383,14 +383,14 @@ namespace UclOpenCoenAvCorridorTask
         }
     
         /// <summary>
-        /// How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogenetics session, stimulated or not, so trial timing does not reveal which trials are stimulated
+        /// How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogenetics experiment, stimulated or not, so trial timing does not reveal which trials are stimulated
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("leadTime")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="leadTime")]
         [System.ComponentModel.DescriptionAttribute("How long before the first tone pip the laser comes on, in seconds. A multiple of " +
             "the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogeneti" +
-            "cs session, stimulated or not, so trial timing does not reveal which trials are " +
-            "stimulated")]
+            "cs experiment, stimulated or not, so trial timing does not reveal which trials a" +
+            "re stimulated")]
         public double LeadTime
         {
             get
@@ -423,11 +423,11 @@ namespace UclOpenCoenAvCorridorTask
         }
     
         /// <summary>
-        /// Trials at session start with no stimulation
+        /// Trials at the experiment's start with no stimulation
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("warmupTrials")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="warmupTrials")]
-        [System.ComponentModel.DescriptionAttribute("Trials at session start with no stimulation")]
+        [System.ComponentModel.DescriptionAttribute("Trials at the experiment\'s start with no stimulation")]
         public int WarmupTrials
         {
             get
