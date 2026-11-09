@@ -3072,7 +3072,7 @@
             </Expression>
             <Expression xsi:type="Annotation">
               <Name>Spout positions file</Name>
-              <Text><![CDATA[This mouse's spout positions: <RigConfigDirectory>\calibration\LickSpoutPositions\<SubjectId>.csv, read at Start (ReadPositions) and written by SaveSpoutPositions.]]></Text>
+              <Text><![CDATA[This mouse's spout positions: <RigConfigDirectory>\calibration\LickSpoutPositions\<SubjectId>.csv, written by SaveSpoutPositions and read at Start (ReadPositions); a mouse without one gets rig.yml's lickSpoutDefaultPosition. Tom's mice's files were copied there from C:\RigConfigs\LickSpoutPositions, where auditory-vr-corridor keeps them, on BLUE-OPTO-2 on 9 Nov 2026 (BACKLOG); copy them on each other corridor rig before it runs a mouse of Tom's.]]></Text>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>RigConfigDirectory</Name>
@@ -8531,7 +8531,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   </Expression>
                   <Expression xsi:type="GroupWorkflow">
                     <Name>ProcessTrialEnd</Name>
-                    <Description />
+                    <Description>Settles the trial once it ends: reward, punishment or neither, then TrialOutcome at once and TrialEnded 2 s later. TrialOutcome is multicast before a Take(1), as TrialEnded is: a MulticastSubject passes on its source's completion, and this stream completes at the end of every trial, which would complete the shared TrialOutcome PublishSubject and stop the trial log after trial 1 (it did: test-1729, 9 Nov 2026). The Take(1) unsubscribes from upstream as the outcome passes, so the completion never reaches it. Keep any multicast to a shared PublishSubject from here before that Take(1). (BehaviorSubjects such as WasRewarded are not completed this way.)</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="WorkflowInput">
@@ -9183,9 +9183,16 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         <Expression xsi:type="MulticastSubject">
                           <Name>TrialOutcome</Name>
                         </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="rx:Take">
+                            <rx:Count>1</rx:Count>
+                          </Combinator>
+                        </Expression>
                       </Nodes>
                       <Edges>
                         <Edge From="31" To="38" Label="Source1" />
+                        <Edge From="38" To="39" Label="Source1" />
+                        <Edge From="39" To="32" Label="Source1" />
                         <Edge From="0" To="1" Label="Source1" />
                         <Edge From="1" To="5" Label="Source1" />
                         <Edge From="2" To="4" Label="Source1" />
@@ -9221,7 +9228,6 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         <Edge From="28" To="29" Label="Source4" />
                         <Edge From="29" To="30" Label="Source1" />
                         <Edge From="30" To="31" Label="Source1" />
-                        <Edge From="31" To="32" Label="Source1" />
                         <Edge From="32" To="33" Label="Source1" />
                         <Edge From="33" To="34" Label="Source1" />
                         <Edge From="34" To="35" Label="Source1" />
@@ -9845,7 +9851,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   <Expression xsi:type="WorkflowOutput" />
                   <Expression xsi:type="GroupWorkflow">
                     <Name>StimulusLogger</Name>
-                    <Description>Writes StimulusState\StimulusState_&lt;time&gt;.csv (OpenRigs.Logging LogData): one row per beep while the trial is active, stamped with the Harp time of the beep, built by LogStimulus. Here rather than in Logging because StimulusLogRow is declared inside this group, as in Tom Childs' workflow (a logger in Logging cannot subscribe to a subject declared in TaskLogic: Bonsai reports a circular definition). Not part of the repeating trial chain, so it writes one file per experiment, created with its first row.</Description>
+                    <Description>Writes StimulusState\StimulusState_&lt;time&gt;.csv (OpenRigs.Logging LogData): one row per beep while the trial is active, stamped with the Harp time of the beep, built by LogStimulus. Here rather than in Logging because StimulusLogRow is declared inside this group, as in Tom Childs' workflow (a logger in Logging cannot subscribe to a subject declared in TaskLogic: Bonsai reports a circular definition). Not part of the repeating trial chain, so it writes one file per experiment, created with its first row. AutoFlush writes each row to disk as it comes (about 20 a second, which LogData's AutoFlush is for): without it the file reached disk in 4 KB blocks, so the manifest's end-of-run write, which comes before this writer closes, recorded a size that stopped at the last full block (test-1802 and test-1813, 9 Nov 2026), and a Bonsai ended by force would lose up to 4 KB of beeps.</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">
@@ -9866,6 +9872,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogData.bonsai">
                           <LogName>StimulusState</LogName>
                           <Selector />
+                          <AutoFlush>true</AutoFlush>
                           <Extension>csv</Extension>
                         </Expression>
                       </Nodes>
@@ -10761,7 +10768,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   </Expression>
                   <Expression xsi:type="MemberSelector">
                     <Name>RngSeed</Name>
-                    <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once.</Description>
+                    <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once: the Take(1) is after the multicast, not before it. A MulticastSubject passes on its source's completion, and a Take(1) ahead of it completed the shared AsyncEvents subject a second after Go, so no reward, Stop or other Async event was logged after RngSeed and rig-control counted no water (test-1802, 9 Nov 2026). After the multicast, the Take(1) unsubscribes as the seed passes, and TaskRandom (a BehaviorSubject) never completes.</Description>
                     <Selector>Seed</Selector>
                   </Expression>
                   <Expression xsi:type="Combinator">
@@ -10825,10 +10832,10 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   <Edge From="20" To="21" Label="Source1" />
                   <Edge From="21" To="22" Label="Source1" />
                   <Edge From="23" To="24" Label="Source1" />
-                  <Edge From="24" To="25" Label="Source1" />
-                  <Edge From="25" To="26" Label="Source1" />
+                  <Edge From="24" To="26" Label="Source1" />
                   <Edge From="26" To="27" Label="Source1" />
                   <Edge From="27" To="28" Label="Source1" />
+                  <Edge From="28" To="25" Label="Source1" />
                   <Edge From="29" To="30" Label="Source1" />
                   <Edge From="30" To="31" Label="Source1" />
                   <Edge From="31" To="32" Label="Source1" />
