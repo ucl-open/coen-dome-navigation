@@ -24,7 +24,7 @@ public class InitialiseOptoTrial
         Seed = -1;
     }
 
-    [Description("Seed for the stimulation draws. -1 (the default) seeds them from the task's rngSeed, or randomly when it is null. Every trial's draw is in BonsaiData_Trial (optoStimulated, optoCondition), so an experiment can be reconstructed.")]
+    [Description("Seed for the stimulation draws. -1 (the default) seeds them from the task's rngSeed, or randomly when it is null. Every trial's draw is in BonsaiData_Trial (laserPowerMw, optoCondition), so an experiment can be reconstructed.")]
     public int Seed { get; set; }
 
     // Instance state: this operator sits inside TaskLogic's per-trial Defer, which calls Process again on every trial with
@@ -59,6 +59,7 @@ public class InitialiseOptoTrial
         {
             // Not an optogenetics experiment: nothing is sent to Zapit.
             trial.OptogeneticEnabled = false;
+            trial.OptogeneticLaserPowerMw = 0;
             trial.OptogeneticCondition = 0;
             trial.OptogeneticMaxDuration = 0;
             return trial;
@@ -75,6 +76,7 @@ public class InitialiseOptoTrial
         // Warmup trials are never laser-on. After warmup the laser is on with probability stimProbability.
         var laserOn = trialNumber > optogenetics.WarmupTrials && random.NextDouble() < optogenetics.StimProbability;
         trial.OptogeneticEnabled = laserOn;
+        trial.OptogeneticLaserPowerMw = laserOn ? optogenetics.LaserPowerMw.Value : 0;
         trial.OptogeneticCondition = NextCondition(laserOn ? stimQueue : shamQueue, optogenetics.PseudorandomSelection);
         trial.OptogeneticMaxDuration = optogenetics.StimDuration;
         return trial;
@@ -112,6 +114,12 @@ public class InitialiseOptoTrial
         {
             throw new InvalidOperationException(string.Format(
                 "optogenetics.stimProbability must be between 0 and 1; got {0}.", optogenetics.StimProbability));
+        }
+        if (!(optogenetics.LaserPowerMw > 0) || double.IsInfinity(optogenetics.LaserPowerMw.Value))
+        {
+            throw new InvalidOperationException(string.Format(
+                "optogenetics.laserPowerMw must be a power in mW above 0 when optogenetics is on; got {0}.",
+                optogenetics.LaserPowerMw.HasValue ? optogenetics.LaserPowerMw.Value.ToString() : "nothing"));
         }
         if (optogenetics.StimDelay != 0)
         {
@@ -180,13 +188,14 @@ public class OptoTrial
 {
     public int TrialNumber;  // Trial this draw is for, as in the TrialNumber subject
     public bool OptogeneticEnabled;  // Laser on. False on sham (laser-off) trials and in experiments without optogenetics
+    public double OptogeneticLaserPowerMw;  // Laser power sent with StartStimulus, in mW (the task's laserPowerMw). 0 on sham trials and when optogenetics is off
     public int OptogeneticCondition;  // Zapit condition (its stimLocations number) presented on this trial, laser on or off. 0 when optogenetics is off
     public double OptogeneticMaxDuration;  // Longest the stimulus stays on, in seconds; normally stopped at the outcome. 0 when optogenetics is off
 
     public override string ToString()
     {
         return string.Format(
-            "OptoTrial(trial={0}, laserOn={1}, condition={2}, maxDuration={3})",
-            TrialNumber, OptogeneticEnabled, OptogeneticCondition, OptogeneticMaxDuration);
+            "OptoTrial(trial={0}, laserOn={1}, laserPowerMw={2}, condition={3}, maxDuration={4})",
+            TrialNumber, OptogeneticEnabled, OptogeneticLaserPowerMw, OptogeneticCondition, OptogeneticMaxDuration);
     }
 }

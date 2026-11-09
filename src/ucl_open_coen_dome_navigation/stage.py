@@ -56,7 +56,7 @@ class Experiment:
     modality: list[str]
     stage: list[int]
     rewarded: list[bool]
-    laser: list[bool] = field(default_factory=list)  # laser-on trials (optoStimulated); empty when there were none
+    laser: list[bool] = field(default_factory=list)  # laser-on trials (laserPowerMw > 0); empty when there were none
     optogenetics: bool = False  # an optogenetics experiment: every trial had a Zapit condition, laser on or sham
 
 
@@ -99,7 +99,7 @@ def read_new(folder: Path) -> Experiment | None:
     stage = int(float(json.loads(settings[-1].read_text(encoding="utf-8-sig"))["parameters"]["TrainingStage"]))
     return Experiment(folder.name, _when(folder.name), [r["trialType"] for r in rows], [stage] * len(rows),
                       [r["outcome"] == "Correct" for r in rows],
-                      [_bool(r.get("optoStimulated") or "") for r in rows],
+                      [float(r.get("laserPowerMw") or 0) > 0 for r in rows],
                       any(int(float(r.get("optoCondition") or 0)) > 0 for r in rows))
 
 

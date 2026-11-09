@@ -159,7 +159,7 @@ def test_laser_on_trials_do_not_count_in_stage_1_s_two_experiments_in_a_row():
 def test_the_opto_columns_are_read(tmp_path):
     from ucl_open_coen_dome_navigation.stage import read_new
     folder = tmp_path / "ses-005D1_2026-11-04T10-00-00"
-    write_new(folder, 4, [["auditory", "Correct", "True", 3], ["auditory", "Incorrect", "False", 1]],
-              header=("trialType", "outcome", "optoStimulated", "optoCondition"))
+    write_new(folder, 4, [["auditory", "Correct", "2.5", 3], ["auditory", "Incorrect", "0", 1]],
+              header=("trialType", "outcome", "laserPowerMw", "optoCondition"))
     e = read_new(folder)
     assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]

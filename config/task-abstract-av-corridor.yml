@@ -40,6 +40,7 @@ taskParameters:
   optogenetics:               # Zapit; continuous stimulus from beep 0 to the outcome (or stimDuration), sham trials laser off
     enabled: false
     zapitConfigPath: ''       # the Zapit stimulus config loaded in Zapit
+    laserPowerMw: null        # mW on laser-on trials, every condition; required with optogenetics on
     stimProbability: 0.4      # laser-on trials after the warmup, shared by all conditions; the rest are sham
     stimDelay: 0.0            # av-dome's; must be 0 (Zapit ignores it for a continuous stimulus)
     stimDuration: 12.5        # s; a cap: at least 12 + leadTime + 0.25, the laser stops at the outcome

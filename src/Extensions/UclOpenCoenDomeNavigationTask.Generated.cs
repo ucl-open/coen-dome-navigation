@@ -122,8 +122,9 @@ namespace UclOpenCoenDomeNavigationTask
     /// <summary>
     /// Zapit optogenetic stimulation: av-dome's fields, plus lead_time.
     ///
-    ///The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
-    ///here. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
+    ///The stimulation sites and ramp-down are set in the Zapit stimulus config loaded in Zapit, not here; the laser
+    ///power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the config's power) and
+    ///logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
     ///an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as sham trials
     ///with the laser off, so galvo noise and masking light are the same on every trial. The stimulus is continuous: it
     ///starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered rig), lead_time before the first
@@ -133,8 +134,9 @@ namespace UclOpenCoenDomeNavigationTask
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute(@"Zapit optogenetic stimulation: av-dome's fields, plus lead_time.
 
-    The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
-    here. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
+    The stimulation sites and ramp-down are set in the Zapit stimulus config loaded in Zapit, not here; the laser
+    power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the config's power) and
+    logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
     an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as sham trials
     with the laser off, so galvo noise and masking light are the same on every trial. The stimulus is continuous: it
     starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered rig), lead_time before the first
@@ -148,6 +150,8 @@ namespace UclOpenCoenDomeNavigationTask
         private bool _enabled;
     
         private string _zapitConfigPath;
+    
+        private double? _laserPowerMw;
     
         private double _stimProbability;
     
@@ -180,6 +184,7 @@ namespace UclOpenCoenDomeNavigationTask
         {
             _enabled = other._enabled;
             _zapitConfigPath = other._zapitConfigPath;
+            _laserPowerMw = other._laserPowerMw;
             _stimProbability = other._stimProbability;
             _stimDelay = other._stimDelay;
             _stimDuration = other._stimDuration;
@@ -224,6 +229,24 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _zapitConfigPath = value;
+            }
+        }
+    
+        /// <summary>
+        /// Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the stimulus config's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on sham trials). Required with optogenetics on
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("laserPowerMw")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserPowerMw")]
+        [System.ComponentModel.DescriptionAttribute(@"Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the stimulus config's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on sham trials). Required with optogenetics on")]
+        public double? LaserPowerMw
+        {
+            get
+            {
+                return _laserPowerMw;
+            }
+            set
+            {
+                _laserPowerMw = value;
             }
         }
     
@@ -373,6 +396,7 @@ namespace UclOpenCoenDomeNavigationTask
         {
             stringBuilder.Append("Enabled = " + _enabled + ", ");
             stringBuilder.Append("ZapitConfigPath = " + _zapitConfigPath + ", ");
+            stringBuilder.Append("LaserPowerMw = " + _laserPowerMw + ", ");
             stringBuilder.Append("StimProbability = " + _stimProbability + ", ");
             stringBuilder.Append("StimDelay = " + _stimDelay + ", ");
             stringBuilder.Append("StimDuration = " + _stimDuration + ", ");

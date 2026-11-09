@@ -85,8 +85,9 @@ class Truncation(BaseSchema):
 class OptogeneticsConfig(BaseSchema):
     """Zapit optogenetic stimulation: av-dome's fields, plus lead_time.
 
-    The stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not
-    here. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
+    The stimulation sites and ramp-down are set in the Zapit stimulus config loaded in Zapit, not here; the laser
+    power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the config's power) and
+    logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
     an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as sham trials
     with the laser off, so galvo noise and masking light are the same on every trial. The stimulus is continuous: it
     starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered rig), lead_time before the first
@@ -101,7 +102,11 @@ class OptogeneticsConfig(BaseSchema):
     model_config = ConfigDict(
         json_schema_extra={
             "if": {"properties": {"enabled": {"const": True}}, "required": ["enabled"], "additionalProperties": True},
-            "then": {"properties": {"zapitConfigPath": {"minLength": 1}}, "additionalProperties": True},
+            "then": {
+                "properties": {"zapitConfigPath": {"minLength": 1}, "laserPowerMw": {"type": "number"}},
+                "required": ["laserPowerMw"],
+                "additionalProperties": True,
+            },
         }
     )
 
@@ -109,6 +114,11 @@ class OptogeneticsConfig(BaseSchema):
     zapit_config_path: str = Field(
         default="",
         description="Path to the Zapit stimulus config loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms",
+    )
+    laser_power_mw: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the stimulus config's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on sham trials). Required with optogenetics on",
     )
     stim_probability: float = Field(
         default=0.4,
@@ -146,6 +156,10 @@ class OptogeneticsConfig(BaseSchema):
     def validate_config_path(self):
         if self.enabled and not self.zapit_config_path:
             raise ValueError("optogenetics is enabled but zapit_config_path is empty")
+        if self.enabled and self.laser_power_mw is None:
+            raise ValueError("optogenetics is enabled but laser_power_mw is not set")
+        if self.laser_power_mw is not None and not math.isfinite(self.laser_power_mw):
+            raise ValueError(f"laser_power_mw ({self.laser_power_mw}) must be a finite number of mW")
         return self
 
     @model_validator(mode="after")

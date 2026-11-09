@@ -87,15 +87,18 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
         return [e.message for e in validator.iter_errors(doc)]
 
     assert problems() == []
-    assert problems(enabled=True) == ["'' should be non-empty"]
-    assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml") == []
+    assert problems(enabled=True, laserPowerMw=2.0) == ["'' should be non-empty"]
+    assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml") == ["None is not of type 'number'"]
+    assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=0) == ["0 is not valid under any of the given schemas"]
+    assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0) == []
 
 
 def test_the_optogenetics_block_is_av_dome_s():
     # Pip, 9 Nov 2026: the same parameter names as av-dome's OptogeneticsSettings (pip/main-switchover 6c5a885),
     # plus leadTime (zapit-v2): how long the stimulus runs before the first tone pip.
-    av_dome = ["enabled", "zapitConfigPath", "stimProbability", "stimDelay", "stimDuration", "leadTime", "excludeRepeats",
-               "pseudorandomSelection", "warmupTrials"]
+    # laserPowerMw added (Pip, 9 Nov 2026): the power sent with every laser-on StartStimulus.
+    av_dome = ["enabled", "zapitConfigPath", "laserPowerMw", "stimProbability", "stimDelay", "stimDuration", "leadTime",
+               "excludeRepeats", "pseudorandomSelection", "warmupTrials"]
     assert list(task()["taskParameters"]["optogenetics"]) == av_dome
 
 

@@ -23,7 +23,7 @@ TASK = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_t
 def params(closed_loop=None, **opto):
     """The task file's parameters with optogenetics on and the given changes."""
     doc = copy.deepcopy(TASK)
-    doc["optogenetics"].update(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml", **opto)
+    doc["optogenetics"].update({"enabled": True, "zapitConfigPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
     if closed_loop is not None:
         doc["trialStructure"]["closedLoopDuration"] = closed_loop
     return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
@@ -82,3 +82,20 @@ def test_the_stimulus_config_is_saved_as_json():
     text = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
     block = text[text.index("TaskParameters.Optogenetics.ZapitConfigPath"):text.index("<Name>Settings_ZapitStimConfig</Name>")]
     assert "ext:ZapitStimConfigSnapshot" in block and "ReadTextFile" not in block
+
+
+def test_laser_power_is_required_with_optogenetics_on_and_above_0():
+    with pytest.raises(pydantic.ValidationError, match="laser_power_mw"):
+        params(laserPowerMw=None)
+    with pytest.raises(pydantic.ValidationError):
+        params(laserPowerMw=0)
+    assert params(laserPowerMw=3.5).optogenetics.laser_power_mw == 3.5
+    assert OptogeneticsConfig().laser_power_mw is None  # off: not needed
+
+
+def test_both_start_stimulus_commands_send_the_trial_s_power_and_the_row_logs_it():
+    text = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8")
+    assert text.count('<Property Name="LaserPower" Selector="OptogeneticLaserPowerMw" />') == 1
+    assert text.count('<Property Name="LaserPower" Selector="Item1.OptogeneticLaserPowerMw" />') == 1
+    assert text.count("<Combinator xsi:type=\"ext:CreateStartStimulus\">") == 2
+    assert "OptogeneticLaserPowerMw as laserPowerMw" in text and "optoStimulated" not in text

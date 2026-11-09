@@ -15,15 +15,15 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
 
 rig-control, `test` mouse, Training Stage 4 (Tom's 5), optogenetics unticked; ~20 trials.
 **Pass:** task as before; nothing in Zapit's window; no `Zapit\` folder and no `Settings_ZapitStimConfig` file; trial rows
-`optoStimulated` False, `optoCondition` 0.
+`laserPowerMw` 0, `optoCondition` 0.
 
 ## 2. Optogenetics on
 
-Same, optogenetics ticked with `zapitConfigPath`; at least 30 trials (the first 20 are sham warmup: galvos move, laser off).
+Same, optogenetics ticked with `zapitConfigPath` and `laserPowerMw`; at least 30 trials (the first 20 are sham warmup: galvos move, laser off).
 With nobody at the wheel every trial times out after 12 s (`trialStructure.closedLoopDuration`).
 **Pass:**
 - `Zapit\` log: StartStimulus (command 1) then StopStimulus (command 0) on every trial, alternating, `isError` False.
-- Trial rows: `optoCondition` on every trial; `optoStimulated` True on about 40% of trials after the warmup.
+- Trial rows: `optoCondition` on every trial; `laserPowerMw` the task's `laserPowerMw` on about 40% of trials after the warmup, 0 on the rest.
 - `Settings\Settings_ZapitStimConfig_<time>.json` in the experiment folder, holding the config's path and its text.
 - No console line "Zapit: the previous trial ended without a StopStimulus"; no "Not ready to stimulate" in MATLAB.
 
