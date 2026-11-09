@@ -7,7 +7,7 @@ it; the experimenter can change it before Go. As a command:
 
     uv run suggest-stage --subject TC003 --modality A [--root DIR ...] [--legacy-root DIR ...]
 
-prints one JSON line, {"shapingStage": 3, "why": "..."}.
+prints one JSON line, {"value": 3, "why": "..."}: the contract of rig-control's [task.suggest].
 
 The rules: the latest experiment of the modality with trials decides. Under 50 trials keeps its stage.
 Stage 2 advances only after two experiments in a row each with at least 50 rewarded trials, and falls
@@ -169,7 +169,7 @@ def main() -> None:
     args = parser.parse_args()
     history = experiments(args.subject, args.root or ROOTS, args.legacy_root or LEGACY_ROOTS)
     stage, why = suggest(history, args.modality)
-    print(json.dumps({"shapingStage": stage, "why": why}))
+    print(json.dumps({"value": stage, "why": why}))
 
 
 if __name__ == "__main__":
