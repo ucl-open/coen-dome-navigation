@@ -14,20 +14,20 @@ taskParameters:
   rngSeed: null               # null = rig-control draws one at Go; each seed used is a RngSeed event in BonsaiData_Async
   # The sweep and its loudness. src\waveforms is made for these four: change them only together
   # with `uv run generate-waveforms` and a commit, or the workflow stops at Go.
-  sweepStartHz: 2000             # Hz
-  sweepEndHz: 25000              # Hz
-  sweepSteps: 100
+  sweepStartHz: 2000
+  sweepEndHz: 25000
+  sweepSteps: 100             # log-spaced tone frequencies from sweepStartHz to sweepEndHz
   amplitude: 0.05             # a tone pip peaks at amplitude squared
   backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
-  positionStepCm: 1          # cm: the distance run is rounded to this before it sets the frequency
+  positionStepCm: 1           # the distance run is rounded to this before it sets the frequency
   # The wheel diameter distances are worked out at; null takes rig.yml's (170 mm on every corridor
   # rig). 75 is what Tom's workflow used, so tracks take the wheel turns the mice trained on.
   wheelDiameterMm: 75.0
   trialStructure:
-    itiMinSeconds: 0.0               # s; Tom's workflow drew 0 or 1 s, now evenly between (Pip, 9 Nov 2026)
-    itiMaxSeconds: 1.0               # s
-    quiescentSeconds: 1.0     # s without licks before the next trial, on stages with quiescent
-    timeLimitSeconds: 12.0  # s, the time limit on stages with timeLimit
+    itiMinSeconds: 0.0        # Tom's workflow drew 0 or 1 s, now evenly between (Pip, 9 Nov 2026)
+    itiMaxSeconds: 1.0
+    quiescentSeconds: 1.0     # without licks before the next trial, on stages with quiescent
+    timeLimitSeconds: 12.0    # on stages with timeLimit
     trackLengthsCm: [80, 100, 120]   # one drawn per trial, times the stage's trackLengthScale
   punishment:
     timeoutSeconds: 2.0       # s after a punished trial
