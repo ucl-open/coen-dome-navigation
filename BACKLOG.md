@@ -14,6 +14,13 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - **Calibration folder switch-over** (rig-setup's): BLUE-OPTO-2 done by hand (MeshMap.csv, gammalut.bmp and LickSpoutPositions copied from `C:\RigConfigs` into `calibration\`, rig.yml's `projectionCalibration` pointed there). BLUE-OPTO-1 and GREEN-DOME-2 still need it; whether rig-setup should do the copy is yours.
 - **rig.yml's wheel diameter** is 170 mm on BLUE-OPTO-1, GREEN-DOME-1 and GREEN-DOME-2; the wheels are 75 mm (BLUE-OPTO-2 corrected).
 
+### Zapit on BLUE-OPTO-2: before any optogenetics with a mouse (found 9 Nov 2026; affects av-dome too; for Pip, Tom and Ainiah)
+
+- **The masking light lasts 3 s; the laser up to 12.5 s.** As in av-dome's `am-zapit-integration` (541ada3), the masking LEDs are on DO3, the Zapit trigger line, lit for its 3000 ms pulse at each trial start. This task keeps the laser on until the outcome (up to 12.5 s), so the masking ends mid-trial on laser and sham trials alike. A longer pulse is no fix: it would still be high at the next trial's start, so Zapit would get no rising edge and miss that trial. Fix: drive the masking LEDs from Zapit's own masking output (its NI box's AO3, which Zapit holds for the whole stimulus, sham and ramp-down included: `sendSamples.m`) and let DO3 only trigger (5 ms, as in Tom's zapit-integration-v2). A cable change on a rig av-dome shares: agree it with Ainiah and Pip.
+- **The laser glows on sham trials.** Zapit's "laser off" is 0 V (`sendSamples.m`: `waveforms(:,3) = 0` on sham trials, and after each ramp-down), but this rig's Zapit settings put 0 mW at -0.04 V (`laserMinMaxControlVolts`), so 0 V is about 0.4 mW: a faint spot was seen on warmup and sham trials (test-2055, where Bonsai sent laser-off on all but 3 of 30 trials). Confirm with a power meter at the skull with Zapit idle; then fix the laser's zero or Zapit's off voltage (Zapit's code, upstream).
+- **Laser offset is not logged.** Onset is DO3's rising edge (hardware-triggered), in the Behavior board log. The stop is sent at the outcome, but only Zapit's reply is logged, about 1.05 s later on laser and sham trials alike. Wire Zapit's laser control output into the Behavior board's unused ADC0: logged at 1 kHz on the Harp clock, no workflow change.
+- **Zapit itself:** simulated mode is broken in Zapit 1.0.4 (`zapit.simulated.DAQ` lacks `stopAndDeleteDOTask`, called when a config loads), so a test needs the real hardware and a scanner calibration (laser on). Starting Zapit sets the rig camera it opens to Mono12 (`camera.connectionIndex: 1`), which Bonsai cannot record until it is set back to Mono8 in SpinView; `connectionIndex: 2` (Mono8) should avoid it.
+
 ### For Pip and Tom to decide
 
 - **Calibrate the left valves, then set `rewardSizeUl` back to 3.0.** Tom's mice got 3 ul as one fixed opening (42 ms on BLUE-OPTO-2 in his RigLogs; 45 ms on BLUE-OPTO-1, 65 ms on the GREEN-DOMEs). An uncalibrated valve here is taken as 2 ul per pulse of DO1's width, so 3 ul would be two openings. Until calibrated, `rewardSizeUl` is 2.0: one opening of DO1's width (set to 42 ms on BLUE-OPTO-2), logged as 2 ul. Set each other rig's DO1 width to Tom's before it runs this uncalibrated.
@@ -38,6 +45,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 - A Go then Stop before trial 1's first beep leaves no `StimulusState\` folder (LogData makes it with its first row), and the manifest expects one, so rig-sync holds that experiment with an alarm.
 - No current-trial metrics: av-dome's Status group (ReportMetric) was not kept, so rig-control's Current Trial line is blank until a row lands. Report the trial number and stage.
+- For analysis: logs are written one file per clock hour (`..._T20-00-00`, `..._T21-00-00`), so an experiment across an hour has two of each; join them. `endPositionCm` is read when the row is written (after the reward tone, or the error tone and timeout), not at the outcome; for the position at the outcome use StimulusState's last row or the wheel encoder.
 
 ## Decided
 
