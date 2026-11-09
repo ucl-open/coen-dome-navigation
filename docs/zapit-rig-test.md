@@ -34,7 +34,7 @@ trial start; with the galvos visible or a photodiode, the stimulus starts at the
 ## 4. Failures (each should stop the experiment with a message)
 
 - A different config (different number of conditions) loaded in Zapit, at Go.
-- A config with a ramp-down under 100 ms, at Go.
+- A config with a ramp-down under 100 ms, named in `zapitConfigPath` (and loaded in Zapit), at Go.
 - A non-`test` mouse on a rig with `hardwareTriggered: false`, at Go.
 - Zapit closed mid-experiment.
 
