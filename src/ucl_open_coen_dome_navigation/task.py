@@ -7,8 +7,8 @@ from typing import Literal, Optional
 from pydantic import ConfigDict, Field, model_validator
 from swc.aeon.schema import BaseSchema
 
-from ucl_open_coen_av_corridor import __semver__
-from ucl_open_coen_av_corridor.helpers import calc_log_window
+from ucl_open_coen_dome_navigation import __semver__
+from ucl_open_coen_dome_navigation.helpers import calc_log_window
 
 MAX_SHAPING_STAGE = 6
 
@@ -142,7 +142,7 @@ class OptogeneticsConfig(BaseSchema):
         return self
 
 
-class UclOpenCoenAvCorridorTaskParameters(BaseSchema):
+class UclOpenCoenDomeNavigationTaskParameters(BaseSchema):
     """Task params."""
 
     modality: Literal["A", "V", "AV"] = Field(
@@ -245,9 +245,9 @@ class UclOpenCoenAvCorridorTaskParameters(BaseSchema):
         return self
 
 
-class UclOpenCoenAvCorridorTaskLogic(BaseSchema):
+class UclOpenCoenDomeNavigationTaskLogic(BaseSchema):
     """Top-level task logic schema."""
 
     version: Literal[__semver__] = __semver__
-    name: Literal["UclOpenCoenAvCorridor"] = Field(default="UclOpenCoenAvCorridor", description="Name of the task")
-    task_parameters: UclOpenCoenAvCorridorTaskParameters = UclOpenCoenAvCorridorTaskParameters()
+    name: Literal["UclOpenCoenDomeNavigation"] = Field(default="UclOpenCoenDomeNavigation", description="Name of the task")
+    task_parameters: UclOpenCoenDomeNavigationTaskParameters = UclOpenCoenDomeNavigationTaskParameters()

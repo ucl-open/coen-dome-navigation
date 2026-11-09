@@ -1,6 +1,6 @@
 # Backlog
 
-Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`.
+Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file kept its name, `config\abstract-av-corridor.yml`.
 
 ## Open
 
@@ -19,7 +19,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 - **Tom's mice's spout positions.** Tom's workflow read and saved each mouse's spouts at `C:\RigConfigs\LickSpoutPositions\<ID>.csv`; this one (av-dome's convention) uses `C:\Coen-Lab-Local\RigConfigs\<MACHINE>\calibration\LickSpoutPositions\<ID>.csv`. Without a file it falls back to rig.yml's `lickSpoutDefaultPosition` (all 0 on BLUE-OPTO-2), not Tom's In positions (3550, 5500, 4700, 2150, 950), and moves the spouts there after zeroing. The format is the same (five integers, Motor1 to Motor5, no header), so on each corridor rig copy `C:\RigConfigs\LickSpoutPositions\*.csv` into the new folder, never over a file av-dome's mice already have there.
 - **GREEN-DOME-2**, one of Tom's rigs, has no rig.yml on `K:\config\machines`, so it cannot run this (or av-dome) until it has one.
-- Not in rig-setup's Repos, so no rig has it; adding it deploys `C:\Github\Coen-Lab\coen-av-corridor` where ticked. Never on a rig while it records.
+- Not in rig-setup's Repos, so no rig has it; adding it deploys `C:\Github\Coen-Lab\coen-dome-navigation` where ticked. Never on a rig while it records.
 - Never run: not headless (it opens BonVision's window and the dome's sound card), not on a rig. The first run is a `test`-mouse experiment through rig-control on a dome, Zapit off.
 - No `config\main.layout` yet: save one with the camera windows on a machine with the Spinnaker SDK, then commit it (`.bonsai\Setup.ps1` copies it).
 - The old workflow's history: `stage.py` reads the old TrialLogs from each rig's `C:\Github\Coen-Lab\auditory-vr-corridor\Logs` and the project share; check those paths on a rig. A share that does not answer gives no stage (the form says which), so check the rig's account can list `\\128.40.51.157\rigs\staging` and the RDSS path, or every suggestion on it says so.

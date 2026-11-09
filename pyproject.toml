@@ -3,8 +3,8 @@ requires = ["uv_build>=0.8.22"]
 build-backend = "uv_build"
 
 [project]
-name = "ucl-open-coen-av-corridor"
-description = "The coen-av-corridor experiment's rig and task schemas, waveforms and shaping-stage choice."
+name = "ucl-open-coen-dome-navigation"
+description = "The coen-dome-navigation experiment's rig and task schemas, waveforms and shaping-stage choice."
 authors = [ {name = "Tom Childs", email = "thomas.childs.19@ucl.ac.uk"}]
 license = "MIT"
 requires-python = ">=3.11, <3.12"
@@ -33,9 +33,9 @@ dev = [
 ]
 
 [project.scripts]
-regenerate-schemas = "ucl_open_coen_av_corridor.regenerate:main"
-generate-waveforms = "ucl_open_coen_av_corridor.waveforms:main"
-suggest-stage = "ucl_open_coen_av_corridor.stage:main"
+regenerate-schemas = "ucl_open_coen_dome_navigation.regenerate:main"
+generate-waveforms = "ucl_open_coen_dome_navigation.waveforms:main"
+suggest-stage = "ucl_open_coen_dome_navigation.stage:main"
 
 [tool.ruff]
 line-length = 120

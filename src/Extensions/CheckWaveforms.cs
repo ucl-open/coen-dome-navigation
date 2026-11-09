@@ -4,9 +4,9 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Reactive.Linq;
-using UclOpenCoenAvCorridorTask;
+using UclOpenCoenDomeNavigationTask;
 
-// The tone files in src\waveforms are made once, by ucl_open_coen_av_corridor.waveforms, for one
+// The tone files in src\waveforms are made once, by ucl_open_coen_dome_navigation.waveforms, for one
 // sweep and loudness, and committed; sweep.txt records them as "start end bins amplitude". Before,
 // gen_session.py wrote them again before every experiment, so they always matched its task.
 // Now a task file edited on the form could ask for another sweep, and the workflow would play the
@@ -24,7 +24,7 @@ public class CheckWaveforms
     [Description("sweep.txt, relative to the workflow's folder (src).")]
     public string FileName { get; set; }
 
-    public IObservable<UclOpenCoenAvCorridorTaskParameters> Process(IObservable<UclOpenCoenAvCorridorTaskParameters> source)
+    public IObservable<UclOpenCoenDomeNavigationTaskParameters> Process(IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
     {
         return source.Select(p =>
         {

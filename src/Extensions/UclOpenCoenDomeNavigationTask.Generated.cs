@@ -5,7 +5,7 @@
 //----------------------
 
 
-namespace UclOpenCoenAvCorridorTask
+namespace UclOpenCoenDomeNavigationTask
 {
     #pragma warning disable // Disable all warnings
 
@@ -16,23 +16,23 @@ namespace UclOpenCoenAvCorridorTask
     [System.ComponentModel.DescriptionAttribute("Top-level task logic schema.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class UclOpenCoenAvCorridorTaskLogic
+    public partial class UclOpenCoenDomeNavigationTaskLogic
     {
     
         private string _version;
     
         private string _name;
     
-        private UclOpenCoenAvCorridorTaskParameters _taskParameters;
+        private UclOpenCoenDomeNavigationTaskParameters _taskParameters;
     
-        public UclOpenCoenAvCorridorTaskLogic()
+        public UclOpenCoenDomeNavigationTaskLogic()
         {
             _version = "0.0.0-rc1";
-            _name = "UclOpenCoenAvCorridor";
-            _taskParameters = new UclOpenCoenAvCorridorTaskParameters();
+            _name = "UclOpenCoenDomeNavigation";
+            _taskParameters = new UclOpenCoenDomeNavigationTaskParameters();
         }
     
-        protected UclOpenCoenAvCorridorTaskLogic(UclOpenCoenAvCorridorTaskLogic other)
+        protected UclOpenCoenDomeNavigationTaskLogic(UclOpenCoenDomeNavigationTaskLogic other)
         {
             _version = other._version;
             _name = other._name;
@@ -74,7 +74,7 @@ namespace UclOpenCoenAvCorridorTask
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("taskParameters")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="taskParameters")]
-        public UclOpenCoenAvCorridorTaskParameters TaskParameters
+        public UclOpenCoenDomeNavigationTaskParameters TaskParameters
         {
             get
             {
@@ -86,14 +86,14 @@ namespace UclOpenCoenAvCorridorTask
             }
         }
     
-        public System.IObservable<UclOpenCoenAvCorridorTaskLogic> Generate()
+        public System.IObservable<UclOpenCoenDomeNavigationTaskLogic> Generate()
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new UclOpenCoenAvCorridorTaskLogic(this)));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new UclOpenCoenDomeNavigationTaskLogic(this)));
         }
     
-        public System.IObservable<UclOpenCoenAvCorridorTaskLogic> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<UclOpenCoenDomeNavigationTaskLogic> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new UclOpenCoenAvCorridorTaskLogic(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new UclOpenCoenDomeNavigationTaskLogic(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
@@ -969,10 +969,10 @@ namespace UclOpenCoenAvCorridorTask
     [System.ComponentModel.DescriptionAttribute("Task params.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class UclOpenCoenAvCorridorTaskParameters
+    public partial class UclOpenCoenDomeNavigationTaskParameters
     {
     
-        private UclOpenCoenAvCorridorTaskParametersModality _modality;
+        private UclOpenCoenDomeNavigationTaskParametersModality _modality;
     
         private int _shapingStage;
     
@@ -1006,9 +1006,9 @@ namespace UclOpenCoenAvCorridorTask
     
         private int _quantizeBinSize;
     
-        public UclOpenCoenAvCorridorTaskParameters()
+        public UclOpenCoenDomeNavigationTaskParameters()
         {
-            _modality = UclOpenCoenAvCorridorTaskParametersModality.A;
+            _modality = UclOpenCoenDomeNavigationTaskParametersModality.A;
             _shapingStage = 1;
             _startFreq = 2000;
             _endFreq = 25000;
@@ -1026,7 +1026,7 @@ namespace UclOpenCoenAvCorridorTask
             _quantizeBinSize = 1;
         }
     
-        protected UclOpenCoenAvCorridorTaskParameters(UclOpenCoenAvCorridorTaskParameters other)
+        protected UclOpenCoenDomeNavigationTaskParameters(UclOpenCoenDomeNavigationTaskParameters other)
         {
             _modality = other._modality;
             _shapingStage = other._shapingStage;
@@ -1053,7 +1053,7 @@ namespace UclOpenCoenAvCorridorTask
         [Newtonsoft.Json.JsonPropertyAttribute("modality")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="modality")]
         [System.ComponentModel.DescriptionAttribute("Stimulus modality: auditory (A), visual (V), or audiovisual (AV)")]
-        public UclOpenCoenAvCorridorTaskParametersModality Modality
+        public UclOpenCoenDomeNavigationTaskParametersModality Modality
         {
             get
             {
@@ -1347,14 +1347,14 @@ namespace UclOpenCoenAvCorridorTask
             }
         }
     
-        public System.IObservable<UclOpenCoenAvCorridorTaskParameters> Generate()
+        public System.IObservable<UclOpenCoenDomeNavigationTaskParameters> Generate()
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new UclOpenCoenAvCorridorTaskParameters(this)));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new UclOpenCoenDomeNavigationTaskParameters(this)));
         }
     
-        public System.IObservable<UclOpenCoenAvCorridorTaskParameters> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<UclOpenCoenDomeNavigationTaskParameters> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new UclOpenCoenAvCorridorTaskParameters(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new UclOpenCoenDomeNavigationTaskParameters(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
@@ -1396,7 +1396,7 @@ namespace UclOpenCoenAvCorridorTask
 
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-    public enum UclOpenCoenAvCorridorTaskParametersModality
+    public enum UclOpenCoenDomeNavigationTaskParametersModality
     {
     
         [System.Runtime.Serialization.EnumMemberAttribute(Value="A")]
@@ -1431,9 +1431,9 @@ namespace UclOpenCoenAvCorridorTask
             return System.Reactive.Linq.Observable.Select(source, value => Newtonsoft.Json.JsonConvert.SerializeObject(value, formatting));
         }
 
-        public System.IObservable<string> Process(System.IObservable<UclOpenCoenAvCorridorTaskLogic> source)
+        public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskLogic> source)
         {
-            return Process<UclOpenCoenAvCorridorTaskLogic>(source);
+            return Process<UclOpenCoenDomeNavigationTaskLogic>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<EngagementConfig> source)
@@ -1466,9 +1466,9 @@ namespace UclOpenCoenAvCorridorTask
             return Process<TruncationConfig>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<UclOpenCoenAvCorridorTaskParameters> source)
+        public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
         {
-            return Process<UclOpenCoenAvCorridorTaskParameters>(source);
+            return Process<UclOpenCoenDomeNavigationTaskParameters>(source);
         }
     }
 
@@ -1480,20 +1480,20 @@ namespace UclOpenCoenAvCorridorTask
     [System.ComponentModel.DescriptionAttribute("Deserializes a sequence of JSON strings into data model objects.")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorTaskLogic>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<EngagementConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PunishmentConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Stage>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<ThresholdFrequencies>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TruncationConfig>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorTaskParameters>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
     public partial class DeserializeFromJson : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {
     
         public DeserializeFromJson()
         {
-            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorTaskLogic>();
+            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>();
         }
 
         public Bonsai.Expressions.TypeMapping Type { get; set; }
@@ -1537,9 +1537,9 @@ namespace UclOpenCoenAvCorridorTask
             });
         }
 
-        public System.IObservable<string> Process(System.IObservable<UclOpenCoenAvCorridorTaskLogic> source)
+        public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskLogic> source)
         {
-            return Process<UclOpenCoenAvCorridorTaskLogic>(source);
+            return Process<UclOpenCoenDomeNavigationTaskLogic>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<EngagementConfig> source)
@@ -1572,9 +1572,9 @@ namespace UclOpenCoenAvCorridorTask
             return Process<TruncationConfig>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<UclOpenCoenAvCorridorTaskParameters> source)
+        public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
         {
-            return Process<UclOpenCoenAvCorridorTaskParameters>(source);
+            return Process<UclOpenCoenDomeNavigationTaskParameters>(source);
         }
     }
 
@@ -1586,20 +1586,20 @@ namespace UclOpenCoenAvCorridorTask
     [System.ComponentModel.DescriptionAttribute("Deserializes a sequence of YAML strings into data model objects.")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorTaskLogic>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<EngagementConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PunishmentConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Stage>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<ThresholdFrequencies>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TruncationConfig>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorTaskParameters>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
     public partial class DeserializeFromYaml : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {
     
         public DeserializeFromYaml()
         {
-            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorTaskLogic>();
+            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>();
         }
 
         public Bonsai.Expressions.TypeMapping Type { get; set; }

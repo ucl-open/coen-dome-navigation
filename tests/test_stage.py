@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ucl_open_coen_av_corridor.stage import Experiment, experiments, suggest
+from ucl_open_coen_dome_navigation.stage import Experiment, experiments, suggest
 
 
 def exp(name, stage, n, rewarded, modality="A", stages=None):
@@ -74,7 +74,7 @@ def test_new_and_old_experiments_are_read_newest_first(tmp_path):
 
 def test_a_share_that_does_not_answer_gives_no_stage(tmp_path, monkeypatch, capsys):
     # Audit, 9 Nov 2026: an unreachable share read as no history, and a trained mouse was offered Stage 1.
-    from ucl_open_coen_av_corridor import stage
+    from ucl_open_coen_dome_navigation import stage
 
     share = Path(r"\\server\rigs\staging")
     monkeypatch.setattr(stage, "unanswered", lambda root: root == share)
@@ -121,7 +121,7 @@ def test_another_workflow_s_ingested_experiment_never_decides(tmp_path):
 
 
 def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
-    from ucl_open_coen_av_corridor.stage import unanswered
+    from ucl_open_coen_dome_navigation.stage import unanswered
 
     assert not unanswered(tmp_path / "missing")
 

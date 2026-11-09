@@ -5,8 +5,8 @@ from pathlib import Path
 import pydantic
 from open_rigs._generators.calibration import export_schema
 
-import ucl_open_coen_av_corridor.rig
-import ucl_open_coen_av_corridor.task
+import ucl_open_coen_dome_navigation.rig
+import ucl_open_coen_dome_navigation.task
 
 SCHEMA_ROOT = Path("./src/DataSchemas/")
 EXTENSIONS_ROOT = Path("./src/Extensions/")
@@ -36,8 +36,8 @@ def regenerate(model_type: type, schema_file: Path) -> None:
 def main():
     """Regenerate the JSON schemas and Bonsai.Sgen C# classes from the pydantic models."""
     SCHEMA_ROOT.mkdir(parents=True, exist_ok=True)
-    regenerate(ucl_open_coen_av_corridor.rig.UclOpenCoenAvCorridorRig, SCHEMA_ROOT / "ucl_open_coen_av_corridor.json")
-    regenerate(ucl_open_coen_av_corridor.task.UclOpenCoenAvCorridorTaskLogic, SCHEMA_ROOT / "ucl_open_coen_av_corridor_task.json")
+    regenerate(ucl_open_coen_dome_navigation.rig.UclOpenCoenDomeNavigationRig, SCHEMA_ROOT / "ucl_open_coen_dome_navigation.json")
+    regenerate(ucl_open_coen_dome_navigation.task.UclOpenCoenDomeNavigationTaskLogic, SCHEMA_ROOT / "ucl_open_coen_dome_navigation_task.json")
     # The platform's calibration types (artefacts and procedure settings) generate no C# here: the
     # rig schema binds them to OpenRigs.Core. The schema is exported only so config/valve-calibration.yml
     # validates in the editor.

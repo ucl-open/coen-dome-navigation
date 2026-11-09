@@ -7,7 +7,7 @@ using System.Linq;
 using System.Reactive.Linq;
 using OpenRigs.Core;
 using OpenRigs.Core.Calibration;
-using UclOpenCoenAvCorridor;
+using UclOpenCoenDomeNavigation;
 
 /// <summary>
 /// One reward valve line (the line rig.yml's rewardValves gives a side) and how a requested volume becomes pulses on it.
@@ -186,16 +186,16 @@ public class LoadSideRewardLine
     }
 
     /// <summary>Builds the side's reward line for each (rig configuration, rig configuration directory) pair.</summary>
-    public IObservable<RewardLine> Process(IObservable<Tuple<UclOpenCoenAvCorridorRig, string>> source)
+    public IObservable<RewardLine> Process(IObservable<Tuple<UclOpenCoenDomeNavigationRig, string>> source)
     {
-        return source.Select(delegate (Tuple<UclOpenCoenAvCorridorRig, string> input)
+        return source.Select(delegate (Tuple<UclOpenCoenDomeNavigationRig, string> input)
         {
             return Load(input.Item1, input.Item2, side, DateTimeOffset.UtcNow);
         });
     }
 
     /// <summary>The DO line number (1 to 3) rig.yml's rewardValves gives a side, or why it gives none.</summary>
-    public static int LineOf(UclOpenCoenAvCorridorRig rig, RewardSide side)
+    public static int LineOf(UclOpenCoenDomeNavigationRig rig, RewardSide side)
     {
         RewardValves valves = rig.RewardValves;
         if (valves == null)
@@ -221,7 +221,7 @@ public class LoadSideRewardLine
     }
 
     /// <summary>Builds the side's reward line; public so the check can run without a workflow.</summary>
-    public static RewardLine Load(UclOpenCoenAvCorridorRig rig, string directory, RewardSide side, DateTimeOffset now)
+    public static RewardLine Load(UclOpenCoenDomeNavigationRig rig, string directory, RewardSide side, DateTimeOffset now)
     {
         int line = LineOf(rig, side);
         BehaviorBoard board;

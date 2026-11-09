@@ -1,12 +1,12 @@
-# yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_av_corridor_task.json
+# yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_dome_navigation_task.json
 # The task file: rig-control copies it at Go with the form's edits (Modality and Shaping Stage on
 # the form; the stage is suggested from the mouse's earlier experiments) and the workflow reads the
 # copy (TaskPath). From the editor, the workflow reads this file as it is.
 #
 # Not every rule is in the schema: tests\test_task_file.py checks this file against the pydantic
-# model (src\ucl_open_coen_av_corridor\task.py), which also says what each field does.
+# model (src\ucl_open_coen_dome_navigation\task.py), which also says what each field does.
 version: 0.0.0-rc1
-name: UclOpenCoenAvCorridor
+name: UclOpenCoenDomeNavigation
 taskParameters:
   modality: A                 # A (auditory), V (visual) or AV
   shapingStage: 1             # 1-6; 6 is stage 5 with truncated trials, only ever chosen by hand

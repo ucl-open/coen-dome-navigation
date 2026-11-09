@@ -6,7 +6,7 @@ using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 using Bonsai;
 
-namespace UclOpenCoenAvCorridor
+namespace UclOpenCoenDomeNavigation
 {
     /// <summary>
     /// Takes one device's settings out of rig.yml by the device's name. rig.yml groups each

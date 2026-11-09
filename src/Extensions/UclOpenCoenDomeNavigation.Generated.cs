@@ -5,12 +5,12 @@
 //----------------------
 
 
-namespace UclOpenCoenAvCorridor
+namespace UclOpenCoenDomeNavigation
 {
     #pragma warning disable // Disable all warnings
 
     /// <summary>
-    /// Rig configuration for the coen-av-corridor experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).
+    /// Rig configuration for the coen-dome-navigation experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).
     ///
     ///Each kind of device is a group of named entries, as the lab's rig.yml (open_rigs.rigs.behaviour_box):
     ///the name in the data is the kind and the entry joined by a hyphen, so behaviorBoard: main: is
@@ -18,7 +18,7 @@ namespace UclOpenCoenAvCorridor
     ///are named as lib-open-rigs' HarpRig names them, so RecordHarpDevices checks each board's WhoAmI.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Rig configuration for the coen-av-corridor experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).
+    [System.ComponentModel.DescriptionAttribute(@"Rig configuration for the coen-dome-navigation experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).
 
     Each kind of device is a group of named entries, as the lab's rig.yml (open_rigs.rigs.behaviour_box):
     the name in the data is the kind and the entry joined by a hyphen, so behaviorBoard: main: is
@@ -26,7 +26,7 @@ namespace UclOpenCoenAvCorridor
     are named as lib-open-rigs' HarpRig names them, so RecordHarpDevices checks each board's WhoAmI.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class UclOpenCoenAvCorridorRig
+    public partial class UclOpenCoenDomeNavigationRig
     {
     
         private string _rootPath;
@@ -57,7 +57,7 @@ namespace UclOpenCoenAvCorridor
     
         private int _interPulseInterval;
     
-        public UclOpenCoenAvCorridorRig()
+        public UclOpenCoenDomeNavigationRig()
         {
             _version = "0.0.0-rc1";
             _behaviorBoard = new System.Collections.Generic.Dictionary<string, BehaviorBoard>();
@@ -73,7 +73,7 @@ namespace UclOpenCoenAvCorridor
             _interPulseInterval = 50;
         }
     
-        protected UclOpenCoenAvCorridorRig(UclOpenCoenAvCorridorRig other)
+        protected UclOpenCoenDomeNavigationRig(UclOpenCoenDomeNavigationRig other)
         {
             _rootPath = other._rootPath;
             _rigId = other._rigId;
@@ -360,14 +360,14 @@ namespace UclOpenCoenAvCorridor
             }
         }
     
-        public System.IObservable<UclOpenCoenAvCorridorRig> Generate()
+        public System.IObservable<UclOpenCoenDomeNavigationRig> Generate()
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new UclOpenCoenAvCorridorRig(this)));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new UclOpenCoenDomeNavigationRig(this)));
         }
     
-        public System.IObservable<UclOpenCoenAvCorridorRig> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<UclOpenCoenDomeNavigationRig> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new UclOpenCoenAvCorridorRig(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new UclOpenCoenDomeNavigationRig(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
@@ -4347,9 +4347,9 @@ namespace UclOpenCoenAvCorridor
             return System.Reactive.Linq.Observable.Select(source, value => Newtonsoft.Json.JsonConvert.SerializeObject(value, formatting));
         }
 
-        public System.IObservable<string> Process(System.IObservable<UclOpenCoenAvCorridorRig> source)
+        public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationRig> source)
         {
-            return Process<UclOpenCoenAvCorridorRig>(source);
+            return Process<UclOpenCoenDomeNavigationRig>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<AudioDevice> source)
@@ -4486,7 +4486,7 @@ namespace UclOpenCoenAvCorridor
     [System.ComponentModel.DescriptionAttribute("Deserializes a sequence of JSON strings into data model objects.")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorRig>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationRig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<AudioDevice>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BehaviorBoard>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BoardWiring>))]
@@ -4517,7 +4517,7 @@ namespace UclOpenCoenAvCorridor
     
         public DeserializeFromJson()
         {
-            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorRig>();
+            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationRig>();
         }
 
         public Bonsai.Expressions.TypeMapping Type { get; set; }
@@ -4672,9 +4672,9 @@ namespace UclOpenCoenAvCorridor
             });
         }
 
-        public System.IObservable<string> Process(System.IObservable<UclOpenCoenAvCorridorRig> source)
+        public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationRig> source)
         {
-            return Process<UclOpenCoenAvCorridorRig>(source);
+            return Process<UclOpenCoenDomeNavigationRig>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<AudioDevice> source)
@@ -4811,7 +4811,7 @@ namespace UclOpenCoenAvCorridor
     [System.ComponentModel.DescriptionAttribute("Deserializes a sequence of YAML strings into data model objects.")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorRig>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationRig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<AudioDevice>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BehaviorBoard>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BoardWiring>))]
@@ -4842,7 +4842,7 @@ namespace UclOpenCoenAvCorridor
     
         public DeserializeFromYaml()
         {
-            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenAvCorridorRig>();
+            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationRig>();
         }
 
         public Bonsai.Expressions.TypeMapping Type { get; set; }

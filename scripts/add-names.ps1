@@ -32,7 +32,7 @@ $streams = @($prev.streams)
 if ($streams -notcontains 'Stimulus') { $streams += 'Stimulus'; $added += 'stream Stimulus' }
 $es = [ordered]@{}; foreach ($p in $prev.experimentSettings.PSObject.Properties) { $es[$p.Name] = $p.Value }
 $body = [ordered]@{ streams = $streams; experimentSettings = $es; trialColumns = $tc }
-$what = "added $($added -join ', ') (coen-av-corridor, Tom Childs' auditory VR corridor on open-rigs)"
+$what = "added $($added -join ', ') (coen-dome-navigation, Tom Childs' auditory VR corridor on open-rigs)"
 "would add $($added.Count): $($added -join ', ')"
 if ($Apply -and $added) {
     $r = Save-NamesDictionary -Path $path -Body $body -Previous $prev -Was $was -By 'PC' -What $what

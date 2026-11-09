@@ -4,7 +4,7 @@ using System.IO;
 using System.Reactive.Linq;
 using Bonsai;
 
-namespace UclOpenCoenAvCorridor
+namespace UclOpenCoenDomeNavigation
 {
     /// <summary>
     /// Reads the whole of each file named by the input. A transform, where Bonsai.IO's

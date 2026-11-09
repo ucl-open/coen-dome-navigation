@@ -120,7 +120,7 @@ def ours(manifest: Path) -> bool:
         repo = json.loads(manifest.read_text(encoding="utf-8-sig")).get("source", {}).get("repo") or ""
     except (OSError, ValueError, AttributeError):
         return True
-    return not repo or "coen-av-corridor" in repo
+    return not repo or "coen-dome-navigation" in repo
 
 
 def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unread: list[str] | None = None) -> list[Experiment]:

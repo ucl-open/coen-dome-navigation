@@ -1,6 +1,6 @@
-# yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_av_corridor.json
+# yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_dome_navigation.json
 #
-# coen-av-corridor rig configuration TEMPLATE: av-dome's (pip/main-switchover), unchanged. Every
+# coen-dome-navigation rig configuration TEMPLATE: av-dome's (pip/main-switchover), unchanged. Every
 # corridor rig is a dome or BLUE-OPTO rig with av-dome's rig.yml, and both workflows read the one
 # file, so keep this template and av-dome's the same (tests\test_rig_schema.py validates it).
 #

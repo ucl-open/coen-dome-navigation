@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.IO;
 using System.Reactive.Linq;
-using UclOpenCoenAvCorridorTask;
+using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -30,7 +30,7 @@ public class InitialiseOptoTrial
     private readonly List<int> conditionQueue = new List<int>();
     private bool configLoaded;
 
-    public IObservable<OptoTrial> Process(IObservable<Tuple<int, UclOpenCoenAvCorridorTaskParameters>> source)
+    public IObservable<OptoTrial> Process(IObservable<Tuple<int, UclOpenCoenDomeNavigationTaskParameters>> source)
     {
         return source.Where(input => input.Item1 > 0).Select(input =>
         {

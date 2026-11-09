@@ -1,6 +1,6 @@
-# coen-av-corridor
+# coen-dome-navigation
 
-Tom Childs' auditory (and visual) VR corridor task on the lab's open-rigs platform, run from rig-control. A head-fixed mouse runs on a wheel through a virtual track while a tone sweeps up in frequency (and a grating's spatial frequency changes) with its position; it licks in the reward zone for a reward. Shaping stages 1 to 6 are as before (see `src\ucl_open_coen_av_corridor\task.py`).
+Tom Childs' auditory (and visual) VR corridor task on the lab's open-rigs platform, run from rig-control. A head-fixed mouse runs on a wheel through a virtual track while a tone sweeps up in frequency (and a grating's spatial frequency changes) with its position; it licks in the reward zone for a reward. Shaping stages 1 to 6 are as before (see `src\ucl_open_coen_dome_navigation\task.py`).
 
 Converted on 9 Nov 2026 from `ucl-open/auditory-vr-corridor` (`main` b67a1f6 with `zapit-integration` 1782543), which stays as it is: Tom's original, read only. The rig, control, commands and logging are av-dome's `pip/main-switchover` (6c5a885), which runs the same domes and BLUE-OPTO rigs; the task is Tom's, its groups kept as they were.
 
@@ -19,7 +19,7 @@ What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided).
 | `config\rig-template.yml` | av-dome's rig template: both workflows read the same `C:\Coen-Lab-Local\RigConfigs\<MACHINE>\rig.yml` |
 | `schemas\trial-columns.yml` | What each `BonsaiData_Trial` column means |
 | `src\waveforms` | The tone pips, error tone and background noise, made by `uv run generate-waveforms` and committed |
-| `src\ucl_open_coen_av_corridor` | Rig and task models (`regenerate-schemas` makes `src\DataSchemas` and the C#), waveforms, stage suggestion |
+| `src\ucl_open_coen_dome_navigation` | Rig and task models (`regenerate-schemas` makes `src\DataSchemas` and the C#), waveforms, stage suggestion |
 | `local_packages` | The lab's OpenRigs packages from `Coen-Lab/lib-open-rigs`; never edited here |
 
 ## Checks

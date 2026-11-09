@@ -223,7 +223,7 @@
       "title": "TruncationConfig",
       "type": "object"
     },
-    "UclOpenCoenAvCorridorTaskLogic": {
+    "UclOpenCoenDomeNavigationTaskLogic": {
       "description": "Top-level task logic schema.",
       "properties": {
         "version": {
@@ -233,14 +233,14 @@
           "type": "string"
         },
         "name": {
-          "const": "UclOpenCoenAvCorridor",
-          "default": "UclOpenCoenAvCorridor",
+          "const": "UclOpenCoenDomeNavigation",
+          "default": "UclOpenCoenDomeNavigation",
           "description": "Name of the task",
           "title": "Name",
           "type": "string"
         },
         "taskParameters": {
-          "$ref": "#/$defs/UclOpenCoenAvCorridorTaskParameters",
+          "$ref": "#/$defs/UclOpenCoenDomeNavigationTaskParameters",
           "default": {
             "modality": "A",
             "shapingStage": 1,
@@ -307,10 +307,10 @@
           "title": "TaskParameters"
         }
       },
-      "title": "UclOpenCoenAvCorridorTaskLogic",
+      "title": "UclOpenCoenDomeNavigationTaskLogic",
       "type": "object"
     },
-    "UclOpenCoenAvCorridorTaskParameters": {
+    "UclOpenCoenDomeNavigationTaskParameters": {
       "description": "Task params.",
       "properties": {
         "modality": {
@@ -471,10 +471,10 @@
           "type": "integer"
         }
       },
-      "title": "UclOpenCoenAvCorridorTaskParameters",
+      "title": "UclOpenCoenDomeNavigationTaskParameters",
       "type": "object"
     }
   },
-  "$ref": "#/$defs/UclOpenCoenAvCorridorTaskLogic",
-  "title": "RootModel[UclOpenCoenAvCorridorTaskLogic]"
+  "$ref": "#/$defs/UclOpenCoenDomeNavigationTaskLogic",
+  "title": "RootModel[UclOpenCoenDomeNavigationTaskLogic]"
 }

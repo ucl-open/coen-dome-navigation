@@ -15,7 +15,7 @@ import yaml
 from scipy.io import wavfile
 from scipy.signal import butter, sosfilt
 
-from ucl_open_coen_av_corridor.task import UclOpenCoenAvCorridorTaskLogic
+from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "src" / "waveforms"
@@ -75,7 +75,7 @@ def write(start_freq: int, end_freq: int, n_freq_bins: int, amplitude: float, ou
 def task_parameters(task_file: Path = TASK_FILE):
     """The task parameters config/abstract-av-corridor.yml gives."""
     data = yaml.safe_load(task_file.read_text(encoding="utf-8"))
-    return UclOpenCoenAvCorridorTaskLogic.model_validate(data).task_parameters
+    return UclOpenCoenDomeNavigationTaskLogic.model_validate(data).task_parameters
 
 
 def main() -> None:

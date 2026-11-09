@@ -7,8 +7,8 @@ import pydantic
 import yaml
 from scipy.io import wavfile
 
-from ucl_open_coen_av_corridor import waveforms
-from ucl_open_coen_av_corridor.task import UclOpenCoenAvCorridorTaskLogic, UclOpenCoenAvCorridorTaskParameters
+from ucl_open_coen_dome_navigation import waveforms
+from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic, UclOpenCoenDomeNavigationTaskParameters
 
 ROOT = Path(__file__).parent.parent
 TASK = ROOT / "config" / "abstract-av-corridor.yml"
@@ -20,19 +20,19 @@ def task() -> dict:
 
 
 def test_the_task_file_validates():
-    UclOpenCoenAvCorridorTaskLogic.model_validate(task())
+    UclOpenCoenDomeNavigationTaskLogic.model_validate(task())
 
 
 def test_the_task_file_s_reward_zones_are_the_ones_the_model_derives():
     # The workflow reads thresholdFrequencies as written; rig-control does not run the model.
     params = task()["taskParameters"]
     written = params.pop("thresholdFrequencies")
-    derived = UclOpenCoenAvCorridorTaskParameters.model_validate(params).threshold_frequencies
+    derived = UclOpenCoenDomeNavigationTaskParameters.model_validate(params).threshold_frequencies
     assert written == derived.model_dump(by_alias=True)
 
 
 def test_the_committed_waveforms_are_the_task_file_s():
-    p = UclOpenCoenAvCorridorTaskLogic.model_validate(task()).task_parameters
+    p = UclOpenCoenDomeNavigationTaskLogic.model_validate(task()).task_parameters
     assert (WAVES / "sweep.txt").read_text(encoding="utf-8") == waveforms.sweep_line(
         p.start_freq, p.end_freq, p.n_freq_bins, p.amplitude
     )
@@ -67,7 +67,7 @@ def _closed(node):
 def test_the_schema_refuses_zapit_ticked_with_no_config_path():
     # rig-control checks the task file against the schema, not the model; this used to reach Go and
     # stop the workflow at trial 1 (audit, 9 Nov 2026, round 3).
-    schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_av_corridor_task.json").read_text(encoding="utf-8")))
+    schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8")))
     validator = jsonschema.Draft202012Validator(schema)
 
     def problems(**opto):
@@ -88,8 +88,8 @@ def test_the_optogenetics_block_is_av_dome_s():
 
 
 def test_the_committed_task_schema_is_the_model_s():
-    committed = json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_av_corridor_task.json").read_text(encoding="utf-8"))
-    model = pydantic.RootModel[UclOpenCoenAvCorridorTaskLogic].model_json_schema(
+    committed = json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8"))
+    model = pydantic.RootModel[UclOpenCoenDomeNavigationTaskLogic].model_json_schema(
         by_alias=True, mode="serialization", union_format="primitive_type_array"
     )
     assert committed == json.loads(json.dumps(model))

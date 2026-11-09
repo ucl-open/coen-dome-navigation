@@ -598,7 +598,7 @@ wheels = [
 ]
 
 [[package]]
-name = "ucl-open-coen-av-corridor"
+name = "ucl-open-coen-dome-navigation"
 version = "0.0.0rc1"
 source = { editable = "." }
 dependencies = [

@@ -15,7 +15,7 @@ from open_rigs.devices import (
 # board's usbSerial required (OpenRigs.HarpDevices checks the board by it).
 from open_rigs.rigs.behaviour_box import BehaviorBoard, SpinnakerCamera
 
-from ucl_open_coen_av_corridor import __semver__
+from ucl_open_coen_dome_navigation import __semver__
 
 
 class ZapitServer(BaseSchema):
@@ -68,8 +68,8 @@ class RewardValves(BaseSchema):
         return self
 
 
-class UclOpenCoenAvCorridorRig(Rig):
-    """Rig configuration for the coen-av-corridor experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).
+class UclOpenCoenDomeNavigationRig(Rig):
+    """Rig configuration for the coen-dome-navigation experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).
 
     Each kind of device is a group of named entries, as the lab's rig.yml (open_rigs.rigs.behaviour_box):
     the name in the data is the kind and the entry joined by a hyphen, so behaviorBoard: main: is

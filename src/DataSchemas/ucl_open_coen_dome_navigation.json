@@ -1181,8 +1181,8 @@
       "type": "string",
       "x-sgen-typename": "Harp.TimestampGeneratorGen3.TimerRate"
     },
-    "UclOpenCoenAvCorridorRig": {
-      "description": "Rig configuration for the coen-av-corridor experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).\n\nEach kind of device is a group of named entries, as the lab's rig.yml (open_rigs.rigs.behaviour_box):\nthe name in the data is the kind and the entry joined by a hyphen, so behaviorBoard: main: is\nBehaviorBoard-Main. The workflow takes each device it drives by that name (RigDevice). Harp kinds\nare named as lib-open-rigs' HarpRig names them, so RecordHarpDevices checks each board's WhoAmI.",
+    "UclOpenCoenDomeNavigationRig": {
+      "description": "Rig configuration for the coen-dome-navigation experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).\n\nEach kind of device is a group of named entries, as the lab's rig.yml (open_rigs.rigs.behaviour_box):\nthe name in the data is the kind and the entry joined by a hyphen, so behaviorBoard: main: is\nBehaviorBoard-Main. The workflow takes each device it drives by that name (RigDevice). Harp kinds\nare named as lib-open-rigs' HarpRig names them, so RecordHarpDevices checks each board's WhoAmI.",
       "properties": {
         "rootPath": {
           "description": "The root path on which to log all data.",
@@ -1287,7 +1287,7 @@
         "zapit",
         "rewardValves"
       ],
-      "title": "UclOpenCoenAvCorridorRig",
+      "title": "UclOpenCoenDomeNavigationRig",
       "type": "object"
     },
     "ValveLine": {
@@ -1411,6 +1411,6 @@
       "type": "object"
     }
   },
-  "$ref": "#/$defs/UclOpenCoenAvCorridorRig",
-  "title": "RootModel[UclOpenCoenAvCorridorRig]"
+  "$ref": "#/$defs/UclOpenCoenDomeNavigationRig",
+  "title": "RootModel[UclOpenCoenDomeNavigationRig]"
 }
