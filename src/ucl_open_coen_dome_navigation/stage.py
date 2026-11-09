@@ -68,8 +68,12 @@ def _read(csv_file: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+# The trial log's modality, spelled out as av-dome's are, as the task file's code.
+MODALITY_CODES = {"auditory": "A", "visual": "V", "audiovisual": "AV"}
+
+
 def read_new(folder: Path) -> Experiment | None:
-    """An experiment of this workflow: BonsaiData\\BonsaiData_Trial_*.csv."""
+    """An experiment of this workflow: BonsaiData\\BonsaiData_Trial_*.csv (outcome Correct is rewarded)."""
     logs = sorted(folder.glob("BonsaiData/BonsaiData_Trial*.csv"))
     if not logs:
         return None
@@ -79,9 +83,9 @@ def read_new(folder: Path) -> Experiment | None:
     return Experiment(
         folder.name,
         _when(folder.name),
-        [r["modality"] for r in rows],
-        [int(r["shapingStage"]) for r in rows],
-        [r["outcome"] == "Rewarded" for r in rows],
+        [MODALITY_CODES[r["modality"]] for r in rows],
+        [int(r["trainingStage"]) for r in rows],
+        [r["outcome"] == "Correct" for r in rows],
     )
 
 

@@ -1,5 +1,5 @@
 param([switch]$Apply)
-# Adds this workflow's trial columns (schemas\trial-columns.yml) and its Stimulus stream to the lab's
+# Adds this workflow's trial columns (schemas\trial-columns.yml) and its StimulusState stream to the lab's
 # names list (K:\config\data-dictionary.json), which rig-control checks before it launches the
 # workflow. Without -Apply it only says what it would add. -Apply saves through rig-setup's own
 # Save-NamesDictionary, which refuses if the file changed since it was read, backs it up and logs the
@@ -29,7 +29,7 @@ foreach ($p in $cols.PSObject.Properties) {
     $added += "column $($p.Name)"
 }
 $streams = @($prev.streams)
-if ($streams -notcontains 'Stimulus') { $streams += 'Stimulus'; $added += 'stream Stimulus' }
+if ($streams -notcontains 'StimulusState') { $streams += 'StimulusState'; $added += 'stream StimulusState' }
 $es = [ordered]@{}; foreach ($p in $prev.experimentSettings.PSObject.Properties) { $es[$p.Name] = $p.Value }
 $body = [ordered]@{ streams = $streams; experimentSettings = $es; trialColumns = $tc }
 $what = "added $($added -join ', ') (coen-dome-navigation, Tom Childs' auditory VR corridor on open-rigs)"

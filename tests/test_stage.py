@@ -59,8 +59,8 @@ def test_new_and_old_experiments_are_read_newest_first(tmp_path):
     new, old = tmp_path / "data", tmp_path / "Logs"
     write(
         new / "sub-TC9" / "ses-002D1_2026-11-10T09-00-00" / "BonsaiData" / "BonsaiData_Trial_2026-11-10T09-00-00.csv",
-        ["Seconds", "trialNumber", "modality", "shapingStage", "outcome"],
-        [[1.0, i + 1, "A", 3, "Rewarded"] for i in range(60)],
+        ["Seconds", "trialNumber", "modality", "trainingStage", "outcome"],
+        [[1.0, i + 1, "auditory", 3, "Correct"] for i in range(60)],
     )
     write(
         old / "sub-TC9" / "ses-A6_date-2026-10-01T09-00-00" / "TrialLog_A6_TC9" / "TrialLog_A6_TC9_x.csv",
@@ -104,7 +104,7 @@ def test_an_ingested_experiment_whose_data_is_in_another_root_is_read_in_any_ord
     (staging / "sub-TC9" / name).mkdir(parents=True)
     (staging / "sub-TC9" / name / "manifest.json").write_text("{}", encoding="utf-8")
     write(destination / "sub-TC9" / name / "BonsaiData" / "BonsaiData_Trial_x.csv",
-          ["modality", "shapingStage", "outcome"], [["A", 3, "Rewarded"]] * 100)
+          ["modality", "trainingStage", "outcome"], [["auditory", 3, "Correct"]] * 100)
     unread = []
     roots = [destination, staging] if destination_first else [staging, destination]
     found = experiments("TC9", roots, [], unread)
@@ -129,7 +129,8 @@ def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
 def test_a_rig_folder_under_staging_is_read(tmp_path):
     write(
         tmp_path / "BLUE-OPTO-2" / "sub-TC9" / "ses-001O2_2026-11-10T09-00-00" / "BonsaiData" / "BonsaiData_Trial_x.csv",
-        ["modality", "shapingStage", "outcome"],
-        [["V", 1, "Unrewarded"]] * 50,
+        ["modality", "trainingStage", "outcome"],
+        [["visual", 1, "Incorrect"]] * 50,
     )
-    assert len(experiments("TC9", [tmp_path], [])) == 1
+    found = experiments("TC9", [tmp_path], [])
+    assert len(found) == 1 and found[0].modality[0] == "V" and not any(found[0].rewarded)  # as the task file's codes

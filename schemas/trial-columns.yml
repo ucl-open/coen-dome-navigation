@@ -20,18 +20,18 @@ trialNumber:
   description: The trial's number in the experiment, from 1.
 modality:
   type: string
-  values: [A, V, AV]
+  values: [auditory, visual, audiovisual]
   formerly: [Modality]
-  description: The task's modality - auditory (tone sweep), visual (grating) or both.
-shapingStage:
+  description: The task's modality - auditory (tone sweep), visual (grating) or both; the task file's A, V or AV spelled out, as av-dome's modalities are.
+trainingStage:
   type: int
   formerly: [ShapingStage]
-  description: The shaping stage the trial ran at, 1 to 6.
+  description: The training stage the trial ran at, 1 to 6 (the task file's shapingStage).
 outcome:
   type: string
-  values: [Rewarded, Unrewarded]
+  values: [Correct, Incorrect, NoResponse]
   formerly: [WasRewarded]
-  description: Rewarded when the trial was rewarded. rig-control's performance is Rewarded over all trials, Tom Childs' success rate.
+  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the time limit or the end of the track (endReason says which). rig-control's performance is Correct over all trials, Tom Childs' success rate.
 endReason:
   type: string
   values: [FreqReached, CorrectLick, WrongLickLimit, Timeout, EndOfTrack]
@@ -41,14 +41,6 @@ punished:
   type: bool
   formerly: [WasPunished]
   description: True when the error tone and timeout were given.
-timedOut:
-  type: bool
-  formerly: [WasTimeout]
-  description: True when the trial ended on its time limit.
-hitEndOfTrack:
-  type: bool
-  formerly: [HitEndOfTrack]
-  description: True when the mouse reached the end of the track.
 lickCount:
   type: int
   formerly: [LickCount]
@@ -73,12 +65,12 @@ rewardCeilingHz:
   unit: Hz
   formerly: [RewAudFreqCeil]
   description: The reward zone's upper frequency.
-endFrequencyHz:
+audioEndFrequencyHz:
   type: double
   unit: Hz
   formerly: [TrialEndAudFreq]
   description: The sweep's frequency when the trial ended.
-endSpatialFrequencyCpd:
+visualEndSpatialFrequencyCpd:
   type: double
   unit: cycles/deg
   formerly: [TrialEndVisFreq]
@@ -87,7 +79,7 @@ audioAmplitude:
   type: double
   formerly: [AudAmplitude]
   description: The tone scale the trial played at - the task's amplitude, 0 when the modality has no sound.
-truncationPoint:
+truncationFraction:
   type: double
   formerly: [TruncationPoint]
   description: Where the cue switched off, as a fraction of the sweep; 1 on an untruncated trial.
