@@ -28,7 +28,7 @@ The Zapit optogenetics from `ucl-open/auditory-vr-corridor` branch `zapit-integr
 | Change | Why |
 |---|---|
 | `stimProbability` 0.4, `warmupTrials` 20 (sham), `stimDuration` 12.5, `leadTime` 0.1 (new), `stimDelay` 0 (schema max 0). | Tom's design: 40% laser over 5 conditions incl. an off-brain control. `stimDelay` kept for av-dome's field names; Zapit ignores it for continuous stimuli. |
-| `rewardSizeUl` 3.0 in every `trainingStages` row. | Tom's reward volume. Uncalibrated valves give two 40 ms pulses; calibrate for a true 3 ul. |
+| `rewardSizeUl` 2.0 in every `trainingStages` row until the left valves are calibrated, then 3.0 (9 Nov 2026). | Tom's reward is 3 ul, one opening (42 ms on BLUE-OPTO-2 in his RigLogs, measured as about 3 ul). An uncalibrated valve is taken as 2 ul a pulse, so 3.0 gave two openings, twice his; 2.0 gives one of rig.yml's width (set to his 42 ms on BLUE-OPTO-2). Calibrate, then 3.0. |
 | `optoStimulated` back in the trial log (Pip had dropped it as `optoCondition` > 0). | With sham trials every trial of an optogenetics experiment has a condition, so only `optoStimulated` says whether the laser was on. |
 
 ## Files

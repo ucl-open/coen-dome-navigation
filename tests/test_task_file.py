@@ -110,11 +110,13 @@ def test_the_schema_refuses_a_stim_delay():
 
 
 def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
-    # zapit-v2: Tom's design (40% laser after 20 sham warmup trials, 0.1 s lead, 12.5 s cap) and 3 ul rewards on every stage
+    # zapit-v2: Tom's design (40% laser after 20 sham warmup trials, 0.1 s lead, 12.5 s cap). The reward is meant to be
+    # 3 ul, but 2.0 on every stage until the left valves are calibrated: an uncalibrated valve is taken as 2 ul a pulse,
+    # so 2 ul is one opening of Tom's width (42 ms on BLUE-OPTO-2, measured as about 3 ul) and 3 ul was two (BACKLOG).
     params = task()["taskParameters"]
     opto = params["optogenetics"]
     assert (opto["stimProbability"], opto["warmupTrials"], opto["leadTime"], opto["stimDuration"], opto["stimDelay"]) == (0.4, 20, 0.1, 12.5, 0.0)
-    assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {3.0}
+    assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {2.0}
 
 
 def test_the_committed_task_schema_is_the_model_s():
