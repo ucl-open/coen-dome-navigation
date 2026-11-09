@@ -16,7 +16,7 @@ from swc.aeon.schema import BaseSchema
 from ucl_open_coen_dome_navigation import __semver__
 
 BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (HarpBeat)
-STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial (closedLoopDuration + laser_lead_seconds) the laser_max_seconds cap must be
+STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial (closedLoopDuration + laser_leads_stimulus_by_seconds) the laser_max_seconds cap must be
 
 STAGE_COUNT = 6
 
@@ -61,17 +61,17 @@ class Punishment(BaseSchema):
 
 
 class Truncation(BaseSchema):
-    """Where the cue switches off on a truncated trial (a stage's truncationFraction says how many).
+    """Where the stimulus switches off on a truncated trial (a stage's truncationFraction says how many).
 
-    On a truncated trial the cue (tone and grating) switches off part way along the sweep. Everything else about
+    On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
     the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
-    zone without the cue.
+    zone without the stimulus.
     """
 
     points: List[float] = Field(
         default=[0.4, 0.6],
         min_length=1,
-        description="Where the cue switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
+        description="Where the stimulus switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
     )
 
     @field_validator("points")
@@ -86,13 +86,14 @@ class OptogeneticsConfig(BaseSchema):
     """Zapit optogenetic stimulation (names Pip's, 9 Nov 2026; av-dome's stimDelay, excludeRepeats and
     pseudorandomSelection dropped: a delay must be 0, there are no repeat trials, and draws are always balanced).
 
-    The stimulation sites and ramp-down are set in the Zapit stimulus config loaded in Zapit, not here; the laser
-    power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the config's power) and
+    The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser
+    power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and
     logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
     an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as sham trials
-    with the laser off, so galvo noise and masking light are the same on every trial. The stimulus is continuous: it
-    starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered rig), laser_lead_seconds before the first
-    tone pip, and Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. Zapit's host,
+    with the laser off, so galvo noise and masking light are the same on every trial. "Stimulus" is the tone and
+    grating; the laser is continuous: it starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered
+    rig), laser_leads_stimulus_by_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
+    laser_max_seconds if that comes first. Zapit's host,
     port and triggering are rig.yml's zapit block.
     """
 
@@ -104,7 +105,7 @@ class OptogeneticsConfig(BaseSchema):
         json_schema_extra={
             "if": {"properties": {"enabled": {"const": True}}, "required": ["enabled"], "additionalProperties": True},
             "then": {
-                "properties": {"zapitStimConfigPath": {"minLength": 1}, "laserPowerMw": {"type": "number"}},
+                "properties": {"zapitConditionsPath": {"minLength": 1}, "laserPowerMw": {"type": "number"}},
                 "required": ["laserPowerMw"],
                 "additionalProperties": True,
             },
@@ -112,31 +113,31 @@ class OptogeneticsConfig(BaseSchema):
     )
 
     enabled: bool = Field(default=False, description="Whether optogenetic stimulation is enabled")
-    zapit_stim_config_path: str = Field(
+    zapit_conditions_path: str = Field(
         default="",
-        description="Path to the Zapit stimulus config loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms",
+        description="Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms",
     )
     laser_power_mw: Optional[float] = Field(
         default=None,
         gt=0,
-        description="Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the stimulus config's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on sham trials). Required with optogenetics on",
+        description="Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the conditions file's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on sham trials). Required with optogenetics on",
     )
     laser_on_probability: float = Field(
         default=0.4,
         ge=0,
         le=1,
-        description="Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit stimulus config, a laser-on control site included. All other trials are sham trials: Zapit is sent a condition with the laser off. Conditions come from shuffled queues, one for laser-on and one for sham trials, so each is used equally often",
+        description="Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are sham trials: Zapit is sent a condition with the laser off. Conditions come from shuffled queues, one for laser-on and one for sham trials, so each is used equally often",
     )
     laser_max_seconds: float = Field(
         default=12.5,
         gt=0,
-        description="Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + laser_lead_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its stimulus",
+        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
     )
-    laser_lead_seconds: float = Field(
+    laser_leads_stimulus_by_seconds: float = Field(
         default=0.1,
         ge=0.05,
         le=0.2,
-        description="How long the stimulus runs before the first tone pip, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_lead_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip",
+        description="How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_leads_stimulus_by_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip",
     )
     trials_before_laser: int = Field(
         default=20,
@@ -146,8 +147,8 @@ class OptogeneticsConfig(BaseSchema):
 
     @model_validator(mode="after")
     def validate_config_path(self):
-        if self.enabled and not self.zapit_stim_config_path:
-            raise ValueError("optogenetics is enabled but zapit_stim_config_path is empty")
+        if self.enabled and not self.zapit_conditions_path:
+            raise ValueError("optogenetics is enabled but zapit_conditions_path is empty")
         if self.enabled and self.laser_power_mw is None:
             raise ValueError("optogenetics is enabled but laser_power_mw is not set")
         if self.laser_power_mw is not None and not math.isfinite(self.laser_power_mw):
@@ -156,10 +157,10 @@ class OptogeneticsConfig(BaseSchema):
 
     @model_validator(mode="after")
     def validate_lead_time(self):
-        # Bonsai starts the stimulus on a beep and moves the first tone pip laser_lead_seconds later, so laser_lead_seconds is a whole number of beeps
-        beeps = self.laser_lead_seconds / BEEP_INTERVAL_SEC
+        # Bonsai starts the laser on a beep and moves the first tone pip laser_leads_stimulus_by_seconds later, so it is a whole number of beeps
+        beeps = self.laser_leads_stimulus_by_seconds / BEEP_INTERVAL_SEC
         if abs(beeps - round(beeps)) > 1e-6:
-            raise ValueError(f"laser_lead_seconds ({self.laser_lead_seconds}) must be a multiple of the {BEEP_INTERVAL_SEC} s beep interval")
+            raise ValueError(f"laser_leads_stimulus_by_seconds ({self.laser_leads_stimulus_by_seconds}) must be a multiple of the {BEEP_INTERVAL_SEC} s beep interval")
         return self
 
     @model_validator(mode="after")
@@ -189,7 +190,7 @@ class TrainingStage(BaseSchema):
     track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
     track_length_scale: float = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
-    truncation_fraction: float = Field(ge=0, le=1, description="Fraction of trials whose cue switches off early (truncation.points)")
+    truncation_fraction: float = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.points)")
 
     @model_validator(mode="after")
     def _zone_ordered(self) -> "TrainingStage":
@@ -243,7 +244,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     )
     trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
     punishment: Punishment = Field(default=Punishment(), description="The timeout and error sound a punished trial gets")
-    truncation: Truncation = Field(default=Truncation(), description="Where the cue switches off on a truncated trial")
+    truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
     optogenetics: OptogeneticsConfig = Field(default=OptogeneticsConfig(), description="Zapit optogenetic stimulation")
     training_stages: List[TrainingStage] = Field(
         description="Training stage table, indexed by the TrainingStage setting from 0; a setting past the end uses the last row"
@@ -252,13 +253,13 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     @model_validator(mode="after")
     def _stim_duration_outlasts_the_trial(self):
         # The laser is meant to stay on until the outcome: the cap must be longer than the longest trial, the time limit
-        # (closedLoopDuration, counted from the first tone pip) plus laser_lead_seconds (zapit-v2)
+        # (closedLoopDuration, counted from the first tone pip) plus laser_leads_stimulus_by_seconds (zapit-v2)
         opto = self.optogenetics
-        shortest = self.trial_structure.closed_loop_duration + opto.laser_lead_seconds + STIM_DURATION_MARGIN_SEC
+        shortest = self.trial_structure.closed_loop_duration + opto.laser_leads_stimulus_by_seconds + STIM_DURATION_MARGIN_SEC
         if opto.enabled and opto.laser_max_seconds < shortest - 1e-9:
             raise ValueError(
                 f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: trialStructure.closedLoopDuration "
-                f"({self.trial_structure.closed_loop_duration:g} s) counts from the first tone pip, laser_lead_seconds ({opto.laser_lead_seconds} s) after onset"
+                f"({self.trial_structure.closed_loop_duration:g} s) counts from the first tone pip, laser_leads_stimulus_by_seconds ({opto.laser_leads_stimulus_by_seconds} s) after onset"
             )
         return self
 

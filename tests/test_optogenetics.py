@@ -1,5 +1,5 @@
-"""The optogenetics settings' rules (zapit-v2): laser_lead_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap longer than the
-longest trial (trialStructure.closedLoopDuration + laser_lead_seconds), and the places main.bonsai and
+"""The optogenetics settings' rules (zapit-v2): laser_leads_stimulus_by_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap longer than the
+longest trial (trialStructure.closedLoopDuration + laser_leads_stimulus_by_seconds), and the places main.bonsai and
 InitialiseOptoTrial.cs share those rules."""
 import copy
 import re
@@ -23,32 +23,32 @@ TASK = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_t
 def params(closed_loop=None, **opto):
     """The task file's parameters with optogenetics on and the given changes."""
     doc = copy.deepcopy(TASK)
-    doc["optogenetics"].update({"enabled": True, "zapitStimConfigPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
+    doc["optogenetics"].update({"enabled": True, "zapitConditionsPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
     if closed_loop is not None:
         doc["trialStructure"]["closedLoopDuration"] = closed_loop
     return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
 
 
-@pytest.mark.parametrize("laser_lead_seconds", [0.05, 0.1, 0.15, 0.2])
-def test_lead_time_in_whole_beeps_up_to_0_2_is_accepted(laser_lead_seconds):
-    assert OptogeneticsConfig(laser_lead_seconds=laser_lead_seconds).laser_lead_seconds == laser_lead_seconds
+@pytest.mark.parametrize("laser_leads_stimulus_by_seconds", [0.05, 0.1, 0.15, 0.2])
+def test_lead_time_in_whole_beeps_up_to_0_2_is_accepted(laser_leads_stimulus_by_seconds):
+    assert OptogeneticsConfig(laser_leads_stimulus_by_seconds=laser_leads_stimulus_by_seconds).laser_leads_stimulus_by_seconds == laser_leads_stimulus_by_seconds
 
 
-@pytest.mark.parametrize("laser_lead_seconds", [0.0, 0.07, 0.125, 0.25, 0.5, 1.0])
-def test_other_lead_times_are_refused(laser_lead_seconds):
-    with pytest.raises(pydantic.ValidationError, match="laser_lead_seconds"):
-        OptogeneticsConfig(laser_lead_seconds=laser_lead_seconds)
+@pytest.mark.parametrize("laser_leads_stimulus_by_seconds", [0.0, 0.07, 0.125, 0.25, 0.5, 1.0])
+def test_other_lead_times_are_refused(laser_leads_stimulus_by_seconds):
+    with pytest.raises(pydantic.ValidationError, match="laser_leads_stimulus_by_seconds"):
+        OptogeneticsConfig(laser_leads_stimulus_by_seconds=laser_leads_stimulus_by_seconds)
 
 
-@pytest.mark.parametrize("closed_loop, laser_lead_seconds, laser_max_seconds", [(12, 0.1, 12.35), (12, 0.1, 12.5), (12, 0.2, 12.45), (20, 0.1, 20.35)])
-def test_a_cap_longer_than_the_longest_trial_is_accepted(closed_loop, laser_lead_seconds, laser_max_seconds):
-    assert params(closed_loop, laserLeadSeconds=laser_lead_seconds, laserMaxSeconds=laser_max_seconds).optogenetics.laser_max_seconds == laser_max_seconds
+@pytest.mark.parametrize("closed_loop, laser_leads_stimulus_by_seconds, laser_max_seconds", [(12, 0.1, 12.35), (12, 0.1, 12.5), (12, 0.2, 12.45), (20, 0.1, 20.35)])
+def test_a_cap_longer_than_the_longest_trial_is_accepted(closed_loop, laser_leads_stimulus_by_seconds, laser_max_seconds):
+    assert params(closed_loop, laserLeadsStimulusBySeconds=laser_leads_stimulus_by_seconds, laserMaxSeconds=laser_max_seconds).optogenetics.laser_max_seconds == laser_max_seconds
 
 
-@pytest.mark.parametrize("closed_loop, laser_lead_seconds, laser_max_seconds", [(12, 0.1, 12.0), (12, 0.2, 12.4), (15, 0.1, 12.5)])
-def test_a_cap_that_would_end_a_timed_out_trial_early_is_refused(closed_loop, laser_lead_seconds, laser_max_seconds):
+@pytest.mark.parametrize("closed_loop, laser_leads_stimulus_by_seconds, laser_max_seconds", [(12, 0.1, 12.0), (12, 0.2, 12.4), (15, 0.1, 12.5)])
+def test_a_cap_that_would_end_a_timed_out_trial_early_is_refused(closed_loop, laser_leads_stimulus_by_seconds, laser_max_seconds):
     with pytest.raises(pydantic.ValidationError, match="laser_max_seconds"):
-        params(closed_loop, laserLeadSeconds=laser_lead_seconds, laserMaxSeconds=laser_max_seconds)
+        params(closed_loop, laserLeadsStimulusBySeconds=laser_leads_stimulus_by_seconds, laserMaxSeconds=laser_max_seconds)
 
 
 def test_the_cap_rule_only_applies_with_optogenetics_on():
@@ -78,8 +78,8 @@ def test_initialise_opto_trial_checks_the_same_rules():
 def test_the_stimulus_config_is_saved_as_json():
     # LogDataSchema writes Settings\<Name>_<time>.json and parses its input as JSON, so the YAML goes in wrapped
     text = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
-    block = text[text.index("TaskParameters.Optogenetics.ZapitStimConfigPath"):text.index("<Name>Settings_ZapitStimConfig</Name>")]
-    assert "ext:ZapitStimConfigSnapshot" in block and "ReadTextFile" not in block
+    block = text[text.index("TaskParameters.Optogenetics.ZapitConditionsPath"):text.index("<Name>Settings_ZapitConditions</Name>")]
+    assert "ext:ZapitConditionsSnapshot" in block and "ReadTextFile" not in block
 
 
 def test_laser_power_is_required_with_optogenetics_on_and_above_0():

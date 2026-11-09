@@ -89,21 +89,21 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
 
     assert problems() == []
     assert problems(enabled=True, laserPowerMw=2.0) == ["'' should be non-empty"]
-    assert problems(enabled=True, zapitStimConfigPath=r"C:\Zapit\conditions.yml") == ["None is not of type 'number'"]
-    assert problems(enabled=True, zapitStimConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=0) == ["0 is not valid under any of the given schemas"]
-    assert problems(enabled=True, zapitStimConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0) == []
+    assert problems(enabled=True, zapitConditionsPath=r"C:\Zapit\conditions.yml") == ["None is not of type 'number'"]
+    assert problems(enabled=True, zapitConditionsPath=r"C:\Zapit\conditions.yml", laserPowerMw=0) == ["0 is not valid under any of the given schemas"]
+    assert problems(enabled=True, zapitConditionsPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0) == []
 
 
 def test_the_optogenetics_block_has_pip_s_names():
     # Pip, 9 Nov 2026: av-dome's stimDelay (only 0 works here), excludeRepeats (no repeat trials) and
     # pseudorandomSelection (draws are always balanced) dropped; the rest renamed to say what they do.
-    names = ["enabled", "zapitStimConfigPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserLeadSeconds",
+    names = ["enabled", "zapitConditionsPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserLeadsStimulusBySeconds",
              "trialsBeforeLaser"]
     assert list(task()["taskParameters"]["optogenetics"]) == names
 
 
 @pytest.mark.parametrize("old", ["stimDelay", "excludeRepeats", "pseudorandomSelection", "warmupTrials", "stimProbability",
-                                 "stimDuration", "leadTime", "zapitConfigPath"])
+                                 "stimDuration", "leadTime", "zapitConditionsPath"])
 def test_the_schema_refuses_the_old_names(old):
     schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8")))
     validator = jsonschema.Draft202012Validator(schema)
@@ -119,7 +119,7 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
     # so 2 ul is one opening of Tom's width (42 ms on BLUE-OPTO-2, measured as about 3 ul) and 3 ul was two (BACKLOG).
     params = task()["taskParameters"]
     opto = params["optogenetics"]
-    assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserLeadSeconds"], opto["laserMaxSeconds"]) == (0.4, 20, 0.1, 12.5)
+    assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserLeadsStimulusBySeconds"], opto["laserMaxSeconds"]) == (0.4, 20, 0.1, 12.5)
     assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {2.0}
 
 

@@ -100,7 +100,7 @@ def read_new(folder: Path) -> Experiment | None:
     return Experiment(folder.name, _when(folder.name), [r["trialType"] for r in rows], [stage] * len(rows),
                       [r["outcome"] == "Correct" for r in rows],
                       [float(r.get("laserPowerMw") or 0) > 0 for r in rows],
-                      any(int(float(r.get("optoCondition") or 0)) > 0 for r in rows))
+                      any(int(float(r.get("laserCondition") or 0)) > 0 for r in rows))
 
 
 def read_legacy(folder: Path) -> Experiment | None:

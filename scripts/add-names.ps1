@@ -32,11 +32,12 @@ foreach ($p in $cols.PSObject.Properties) {
     $added += "column $($p.Name)"
 }
 $streams = @($prev.streams)
-# This workflow's own streams: BonsaiData_StimulusState, and zapit-v2's copy of the Zapit stimulus config at Go.
-$ownStreams = @('BonsaiData_StimulusState', 'Settings_ZapitStimConfig')
-# Names this workflow wrote once and no longer does (Pip, 9 Nov 2026): optoStimulated became laserPowerMw,
-# StimulusState moved into BonsaiData.
-$retired = @{ trialColumns = @('optoStimulated'); streams = @('StimulusState') }
+# This workflow's own streams: BonsaiData_StimulusState, Zapit's replies, and the copy of the Zapit conditions file at Go.
+$ownStreams = @('BonsaiData_StimulusState', 'BonsaiData_ZapitReplies', 'Settings_ZapitConditions')
+# Names this workflow wrote once and no longer does (Pip, 9 Nov 2026): optoStimulated became laserPowerMw and
+# optoCondition laserCondition; StimulusState and Zapit moved into BonsaiData; Settings_ZapitStimConfig is
+# Settings_ZapitConditions.
+$retired = @{ trialColumns = @('optoStimulated', 'optoCondition'); streams = @('StimulusState', 'Zapit', 'Settings_ZapitStimConfig') }
 foreach ($s in $ownStreams) { if ($streams -notcontains $s) { $streams += $s; $added += "stream $s" } }
 $es = [ordered]@{}; foreach ($p in $prev.experimentSettings.PSObject.Properties) { $es[$p.Name] = $p.Value }
 # usedBy as it was, with this repo on each of its names (its streams: StimulusState and the lab's

@@ -160,6 +160,6 @@ def test_the_opto_columns_are_read(tmp_path):
     from ucl_open_coen_dome_navigation.stage import read_new
     folder = tmp_path / "ses-005D1_2026-11-04T10-00-00"
     write_new(folder, 4, [["auditory", "Correct", "2.5", 3], ["auditory", "Incorrect", "0", 1]],
-              header=("trialType", "outcome", "laserPowerMw", "optoCondition"))
+              header=("trialType", "outcome", "laserPowerMw", "laserCondition"))
     e = read_new(folder)
     assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]

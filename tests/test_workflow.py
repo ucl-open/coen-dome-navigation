@@ -53,14 +53,14 @@ def test_zapit_is_armed_once_the_iti_has_ended():
 
 
 def test_the_lead_time_moves_the_first_pip_and_what_waits_for_it():
-    # zapit-v2: TaskLogic's first pip, IsTrialEnd and IsTimeOut skip laserLeadSeconds / 50 ms beeps in an optogenetics experiment
+    # zapit-v2: TaskLogic's first pip, IsTrialEnd and IsTimeOut skip laserLeadsStimulusBySeconds / 50 ms beeps in an optogenetics experiment
     text = ET.tostring(MAIN, encoding="unicode")
-    assert text.count(">CueStartBeep<") == 3
+    assert text.count(">StimulusStartBeep<") == 3
 
 
 def test_the_safety_stop_and_startup_checks_are_there():
     text = ET.tostring(MAIN, encoding="unicode")
-    for name in ("StimulusLeftOn?", "ZapitError?", "ConditionCountReply?", "SoftwareTriggeredRealMouse?", "Settings_ZapitStimConfig"):
+    for name in ("StimulusLeftOn?", "ZapitError?", "ConditionCountReply?", "SoftwareTriggeredRealMouse?", "Settings_ZapitConditions"):
         assert ">%s<" % name in text, name
 
 
@@ -135,10 +135,14 @@ def test_stimulus_state_reaches_disk_row_by_row():
 
 def test_stimulus_state_is_in_bonsai_data_with_its_units():
     # Pip, 9 Nov 2026: everything Bonsai computes is in BonsaiData (Trial, Async, StimulusState), so the manifest
-    # expects no StimulusState folder; spatialFrequency names its unit and frequencyBin is a step along the sweep.
+    # expects no StimulusState folder. Only what the trial row and the Harp logs cannot give (beep, the sweep's step and
+    # the grating's 0/1 opacity follow from them), named with the trial row's audio/visual prefixes.
     text = (Path(__file__).parents[1] / "src" / "main.bonsai").read_text(encoding="utf-8")
-    assert "as spatialFrequencyCpd," in text and "as frequencyStep," in text
+    row = re.search(r"new\(new\(it\.Item2 as trialNumber.*?\) as Row", text).group(0)
+    assert re.findall(r" as (\w+)", row)[:-1] == ["trialNumber", "positionCm", "audioFrequencyHz", "stimulusActive",
+                                             "visualSpatialFrequencyCpd"]
     assert "StimulusState/" not in text and "<LogName>StimulusState</LogName>" not in text
+    assert "<LogName>BonsaiData_ZapitReplies</LogName>" in text and "<LogName>Zapit</LogName>" not in text
 
 
 def test_the_manifest_hashes_the_rig_s_calibration_folder_as_av_dome_s():

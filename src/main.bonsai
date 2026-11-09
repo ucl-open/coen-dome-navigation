@@ -1599,7 +1599,7 @@
                                 </Workflow>
                               </Expression>
                               <Expression xsi:type="Format">
-                                <Format>Zapit answered {0} with an error (reply value {1}, laserOn {2}). Check the MATLAB window: is the stimulus config the task file names (zapitStimConfigPath) loaded in Zapit, is Zapit calibrated, and is the DAQ working?</Format>
+                                <Format>Zapit answered {0} with an error (reply value {1}, laserOn {2}). Check the MATLAB window: is the conditions file the task file names (zapitConditionsPath) loaded in Zapit, is Zapit calibrated, and is the DAQ working?</Format>
                                 <Selector>Command,Value,LaserOn</Selector>
                               </Expression>
                               <Expression xsi:type="Combinator">
@@ -2748,7 +2748,7 @@
                           </Combinator>
                         </Expression>
                         <Expression xsi:type="rx:BehaviorSubject">
-                          <Name>CueActive</Name>
+                          <Name>StimulusActive</Name>
                         </Expression>
                         <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Int32">
                           <rx:Name>AudBin</rx:Name>
@@ -4800,7 +4800,7 @@
               <rx:Name>TrialStartHarp</rx:Name>
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
-              <rx:Name>CueOnsetHarp</rx:Name>
+              <rx:Name>StimulusOnsetTime</rx:Name>
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
               <rx:Name>OutcomeHarp</rx:Name>
@@ -4820,7 +4820,7 @@
               <Name>TrialStartHarp</Name>
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>CueOnsetHarp</Name>
+              <Name>StimulusOnsetTime</Name>
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>OutcomeHarp</Name>
@@ -4875,7 +4875,7 @@
               <Name>TrialStartHarp</Name>
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>CueOnsetHarp</Name>
+              <Name>StimulusOnsetTime</Name>
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>OutcomeHarp</Name>
@@ -5689,11 +5689,11 @@
                           </Combinator>
                         </Expression>
                         <Expression xsi:type="MulticastSubject">
-                          <Name>CueActive</Name>
+                          <Name>StimulusActive</Name>
                         </Expression>
                         <Expression xsi:type="Annotation">
                           <Name>Optogenetics</Name>
-                          <Text><![CDATA[At ITI start InitialiseOptoTrial draws this trial's Zapit command: after the first trialsBeforeLaser trials, laser on with probability laserOnProbability, otherwise laser off (sham), each with a condition from the Zapit stimulus config, so galvos and masking light are the same on every trial. On hardware-triggered rigs ArmZapit sends it once the ITI has ended and waits for Zapit to confirm; OptoOnset pulses the trigger at beep 0, laserLeadSeconds before the first tone pip, and LaserOnUntilOutcome stops the stimulus at the outcome or after laserMaxSeconds. Zapit only gets continuous stimuli.
+                          <Text><![CDATA[At ITI start InitialiseOptoTrial draws this trial's Zapit command: after the first trialsBeforeLaser trials, laser on with probability laserOnProbability, otherwise laser off (sham), each with a condition from the Zapit conditions file, so galvos and masking light are the same on every trial. On hardware-triggered rigs ArmZapit sends it once the ITI has ended and waits for Zapit to confirm; OptoOnset pulses the trigger at beep 0, laserLeadsStimulusBySeconds before the first tone pip, and LaserOnUntilOutcome stops the stimulus at the outcome or after laserMaxSeconds. Zapit only gets continuous stimuli.
 
 StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its StopStimulus, the next ITI start sends one.]]></Text>
                         </Expression>
@@ -6860,7 +6860,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                           <Combinator xsi:type="rx:WithLatestFrom" />
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Name>CueActive</scr:Name>
+                          <scr:Name>StimulusActive</scr:Name>
                           <scr:Description>Tone's sweep fraction, compared with the truncation point. EndFreq / StartFreq is divided as whole numbers (25000 / 2000 = 12), exactly as in 'cm to Hz', so the fraction matches how the tone actually sweeps (2-24 kHz) and equals the grating's in HideAfterTruncation. Rounded to 3 decimals in both, so CurrFreq's whole-Hz rounding cannot put the tone and grating a beep apart.</scr:Description>
                           <scr:Expression>new(it.Item1 as Buffer, (it.Item2.Item2 &gt;= 1 || Math.Round(Math.Log(Convert.ToDouble(it.Item2.Item1) / Convert.ToDouble(it.Item2.Item3.StartFreq)) / Math.Log(Convert.ToDouble(it.Item2.Item3.EndFreq / it.Item2.Item3.StartFreq)), 3) &lt; it.Item2.Item2 ? 1.0 : 0.0) as Gain)</scr:Expression>
                         </Expression>
@@ -6868,7 +6868,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                           <Selector>Gain</Selector>
                         </Expression>
                         <Expression xsi:type="MulticastSubject">
-                          <Name>CueActive</Name>
+                          <Name>StimulusActive</Name>
                         </Expression>
                         <Expression xsi:type="InputMapping">
                           <PropertyMappings>
@@ -7924,9 +7924,9 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                           <Name>TaskParams</Name>
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Name>CueStartBeep</scr:Name>
-                          <scr:Description>Skip count before lick detection starts: 1 as before, or laserLeadSeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
-                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadSeconds / 0.05)) : 1</scr:Expression>
+                          <scr:Name>StimulusStartBeep</scr:Name>
+                          <scr:Description>Skip count before lick detection starts: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
+                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
                         </Expression>
                         <Expression xsi:type="PropertyMapping">
                           <PropertyMappings>
@@ -8183,9 +8183,9 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                           <Name>TaskParams</Name>
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Name>CueStartBeep</scr:Name>
-                          <scr:Description>Skip count before the timeout starts: 1 as before, or laserLeadSeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
-                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadSeconds / 0.05)) : 1</scr:Expression>
+                          <scr:Name>StimulusStartBeep</scr:Name>
+                          <scr:Description>Skip count before the timeout starts: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
+                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
                         </Expression>
                         <Expression xsi:type="PropertyMapping">
                           <PropertyMappings>
@@ -9664,7 +9664,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   </Expression>
                   <Expression xsi:type="GroupWorkflow">
                     <Name>LogStimulus</Name>
-                    <Description>One StimulusLog row per beep while the trial is active (TrialActive = 1, so rows stop at the outcome): the beep count and position from Skip and the grating from the visual branch, zipped beep by beep, with the tone values that same beep set (CurrFreq, AudBin, CueActive are updated by the tone branch before the grating branch runs). Reads the tone only through those subjects, so the tone's chain is untouched. Also publishes CueOnsetHarp, the Harp time of the trial's first row: its first tone pip and grating frame (beep 1), since Skip has already dropped beep 0, the trial's start and its laser trigger. BonsaiData_Trial's stimulusOnsetTime. Sits in series between HideAfterTruncation and GratingOpacity and passes the opacity straight through: a branch that did not lead on to the Repeat would stop the trials restarting.</Description>
+                    <Description>One StimulusLog row per beep while the trial is active (TrialActive = 1, so rows stop at the outcome): the beep count and position from Skip and the grating from the visual branch, zipped beep by beep, with the tone values that same beep set (CurrFreq, AudBin, StimulusActive are updated by the tone branch before the grating branch runs). Reads the tone only through those subjects, so the tone's chain is untouched. Also publishes StimulusOnsetTime, the Harp time of the trial's first row: its first tone pip and grating frame (beep 1), since Skip has already dropped beep 0, the trial's start and its laser trigger. BonsaiData_Trial's stimulusOnsetTime. Sits in series between HideAfterTruncation and GratingOpacity and passes the opacity straight through: a branch that did not lead on to the Repeat would stop the trials restarting.</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="WorkflowInput">
@@ -9692,7 +9692,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                           <Combinator xsi:type="rx:WithLatestFrom" />
                         </Expression>
                         <Expression xsi:type="SubscribeSubject">
-                          <Name>CueActive</Name>
+                          <Name>StimulusActive</Name>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:WithLatestFrom" />
@@ -9738,7 +9738,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>StimulusRow</scr:Name>
-                          <scr:Expression>new(new(it.Item2 as trialNumber, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1 as beep, it.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as positionCm, it.Item1.Item1.Item1.Item1.Item2 as frequencyHz, it.Item1.Item1.Item1.Item2 as frequencyStep, Convert.ToInt32(it.Item1.Item1.Item2) as cueActive, it.Item1.Item1.Item1.Item1.Item1.Item2.Item1 as spatialFrequencyCpd, it.Item1.Item1.Item1.Item1.Item1.Item3 as gratingOpacity) as Row, it.Item1.Item2 as Seconds)</scr:Expression>
+                          <scr:Expression>new(new(it.Item2 as trialNumber, it.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as positionCm, it.Item1.Item1.Item1.Item1.Item2 as audioFrequencyHz, Convert.ToInt32(it.Item1.Item1.Item2) as stimulusActive, it.Item1.Item1.Item1.Item1.Item1.Item2.Item1 as visualSpatialFrequencyCpd) as Row, it.Item1.Item2 as Seconds)</scr:Expression>
                         </Expression>
                         <Expression xsi:type="rx:BehaviorSubject">
                           <Name>StimulusLogRow</Name>
@@ -9752,7 +9752,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                           <Selector>Item2</Selector>
                         </Expression>
                         <Expression xsi:type="MulticastSubject">
-                          <Name>CueOnsetHarp</Name>
+                          <Name>StimulusOnsetTime</Name>
                         </Expression>
                         <Expression xsi:type="WorkflowOutput" />
                       </Nodes>
@@ -9892,9 +9892,9 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                     <Name>TaskParams</Name>
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Name>CueStartBeep</scr:Name>
-                    <scr:Description>First beep with a tone pip: 1 as before, or laserLeadSeconds / 50 ms in an optogenetics experiment, so the stimulus (on at beep 0) leads the cue by laserLeadSeconds on every trial of that experiment, laser-on or sham.</scr:Description>
-                    <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadSeconds / 0.05)) : 1</scr:Expression>
+                    <scr:Name>StimulusStartBeep</scr:Name>
+                    <scr:Description>First beep with a tone pip: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment, so the laser (on at beep 0) leads the stimulus by laserLeadsStimulusBySeconds on every trial of that experiment, laser-on or sham.</scr:Description>
+                    <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
                   </Expression>
                   <Expression xsi:type="PropertyMapping">
                     <PropertyMappings>
@@ -10261,7 +10261,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
               <Combinator xsi:type="rx:WithLatestFrom" />
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>CueOnsetHarp</Name>
+              <Name>StimulusOnsetTime</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -10298,7 +10298,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
             </Expression>
             <Expression xsi:type="scr:ExpressionTransform">
               <scr:Name>BuildTrialRow</scr:Name>
-              <scr:Expression>new(Convert.ToInt32(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trialNumber, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.ToString().ToLower() as trialType, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;Correct&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 || it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 || !it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.LickToReward ? &quot;NoResponse&quot; : &quot;Incorrect&quot;) as outcome, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;EndOfTrack&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;Timeout&quot; : !it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.LickToReward ? &quot;FreqReached&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;CorrectLick&quot; : &quot;WrongLickLimit&quot;) as endReason, it.Item1.Item1.Item1.Item2 &amp;&amp; it.Item1.Item1.Item2.Punishment.Sound.Enabled as punishSound, (it.Item1.Item1.Item1.Item2 ? it.Item1.Item1.Item2.Punishment.TimeoutSeconds : 0.0) as punishTimeoutSeconds, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trackLengthCm, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as endPositionCm, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as audioEndFrequencyHz, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as visualEndSpatialFrequencyCpd, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as truncationFraction, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as itiStartTime, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.TotalSeconds as itiSeconds, it.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as trialStartTime, it.Item1.Item1.Item1.Item1.Item1.Item2 as stimulusOnsetTime, it.Item1.Item1.Item1.Item1.Item2 as outcomeTime, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.RewardSizeUl as rewardSizeUl, it.Item1.Item2.OptogeneticLaserPowerMw as laserPowerMw, it.Item1.Item2.OptogeneticCondition as optoCondition)</scr:Expression>
+              <scr:Expression>new(Convert.ToInt32(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trialNumber, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.ToString().ToLower() as trialType, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;Correct&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 || it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 || !it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.LickToReward ? &quot;NoResponse&quot; : &quot;Incorrect&quot;) as outcome, (it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;EndOfTrack&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;Timeout&quot; : !it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.LickToReward ? &quot;FreqReached&quot; : it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 ? &quot;CorrectLick&quot; : &quot;WrongLickLimit&quot;) as endReason, it.Item1.Item1.Item1.Item2 &amp;&amp; it.Item1.Item1.Item2.Punishment.Sound.Enabled as punishSound, (it.Item1.Item1.Item1.Item2 ? it.Item1.Item1.Item2.Punishment.TimeoutSeconds : 0.0) as punishTimeoutSeconds, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as trackLengthCm, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as endPositionCm, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as audioEndFrequencyHz, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as visualEndSpatialFrequencyCpd, Convert.ToDouble(it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2) as truncationFraction, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as itiStartTime, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.TotalSeconds as itiSeconds, it.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as trialStartTime, it.Item1.Item1.Item1.Item1.Item1.Item2 as stimulusOnsetTime, it.Item1.Item1.Item1.Item1.Item2 as outcomeTime, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item1.Item2.RewardSizeUl as rewardSizeUl, it.Item1.Item2.OptogeneticLaserPowerMw as laserPowerMw, it.Item1.Item2.OptogeneticCondition as laserCondition)</scr:Expression>
             </Expression>
             <Expression xsi:type="MemberSelector">
               <Selector>Item2</Selector>
@@ -10431,7 +10431,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
             </Expression>
             <Expression xsi:type="rx:SelectMany">
               <Name>ExperimentLogs</Name>
-              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix. TrialParameters writes BonsaiData_Trial (LogTrial): one row per trial, built by the TrialRow group when the outcome is known (TrialRow, a PublishSubject: trials start only after PathPrefix, so no row comes before the folder): the trial's draws, stage, outcome and why it ended, positions and frequencies, and its Harp times (itiStartTime, trialStartTime, stimulusOnsetTime, outcomeTime), with Seconds the time the row was built. Its columns are named and typed as the lab's list allows (K:\config\data-dictionary.json; rig-control checks before launch), and what each means (codes, units, former names) is schemas\trial-columns.yml, which ExperimentManifest copies into each experiment's manifest; settings that are the same throughout the experiment are not columns, being in the experiment's settings files (Settings\Settings_Rig_, Settings_Task_ and Settings_Experiment_&lt;DateTime&gt;.json: rig.yml as read, the task as read at Go, and from ExperimentSettings the subject, session, workflow, commit, who launched and sent Go and every ExperimentControl parameter at Go), and each trial's optogenetic draw is in its laserPowerMw and optoCondition columns. Subjects that already hold a value (BehaviorSubject, AsyncSubject) hand it to the late subscriber. Values set at startup, such as the Zapit startup replies and the first trial draw, are therefore logged when the experiment logs start, about a second after Go, with that time. Add new loggers inside this group.</Description>
+              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix. TrialParameters writes BonsaiData_Trial (LogTrial): one row per trial, built by the TrialRow group when the outcome is known (TrialRow, a PublishSubject: trials start only after PathPrefix, so no row comes before the folder): the trial's draws, stage, outcome and why it ended, positions and frequencies, and its Harp times (itiStartTime, trialStartTime, stimulusOnsetTime, outcomeTime), with Seconds the time the row was built. Its columns are named and typed as the lab's list allows (K:\config\data-dictionary.json; rig-control checks before launch), and what each means (codes, units, former names) is schemas\trial-columns.yml, which ExperimentManifest copies into each experiment's manifest; settings that are the same throughout the experiment are not columns, being in the experiment's settings files (Settings\Settings_Rig_, Settings_Task_ and Settings_Experiment_&lt;DateTime&gt;.json: rig.yml as read, the task as read at Go, and from ExperimentSettings the subject, session, workflow, commit, who launched and sent Go and every ExperimentControl parameter at Go), and each trial's optogenetic draw is in its laserPowerMw and laserCondition columns. Subjects that already hold a value (BehaviorSubject, AsyncSubject) hand it to the late subscriber. Values set at startup, such as the Zapit startup replies and the first trial draw, are therefore logged when the experiment logs start, about a second after Go, with that time. Add new loggers inside this group.</Description>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="GroupWorkflow">
@@ -10727,7 +10727,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                             <Name>Timestamp</Name>
                           </Expression>
                           <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogData.bonsai">
-                            <LogName>Zapit</LogName>
+                            <LogName>BonsaiData_ZapitReplies</LogName>
                             <Selector />
                             <Extension>csv</Extension>
                           </Expression>
@@ -10811,13 +10811,13 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                     </Workflow>
                   </Expression>
                   <Expression xsi:type="MemberSelector">
-                    <Selector>TaskParameters.Optogenetics.ZapitStimConfigPath</Selector>
+                    <Selector>TaskParameters.Optogenetics.ZapitConditionsPath</Selector>
                   </Expression>
                   <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="ext:ZapitStimConfigSnapshot" />
+                    <Combinator xsi:type="ext:ZapitConditionsSnapshot" />
                   </Expression>
                   <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogDataSchema.bonsai">
-                    <Name>Settings_ZapitStimConfig</Name>
+                    <Name>Settings_ZapitConditions</Name>
                   </Expression>
                 </Nodes>
                 <Edges>

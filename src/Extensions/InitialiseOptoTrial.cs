@@ -13,9 +13,9 @@ using UclOpenCoenDomeNavigationTask;
 // - Laser-on and sham conditions are drawn from separate shuffled queues, so each set is balanced on its own.
 // - OptogeneticMaxDuration (laserMaxSeconds) is set on every trial: Bonsai stops the stimulus at the outcome or after this many
 //   seconds, whichever comes first. Zapit itself only ever gets continuous stimuli (it ignores StopStimulus for timed ones).
-// - Conditions come from ZapitStimConfig (no YAML library), which also checks they are numbered 1 to N.
+// - Conditions come from ZapitConditions (no YAML library), which also checks they are numbered 1 to N.
 [Combinator]
-[Description("Draws the optogenetics for each new trial: laser on or off, and which condition from the Zapit stimulus config to present. In an optogenetics experiment every trial gets a condition (laser-off trials are sham stimuli). Input is the trial number (from 1) and the task parameters.")]
+[Description("Draws the optogenetics for each new trial: laser on or off, and which condition from the Zapit conditions file to present. In an optogenetics experiment every trial gets a condition (laser-off trials are sham stimuli). Input is the trial number (from 1) and the task parameters.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class InitialiseOptoTrial
 {
@@ -24,14 +24,14 @@ public class InitialiseOptoTrial
         Seed = -1;
     }
 
-    [Description("Seed for the stimulation draws. -1 (the default) seeds them from the task's rngSeed, or randomly when it is null. Every trial's draw is in BonsaiData_Trial (laserPowerMw, optoCondition), so an experiment can be reconstructed.")]
+    [Description("Seed for the stimulation draws. -1 (the default) seeds them from the task's rngSeed, or randomly when it is null. Every trial's draw is in BonsaiData_Trial (laserPowerMw, laserCondition), so an experiment can be reconstructed.")]
     public int Seed { get; set; }
 
     // Instance state: this operator sits inside TaskLogic's per-trial Defer, which calls Process again on every trial with
     // the same instance, so state kept inside Process would be lost between trials. Reset on trial 1, so each experiment starts
     // with a fresh random stream and fresh queues.
     private Random random;
-    private List<int> conditions; // null until read from the Zapit stimulus config, on the first trial of an optogenetics experiment
+    private List<int> conditions; // null until read from the Zapit conditions file, on the first trial of an optogenetics experiment
     private readonly ConditionQueue stimQueue = new ConditionQueue();
     private readonly ConditionQueue shamQueue = new ConditionQueue();
 
@@ -68,8 +68,8 @@ public class InitialiseOptoTrial
         if (conditions == null)
         {
             Validate(optogenetics, parameters);
-            conditions = ZapitStimConfig.ReadConditionNumbers(optogenetics.ZapitStimConfigPath);
-            Console.WriteLine("InitialiseOptoTrial: Zapit stimulus config '" + optogenetics.ZapitStimConfigPath + "' has " +
+            conditions = ZapitConditions.ReadConditionNumbers(optogenetics.ZapitConditionsPath);
+            Console.WriteLine("InitialiseOptoTrial: Zapit conditions file '" + optogenetics.ZapitConditionsPath + "' has " +
                 conditions.Count + " conditions");
         }
 
@@ -112,23 +112,23 @@ public class InitialiseOptoTrial
                 "optogenetics.laserPowerMw must be a power in mW above 0 when optogenetics is on; got {0}.",
                 optogenetics.LaserPowerMw.HasValue ? optogenetics.LaserPowerMw.Value.ToString() : "nothing"));
         }
-        // The stimulus starts on a beep and the first tone pip comes LaserLeadSeconds later, so LaserLeadSeconds must be 1 to 4 whole beeps.
+        // The stimulus starts on a beep and the first tone pip comes LaserLeadsStimulusBySeconds later, so LaserLeadsStimulusBySeconds must be 1 to 4 whole beeps.
         // At most 4 (0.2 s): licks before the first pip count toward the wrong-lick limits, and a longer lead could end a
         // trial before its first pip, which leaves the trial loop without an outcome.
-        var beeps = optogenetics.LaserLeadSeconds / BeepIntervalSec;
+        var beeps = optogenetics.LaserLeadsStimulusBySeconds / BeepIntervalSec;
         if (!(Math.Abs(beeps - Math.Round(beeps)) < 1e-6 && Math.Round(beeps) >= 1 && Math.Round(beeps) <= 4))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.laserLeadSeconds must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LaserLeadSeconds));
+                "optogenetics.laserLeadsStimulusBySeconds must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LaserLeadsStimulusBySeconds));
         }
         // The laser is meant to stay on until the outcome, so the cap must be longer than the longest trial: the time limit
-        // (trialStructure.closedLoopDuration, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LaserLeadSeconds after onset) plus a margin.
+        // (trialStructure.closedLoopDuration, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LaserLeadsStimulusBySeconds after onset) plus a margin.
         var timeLimit = parameters.TrialStructure != null ? parameters.TrialStructure.ClosedLoopDuration : 12.0;
-        var shortestCap = timeLimit + optogenetics.LaserLeadSeconds + StimDurationMarginSec;
+        var shortestCap = timeLimit + optogenetics.LaserLeadsStimulusBySeconds + StimDurationMarginSec;
         if (!(optogenetics.LaserMaxSeconds >= shortestCap - 1e-9) || double.IsInfinity(optogenetics.LaserMaxSeconds))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.closedLoopDuration, {1} s from the first tone pip, plus laserLeadSeconds, "
+                "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.closedLoopDuration, {1} s from the first tone pip, plus laserLeadsStimulusBySeconds, "
                 + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, StimDurationMarginSec, optogenetics.LaserMaxSeconds));
         }
     }
