@@ -54,3 +54,19 @@ def test_the_trial_row_is_built_at_the_outcome_not_two_seconds_later():
     assert first.findtext(W + "Name") == "TrialOutcome"
     assert any(e.findtext(W + "Name") == "TrialOutcome" and e.get(XSI) == "MulticastSubject"
                for e in group("ProcessTrialEnd").find(W + "Workflow").find(W + "Nodes"))
+
+
+def test_the_trial_outcome_is_not_completed_at_the_end_of_trial_1():
+    # A MulticastSubject passes on its source's completion, and ProcessTrialEnd's stream completes
+    # at the end of every trial: the shared TrialOutcome PublishSubject completed after trial 1, and
+    # the trial log had one row for nine trials (test-1729, 9 Nov 2026). A Take(1) straight after the
+    # multicast unsubscribes from upstream as the outcome passes, so the completion never reaches it.
+    workflow = group("ProcessTrialEnd").find(W + "Workflow")
+    nodes = list(workflow.find(W + "Nodes"))
+    outcome = next(i for i, e in enumerate(nodes)
+                   if e.findtext(W + "Name") == "TrialOutcome" and e.get(XSI) == "MulticastSubject")
+    after = [int(e.get("To")) for e in workflow.find(W + "Edges") if int(e.get("From")) == outcome]
+    assert len(after) == 1
+    take = nodes[after[0]].find(W + "Combinator")
+    assert take is not None and take.get(XSI) == "rx:Take"
+    assert take.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Count") == "1"
