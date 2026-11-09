@@ -134,3 +134,27 @@ def test_a_rig_folder_under_staging_is_read(tmp_path):
     )
     found = experiments("TC9", [tmp_path], [])
     assert len(found) == 1 and found[0].modality[0] == "V" and not any(found[0].rewarded)  # as the task file's codes
+
+
+def test_an_optogenetics_experiment_keeps_its_stage():
+    # zapit-v2: 100% rewarded would advance stage 4, but an optogenetics experiment never changes the stage
+    e = Experiment("2026-01-02", "2026-01-02", ["A"] * 200, [4] * 200, [True] * 200, [i % 3 == 0 for i in range(200)], True)
+    stage, why = suggest([e], "A")
+    assert stage == 4 and why.startswith("Optogenetics Experiment") and "of 67 laser-on" in why
+
+
+def test_laser_on_trials_do_not_count_in_stage_2_s_two_experiments_in_a_row():
+    # The earlier experiment has 50 rewarded stage-2 trials only if its laser-on ones count
+    now = exp("2026-01-02", 2, 100, 60)
+    before = Experiment("2026-01-01", "2026-01-01", ["A"] * 100, [2] * 100, [i < 50 for i in range(100)], [i < 10 for i in range(100)], True)
+    assert suggest([now, before], "A")[0] == 2
+
+
+def test_the_opto_columns_are_read(tmp_path):
+    from ucl_open_coen_dome_navigation.stage import read_new
+    folder = tmp_path / "ses-005D1_2026-11-04T10-00-00"
+    write(folder / "BonsaiData" / "BonsaiData_Trial_2026-11-04T10-00-00.csv",
+          ["trialType", "trainingStage", "outcome", "optoStimulated", "optoCondition"],
+          [["auditory", 5, "Correct", "True", 3], ["auditory", 5, "Incorrect", "False", 1]])
+    e = read_new(folder)
+    assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]

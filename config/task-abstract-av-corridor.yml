@@ -26,7 +26,7 @@ taskParameters:
     stage3: { floor: 15248, ceiling: 25000 }   # a lick anywhere above the floor
     stage4: { floor: 15248, ceiling: 21248 }   # the ceiling comes in; wrong licks punished
     stage5: { floor: 15248, ceiling: 21248 }   # stage 6 uses stage 5's
-  rewardSizeUl: 2.0           # ul per reward on the left spout
+  rewardSizeUl: 3.0           # ul per reward on the left spout
   # The wheel diameter distances are worked out at; null takes rig.yml's (170 mm on every corridor
   # rig). 75 is what Tom's workflow used, so tracks take the wheel turns the mice trained on.
   wheelDiameterMm: 75.0
@@ -41,14 +41,15 @@ taskParameters:
     rollWindow: 25
     rollThreshold: 0.5
     minEpoch: 10
-  optogenetics:               # av-dome's block; the laser lasts the trial (stopped at the outcome)
+  optogenetics:               # Zapit; continuous stimulus from beep 0 to the outcome (or stimDuration), sham trials laser off
     enabled: false
     zapitConfigPath: ''       # the Zapit stimulus config loaded in Zapit
-    stimProbability: 0.75
-    stimDelay: 0.0            # s from the trial's start (beep 0) to the laser
-    stimDuration: 12.0        # s; the longest: the laser stops at the outcome
+    stimProbability: 0.4      # laser-on trials after the warmup, shared by all conditions; the rest are sham
+    stimDelay: 0.0            # av-dome's; must be 0 (Zapit ignores it for a continuous stimulus)
+    stimDuration: 12.5        # s; a cap: at least 12 + leadTime + 0.25, the laser stops at the outcome
+    leadTime: 0.1             # s the stimulus runs before the first tone pip (multiple of 0.05)
     excludeRepeats: true      # av-dome's; this task has no repeat trials
     pseudorandomSelection: true
-    warmupTrials: 0
+    warmupTrials: 20          # sham trials at the start
   backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
   quantizeBinSize: 1          # Hz

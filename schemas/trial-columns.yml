@@ -119,7 +119,7 @@ rewardSizeUl:
   description: Microlitres a reward on this trial gives (the task file's rewardSizeUl). What was delivered is RewardDelivered in BonsaiData_Async.
 optoStimulated:
   type: bool
-  description: True when this trial had optogenetic stimulation.
+  description: True when the laser was on in this trial. False on sham trials (laser off) and without optogenetics.
 optoCondition:
   type: int
-  description: The Zapit condition stimulated, 0 when none.
+  description: The Zapit condition (stimLocations number) presented in this trial, laser on or off - every trial of an optogenetics experiment has one, so with optoStimulated false it was a sham trial. 0 without optogenetics.

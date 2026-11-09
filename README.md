@@ -8,7 +8,7 @@ Converted on 9 Nov 2026 from `ucl-open/auditory-vr-corridor` (`main` b67a1f6 wit
 
 From rig-control: choose the rig and the mouse, then this workflow and `config\task-abstract-av-corridor.yml`. The form shows the task's Modality and Shaping Stage; the stage is suggested from the mouse's earlier experiments of that modality (`uv run suggest-stage --subject <ID> --modality A`, Tom's rules from `gen_session.py`, reading both this workflow's data and the old TrialLogs). Launch puts the rig in ready mode (hardware armed, cameras on, nothing recorded); Go reads the task file and starts the trials once the experiment folder exists.
 
-What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided).
+What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided). The Zapit optogenetics port (branch `zapit-v2`) is in `ZAPIT-V2-CHANGES.md`; the rig checks before the first optogenetics experiment are in `docs\zapit-rig-test.md`.
 
 ## Layout
 
