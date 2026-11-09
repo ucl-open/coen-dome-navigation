@@ -37,17 +37,14 @@ taskParameters:
       gain: 1.0
   truncation:                 # on a stage's truncated trials
     points: [0.4, 0.6]
-  optogenetics:               # Zapit; continuous stimulus from beep 0 to the outcome (or stimDuration), sham trials laser off
+  optogenetics:               # Zapit; continuous stimulus from beep 0 to the outcome (or laserMaxSeconds), sham trials laser off
     enabled: false
-    zapitConfigPath: ''       # the Zapit stimulus config loaded in Zapit
+    zapitStimConfigPath: ''   # the Zapit stimulus config loaded in Zapit
     laserPowerMw: null        # mW on laser-on trials, every condition; required with optogenetics on
-    stimProbability: 0.4      # laser-on trials after the warmup, shared by all conditions; the rest are sham
-    stimDelay: 0.0            # av-dome's; must be 0 (Zapit ignores it for a continuous stimulus)
-    stimDuration: 12.5        # s; a cap: at least 12 + leadTime + 0.25, the laser stops at the outcome
-    leadTime: 0.1             # s the stimulus runs before the first tone pip (multiple of 0.05)
-    excludeRepeats: true      # av-dome's; this task has no repeat trials
-    pseudorandomSelection: true
-    warmupTrials: 20          # sham trials at the start
+    laserOnProbability: 0.4   # laser-on trials after trialsBeforeLaser, balanced over the conditions; the rest are 0 mW
+    laserMaxSeconds: 12.5     # s; a cap: at least 12 + laserLeadSeconds + 0.25, the laser stops at the outcome
+    laserLeadSeconds: 0.1     # s the stimulus runs before the first tone pip (multiple of 0.05)
+    trialsBeforeLaser: 20     # no laser-on trial among the first this many
   # Rows by the Training Stage setting (a setting past the end uses the last row). The reward zones are
   # Tom's: centred on 18 kHz in log space, a 6 kHz window from stage 2 (task.py's old derivation).
   trainingStages:

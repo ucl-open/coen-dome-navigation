@@ -20,7 +20,7 @@ public class ZapitStimConfigSnapshot
         {
             var fullPath = Path.GetFullPath(path);
             var snapshot = new JObject();
-            snapshot["zapitConfigPath"] = fullPath;
+            snapshot["zapitStimConfigPath"] = fullPath;
             snapshot["contents"] = File.ReadAllText(fullPath);
             return snapshot.ToString(Formatting.Indented);
         });

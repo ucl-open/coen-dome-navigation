@@ -26,7 +26,7 @@ public static class ZapitStimConfig
         if (string.IsNullOrWhiteSpace(path))
         {
             throw new InvalidOperationException(
-                "No Zapit stimulus config was given (optogenetics.zapitConfigPath is empty). " +
+                "No Zapit stimulus config was given (optogenetics.zapitStimConfigPath is empty). " +
                 "Set it to the stimulus config YAML that is loaded in Zapit.");
         }
         if (!File.Exists(path))

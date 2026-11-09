@@ -53,7 +53,7 @@ def test_zapit_is_armed_once_the_iti_has_ended():
 
 
 def test_the_lead_time_moves_the_first_pip_and_what_waits_for_it():
-    # zapit-v2: TaskLogic's first pip, IsTrialEnd and IsTimeOut skip leadTime / 50 ms beeps in an optogenetics experiment
+    # zapit-v2: TaskLogic's first pip, IsTrialEnd and IsTimeOut skip laserLeadSeconds / 50 ms beeps in an optogenetics experiment
     text = ET.tostring(MAIN, encoding="unicode")
     assert text.count(">CueStartBeep<") == 3
 

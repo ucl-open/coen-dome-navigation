@@ -1599,7 +1599,7 @@
                                 </Workflow>
                               </Expression>
                               <Expression xsi:type="Format">
-                                <Format>Zapit answered {0} with an error (reply value {1}, laserOn {2}). Check the MATLAB window: is the stimulus config the task file names (zapitConfigPath) loaded in Zapit, is Zapit calibrated, and is the DAQ working?</Format>
+                                <Format>Zapit answered {0} with an error (reply value {1}, laserOn {2}). Check the MATLAB window: is the stimulus config the task file names (zapitStimConfigPath) loaded in Zapit, is Zapit calibrated, and is the DAQ working?</Format>
                                 <Selector>Command,Value,LaserOn</Selector>
                               </Expression>
                               <Expression xsi:type="Combinator">
@@ -5693,7 +5693,7 @@
                         </Expression>
                         <Expression xsi:type="Annotation">
                           <Name>Optogenetics</Name>
-                          <Text><![CDATA[At ITI start InitialiseOptoTrial draws this trial's Zapit command: after the warmup, laser on with probability stimProbability, otherwise laser off (sham), each with a condition from the Zapit stimulus config, so galvos and masking light are the same on every trial. On hardware-triggered rigs ArmZapit sends it once the ITI has ended and waits for Zapit to confirm; OptoOnset pulses the trigger at beep 0, leadTime before the first tone pip, and LaserOnUntilOutcome stops the stimulus at the outcome or after stimDuration. Zapit only gets continuous stimuli.
+                          <Text><![CDATA[At ITI start InitialiseOptoTrial draws this trial's Zapit command: after the first trialsBeforeLaser trials, laser on with probability laserOnProbability, otherwise laser off (sham), each with a condition from the Zapit stimulus config, so galvos and masking light are the same on every trial. On hardware-triggered rigs ArmZapit sends it once the ITI has ended and waits for Zapit to confirm; OptoOnset pulses the trigger at beep 0, laserLeadSeconds before the first tone pip, and LaserOnUntilOutcome stops the stimulus at the outcome or after laserMaxSeconds. Zapit only gets continuous stimuli.
 
 StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its StopStimulus, the next ITI start sends one.]]></Text>
                         </Expression>
@@ -6102,7 +6102,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                               </Expression>
                               <Expression xsi:type="rx:SelectMany">
                                 <Name>LaserOnUntilOutcome</Name>
-                                <Description>One optogenetics-experiment trial, from beep 0 to the stop. On a hardware-triggered rig the trigger pulse above starts the waveform ArmZapit loaded (onset is in the Behavior board's Harp log); a rig without hardware triggering (test mice only) sends StartStimulus now and Zapit starts on receipt. Sham trials do exactly the same with the laser off. The stimulus is stopped once, at the trial outcome (TrialActive back to 0) or after OptogeneticMaxDuration (stimDuration), whichever comes first; the laser then ramps down over the condition's offRampDownDuration_ms.</Description>
+                                <Description>One optogenetics-experiment trial, from beep 0 to the stop. On a hardware-triggered rig the trigger pulse above starts the waveform ArmZapit loaded (onset is in the Behavior board's Harp log); a rig without hardware triggering (test mice only) sends StartStimulus now and Zapit starts on receipt. Sham trials do exactly the same with the laser off. The stimulus is stopped once, at the trial outcome (TrialActive back to 0) or after OptogeneticMaxDuration (laserMaxSeconds), whichever comes first; the laser then ramps down over the condition's offRampDownDuration_ms.</Description>
                                 <Workflow>
                                   <Nodes>
                                     <Expression xsi:type="WorkflowInput">
@@ -7925,8 +7925,8 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>CueStartBeep</scr:Name>
-                          <scr:Description>Skip count before lick detection starts: 1 as before, or leadTime / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
-                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LeadTime / 0.05)) : 1</scr:Expression>
+                          <scr:Description>Skip count before lick detection starts: 1 as before, or laserLeadSeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
+                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadSeconds / 0.05)) : 1</scr:Expression>
                         </Expression>
                         <Expression xsi:type="PropertyMapping">
                           <PropertyMappings>
@@ -8184,8 +8184,8 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>CueStartBeep</scr:Name>
-                          <scr:Description>Skip count before the timeout starts: 1 as before, or leadTime / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
-                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LeadTime / 0.05)) : 1</scr:Expression>
+                          <scr:Description>Skip count before the timeout starts: 1 as before, or laserLeadSeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
+                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadSeconds / 0.05)) : 1</scr:Expression>
                         </Expression>
                         <Expression xsi:type="PropertyMapping">
                           <PropertyMappings>
@@ -9893,8 +9893,8 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
                     <scr:Name>CueStartBeep</scr:Name>
-                    <scr:Description>First beep with a tone pip: 1 as before, or leadTime / 50 ms in an optogenetics experiment, so the stimulus (on at beep 0) leads the cue by leadTime on every trial of that experiment, laser-on or sham.</scr:Description>
-                    <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LeadTime / 0.05)) : 1</scr:Expression>
+                    <scr:Description>First beep with a tone pip: 1 as before, or laserLeadSeconds / 50 ms in an optogenetics experiment, so the stimulus (on at beep 0) leads the cue by laserLeadSeconds on every trial of that experiment, laser-on or sham.</scr:Description>
+                    <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadSeconds / 0.05)) : 1</scr:Expression>
                   </Expression>
                   <Expression xsi:type="PropertyMapping">
                     <PropertyMappings>
@@ -10811,7 +10811,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                     </Workflow>
                   </Expression>
                   <Expression xsi:type="MemberSelector">
-                    <Selector>TaskParameters.Optogenetics.ZapitConfigPath</Selector>
+                    <Selector>TaskParameters.Optogenetics.ZapitStimConfigPath</Selector>
                   </Expression>
                   <Expression xsi:type="Combinator">
                     <Combinator xsi:type="ext:ZapitStimConfigSnapshot" />

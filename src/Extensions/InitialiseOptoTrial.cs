@@ -8,10 +8,10 @@ using UclOpenCoenDomeNavigationTask;
 // The optogenetics part of av-dome's InitialiseTrial operator, rewritten for this task (zapit-v2). The rest of the trial is
 // drawn by main.bonsai, so this only decides, for each new trial, whether the laser is on and which Zapit condition is presented.
 // Differences from av-dome:
-// - Sham trials: in an optogenetics experiment every trial sends a StartStimulus. Laser-off trials (warmup included) still get
+// - Sham trials: in an optogenetics experiment every trial sends a StartStimulus. Laser-off trials (the first trialsBeforeLaser included) still get
 //   a real condition, so the galvos move and the masking light comes on exactly as on laser-on trials.
 // - Laser-on and sham conditions are drawn from separate shuffled queues, so each set is balanced on its own.
-// - OptogeneticMaxDuration (stimDuration) is set on every trial: Bonsai stops the stimulus at the outcome or after this many
+// - OptogeneticMaxDuration (laserMaxSeconds) is set on every trial: Bonsai stops the stimulus at the outcome or after this many
 //   seconds, whichever comes first. Zapit itself only ever gets continuous stimuli (it ignores StopStimulus for timed ones).
 // - Conditions come from ZapitStimConfig (no YAML library), which also checks they are numbered 1 to N.
 [Combinator]
@@ -68,17 +68,17 @@ public class InitialiseOptoTrial
         if (conditions == null)
         {
             Validate(optogenetics, parameters);
-            conditions = ZapitStimConfig.ReadConditionNumbers(optogenetics.ZapitConfigPath);
-            Console.WriteLine("InitialiseOptoTrial: Zapit stimulus config '" + optogenetics.ZapitConfigPath + "' has " +
+            conditions = ZapitStimConfig.ReadConditionNumbers(optogenetics.ZapitStimConfigPath);
+            Console.WriteLine("InitialiseOptoTrial: Zapit stimulus config '" + optogenetics.ZapitStimConfigPath + "' has " +
                 conditions.Count + " conditions");
         }
 
-        // Warmup trials are never laser-on. After warmup the laser is on with probability stimProbability.
-        var laserOn = trialNumber > optogenetics.WarmupTrials && random.NextDouble() < optogenetics.StimProbability;
+        // No laser-on trial among the first trialsBeforeLaser; after them the laser is on with probability laserOnProbability.
+        var laserOn = trialNumber > optogenetics.TrialsBeforeLaser && random.NextDouble() < optogenetics.LaserOnProbability;
         trial.OptogeneticEnabled = laserOn;
         trial.OptogeneticLaserPowerMw = laserOn ? optogenetics.LaserPowerMw.Value : 0;
-        trial.OptogeneticCondition = NextCondition(laserOn ? stimQueue : shamQueue, optogenetics.PseudorandomSelection);
-        trial.OptogeneticMaxDuration = optogenetics.StimDuration;
+        trial.OptogeneticCondition = (laserOn ? stimQueue : shamQueue).Next(conditions, random);
+        trial.OptogeneticMaxDuration = optogenetics.LaserMaxSeconds;
         return trial;
     }
 
@@ -94,15 +94,6 @@ public class InitialiseOptoTrial
         shamQueue.Clear();
     }
 
-    private int NextCondition(ConditionQueue queue, bool pseudorandom)
-    {
-        if (pseudorandom)
-        {
-            return queue.Next(conditions, random);
-        }
-        return conditions[random.Next(conditions.Count)];
-    }
-
     const double BeepIntervalSec = 0.05;        // HarpBeat's beep; task.py BEEP_INTERVAL_SEC
     const double StimDurationMarginSec = 0.25;  // task.py STIM_DURATION_MARGIN_SEC
 
@@ -110,10 +101,10 @@ public class InitialiseOptoTrial
     // so they are checked again here: a bad value would silently change every trial.
     private static void Validate(OptogeneticsConfig optogenetics, UclOpenCoenDomeNavigationTaskParameters parameters)
     {
-        if (!(optogenetics.StimProbability >= 0 && optogenetics.StimProbability <= 1))
+        if (!(optogenetics.LaserOnProbability >= 0 && optogenetics.LaserOnProbability <= 1))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.stimProbability must be between 0 and 1; got {0}.", optogenetics.StimProbability));
+                "optogenetics.laserOnProbability must be between 0 and 1; got {0}.", optogenetics.LaserOnProbability));
         }
         if (!(optogenetics.LaserPowerMw > 0) || double.IsInfinity(optogenetics.LaserPowerMw.Value))
         {
@@ -121,30 +112,24 @@ public class InitialiseOptoTrial
                 "optogenetics.laserPowerMw must be a power in mW above 0 when optogenetics is on; got {0}.",
                 optogenetics.LaserPowerMw.HasValue ? optogenetics.LaserPowerMw.Value.ToString() : "nothing"));
         }
-        if (optogenetics.StimDelay != 0)
-        {
-            throw new InvalidOperationException(string.Format(
-                "optogenetics.stimDelay must be 0 (Zapit ignores a start delay for the continuous stimulus this task uses); got {0}.",
-                optogenetics.StimDelay));
-        }
-        // The stimulus starts on a beep and the first tone pip comes LeadTime later, so LeadTime must be 1 to 4 whole beeps.
+        // The stimulus starts on a beep and the first tone pip comes LaserLeadSeconds later, so LaserLeadSeconds must be 1 to 4 whole beeps.
         // At most 4 (0.2 s): licks before the first pip count toward the wrong-lick limits, and a longer lead could end a
         // trial before its first pip, which leaves the trial loop without an outcome.
-        var beeps = optogenetics.LeadTime / BeepIntervalSec;
+        var beeps = optogenetics.LaserLeadSeconds / BeepIntervalSec;
         if (!(Math.Abs(beeps - Math.Round(beeps)) < 1e-6 && Math.Round(beeps) >= 1 && Math.Round(beeps) <= 4))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.leadTime must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LeadTime));
+                "optogenetics.laserLeadSeconds must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LaserLeadSeconds));
         }
         // The laser is meant to stay on until the outcome, so the cap must be longer than the longest trial: the time limit
-        // (trialStructure.closedLoopDuration, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LeadTime after onset) plus a margin.
+        // (trialStructure.closedLoopDuration, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LaserLeadSeconds after onset) plus a margin.
         var timeLimit = parameters.TrialStructure != null ? parameters.TrialStructure.ClosedLoopDuration : 12.0;
-        var shortestCap = timeLimit + optogenetics.LeadTime + StimDurationMarginSec;
-        if (!(optogenetics.StimDuration >= shortestCap - 1e-9) || double.IsInfinity(optogenetics.StimDuration))
+        var shortestCap = timeLimit + optogenetics.LaserLeadSeconds + StimDurationMarginSec;
+        if (!(optogenetics.LaserMaxSeconds >= shortestCap - 1e-9) || double.IsInfinity(optogenetics.LaserMaxSeconds))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.stimDuration must be at least {0} s (trialStructure.closedLoopDuration, {1} s from the first tone pip, plus leadTime, "
-                + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, StimDurationMarginSec, optogenetics.StimDuration));
+                "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.closedLoopDuration, {1} s from the first tone pip, plus laserLeadSeconds, "
+                + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, StimDurationMarginSec, optogenetics.LaserMaxSeconds));
         }
     }
 
