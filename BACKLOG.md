@@ -2,6 +2,13 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+> [!IMPORTANT]
+> **Pip, please read: two names were added to the lab's names list without your OK** (9 Nov 2026, on BLUE-OPTO-2, so zapit-v2 could be tested on the rig; `scripts\add-names.ps1 -Apply`, saved through rig-setup's Save-NamesDictionary with its backup and log):
+> - **`optoStimulated`** (trial column, bool) and **`Settings_ZapitStimConfig`** (stream: zapit-v2's copy of the Zapit stimulus config at Go).
+> - **Why it needs your decision:** you dropped `optoStimulated` from main and av-dome (399b428) because it was always `optoCondition > 0`. On zapit-v2 it is not: Tom's sham trials (galvos move, masking light on, laser off) also get a Zapit condition, so there `optoCondition` is the location *presented*, laser on or off, and `optoStimulated` says whether the laser was on. That differs from av-dome's definition of `optoCondition` ("the Zapit condition stimulated, 0 when none"), so the same name would mean different things in two workflows.
+> - **Options:** (a) keep both names and widen `optoCondition`'s lab-wide definition to "the condition presented; `optoStimulated` says whether the laser was on" (av-dome is unchanged in practice: it has no sham trials); or (b) remove `optoStimulated` from the list again and make zapit-v2 log sham trials as `optoCondition` 0 (the sham trial's location is then not in the trial log).
+> - zapit-v2 is to be merged into main once its rig test passes (opto off, then on; `docs\zapit-rig-test.md`).
+
 ## Open
 
 ### For Pip (found 9 Nov 2026 on BLUE-OPTO-2, with Claude)
