@@ -129,8 +129,16 @@ def test_stimulus_state_reaches_disk_row_by_row():
     # closes, recorded a size short of the file (test-1802 and test-1813, 9 Nov 2026).
     log = next(e for e in group("StimulusLogger").iter(W + "Expression")
                if e.get(XSI) == "IncludeWorkflow" and e.get("Path") == "OpenRigs.Logging:LogData.bonsai")
-    assert log.findtext(W + "LogName") == "StimulusState"
+    assert log.findtext(W + "LogName") == "BonsaiData_StimulusState"
     assert log.findtext(W + "AutoFlush") == "true"
+
+
+def test_stimulus_state_is_in_bonsai_data_with_its_units():
+    # Pip, 9 Nov 2026: everything Bonsai computes is in BonsaiData (Trial, Async, StimulusState), so the manifest
+    # expects no StimulusState folder; spatialFrequency names its unit and frequencyBin is a step along the sweep.
+    text = (Path(__file__).parents[1] / "src" / "main.bonsai").read_text(encoding="utf-8")
+    assert "as spatialFrequencyCpd," in text and "as frequencyStep," in text
+    assert "StimulusState/" not in text and "<LogName>StimulusState</LogName>" not in text
 
 
 def test_the_manifest_hashes_the_rig_s_calibration_folder_as_av_dome_s():

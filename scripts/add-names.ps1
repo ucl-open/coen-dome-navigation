@@ -1,8 +1,9 @@
 param([switch]$Apply, [string]$ListPath = 'K:\config\data-dictionary.json')
-# Adds this workflow's trial columns (schemas\trial-columns.yml) and its StimulusState stream to the lab's
+# Adds this workflow's trial columns (schemas\trial-columns.yml) and its own streams to the lab's
 # names list (K:\config\data-dictionary.json), which rig-control checks before it launches the
 # workflow, and tags each name this workflow uses with coen-dome-navigation (usedBy; every other
-# repo's tags are kept). Without -Apply it only says what it would change. -Apply saves through
+# repo's tags are kept). Names it no longer writes ($retired) lose its tag, and leave the list when
+# no other repo is tagged on them. Without -Apply it only says what it would change. -Apply saves through
 # rig-setup's own Save-NamesDictionary, which refuses if the file changed since it was read, backs it
 # up and logs the change. The list is production config: apply only on Pip's word.
 #
@@ -31,8 +32,11 @@ foreach ($p in $cols.PSObject.Properties) {
     $added += "column $($p.Name)"
 }
 $streams = @($prev.streams)
-# This workflow's own streams: StimulusState, and zapit-v2's copy of the Zapit stimulus config at Go.
-$ownStreams = @('StimulusState', 'Settings_ZapitStimConfig')
+# This workflow's own streams: BonsaiData_StimulusState, and zapit-v2's copy of the Zapit stimulus config at Go.
+$ownStreams = @('BonsaiData_StimulusState', 'Settings_ZapitStimConfig')
+# Names this workflow wrote once and no longer does (Pip, 9 Nov 2026): optoStimulated became laserPowerMw,
+# StimulusState moved into BonsaiData.
+$retired = @{ trialColumns = @('optoStimulated'); streams = @('StimulusState') }
 foreach ($s in $ownStreams) { if ($streams -notcontains $s) { $streams += $s; $added += "stream $s" } }
 $es = [ordered]@{}; foreach ($p in $prev.experimentSettings.PSObject.Properties) { $es[$p.Name] = $p.Value }
 # usedBy as it was, with this repo on each of its names (its streams: StimulusState and the lab's
@@ -50,11 +54,26 @@ function Add-Tag([string]$Section, [string]$Name) {
 }
 foreach ($name in $cols.PSObject.Properties.Name) { Add-Tag 'trialColumns' $name }
 foreach ($s in $ownStreams) { Add-Tag 'streams' $s }
+$removed = @()
+foreach ($section in $retired.Keys) {
+    foreach ($name in $retired[$section]) {
+        if (-not $usedBy[$section].Contains($name)) { $others = @() } else { $others = @($usedBy[$section][$name] | Where-Object { $_ -and $_ -ne $me }) }
+        if ($others) {
+            if (@($usedBy[$section][$name]) -contains $me) { $usedBy[$section][$name] = $others; $removed += "$me tag on $name" }
+            continue
+        }
+        if ($usedBy[$section].Contains($name)) { $usedBy[$section].Remove($name) }
+        if ($section -eq 'trialColumns' -and $tc.Contains($name)) { $tc.Remove($name); $removed += "column $name" }
+        if ($section -eq 'streams' -and $streams -contains $name) { $streams = @($streams | Where-Object { $_ -ne $name }); $removed += "stream $name" }
+    }
+}
 $body = [ordered]@{ streams = $streams; experimentSettings = $es; trialColumns = $tc; usedBy = $usedBy }
 "would add $($added.Count): $($added -join ', ')"
 "would tag $($tagged.Count) with ${me}: $($tagged -join ', ')"
-if ($Apply -and ($added -or $tagged)) {
-    $what = @($(if ($added) { "added $($added -join ', ')" }), $(if ($tagged) { "tagged $($tagged -join ', ') with $me" })) -join '; '
+"would remove $($removed.Count): $($removed -join ', ')"
+if ($Apply -and ($added -or $tagged -or $removed)) {
+    $what = @($(if ($added) { "added $($added -join ', ')" }), $(if ($tagged) { "tagged $($tagged -join ', ') with $me" }),
+              $(if ($removed) { "removed $($removed -join ', ')" })) -join '; '
     $r = Save-NamesDictionary -Path $path -Body $body -Previous $prev -Was $was -By 'PC' -What "$what (coen-dome-navigation, Tom Childs' auditory VR corridor on open-rigs)"
     "saved: $($r.Ok) $($r.Detail)"
 }

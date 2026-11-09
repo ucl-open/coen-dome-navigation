@@ -33,4 +33,4 @@ The second needs `.bonsai\Setup.ps1` run once (Bonsai and its packages).
 
 ## Data
 
-Each experiment is `C:\Coen-Lab-Local\Acquired-Data\sub-<mouse>\ses-<session>_<UTC>`: the Harp boards' raw logs, the cameras, `BonsaiData\BonsaiData_Trial_*.csv` (one row per trial, columns in `schemas\trial-columns.yml`), `BonsaiData\BonsaiData_Async_*.csv` (rewards, commands, Go), `StimulusState\StimulusState_*.csv` (one row per 50 ms beep: Harp time, position, tone, grating), `Zapit\` when optogenetics is on, the settings files and `manifest.json`.
+Each experiment is `C:\Coen-Lab-Local\Acquired-Data\sub-<mouse>\ses-<session>_<UTC>`: the Harp boards' raw logs, the cameras, `BonsaiData\BonsaiData_Trial_*.csv` (one row per trial, columns in `schemas\trial-columns.yml`), `BonsaiData\BonsaiData_Async_*.csv` (rewards, commands, Go), `BonsaiData\BonsaiData_StimulusState_*.csv` (one row per 50 ms beep while a trial is active: `Seconds` (Harp time), `trialNumber`, `beep`, `positionCm`, `frequencyHz`, `frequencyStep` (the sweep's step), `cueActive`, `spatialFrequencyCpd`, `gratingOpacity`), `Zapit\` when optogenetics is on, the settings files and `manifest.json`.

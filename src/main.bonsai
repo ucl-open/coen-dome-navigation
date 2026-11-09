@@ -4753,7 +4753,7 @@
             </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>HarpClock</Name>
-        <Description>Harp time (seconds on the synchronised Harp clock, as in the Harp binaries) of the latest Behavior board AnalogData sample, about every 1 ms. Timestamps BonsaiData_Trial and StimulusState.</Description>
+        <Description>Harp time (seconds on the synchronised Harp clock, as in the Harp binaries) of the latest Behavior board AnalogData sample, about every 1 ms. Timestamps BonsaiData_Trial and BonsaiData_StimulusState.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
@@ -9738,7 +9738,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>StimulusRow</scr:Name>
-                          <scr:Expression>new(new(it.Item2 as trialNumber, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1 as beep, it.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as positionCm, it.Item1.Item1.Item1.Item1.Item2 as frequencyHz, it.Item1.Item1.Item1.Item2 as frequencyBin, Convert.ToInt32(it.Item1.Item1.Item2) as cueActive, it.Item1.Item1.Item1.Item1.Item1.Item2.Item1 as spatialFrequency, it.Item1.Item1.Item1.Item1.Item1.Item3 as gratingOpacity) as Row, it.Item1.Item2 as Seconds)</scr:Expression>
+                          <scr:Expression>new(new(it.Item2 as trialNumber, it.Item1.Item1.Item1.Item1.Item1.Item1.Item1 as beep, it.Item1.Item1.Item1.Item1.Item1.Item1.Item2 as positionCm, it.Item1.Item1.Item1.Item1.Item2 as frequencyHz, it.Item1.Item1.Item1.Item2 as frequencyStep, Convert.ToInt32(it.Item1.Item1.Item2) as cueActive, it.Item1.Item1.Item1.Item1.Item1.Item2.Item1 as spatialFrequencyCpd, it.Item1.Item1.Item1.Item1.Item1.Item3 as gratingOpacity) as Row, it.Item1.Item2 as Seconds)</scr:Expression>
                         </Expression>
                         <Expression xsi:type="rx:BehaviorSubject">
                           <Name>StimulusLogRow</Name>
@@ -9853,7 +9853,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   <Expression xsi:type="WorkflowOutput" />
                   <Expression xsi:type="GroupWorkflow">
                     <Name>StimulusLogger</Name>
-                    <Description>Writes StimulusState\StimulusState_&lt;time&gt;.csv (OpenRigs.Logging LogData): one row per beep while the trial is active, stamped with the Harp time of the beep, built by LogStimulus. Here rather than in Logging because StimulusLogRow is declared inside this group, as in Tom Childs' workflow (a logger in Logging cannot subscribe to a subject declared in TaskLogic: Bonsai reports a circular definition). Not part of the repeating trial chain, so it writes one file per experiment, created with its first row. AutoFlush writes each row to disk as it comes (about 20 a second, which LogData's AutoFlush is for): without it the file reached disk in 4 KB blocks, so the manifest's end-of-run write, which comes before this writer closes, recorded a size that stopped at the last full block (test-1802 and test-1813, 9 Nov 2026), and a Bonsai ended by force would lose up to 4 KB of beeps.</Description>
+                    <Description>Writes BonsaiData\BonsaiData_StimulusState_&lt;time&gt;.csv (OpenRigs.Logging LogData): one row per beep while the trial is active, stamped with the Harp time of the beep, built by LogStimulus. Here rather than in Logging because StimulusLogRow is declared inside this group, as in Tom Childs' workflow (a logger in Logging cannot subscribe to a subject declared in TaskLogic: Bonsai reports a circular definition). Not part of the repeating trial chain, so it writes one file per experiment, created with its first row. AutoFlush writes each row to disk as it comes (about 20 a second, which LogData's AutoFlush is for): without it the file reached disk in 4 KB blocks, so the manifest's end-of-run write, which comes before this writer closes, recorded a size that stopped at the last full block (test-1802 and test-1813, 9 Nov 2026), and a Bonsai ended by force would lose up to 4 KB of beeps.</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="SubscribeSubject">
@@ -9872,7 +9872,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                           <Combinator xsi:type="harp:CreateTimestamped" />
                         </Expression>
                         <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogData.bonsai">
-                          <LogName>StimulusState</LogName>
+                          <LogName>BonsaiData_StimulusState</LogName>
                           <Selector />
                           <AutoFlush>true</AutoFlush>
                           <Extension>csv</Extension>
@@ -10930,10 +10930,10 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
             </Expression>
             <Expression xsi:type="mf:ExperimentManifest">
               <Name>ExperimentManifest</Name>
-              <Description>Writes manifest.json into the experiment folder (OpenRigs.Manifest), as av-dome's: the machine, this repo's commit, who launched it and sent Go, rig.yml and the calibration files the workflow reads (MeshMap.csv, gammalut.bmp, this mouse's spout positions) by hash, what each BonsaiData_Trial column means (schemas\trial-columns.yml), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files, BonsaiData and StimulusState.</Description>
+              <Description>Writes manifest.json into the experiment folder (OpenRigs.Manifest), as av-dome's: the machine, this repo's commit, who launched it and sent Go, rig.yml and the calibration files the workflow reads (MeshMap.csv, gammalut.bmp, this mouse's spout positions) by hash, what each BonsaiData_Trial column means (schemas\trial-columns.yml), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState).</Description>
               <mf:IngestScript>coen-dome-navigation</mf:IngestScript>
               <mf:ConfigFiles>C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\rig.yml;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\MeshMap.csv;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\gammalut.bmp;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\LickSpoutPositions\{SubjectId}.csv</mf:ConfigFiles>
-              <mf:ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/;StimulusState/</mf:ExpectedFiles>
+              <mf:ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/</mf:ExpectedFiles>
               <mf:TrialColumns>schemas\trial-columns.yml</mf:TrialColumns>
             </Expression>
             <Expression xsi:type="scr:ExpressionTransform">
