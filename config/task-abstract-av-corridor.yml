@@ -52,7 +52,7 @@ taskParameters:
     - label: Stage 0 (Tom's 1)   # rewarded on reaching the zone, no lick; short tracks; the frequency drifts too
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
-      rewardSizeUl: 3.0
+      rewardSizeUl: 2.0
       lickToReward: false
       wrongLickLimit: 0
       punishWrongZone: false
@@ -65,7 +65,7 @@ taskParameters:
     - label: Stage 1 (Tom's 2)   # as stage 0, no drift
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
-      rewardSizeUl: 3.0
+      rewardSizeUl: 2.0
       lickToReward: false
       wrongLickLimit: 0
       punishWrongZone: false
@@ -78,7 +78,7 @@ taskParameters:
     - label: Stage 2 (Tom's 3)   # a lick anywhere above the floor; full tracks; the end of the track ends the trial
       rewardFloorHz: 15248
       rewardCeilingHz: 25000
-      rewardSizeUl: 3.0
+      rewardSizeUl: 2.0
       lickToReward: true
       wrongLickLimit: 0
       punishWrongZone: false
@@ -91,7 +91,7 @@ taskParameters:
     - label: Stage 3 (Tom's 4)   # the ceiling comes in; wrong licks and slowness punished
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
-      rewardSizeUl: 3.0
+      rewardSizeUl: 2.0
       lickToReward: true
       wrongLickLimit: 8
       punishWrongZone: true
@@ -104,7 +104,7 @@ taskParameters:
     - label: Stage 4 (Tom's 5)   # fewer wrong licks allowed
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
-      rewardSizeUl: 3.0
+      rewardSizeUl: 2.0
       lickToReward: true
       wrongLickLimit: 5
       punishWrongZone: true
@@ -117,7 +117,7 @@ taskParameters:
     - label: Stage 5 (Tom's 6)   # stage 4 with 16% truncated trials; only ever chosen by hand
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
-      rewardSizeUl: 3.0
+      rewardSizeUl: 2.0
       lickToReward: true
       wrongLickLimit: 5
       punishWrongZone: true
