@@ -108,9 +108,11 @@ def test_stimulus_state_reaches_disk_row_by_row():
     assert log.findtext(W + "AutoFlush") == "true"
 
 
-def test_the_manifest_hashes_the_calibration_files_the_workflow_reads():
+def test_the_manifest_hashes_the_rig_s_calibration_folder_as_av_dome_s():
+    # One calibration folder per rig, beside its rig.yml, read by every workflow on it (av-dome's layout);
+    # production's C:\RigConfigs is copied there when a rig switches over, not read (BLUE-OPTO-2, 9 Nov 2026).
     mf = "{clr-namespace:OpenRigs.Manifest;assembly=OpenRigs.Manifest}"
     files = next(e for e in MAIN.iter(W + "Expression") if e.findtext(W + "Name") == "ExperimentManifest").findtext(mf + "ConfigFiles").split(";")
-    assert r"C:\RigConfigs\MeshMap.csv" in files and r"C:\RigConfigs\gammalut.bmp" in files  # rig.yml's projectionCalibration
-    assert r"C:\RigConfigs\LickSpoutPositions\{SubjectId}.csv" not in files  # copied beside rig.yml, read only there
-    assert r"C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\LickSpoutPositions\{SubjectId}.csv" in files
+    rig = "C:\\Coen-Lab-Local\\RigConfigs\\%COMPUTERNAME%\\"
+    assert files == [rig + "rig.yml", rig + r"calibration\MeshMap.csv", rig + r"calibration\gammalut.bmp",
+                     rig + r"calibration\LickSpoutPositions\{SubjectId}.csv"]
