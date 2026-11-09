@@ -138,3 +138,28 @@ def test_a_rig_folder_under_staging_is_read(tmp_path):
     found = experiments("TC9", [tmp_path], [])
     assert len(found) == 1 and found[0].modality[0] == "visual" and not any(found[0].rewarded)
     assert found[0].stage == [1] * 50
+
+
+def test_an_optogenetics_experiment_keeps_its_stage():
+    # zapit-v2: 100% rewarded would advance stage 3 (Tom's 4), but an optogenetics experiment never changes the stage
+    e = Experiment("2026-01-02", "2026-01-02", ["auditory"] * 200, [3] * 200, [True] * 200, [i % 3 == 0 for i in range(200)], True)
+    stage, why = suggest([e], "auditory")
+    assert stage == 3 and why.startswith("Optogenetics Experiment") and "of 67 laser-on" in why
+
+
+def test_laser_on_trials_do_not_count_in_stage_1_s_two_experiments_in_a_row():
+    # The earlier experiment has 50 rewarded stage-1 trials only if its laser-on ones count
+    from ucl_open_coen_dome_navigation.stage import TWO_IN_A_ROW_STAGE
+    now = exp("2026-01-02", TWO_IN_A_ROW_STAGE, 100, 60)
+    before = Experiment("2026-01-01", "2026-01-01", ["auditory"] * 100, [TWO_IN_A_ROW_STAGE] * 100,
+                        [i < 50 for i in range(100)], [i < 10 for i in range(100)], True)
+    assert suggest([now, before], "auditory")[0] == TWO_IN_A_ROW_STAGE
+
+
+def test_the_opto_columns_are_read(tmp_path):
+    from ucl_open_coen_dome_navigation.stage import read_new
+    folder = tmp_path / "ses-005D1_2026-11-04T10-00-00"
+    write_new(folder, 4, [["auditory", "Correct", "True", 3], ["auditory", "Incorrect", "False", 1]],
+              header=("trialType", "outcome", "optoStimulated", "optoCondition"))
+    e = read_new(folder)
+    assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]

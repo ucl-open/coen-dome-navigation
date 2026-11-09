@@ -1,7 +1,7 @@
 {
   "$defs": {
     "OptogeneticsConfig": {
-      "description": "Zapit optogenetic stimulation: av-dome's OptogeneticsSettings field for field, and the laser started as\nav-dome starts it (Pip, 9 Nov 2026), but lasting the whole trial.\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws\none per stimulated trial. Each stimulated trial's StartStimulus carries the condition, stim_duration and\nstim_delay; Zapit starts the laser stim_delay after the trial's start (beep 0: the trigger pulse, or the\ncommand on a rig without hardware triggering). The workflow stops it at the trial's outcome, so it covers the\ntrial, as Tom Childs' did; stim_duration only caps it. Zapit's host, port and triggering are rig.yml's zapit block.",
+      "description": "Zapit optogenetic stimulation: av-dome's fields, plus lead_time.\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of\nan optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as sham trials\nwith the laser off, so galvo noise and masking light are the same on every trial. The stimulus is continuous: it\nstarts at the trial's start (beep 0: the trigger pulse on a hardware-triggered rig), lead_time before the first\ntone pip, and Bonsai stops it at the trial's outcome, or after stim_duration if that comes first. Zapit's host,\nport and triggering are rig.yml's zapit block.",
       "if": {
         "additionalProperties": true,
         "properties": {
@@ -22,13 +22,13 @@
         },
         "zapitConfigPath": {
           "default": "",
-          "description": "Path to the Zapit YAML config listing stimulation conditions",
+          "description": "Path to the Zapit stimulus config loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms",
           "title": "ZapitConfigPath",
           "type": "string"
         },
         "stimProbability": {
-          "default": 0.75,
-          "description": "Probability that a trial receives stimulation",
+          "default": 0.4,
+          "description": "Probability that a trial after the warmup is a laser-on trial, shared equally by every condition in the Zapit stimulus config, a laser-on control site included. All other trials are sham trials: Zapit is sent a condition with the laser off",
           "maximum": 1,
           "minimum": 0,
           "title": "StimProbability",
@@ -36,16 +36,25 @@
         },
         "stimDelay": {
           "default": 0.0,
-          "description": "Delay from trial start to stimulation onset, in seconds",
+          "description": "av-dome's field, kept at 0: Zapit ignores a start delay for the continuous stimulus this task uses. The laser starts at the trial's start, lead_time before the first tone pip",
+          "maximum": 0,
           "minimum": 0,
           "title": "StimDelay",
           "type": "number"
         },
         "stimDuration": {
-          "default": 12.0,
-          "description": "Longest the stimulation lasts, in seconds: the laser is stopped at the trial's outcome, so it covers the trial, and this caps it if the outcome is late (av-dome: the stimulation duration)",
-          "minimum": 0,
+          "default": 12.5,
+          "description": "Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + lead_time + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its stimulus",
+          "exclusiveMinimum": 0,
           "title": "StimDuration",
+          "type": "number"
+        },
+        "leadTime": {
+          "default": 0.1,
+          "description": "How long the stimulus runs before the first tone pip, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep lead_time / 50 ms on every trial of an optogenetics experiment, laser-on or sham, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip",
+          "maximum": 0.2,
+          "minimum": 0.05,
+          "title": "LeadTime",
           "type": "number"
         },
         "excludeRepeats": {
@@ -56,13 +65,13 @@
         },
         "pseudorandomSelection": {
           "default": true,
-          "description": "Draw conditions from a shuffled queue rather than independently",
+          "description": "Draw conditions from shuffled queues, one for laser-on and one for sham trials, so each condition is used equally often, rather than independently each trial",
           "title": "PseudorandomSelection",
           "type": "boolean"
         },
         "warmupTrials": {
-          "default": 0,
-          "description": "Trials at the experiment's start with no stimulation",
+          "default": 20,
+          "description": "Trials at the experiment's start that are all sham trials, with the laser off",
           "minimum": 0,
           "title": "WarmupTrials",
           "type": "integer"
@@ -446,12 +455,13 @@
           "default": {
             "enabled": false,
             "zapitConfigPath": "",
-            "stimProbability": 0.75,
+            "stimProbability": 0.4,
             "stimDelay": 0.0,
-            "stimDuration": 12.0,
+            "stimDuration": 12.5,
+            "leadTime": 0.1,
             "excludeRepeats": true,
             "pseudorandomSelection": true,
-            "warmupTrials": 0
+            "warmupTrials": 20
           },
           "description": "Zapit optogenetic stimulation",
           "title": "Optogenetics"

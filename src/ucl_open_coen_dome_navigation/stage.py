@@ -18,14 +18,15 @@ The rules: the latest experiment of the modality with trials decides. Under 50 t
 Stage 1 advances only after two experiments in a row each with at least 50 rewarded trials, and falls
 back to 0 under 50% rewarded. Stages 2 and 3 also advance on 70% over the first 100 or 150 trials
 (mice stop licking late on). Otherwise 70% over the experiment advances, below keeps. Stage 4 never
-advances on its own; 5 is only chosen by hand and then kept.
+advances on its own; 5 is only chosen by hand and then kept. An optogenetics experiment (zapit-v2) keeps
+its stage, and its laser-on trials never count toward a decision.
 """
 
 import argparse
 import csv
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 MAX_STAGE = 5
@@ -55,6 +56,12 @@ class Experiment:
     modality: list[str]
     stage: list[int]
     rewarded: list[bool]
+    laser: list[bool] = field(default_factory=list)  # laser-on trials (optoStimulated); empty when there were none
+    optogenetics: bool = False  # an optogenetics experiment: every trial had a Zapit condition, laser on or sham
+
+
+def _laser(e: "Experiment") -> list[bool]:
+    return e.laser or [False] * len(e.rewarded)
 
 
 def _bool(text: str) -> bool:
@@ -91,7 +98,9 @@ def read_new(folder: Path) -> Experiment | None:
         raise FileNotFoundError(f"{folder} has trials but no Settings\\Settings_Experiment_*.json")
     stage = int(float(json.loads(settings[-1].read_text(encoding="utf-8-sig"))["parameters"]["TrainingStage"]))
     return Experiment(folder.name, _when(folder.name), [r["trialType"] for r in rows], [stage] * len(rows),
-                      [r["outcome"] == "Correct" for r in rows])
+                      [r["outcome"] == "Correct" for r in rows],
+                      [_bool(r.get("optoStimulated") or "") for r in rows],
+                      any(int(float(r.get("optoCondition") or 0)) > 0 for r in rows))
 
 
 def read_legacy(folder: Path) -> Experiment | None:
@@ -109,6 +118,8 @@ def read_legacy(folder: Path) -> Experiment | None:
         [LEGACY_MODALITY[r["Modality"]] for r in rows],
         [int(r["ShapingStage"]) - 1 for r in rows],
         [_bool(r["WasRewarded"]) for r in rows],
+        [_bool(r.get("OptogeneticEnabled") or "") for r in rows],  # auditory-vr-corridor's zapit-integration-v2 TrialLog
+        any(int(float(r.get("OptogeneticCondition") or 0)) > 0 for r in rows),
     )
 
 
@@ -183,6 +194,12 @@ def suggest(history: list[Experiment], modality: str) -> tuple[int, str]:
         return 0, f"No Earlier {modality.title()} Experiment With Trials: Stage 0"
     last = same[0]
     stage = last.stage[-1]
+    if last.optogenetics:
+        # An optogenetics experiment never changes the stage (zapit-v2): the laser is meant to change behaviour
+        on = [r for r, l in zip(last.rewarded, _laser(last)) if l]
+        off = [r for r, l in zip(last.rewarded, _laser(last)) if not l]
+        return stage, (f"Optogenetics Experiment ({last.name}: {_rate(on):.0%} of {len(on)} laser-on and {_rate(off):.0%} of "
+                       f"{len(off)} laser-off trials rewarded): Stage {stage} Again")
     # Trials of the experiment's last stage only (a stage changed mid-experiment uses the last)
     rewarded = [r for r, s in zip(last.rewarded, last.stage) if s == stage]
     total = len(last.rewarded)
@@ -193,7 +210,7 @@ def suggest(history: list[Experiment], modality: str) -> tuple[int, str]:
         return stage, f"Under {MIN_TRIALS} Trials ({where}): Stage {stage} Again"
     if stage == TWO_IN_A_ROW_STAGE:
         s2, n = TWO_IN_A_ROW_STAGE, TWO_IN_A_ROW_REWARDED
-        before = [r for r, s in zip(same[1].rewarded, same[1].stage) if s == s2] if len(same) > 1 else []
+        before = [r for r, s, l in zip(same[1].rewarded, same[1].stage, _laser(same[1])) if s == s2 and not l] if len(same) > 1 else []
         if sum(rewarded) >= n and sum(before) >= n:
             return s2 + 1, f"{n}+ Rewarded in Two Experiments in a Row ({where}): Stage {s2 + 1}"
         if rate < REGRESS_RATE:
