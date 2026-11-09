@@ -107,4 +107,5 @@ laserPowerMw:
   description: Laser power sent to Zapit for this trial (the task's optogenetics.laserPowerMw), as commanded, not measured. 0 on sham trials (laser off) and without optogenetics.
 laserCondition:
   type: int
+  formerly: [optoCondition]
   description: The Zapit condition (stimLocations number, from 1) presented in this trial, laser on or off - every trial of an optogenetics experiment has one, so with laserPowerMw 0 it was a sham trial. 0 without optogenetics.
