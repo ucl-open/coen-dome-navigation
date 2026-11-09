@@ -20,7 +20,7 @@ public class InitialiseOptoTrial
         Seed = -1;
     }
 
-    [Description("Seed for the stimulation draws. Set to -1 for a random seed (recommended). The draw for every trial is in BonsaiData_Trial (optoStimulated, optoCondition), so an experiment can be reconstructed either way.")]
+    [Description("Seed for the stimulation draws. Set to -1 for a random seed (recommended). The draw for every trial is in BonsaiData_Trial (optoCondition, 0 when not stimulated), so an experiment can be reconstructed either way.")]
     public int Seed { get; set; }
 
     // Instance state, as in av-dome's InitialiseTrial: this operator sits inside TaskLogic's per-trial Defer, which calls Process again on every trial,

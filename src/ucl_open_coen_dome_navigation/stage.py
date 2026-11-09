@@ -73,18 +73,23 @@ MODALITY_CODES = {"auditory": "A", "visual": "V", "audiovisual": "AV"}
 
 
 def read_new(folder: Path) -> Experiment | None:
-    """An experiment of this workflow: BonsaiData\\BonsaiData_Trial_*.csv (outcome Correct is rewarded)."""
+    """An experiment of this workflow: BonsaiData\\BonsaiData_Trial_*.csv (outcome Correct is rewarded),
+    its stage from Settings\\Settings_Task_*.json (fixed for the experiment, so not a trial column)."""
     logs = sorted(folder.glob("BonsaiData/BonsaiData_Trial*.csv"))
     if not logs:
         return None
     rows = [r for log in logs for r in _read(log)]
     if not rows or "trialType" not in rows[0]:
         return None
+    task = sorted(folder.glob("Settings/Settings_Task*.json"))
+    if not task:
+        raise FileNotFoundError(f"{folder} has trials but no Settings\\Settings_Task_*.json")
+    stage = int(json.loads(task[-1].read_text(encoding="utf-8-sig"))["taskParameters"]["shapingStage"])
     return Experiment(
         folder.name,
         _when(folder.name),
         [MODALITY_CODES[r["trialType"]] for r in rows],
-        [int(r["trainingStage"]) for r in rows],
+        [stage] * len(rows),
         [r["outcome"] == "Correct" for r in rows],
     )
 

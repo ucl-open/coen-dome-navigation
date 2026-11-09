@@ -8,6 +8,10 @@
 # rig-control checks both before it launches the workflow.
 #
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a quantity ends in its unit.
+#
+# Only what changes from trial to trial (Pip, 9 Nov 2026): the task file's values fixed for the
+# experiment (shapingStage, the reward zone, amplitude) are in Settings\Settings_Task_*.json, and
+# no column repeats another (optoStimulated was optoCondition > 0).
 
 Seconds:
   type: double
@@ -23,10 +27,6 @@ trialType:
   values: [auditory, visual, audiovisual]
   formerly: [Modality]
   description: What the trial showed, in words, as av-dome's trialType - auditory (the tone sweep), visual (the grating) or both; the task file's modality, A, V or AV.
-trainingStage:
-  type: int
-  formerly: [ShapingStage]
-  description: The training stage the trial ran at, 1 to 6 (the task file's shapingStage).
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
@@ -37,10 +37,15 @@ endReason:
   values: [FreqReached, CorrectLick, WrongLickLimit, Timeout, EndOfTrack]
   formerly: [EndReason]
   description: Why the trial ended - the reward frequency reached (stages 1-2), a lick in the reward zone, too many wrong licks, the trial's time limit, or the end of the track.
-punished:
+punishSound:
   type: bool
   formerly: [WasPunished]
-  description: True when the error tone and timeout were given.
+  description: True when the error tone played. It plays at the end of the track or the time limit with the end frequency in the reward zone, and on any ending outside the zone at stages 4-6 (ProcessTrialEnd); the timeout follows it.
+punishTimeoutSeconds:
+  type: double
+  unit: s
+  formerly: [WasPunished]
+  description: The timeout after the error tone (the task file's punishment.timeoutSec), 0 when no punishment.
 lickCount:
   type: int
   formerly: [LickCount]
@@ -55,16 +60,6 @@ endPositionCm:
   unit: cm
   formerly: [TrialEndPosCm]
   description: Distance run in the trial when the row was built (Seconds). Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
-rewardFloorHz:
-  type: double
-  unit: Hz
-  formerly: [RewAudFreqFloor]
-  description: The reward zone's lower frequency.
-rewardCeilingHz:
-  type: double
-  unit: Hz
-  formerly: [RewAudFreqCeil]
-  description: The reward zone's upper frequency.
 audioEndFrequencyHz:
   type: double
   unit: Hz
@@ -75,10 +70,6 @@ visualEndSpatialFrequencyCpd:
   unit: cycles/deg
   formerly: [TrialEndVisFreq]
   description: The grating's spatial frequency when the trial ended.
-audioAmplitude:
-  type: double
-  formerly: [AudAmplitude]
-  description: The tone scale the trial played at - the task's amplitude, 0 when the modality has no sound.
 truncationFraction:
   type: double
   formerly: [TruncationPoint]
@@ -117,9 +108,6 @@ rewardSizeUl:
   type: double
   unit: ul
   description: Microlitres a reward on this trial gives (the task file's rewardSizeUl). What was delivered is RewardDelivered in BonsaiData_Async.
-optoStimulated:
-  type: bool
-  description: True when this trial had optogenetic stimulation.
 optoCondition:
   type: int
-  description: The Zapit condition stimulated, 0 when none.
+  description: The Zapit condition stimulated, 0 when none (Zapit numbers conditions from 1).
