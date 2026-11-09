@@ -1,0 +1,437 @@
+{
+  "$defs": {
+    "EngagementConfig": {
+      "description": "How engagement is labelled when the next stage is chosen (stage.py): whether the animal is still\nattempting the task.\n\nA mouse partway through a session often keeps running but stops licking. Those trials are not failures (it\nis not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read\nfrom whether each trial contained a lick, smoothed over a window of trials.",
+      "properties": {
+        "rollWindow": {
+          "default": 25,
+          "description": "Trials averaged around each trial when deciding engagement. Prefer an odd value",
+          "minimum": 1,
+          "title": "RollWindow",
+          "type": "integer"
+        },
+        "rollThreshold": {
+          "default": 0.5,
+          "description": "Lick fraction at or below which the animal counts as disengaged",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "RollThreshold",
+          "type": "number"
+        },
+        "minEpoch": {
+          "default": 10,
+          "description": "Shortest run of trials that can be called engaged or disengaged; shorter runs are absorbed into their neighbours",
+          "maximum": 20,
+          "minimum": 1,
+          "title": "MinEpoch",
+          "type": "integer"
+        }
+      },
+      "title": "EngagementConfig",
+      "type": "object"
+    },
+    "OptogeneticsConfig": {
+      "description": "Zapit optogenetic stimulation. Field names follow the av-dome task schema.\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file only to list its conditions (stimLocations01, stimLocations02, ...) and draws\none per stimulated trial. On a stimulated trial the laser comes on lead_time before the first tone pip and is\nstopped at the trial outcome, or after stim_duration if that comes first. Zapit's host and port are rig.yml's\nzapit block.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Whether optogenetic stimulation runs this session. When false, Bonsai does not connect to Zapit",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "zapitConfigPath": {
+          "default": "",
+          "description": "Path to the Zapit stimulus config YAML loaded in Zapit, listing the stimulation conditions",
+          "title": "ZapitConfigPath",
+          "type": "string"
+        },
+        "stimProbability": {
+          "default": 0.75,
+          "description": "Probability that a trial receives stimulation",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "StimProbability",
+          "type": "number"
+        },
+        "stimDuration": {
+          "default": 12.0,
+          "description": "Longest the laser stays on in one trial, in seconds. It normally stops earlier, at the trial outcome",
+          "exclusiveMinimum": 0,
+          "title": "StimDuration",
+          "type": "number"
+        },
+        "leadTime": {
+          "default": 0.1,
+          "description": "How long before the first tone pip the laser comes on, in seconds. A multiple of the 50 ms beep interval, from 0.05 to 1. Applied to every trial of an optogenetics session, stimulated or not, so trial timing does not reveal which trials are stimulated",
+          "title": "LeadTime",
+          "type": "number"
+        },
+        "pseudorandomSelection": {
+          "default": true,
+          "description": "Draw conditions from a shuffled queue, so each is used equally often, rather than independently each trial",
+          "title": "PseudorandomSelection",
+          "type": "boolean"
+        },
+        "warmupTrials": {
+          "default": 0,
+          "description": "Trials at session start with no stimulation",
+          "minimum": 0,
+          "title": "WarmupTrials",
+          "type": "integer"
+        }
+      },
+      "title": "OptogeneticsConfig",
+      "type": "object"
+    },
+    "PunishmentConfig": {
+      "description": "Punishment params.",
+      "properties": {
+        "timeoutSec": {
+          "default": 2,
+          "description": "Timeout duration in seconds",
+          "title": "TimeoutSec",
+          "type": "integer"
+        },
+        "stage4PunishedLick": {
+          "default": 8,
+          "description": "Punished lick in stage 4",
+          "minimum": 1,
+          "title": "Stage4PunishedLick",
+          "type": "integer"
+        },
+        "stage5PunishedLick": {
+          "default": 5,
+          "description": "Punished lick in stage 5",
+          "minimum": 1,
+          "title": "Stage5PunishedLick",
+          "type": "integer"
+        }
+      },
+      "title": "PunishmentConfig",
+      "type": "object"
+    },
+    "Stage": {
+      "description": "Frequency boundaries for a single shaping stage.",
+      "properties": {
+        "floor": {
+          "description": "Lower frequency threshold (Hz)",
+          "maximum": 25000,
+          "minimum": 1,
+          "title": "Floor",
+          "type": "integer"
+        },
+        "ceiling": {
+          "description": "Upper frequency ceiling (Hz)",
+          "maximum": 25000,
+          "minimum": 1,
+          "title": "Ceiling",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "floor",
+        "ceiling"
+      ],
+      "title": "Stage",
+      "type": "object"
+    },
+    "ThresholdFrequencies": {
+      "description": "Floor and ceiling frequencies of the reward zone for each shaping stage.",
+      "properties": {
+        "stage1": {
+          "$ref": "#/$defs/Stage",
+          "title": "Stage1"
+        },
+        "stage2": {
+          "$ref": "#/$defs/Stage",
+          "title": "Stage2"
+        },
+        "stage3": {
+          "$ref": "#/$defs/Stage",
+          "title": "Stage3"
+        },
+        "stage4": {
+          "$ref": "#/$defs/Stage",
+          "title": "Stage4"
+        },
+        "stage5": {
+          "$ref": "#/$defs/Stage",
+          "title": "Stage5"
+        }
+      },
+      "required": [
+        "stage1",
+        "stage2",
+        "stage3",
+        "stage4",
+        "stage5"
+      ],
+      "title": "ThresholdFrequencies",
+      "type": "object"
+    },
+    "TruncationConfig": {
+      "description": "Truncated trials, used in stage 6 only.\n\nOn a truncated trial the cue (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the cue.",
+      "properties": {
+        "fraction": {
+          "default": 0.16,
+          "description": "Fraction of stage 6 trials that are truncated, split evenly between the truncation points",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Fraction",
+          "type": "number"
+        },
+        "points": {
+          "default": [
+            0.4,
+            0.6
+          ],
+          "description": "Where the cue switches off, as a fraction of the sweep on a log scale. The reward floor is at about 0.8",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "title": "Points",
+          "type": "array"
+        }
+      },
+      "title": "TruncationConfig",
+      "type": "object"
+    },
+    "UclOpenCoenAvCorridorTaskLogic": {
+      "description": "Top-level task logic schema.",
+      "properties": {
+        "version": {
+          "const": "0.0.0-rc1",
+          "default": "0.0.0-rc1",
+          "title": "Version",
+          "type": "string"
+        },
+        "name": {
+          "const": "UclOpenCoenAvCorridor",
+          "default": "UclOpenCoenAvCorridor",
+          "description": "Name of the task",
+          "title": "Name",
+          "type": "string"
+        },
+        "taskParameters": {
+          "$ref": "#/$defs/UclOpenCoenAvCorridorTaskParameters",
+          "default": {
+            "modality": "A",
+            "shapingStage": 1,
+            "startFreq": 2000,
+            "endFreq": 25000,
+            "nFreqBins": 100,
+            "centerFreq": 18000,
+            "rewardWindowSize": 6000,
+            "thresholdFrequencies": {
+              "stage1": {
+                "ceiling": 25000,
+                "floor": 18000
+              },
+              "stage2": {
+                "ceiling": 25000,
+                "floor": 18000
+              },
+              "stage3": {
+                "ceiling": 25000,
+                "floor": 15248
+              },
+              "stage4": {
+                "ceiling": 21248,
+                "floor": 15248
+              },
+              "stage5": {
+                "ceiling": 21248,
+                "floor": 15248
+              }
+            },
+            "rewardSizeUl": 2.0,
+            "punishment": {
+              "stage4PunishedLick": 8,
+              "stage5PunishedLick": 5,
+              "timeoutSec": 2
+            },
+            "truncation": {
+              "fraction": 0.16,
+              "points": [
+                0.4,
+                0.6
+              ]
+            },
+            "engagement": {
+              "minEpoch": 10,
+              "rollThreshold": 0.5,
+              "rollWindow": 25
+            },
+            "optogenetics": {
+              "enabled": false,
+              "leadTime": 0.1,
+              "pseudorandomSelection": true,
+              "stimDuration": 12.0,
+              "stimProbability": 0.75,
+              "warmupTrials": 0,
+              "zapitConfigPath": ""
+            },
+            "amplitude": 0.05,
+            "backgroundNoiseLevel": 0.5,
+            "quantizeBinSize": 1
+          },
+          "title": "TaskParameters"
+        }
+      },
+      "title": "UclOpenCoenAvCorridorTaskLogic",
+      "type": "object"
+    },
+    "UclOpenCoenAvCorridorTaskParameters": {
+      "description": "Task params.",
+      "properties": {
+        "modality": {
+          "default": "A",
+          "description": "Stimulus modality: auditory (A), visual (V), or audiovisual (AV)",
+          "enum": [
+            "A",
+            "V",
+            "AV"
+          ],
+          "title": "Modality",
+          "type": "string"
+        },
+        "shapingStage": {
+          "default": 1,
+          "description": "Shaping stage (1-6). rig-control suggests one from the mouse's earlier experiments of this modality (stage.py); stage 6 (stage 5 with truncated trials) is only ever chosen by hand",
+          "maximum": 6,
+          "minimum": 1,
+          "title": "ShapingStage",
+          "type": "integer"
+        },
+        "startFreq": {
+          "default": 2000,
+          "description": "Start frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
+          "maximum": 25000,
+          "minimum": 1,
+          "title": "StartFreq",
+          "type": "integer"
+        },
+        "endFreq": {
+          "default": 25000,
+          "description": "End frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
+          "maximum": 25000,
+          "minimum": 1,
+          "title": "EndFreq",
+          "type": "integer"
+        },
+        "nFreqBins": {
+          "default": 100,
+          "description": "Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
+          "minimum": 10,
+          "title": "NFreqBins",
+          "type": "integer"
+        },
+        "centerFreq": {
+          "default": 18000,
+          "description": "Center frequency of all reward windows (Hz)",
+          "maximum": 25000,
+          "minimum": 1,
+          "title": "CenterFreq",
+          "type": "integer"
+        },
+        "rewardWindowSize": {
+          "default": 6000,
+          "description": "Window size around center_freq, setting the reward floor for stages 3-5 and the ceiling for stages 4-5 (Hz)",
+          "maximum": 25000,
+          "minimum": 1,
+          "title": "RewardWindowSize",
+          "type": "integer"
+        },
+        "thresholdFrequencies": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ThresholdFrequencies"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "ThresholdFrequencies"
+        },
+        "rewardSizeUl": {
+          "default": 2.0,
+          "description": "Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)",
+          "exclusiveMinimum": 0,
+          "title": "RewardSizeUl",
+          "type": "number"
+        },
+        "punishment": {
+          "$ref": "#/$defs/PunishmentConfig",
+          "default": {
+            "timeoutSec": 2,
+            "stage4PunishedLick": 8,
+            "stage5PunishedLick": 5
+          },
+          "title": "Punishment"
+        },
+        "truncation": {
+          "$ref": "#/$defs/TruncationConfig",
+          "default": {
+            "fraction": 0.16,
+            "points": [
+              0.4,
+              0.6
+            ]
+          },
+          "title": "Truncation"
+        },
+        "engagement": {
+          "$ref": "#/$defs/EngagementConfig",
+          "default": {
+            "rollWindow": 25,
+            "rollThreshold": 0.5,
+            "minEpoch": 10
+          },
+          "title": "Engagement"
+        },
+        "optogenetics": {
+          "$ref": "#/$defs/OptogeneticsConfig",
+          "default": {
+            "enabled": false,
+            "zapitConfigPath": "",
+            "stimProbability": 0.75,
+            "stimDuration": 12.0,
+            "leadTime": 0.1,
+            "pseudorandomSelection": true,
+            "warmupTrials": 0
+          },
+          "title": "Optogenetics"
+        },
+        "amplitude": {
+          "default": 0.05,
+          "description": "Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Amplitude",
+          "type": "number"
+        },
+        "backgroundNoiseLevel": {
+          "default": 0.5,
+          "description": "Constant background white noise RMS, as a fraction of the beep RMS (0 = off)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "BackgroundNoiseLevel",
+          "type": "number"
+        },
+        "quantizeBinSize": {
+          "default": 1,
+          "description": "Bin size for frequency quantization (Hz)",
+          "minimum": 1,
+          "title": "QuantizeBinSize",
+          "type": "integer"
+        }
+      },
+      "title": "UclOpenCoenAvCorridorTaskParameters",
+      "type": "object"
+    }
+  },
+  "$ref": "#/$defs/UclOpenCoenAvCorridorTaskLogic",
+  "title": "RootModel[UclOpenCoenAvCorridorTaskLogic]"
+}

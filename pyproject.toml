@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "ucl-open-coen-av-corridor"
-description = "A library that defines a open-rigs data schema for the coen-av-corridor experiment."
+description = "The coen-av-corridor experiment's rig and task schemas, waveforms and shaping-stage choice."
 authors = [ {name = "Tom Childs", email = "thomas.childs.19@ucl.ac.uk"}]
 license = "MIT"
 requires-python = ">=3.11, <3.12"
@@ -12,23 +12,27 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Operating System :: Microsoft :: Windows",
 ]
+# Kept equal to av-dome's: the rig model's version field is this package's version, and every
+# rig.yml is read by both workflows.
 version = "0.0.0-rc1"
 readme = {file = "README.md", content-type = "text/markdown"}
 
 dependencies = [
   "swc-aeon>=0.2.0",
   "open-rigs",
-  "pydantic-settings"
+  "pydantic-settings",
+  "numpy",
+  "scipy",
+  "pyyaml",
 ]
 
-# [project.urls]
-# Documentation = "https://open-rigs.github.io/Ucl.Open.CoenAvCorridor/"
-# Repository = "https://github.com/OpenRigs/Ucl.Open.CoenAvCorridor/"
-# Issues = "https://github.com/OpenRigs/Ucl.Open.CoenAvCorridor/issues"
-# Changelog = "https://github.com/OpenRigs/Ucl.Open.CoenAvCorridor/releases"
+[dependency-groups]
+dev = ["pytest"]
+
 [project.scripts]
-coen-av-corridor = "ucl_open_coen_av_corridor.cli:main"
 regenerate-schemas = "ucl_open_coen_av_corridor.regenerate:main"
+generate-waveforms = "ucl_open_coen_av_corridor.waveforms:main"
+suggest-stage = "ucl_open_coen_av_corridor.stage:main"
 
 [tool.ruff]
 line-length = 120
@@ -48,5 +52,7 @@ ignore-words-list = 'nd'
 required-version = '>=0.8.4'
 
 [tool.uv.sources]
-open-rigs = {git = "https://github.com/open-rigs/open-rigs", branch = "main"}
+# The lab's fork, at av-dome's commit: both workflows read the same rig.yml, so their rig models
+# must come from the same open-rigs. lib-open-rigs' update-workflows moves this pin.
+open-rigs = {git = "https://github.com/Coen-Lab/lib-open-rigs", rev = "25ee964364019cf29f459c726043a25dc79cf41a"}
 swc-aeon = { git = "https://github.com/SainsburyWellcomeCentre/aeon_api.git", branch = "main" }

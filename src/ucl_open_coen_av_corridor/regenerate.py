@@ -1,29 +1,47 @@
-from pathlib import Path
-from typing import Union
 import json
-import pydantic
-import os
+import subprocess
+from pathlib import Path
 
-from open_rigs.core import ExperimentSession
+import pydantic
+from open_rigs._generators.calibration import export_schema
+
 import ucl_open_coen_av_corridor.rig
 import ucl_open_coen_av_corridor.task
 
 SCHEMA_ROOT = Path("./src/DataSchemas/")
-SCHEMA_FILE = SCHEMA_ROOT / "ucl_open_coen_av_corridor.json"
+EXTENSIONS_ROOT = Path("./src/Extensions/")
+
+
+def regenerate(model_type: type, schema_file: Path) -> None:
+    """Write the JSON schema for one root model and run Bonsai.Sgen on it."""
+    model = pydantic.RootModel[model_type]
+    schema = model.model_json_schema(by_alias=True, mode="serialization", union_format="primitive_type_array")
+    schema_file.write_text(json.dumps(schema, indent=2))
+    subprocess.run(
+        [
+            "dotnet",
+            "bonsai.sgen",
+            str(schema_file),
+            "--output",
+            str(EXTENSIONS_ROOT),
+            "--serializer",
+            "json",
+            "--serializer",
+            "yaml",
+        ],
+        check=True,
+    )
 
 
 def main():
-    models = [
-        ucl_open_coen_av_corridor.task.UclOpenCoenAvCorridorTaskLogic,
-        ucl_open_coen_av_corridor.rig.UclOpenCoenAvCorridorRig,
-        ExperimentSession
-    ]
-    model = pydantic.RootModel[Union[tuple(models)]]
-    schema = model.model_json_schema(by_alias=True, mode="serialization", union_format="primitive_type_array")
+    """Regenerate the JSON schemas and Bonsai.Sgen C# classes from the pydantic models."""
     SCHEMA_ROOT.mkdir(parents=True, exist_ok=True)
-    SCHEMA_FILE.write_text(json.dumps(schema, indent=2))
-    print(f"Schema written to {SCHEMA_FILE}")
-    os.system("dotnet bonsai.sgen src/DataSchemas/ucl_open_coen_av_corridor.json --output src/Extensions --serializer json --serializer yaml")
+    regenerate(ucl_open_coen_av_corridor.rig.UclOpenCoenAvCorridorRig, SCHEMA_ROOT / "ucl_open_coen_av_corridor.json")
+    regenerate(ucl_open_coen_av_corridor.task.UclOpenCoenAvCorridorTaskLogic, SCHEMA_ROOT / "ucl_open_coen_av_corridor_task.json")
+    # The platform's calibration types (artefacts and procedure settings) generate no C# here: the
+    # rig schema binds them to OpenRigs.Core. The schema is exported only so config/valve-calibration.yml
+    # validates in the editor.
+    export_schema(SCHEMA_ROOT / "calibration.json")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,8 @@ Bonsai/Settings/
 *.exe
 *.exe.settings
 *.layout
+# The workflow's editor layout, which deploy.ps1 copies to the machine's (camera preview, exposure and gain).
+!config/main.layout
 *.editor
 local
 .venv
@@ -84,3 +86,6 @@ ipython_config.py
 #   For a library or package, you might want to ignore these files since the code is
 #   intended to run in multiple environments; otherwise, check them in:
 # .python-version
+# The tone pips, error tone and background noise the workflow plays: generated once by
+# ucl_open_coen_av_corridor.waveforms from config/task.yml, committed (tests check them).
+!src/waveforms/*.bin

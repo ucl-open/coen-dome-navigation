@@ -1,0 +1,1416 @@
+{
+  "$defs": {
+    "AudioDevice": {
+      "description": "A multi-channel audio output device driven through the mixer.",
+      "properties": {
+        "deviceName": {
+          "description": "The name of the audio output device.",
+          "examples": [
+            "Speakers (XMOS xCORE-200 MC (UAC2.0))"
+          ],
+          "title": "DeviceName",
+          "type": "string"
+        },
+        "hostApi": {
+          "default": "Windows WDM-KS",
+          "description": "The audio host API used to open the device.",
+          "title": "HostApi",
+          "type": "string"
+        },
+        "sampleRate": {
+          "default": 48000,
+          "description": "Output sampling rate, in Hz.",
+          "exclusiveMinimum": 0,
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "title": "SampleRate",
+          "type": "integer"
+        },
+        "channelCount": {
+          "default": 32,
+          "description": "Number of output channels.",
+          "exclusiveMinimum": 0,
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "title": "ChannelCount",
+          "type": "integer"
+        },
+        "suggestedLatency": {
+          "default": 0.002,
+          "description": "Suggested output latency, in seconds.",
+          "exclusiveMinimum": 0,
+          "title": "SuggestedLatency",
+          "type": "number"
+        },
+        "bootDelay": {
+          "default": 3.0,
+          "description": "Delay before starting the mixer, in seconds. Guards against a driver fault on startup.",
+          "minimum": 0,
+          "title": "BootDelay",
+          "type": "number"
+        }
+      },
+      "required": [
+        "deviceName"
+      ],
+      "title": "AudioDevice",
+      "type": "object"
+    },
+    "BehaviorBoard": {
+      "description": "Represents a Harp Behavior Board device.",
+      "properties": {
+        "portName": {
+          "description": "The name of the device serial port.",
+          "examples": [
+            "COM"
+          ],
+          "title": "PortName",
+          "type": "string"
+        },
+        "usbSerial": {
+          "description": "The board's USB serial number, its FTDI chip's (AB0M7PLB): which board this is. OpenRigs.HarpDevices stops the workflow at Start if the board on portName has another. The rig's hardware scan lists each port's (serialPorts, usbSerial).",
+          "title": "UsbSerial",
+          "type": "string"
+        },
+        "pulseController": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PulseController"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional PulseController module for generating digital output pulses.",
+          "title": "PulseController"
+        },
+        "cameraTriggerController": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CameraTriggerController"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional CameraTriggerController module for emitting camera trigger pulses.",
+          "title": "CameraTriggerController"
+        },
+        "runningWheel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunningWheel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional RunningWheelModule module to define wheel geometry.",
+          "title": "RunningWheel"
+        },
+        "liveView": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LiveView"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Live view settings for this board (OpenRigs.LiveView).",
+          "title": "LiveView"
+        },
+        "wiring": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoardWiring"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into each line (Pip, 7 Nov 2026): checked at Start against the lines the workflow uses (its schemas/board-lines.yml) by OpenRigs.HarpDevices.",
+          "title": "Wiring"
+        }
+      },
+      "required": [
+        "portName",
+        "usbSerial"
+      ],
+      "title": "BehaviorBoard",
+      "type": "object"
+    },
+    "BoardWiring": {
+      "description": "What is plugged into each line of a Harp Behavior board, by the board's own channel names. A\nline left out is unknown, which is allowed only for a line no workflow on the rig uses.",
+      "properties": {
+        "DIPort0": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DIPort0 (digital input, port 0); left out when unknown.",
+          "title": "DiPort0"
+        },
+        "DIPort1": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DIPort1 (digital input, port 1); left out when unknown.",
+          "title": "DiPort1"
+        },
+        "DIPort2": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DIPort2 (digital input, port 2); left out when unknown.",
+          "title": "DiPort2"
+        },
+        "DI3": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DI3 (digital input 3); left out when unknown.",
+          "title": "Di3"
+        },
+        "DIO0": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DIO0 (port 0 digital input/output); left out when unknown.",
+          "title": "Dio0"
+        },
+        "DIO1": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DIO1 (port 1 digital input/output); left out when unknown.",
+          "title": "Dio1"
+        },
+        "DIO2": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DIO2 (port 2 digital input/output); left out when unknown.",
+          "title": "Dio2"
+        },
+        "DO0": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DO0 (digital output 0, camera trigger 0's pin); left out when unknown.",
+          "title": "Do0"
+        },
+        "DO1": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DO1 (digital output 1, camera trigger 1's pin); left out when unknown.",
+          "title": "Do1"
+        },
+        "DO2": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DO2 (digital output 2); left out when unknown.",
+          "title": "Do2"
+        },
+        "DO3": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DO3 (digital output 3); left out when unknown.",
+          "title": "Do3"
+        },
+        "DOPort0": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DOPort0 (digital output, port 0); left out when unknown.",
+          "title": "DoPort0"
+        },
+        "DOPort1": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DOPort1 (digital output, port 1); left out when unknown.",
+          "title": "DoPort1"
+        },
+        "DOPort2": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into DOPort2 (digital output, port 2); left out when unknown.",
+          "title": "DoPort2"
+        },
+        "SupplyPort0": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into SupplyPort0 (port 0 supply); left out when unknown.",
+          "title": "SupplyPort0"
+        },
+        "SupplyPort1": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into SupplyPort1 (port 1 supply); left out when unknown.",
+          "title": "SupplyPort1"
+        },
+        "SupplyPort2": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into SupplyPort2 (port 2 supply); left out when unknown.",
+          "title": "SupplyPort2"
+        },
+        "Led0": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into Led0 (LED 0); left out when unknown.",
+          "title": "Led0"
+        },
+        "Led1": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into Led1 (LED 1); left out when unknown.",
+          "title": "Led1"
+        },
+        "Rgb0": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into Rgb0 (RGB LED 0); left out when unknown.",
+          "title": "Rgb0"
+        },
+        "Rgb1": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into Rgb1 (RGB LED 1); left out when unknown.",
+          "title": "Rgb1"
+        },
+        "AnalogInput0": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into AnalogInput0 (analog input 0, ADC0); left out when unknown.",
+          "title": "AnalogInput0"
+        },
+        "AnalogInput1": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WiredLine"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What is plugged into AnalogInput1 (analog input 1, ADC1); left out when unknown.",
+          "title": "AnalogInput1"
+        }
+      },
+      "title": "BoardWiring",
+      "type": "object"
+    },
+    "CalibratedPulse": {
+      "description": "A pulsed output whose width comes from a calibration curve at run time, such as a reward valve.",
+      "properties": {
+        "artefact": {
+          "description": "Relative path of the CalibrationCurve that converts the requested quantity to a pulse width: a file written by the platform's DispenseCalibration procedure into this machine's calibration folder.",
+          "examples": [
+            "calibration/valve-DO1.json"
+          ],
+          "title": "Artefact",
+          "type": "string",
+          "x-rig-artefact": true
+        },
+        "fit": {
+          "$ref": "#/$defs/CalibrationModel",
+          "default": "LinearFit",
+          "description": "How the rig fits the artefact's points at startup. LinearFit suits repeated weighings.",
+          "title": "Fit"
+        },
+        "maxAgeDays": {
+          "default": 90,
+          "description": "Warn at startup when the artefact is older than this many days. 0 disables the check.",
+          "minimum": 0,
+          "title": "MaxAgeDays",
+          "type": "integer"
+        },
+        "discriminatorType": {
+          "const": "CalibratedPulse",
+          "default": "CalibratedPulse",
+          "title": "DiscriminatorType",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artefact"
+      ],
+      "title": "CalibratedPulse",
+      "type": "object"
+    },
+    "CalibrationModel": {
+      "description": "How a calibration curve is derived from its points; the `OpenRigs.Core.CalibrationModel` operators' enum.",
+      "enum": [
+        "LinearFit",
+        "PolynomialFit",
+        "Linear",
+        "CubicSpline",
+        "Step"
+      ],
+      "title": "CalibrationModel",
+      "type": "string",
+      "x-sgen-typename": "OpenRigs.Core.CalibrationModel"
+    },
+    "CameraTriggerController": {
+      "description": "Represents a CameraTriggerController module on a BehaviorBoard device.\n\nThe two camera trigger outputs share pins with digital outputs: Trigger0 is DO0 and Trigger1\nis DO1. A trigger that is not enabled is never started, which leaves its pin free for a pulse\noutput such as a reward valve.",
+      "properties": {
+        "trigger0Enabled": {
+          "default": true,
+          "description": "Start camera trigger 0 (CameraOutput0, the DO0 pin) when the rig starts.",
+          "title": "Trigger0Enabled",
+          "type": "boolean"
+        },
+        "trigger0Frequency": {
+          "description": "The frequency, in Hz, at which to emit camera triggers on Trigger0 (DO0, CameraOutput0)",
+          "examples": [
+            "50"
+          ],
+          "title": "Trigger0Frequency",
+          "type": "integer"
+        },
+        "trigger1Enabled": {
+          "default": false,
+          "description": "Start camera trigger 1 (CameraOutput1, the DO1 pin) when the rig starts. Leave off when DO1 drives a pulse output.",
+          "title": "Trigger1Enabled",
+          "type": "boolean"
+        },
+        "trigger1Frequency": {
+          "description": "The frequency, in Hz, at which to emit camera triggers on Trigger1 (DO1, CameraOutput1). Only matters when trigger 1 is enabled.",
+          "examples": [
+            "50"
+          ],
+          "title": "Trigger1Frequency",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "trigger0Frequency",
+        "trigger1Frequency"
+      ],
+      "title": "CameraTriggerController",
+      "type": "object"
+    },
+    "DigitalOutputs": {
+      "allOf": [
+        {
+          "type": "string"
+        }
+      ],
+      "description": "A set of behavior board digital output lines, written comma separated.",
+      "title": "DigitalOutputs",
+      "x-sgen-typename": "Harp.Behavior.DigitalOutputs"
+    },
+    "FixedPulse": {
+      "description": "A pulsed output whose width is set in the rig configuration, such as an LED, an air puff or a TTL.",
+      "properties": {
+        "pulseWidthMs": {
+          "description": "Pulse duration, in milliseconds.",
+          "maximum": 65535,
+          "minimum": 0,
+          "title": "PulseWidthMs",
+          "type": "integer"
+        },
+        "discriminatorType": {
+          "const": "FixedPulse",
+          "default": "FixedPulse",
+          "title": "DiscriminatorType",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pulseWidthMs"
+      ],
+      "title": "FixedPulse",
+      "type": "object"
+    },
+    "HarpStepperDriver": {
+      "description": "Single Harp StepperDriver board (who_am_i=1130). Controls up to 4 motors (0-3).",
+      "properties": {
+        "portName": {
+          "description": "The name of the device serial port.",
+          "examples": [
+            "COM"
+          ],
+          "title": "PortName",
+          "type": "string"
+        },
+        "usbSerial": {
+          "default": null,
+          "description": "The USB serial number of the board on port_name, which tells it from others of its kind.",
+          "title": "UsbSerial",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stepInterval": {
+          "default": 250,
+          "description": "Step interval in \u00b5s (100-20000). Lower = faster.",
+          "title": "StepInterval",
+          "type": "integer"
+        },
+        "microstepResolution": {
+          "default": "Microstep8",
+          "description": "Microstep resolution. Affects how many steps equal one physical unit.",
+          "enum": [
+            "Full",
+            "Half",
+            "Microstep4",
+            "Microstep8",
+            "Microstep16",
+            "Microstep32"
+          ],
+          "title": "MicrostepResolution",
+          "type": "string"
+        },
+        "maximumRunCurrent": {
+          "default": 0.5,
+          "description": "Maximum run current in amps (0.0-2.0).",
+          "maximum": 2.0,
+          "minimum": 0.0,
+          "title": "MaximumRunCurrent",
+          "type": "number"
+        }
+      },
+      "required": [
+        "portName"
+      ],
+      "title": "HarpStepperDriver",
+      "type": "object"
+    },
+    "HarpTimestampGeneratorGen3": {
+      "description": "Harp Timestamp Generator Gen3 (who_am_i=1158). Provides hardware clock synchronisation.",
+      "properties": {
+        "portName": {
+          "description": "The name of the device serial port.",
+          "examples": [
+            "COM"
+          ],
+          "title": "PortName",
+          "type": "string"
+        },
+        "usbSerial": {
+          "default": null,
+          "description": "The USB serial number of the board on port_name, which tells it from others of its kind.",
+          "title": "UsbSerial",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timerFrequency": {
+          "$ref": "#/$defs/TimerFrequency",
+          "default": "Timer1000Hz",
+          "description": "Frequency of the timer output signal."
+        }
+      },
+      "required": [
+        "portName"
+      ],
+      "title": "HarpTimestampGeneratorGen3",
+      "type": "object"
+    },
+    "LicketySplit": {
+      "description": "Represents a Harp LicketySplit device.",
+      "properties": {
+        "portName": {
+          "description": "The name of the device serial port.",
+          "examples": [
+            "COM"
+          ],
+          "title": "PortName",
+          "type": "string"
+        },
+        "usbSerial": {
+          "default": null,
+          "description": "The USB serial number of the board on port_name, which tells it from others of its kind.",
+          "title": "UsbSerial",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "channel0TriggerThreshold": {
+          "default": 0,
+          "description": "ADC threshold above which Channel 0 triggers a lick",
+          "maximum": 65535,
+          "minimum": 0,
+          "title": "Channel0TriggerThreshold",
+          "type": "integer"
+        },
+        "channel0UntriggerThreshold": {
+          "default": 0,
+          "description": "ADC threshold below which Channel 0 untriggers a lick",
+          "maximum": 65535,
+          "minimum": 0,
+          "title": "Channel0UntriggerThreshold",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "portName"
+      ],
+      "title": "LicketySplit",
+      "type": "object"
+    },
+    "LiveView": {
+      "description": "How OpenRigs.LiveView's StreamDevices streams this device; each setting left out keeps its default for the device's kind.",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "False: the device is not streamed at all.",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "rate": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1000,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Messages per second (camera default 5, behavior board 10).",
+          "title": "Rate"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "maximum": 4096,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Width of the streamed frames, in pixels; video only (default 320).",
+          "title": "Width"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "maximum": 4096,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Height of the streamed frames, in pixels; video only (default 240).",
+          "title": "Height"
+        }
+      },
+      "title": "LiveView",
+      "type": "object"
+    },
+    "ProjectionCalibration": {
+      "description": "File-based calibration assets for mesh-mapped projection displays.\n\nSuperseded by vision.ProjectionCorrection, whose paths are relative to the rig configuration\ndirectory; kept until av-dome migrates (ucl-open/av-dome#20, #22).",
+      "properties": {
+        "meshMapPath": {
+          "description": "Path to the mesh-mapping interpolation file (CSV)",
+          "examples": [
+            "C:\\RigConfigs\\MeshMap.csv"
+          ],
+          "title": "MeshMapPath",
+          "type": "string"
+        },
+        "gammaLutPath": {
+          "description": "Path to the gamma lookup-table image (BMP)",
+          "examples": [
+            "C:\\RigConfigs\\gammalut.bmp"
+          ],
+          "title": "GammaLutPath",
+          "type": "string"
+        }
+      },
+      "required": [
+        "meshMapPath",
+        "gammaLutPath"
+      ],
+      "title": "ProjectionCalibration",
+      "type": "object"
+    },
+    "PulseController": {
+      "description": "Represents the PulseController module on the BehaviorBoard.",
+      "properties": {
+        "outputPulseEnable": {
+          "$ref": "#/$defs/DigitalOutputs",
+          "default": "DO1, DO2, DO3",
+          "description": "Digital output lines enabled for pulse generation, comma separated.",
+          "title": "OutputPulseEnable"
+        },
+        "outputs": {
+          "$ref": "#/$defs/PulseOutputs",
+          "description": "Pulse source of each digital output line.",
+          "title": "Outputs"
+        }
+      },
+      "required": [
+        "outputs"
+      ],
+      "title": "PulseController",
+      "type": "object"
+    },
+    "PulseOutput": {
+      "description": "What drives the pulse width of one digital output line: a fixed width or a calibration curve.",
+      "discriminator": {
+        "mapping": {
+          "CalibratedPulse": "#/$defs/CalibratedPulse",
+          "FixedPulse": "#/$defs/FixedPulse"
+        },
+        "propertyName": "discriminatorType"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FixedPulse"
+        },
+        {
+          "$ref": "#/$defs/CalibratedPulse"
+        }
+      ],
+      "title": "PulseOutput"
+    },
+    "PulseOutputs": {
+      "description": "The pulse source of each behavior board digital output line. Each line appears once.\n\nAll three lines are required: a union has no default that survives code generation, so an\nunused line is written as a FixedPulse with a width of 0.",
+      "properties": {
+        "DO1": {
+          "$ref": "#/$defs/PulseOutput",
+          "description": "Pulse source for DO1.",
+          "title": "Do1"
+        },
+        "DO2": {
+          "$ref": "#/$defs/PulseOutput",
+          "description": "Pulse source for DO2.",
+          "title": "Do2"
+        },
+        "DO3": {
+          "$ref": "#/$defs/PulseOutput",
+          "description": "Pulse source for DO3; a FixedPulse of width 0 if unused.",
+          "title": "Do3"
+        }
+      },
+      "required": [
+        "DO1",
+        "DO2",
+        "DO3"
+      ],
+      "title": "PulseOutputs",
+      "type": "object"
+    },
+    "RewardValves": {
+      "description": "Which behavior board line drives each side's reward valve. The workflow reads it at startup\n(LoadSideRewardLine): a left reward pulses the left line, a right reward the right line, each\nwith that line's entry in behaviorBoard.main.pulseController.outputs. rig-control's Calibrations\npage names each valve line's side from it.",
+      "properties": {
+        "left": {
+          "$ref": "#/$defs/ValveLine",
+          "description": "The line that drives the left lick spout's reward valve",
+          "title": "Left"
+        },
+        "right": {
+          "$ref": "#/$defs/ValveLine",
+          "description": "The line that drives the right lick spout's reward valve",
+          "title": "Right"
+        }
+      },
+      "required": [
+        "left",
+        "right"
+      ],
+      "title": "RewardValves",
+      "type": "object"
+    },
+    "RunningWheel": {
+      "description": "Represents configuration parameters of the RunningWheel module.\nExposes wheel geometry parameters used to compute speed and distance from encoder counts.",
+      "properties": {
+        "countsPerRev": {
+          "description": "Number of encoder counts per full revolution of the running wheel.",
+          "title": "CountsPerRev",
+          "type": "integer"
+        },
+        "wheelDiameterMm": {
+          "description": "The diameter of the running wheel, in millimetres.",
+          "title": "WheelDiameterMm",
+          "type": "number"
+        }
+      },
+      "required": [
+        "countsPerRev",
+        "wheelDiameterMm"
+      ],
+      "title": "RunningWheel",
+      "type": "object"
+    },
+    "Side": {
+      "description": "Which side of the animal a line serves.",
+      "enum": [
+        "left",
+        "right"
+      ],
+      "title": "Side",
+      "type": "string"
+    },
+    "Speaker": {
+      "description": "A single speaker in a spatial audio array.",
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/SphericalPosition",
+          "description": "Position of the speaker relative to the subject.",
+          "title": "Position"
+        },
+        "channel": {
+          "description": "Mixer output channel driving this speaker.",
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "title": "Channel",
+          "type": "integer"
+        },
+        "gain": {
+          "default": 1.0,
+          "description": "Gain correction applied to this speaker's channel.",
+          "minimum": 0,
+          "title": "Gain",
+          "type": "number"
+        },
+        "filter": {
+          "anyOf": [
+            {
+              "type": "string",
+              "x-rig-artefact": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Relative path of this speaker's SpeakerFilter artefact; none means the channel is not equalised.",
+          "examples": [
+            "calibration/speaker-left.json"
+          ],
+          "title": "Filter"
+        }
+      },
+      "required": [
+        "position",
+        "channel"
+      ],
+      "title": "Speaker",
+      "type": "object"
+    },
+    "SpeakerArray": {
+      "description": "A spatial speaker array driven by a single audio device.",
+      "properties": {
+        "device": {
+          "$ref": "#/$defs/AudioDevice",
+          "description": "The audio device driving the array.",
+          "title": "Device"
+        },
+        "speakers": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Speaker"
+          },
+          "description": "Speakers in the array, keyed by name.",
+          "examples": [
+            {
+              "centre": {
+                "channel": 2,
+                "position": {
+                  "azimuth": 0,
+                  "elevation": 15
+                }
+              },
+              "left": {
+                "channel": 0,
+                "position": {
+                  "azimuth": -90,
+                  "elevation": 15
+                }
+              },
+              "right": {
+                "channel": 1,
+                "position": {
+                  "azimuth": 90,
+                  "elevation": 15
+                }
+              }
+            }
+          ],
+          "title": "Speakers",
+          "type": "object"
+        },
+        "syncChannel": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Channel carrying a sync copy of each stimulus, for alignment with acquisition.",
+          "title": "SyncChannel"
+        },
+        "syncGain": {
+          "default": 0.2,
+          "description": "Gain applied to the sync channel.",
+          "minimum": 0,
+          "title": "SyncGain",
+          "type": "number"
+        },
+        "unusedChannels": {
+          "description": "Output channels with nothing connected.",
+          "items": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "title": "UnusedChannels",
+          "type": "array"
+        }
+      },
+      "required": [
+        "device",
+        "speakers"
+      ],
+      "title": "SpeakerArray",
+      "type": "object"
+    },
+    "SphericalPosition": {
+      "description": "A position on a sphere centred on the subject.",
+      "properties": {
+        "azimuth": {
+          "description": "Azimuth, in degrees. Zero is straight ahead, positive to the right.",
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Azimuth",
+          "type": "number"
+        },
+        "elevation": {
+          "description": "Elevation, in degrees. Zero is the horizontal plane.",
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Elevation",
+          "type": "number"
+        },
+        "radius": {
+          "default": 1.0,
+          "description": "Distance from the subject, in metres.",
+          "exclusiveMinimum": 0,
+          "title": "Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "azimuth",
+        "elevation"
+      ],
+      "title": "SphericalPosition",
+      "type": "object"
+    },
+    "SpinnakerCamera": {
+      "properties": {
+        "triggerFrequency": {
+          "default": 50,
+          "description": "The frequency at which the camera is triggered (in Hz).",
+          "minimum": 1,
+          "title": "TriggerFrequency",
+          "type": "number"
+        },
+        "exposureTime": {
+          "default": 15000,
+          "description": "The exposure time for the camera (in microseconds).",
+          "minimum": 0,
+          "title": "ExposureTime",
+          "type": "number"
+        },
+        "serialNumber": {
+          "default": "00000",
+          "description": "The serial number of the camera.",
+          "title": "SerialNumber",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gain": {
+          "default": 1,
+          "description": "The camera gain.",
+          "minimum": 0,
+          "title": "Gain",
+          "type": "number"
+        },
+        "binning": {
+          "default": 1,
+          "description": "The binning setting for the camera.",
+          "minimum": 1,
+          "title": "Binning",
+          "type": "integer"
+        },
+        "discriminatorType": {
+          "const": "SpinnakerCamera",
+          "default": "SpinnakerCamera",
+          "title": "DiscriminatorType",
+          "type": "string"
+        },
+        "liveView": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LiveView"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Live view settings for this camera (OpenRigs.LiveView).",
+          "title": "LiveView"
+        }
+      },
+      "title": "SpinnakerCamera",
+      "type": "object"
+    },
+    "StepperPositions": {
+      "description": "Absolute target position for the 5-axis spout rig, expressed in task-relative axes.",
+      "properties": {
+        "leftElevation": {
+          "description": "Left spout elevation axis absolute position (steps). Maps to motor 1",
+          "title": "LeftElevation",
+          "type": "integer"
+        },
+        "rightElevation": {
+          "description": "Right spout elevation axis absolute position (steps). Maps to motor 2",
+          "title": "RightElevation",
+          "type": "integer"
+        },
+        "rightRadial": {
+          "description": "Right spout radial axis (in/out) absolute position (steps). Maps to motor 3",
+          "title": "RightRadial",
+          "type": "integer"
+        },
+        "leftRadial": {
+          "description": "Left spout radial axis (in/out) absolute position (steps). Maps to motor 4",
+          "title": "LeftRadial",
+          "type": "integer"
+        },
+        "baseTransverse": {
+          "description": "Base transverse axis absolute position (steps). Maps to motor 5",
+          "title": "BaseTransverse",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "leftElevation",
+        "rightElevation",
+        "rightRadial",
+        "leftRadial",
+        "baseTransverse"
+      ],
+      "title": "StepperPositions",
+      "type": "object"
+    },
+    "TimerFrequency": {
+      "enum": [
+        "Disabled",
+        "Timer50Hz",
+        "Timer100Hz",
+        "Timer200Hz",
+        "Timer500Hz",
+        "Timer1000Hz"
+      ],
+      "title": "TimerFrequency",
+      "type": "string",
+      "x-sgen-typename": "Harp.TimestampGeneratorGen3.TimerRate"
+    },
+    "UclOpenCoenAvCorridorRig": {
+      "description": "Rig configuration for the coen-av-corridor experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).\n\nEach kind of device is a group of named entries, as the lab's rig.yml (open_rigs.rigs.behaviour_box):\nthe name in the data is the kind and the entry joined by a hyphen, so behaviorBoard: main: is\nBehaviorBoard-Main. The workflow takes each device it drives by that name (RigDevice). Harp kinds\nare named as lib-open-rigs' HarpRig names them, so RecordHarpDevices checks each board's WhoAmI.",
+      "properties": {
+        "rootPath": {
+          "description": "The root path on which to log all data.",
+          "title": "RootPath",
+          "type": "string"
+        },
+        "rigId": {
+          "default": null,
+          "description": "A short code naming this rig, kept when another computer takes over its job, for labs that build it into session IDs (for example the <RR> in ses-<NNN><RR>). Its form is the lab's to decide.",
+          "title": "RigId",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "const": "0.0.0-rc1",
+          "default": "0.0.0-rc1",
+          "title": "Version",
+          "type": "string"
+        },
+        "behaviorBoard": {
+          "additionalProperties": {
+            "$ref": "#/$defs/BehaviorBoard"
+          },
+          "description": "Harp Behavior boards by name: main (BehaviorBoard-Main) drives the valves, camera trigger and wheel encoder",
+          "title": "BehaviorBoard",
+          "type": "object"
+        },
+        "timestampGeneratorGen3": {
+          "additionalProperties": {
+            "$ref": "#/$defs/HarpTimestampGeneratorGen3"
+          },
+          "description": "Harp timestamp generators by name: main (TimestampGeneratorGen3-Main) syncs the boards' clocks",
+          "title": "TimestampGeneratorGen3",
+          "type": "object"
+        },
+        "stepperDriver": {
+          "additionalProperties": {
+            "$ref": "#/$defs/HarpStepperDriver"
+          },
+          "description": "Harp StepperDriver boards by name: a and b (StepperDriver-A, StepperDriver-B) drive the lick spout stage's 5 axes; which motor moves which axis is fixed in the workflow",
+          "title": "StepperDriver",
+          "type": "object"
+        },
+        "licketySplit": {
+          "additionalProperties": {
+            "$ref": "#/$defs/LicketySplit"
+          },
+          "description": "Lick detectors by name: left (LicketySplit-Left) and right (LicketySplit-Right)",
+          "title": "LicketySplit",
+          "type": "object"
+        },
+        "camera": {
+          "additionalProperties": {
+            "$ref": "#/$defs/SpinnakerCamera"
+          },
+          "description": "Spinnaker cameras by name: face, pupil and body (Camera-Face, Camera-Pupil, Camera-Body)",
+          "title": "Camera",
+          "type": "object"
+        },
+        "projectionCalibration": {
+          "$ref": "#/$defs/ProjectionCalibration",
+          "description": "Mesh-map and gamma-LUT file paths for the dome projection"
+        },
+        "speakerArray": {
+          "$ref": "#/$defs/SpeakerArray",
+          "description": "Dome speaker array and audio output device"
+        },
+        "lickSpoutDefaultPosition": {
+          "$ref": "#/$defs/StepperPositions",
+          "description": "Default absolute stage position at session start",
+          "title": "LickSpoutDefaultPosition"
+        },
+        "zapit": {
+          "$ref": "#/$defs/ZapitServer",
+          "description": "Zapit optogenetics server endpoint; only contacted when the task enables optogenetics",
+          "title": "Zapit"
+        },
+        "rewardValves": {
+          "$ref": "#/$defs/RewardValves",
+          "description": "Which behavior board line drives the left and which the right reward valve, such as { left: DO1, right: DO2 }"
+        },
+        "interPulseInterval": {
+          "default": 50,
+          "description": "Gap between consecutive reward pulses, in milliseconds. Must be long enough for the valve to seat before the next trigger; 0 re-triggers the instant the board closes the valve and risks merged or dropped pulses.",
+          "minimum": 0,
+          "title": "InterPulseInterval",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rootPath",
+        "behaviorBoard",
+        "timestampGeneratorGen3",
+        "stepperDriver",
+        "licketySplit",
+        "camera",
+        "projectionCalibration",
+        "speakerArray",
+        "lickSpoutDefaultPosition",
+        "zapit",
+        "rewardValves"
+      ],
+      "title": "UclOpenCoenAvCorridorRig",
+      "type": "object"
+    },
+    "ValveLine": {
+      "description": "A behavior board digital output that can drive a reward valve.",
+      "enum": [
+        "DO1",
+        "DO2",
+        "DO3"
+      ],
+      "title": "ValveLine",
+      "type": "string"
+    },
+    "WiredLine": {
+      "description": "What is plugged into one line of the board. A workflow's schemas/board-lines.yml says what it\nuses each line for, and OpenRigs.HarpDevices compares the two at Start: device, side and targets\nmust agree on every line the workflow uses, or the workflow stops. part and note are for people.",
+      "properties": {
+        "device": {
+          "description": "What is on the line, as the workflow's board-lines.yml names it. Nothing holds the word to a lab list yet: wiredDevices in K:\\config\\device-dictionary.json, checked by rig-control's names check, is planned.",
+          "examples": [
+            "RewardValve",
+            "CameraTrigger",
+            "Photodiode",
+            "ZapitTrigger"
+          ],
+          "title": "Device",
+          "type": "string"
+        },
+        "side": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Side"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The side it serves, where that matters (a reward valve).",
+          "title": "Side"
+        },
+        "targets": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The rig's devices this line drives or reads, by their Kind-Instance names in this rig.yml.",
+          "examples": [
+            [
+              "Camera-Face",
+              "Camera-Pupil",
+              "Camera-Body"
+            ]
+          ],
+          "title": "Targets"
+        },
+        "part": {
+          "default": null,
+          "description": "The physical part, for people; never compared.",
+          "title": "Part",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "note": {
+          "default": null,
+          "description": "Anything else about the line (a cable label, a patch panel), for people; never compared.",
+          "title": "Note",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "device"
+      ],
+      "title": "WiredLine",
+      "type": "object"
+    },
+    "ZapitServer": {
+      "description": "TCP endpoint of the Zapit optogenetics server (tcpServer section of the Zapit settings file).",
+      "properties": {
+        "host": {
+          "default": "127.0.0.1",
+          "description": "Host name or IP address of the PC running Zapit; 127.0.0.1 when Zapit runs on this rig PC",
+          "title": "Host",
+          "type": "string"
+        },
+        "port": {
+          "default": 1488,
+          "description": "TCP port the Zapit server listens on",
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Port",
+          "type": "integer"
+        },
+        "hardwareTriggered": {
+          "default": false,
+          "description": "True: Zapit arms the DAQ on the TCP command and the behavior board fires a TTL on triggerLine when Zapit confirms it is armed. False: Zapit starts the stimulus on receipt of the command.",
+          "title": "HardwareTriggered",
+          "type": "boolean"
+        },
+        "triggerLine": {
+          "default": 3,
+          "description": "Behavior board digital output (0 to 3) wired to the Zapit DAQ trigger input; pulsed with the width set in behaviorBoard.pulseController.pulseWidths for that line. Only used when hardwareTriggered is true.",
+          "maximum": 3,
+          "minimum": 0,
+          "title": "TriggerLine",
+          "type": "integer"
+        }
+      },
+      "title": "ZapitServer",
+      "type": "object"
+    }
+  },
+  "$ref": "#/$defs/UclOpenCoenAvCorridorRig",
+  "title": "RootModel[UclOpenCoenAvCorridorRig]"
+}

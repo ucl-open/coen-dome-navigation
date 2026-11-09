@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_av_corridor_task.json
+# The task file: rig-control copies it at Go with the form's edits (Modality and Shaping Stage on
+# the form; the stage is suggested from the mouse's earlier experiments) and the workflow reads the
+# copy (TaskPath). From the editor, the workflow reads this file as it is.
+#
+# Not every rule is in the schema: tests\test_task_file.py checks this file against the pydantic
+# model (src\ucl_open_coen_av_corridor\task.py), which also says what each field does.
+version: 0.0.0-rc1
+name: UclOpenCoenAvCorridor
+taskParameters:
+  modality: A                 # A (auditory), V (visual) or AV
+  shapingStage: 1             # 1-6; 6 is stage 5 with truncated trials, only ever chosen by hand
+  # The sweep and its loudness. src\waveforms is made for these four: change them only together
+  # with `uv run generate-waveforms` and a commit, or the workflow stops at Go.
+  startFreq: 2000             # Hz
+  endFreq: 25000              # Hz
+  nFreqBins: 100
+  amplitude: 0.05             # a tone pip peaks at amplitude squared
+  centerFreq: 18000           # Hz, the middle of every reward window
+  rewardWindowSize: 6000      # Hz
+  # The reward zone per stage, as task.py derives it from centerFreq, rewardWindowSize and endFreq
+  # (the workflow does not derive it): change them together, and tests\test_task_file.py checks.
+  thresholdFrequencies:
+    stage1: { floor: 18000, ceiling: 25000 }   # rewarded on reaching the zone, no lick needed
+    stage2: { floor: 18000, ceiling: 25000 }
+    stage3: { floor: 15248, ceiling: 25000 }   # a lick anywhere above the floor
+    stage4: { floor: 15248, ceiling: 21248 }   # the ceiling comes in; wrong licks punished
+    stage5: { floor: 15248, ceiling: 21248 }   # stage 6 uses stage 5's
+  rewardSizeUl: 2.0           # ul per reward on the left spout
+  punishment:
+    timeoutSec: 2
+    stage4PunishedLick: 8
+    stage5PunishedLick: 5
+  truncation:                 # stage 6 only
+    fraction: 0.16
+    points: [0.4, 0.6]
+  engagement:                 # how stage.py labels engaged trials
+    rollWindow: 25
+    rollThreshold: 0.5
+    minEpoch: 10
+  optogenetics:
+    enabled: false
+    zapitConfigPath: ''       # the Zapit stimulus config loaded in Zapit
+    stimProbability: 0.75
+    stimDuration: 12.0        # s
+    leadTime: 0.1             # s before the first tone pip; a multiple of 0.05
+    pseudorandomSelection: true
+    warmupTrials: 0
+  backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
+  quantizeBinSize: 1          # Hz
