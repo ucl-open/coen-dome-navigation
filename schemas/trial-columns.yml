@@ -11,8 +11,9 @@
 #
 # Only what changes from trial to trial (Pip, 9 Nov 2026): the task file's values fixed for the
 # experiment (the stage's row, amplitude) are in Settings\Settings_Task_*.json and the stage itself
-# is TrainingStage in Settings\Settings_Experiment_*.json; no column repeats another (optoStimulated
-# was optoCondition > 0) or sums the Harp logs (lickCount, trialStartWheelCm until 9 Nov 2026).
+# is TrainingStage in Settings\Settings_Experiment_*.json; no column repeats another or sums the Harp logs (lickCount, trialStartWheelCm until 9 Nov 2026).
+# optoStimulated is back (zapit-v2): with sham trials every trial of an optogenetics experiment has a
+# condition, so laser on is no longer optoCondition > 0.
 
 Seconds:
   type: double
@@ -100,6 +101,9 @@ rewardSizeUl:
   type: double
   unit: ul
   description: Microlitres a reward on this trial gives (the stage's rewardSizeUl in trainingStages). What was delivered is RewardDelivered in BonsaiData_Async.
+optoStimulated:
+  type: bool
+  description: True when the laser was on in this trial. False on sham trials (laser off) and without optogenetics.
 optoCondition:
   type: int
-  description: The Zapit condition stimulated, 0 when none (Zapit numbers conditions from 1).
+  description: The Zapit condition (stimLocations number, from 1) presented in this trial, laser on or off - every trial of an optogenetics experiment has one, so with optoStimulated false it was a sham trial. 0 without optogenetics.

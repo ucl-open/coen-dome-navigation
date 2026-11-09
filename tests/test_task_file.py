@@ -92,10 +92,31 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
 
 
 def test_the_optogenetics_block_is_av_dome_s():
-    # Pip, 9 Nov 2026: the same parameter names as av-dome's OptogeneticsSettings (pip/main-switchover 6c5a885).
-    av_dome = ["enabled", "zapitConfigPath", "stimProbability", "stimDelay", "stimDuration", "excludeRepeats",
+    # Pip, 9 Nov 2026: the same parameter names as av-dome's OptogeneticsSettings (pip/main-switchover 6c5a885),
+    # plus leadTime (zapit-v2): how long the stimulus runs before the first tone pip.
+    av_dome = ["enabled", "zapitConfigPath", "stimProbability", "stimDelay", "stimDuration", "leadTime", "excludeRepeats",
                "pseudorandomSelection", "warmupTrials"]
     assert list(task()["taskParameters"]["optogenetics"]) == av_dome
+
+
+def test_the_schema_refuses_a_stim_delay():
+    # Zapit ignores a start delay for the continuous stimulus this task uses, so only 0 is accepted (zapit-v2)
+    schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8")))
+    validator = jsonschema.Draft202012Validator(schema)
+    doc = task()
+    assert list(validator.iter_errors(doc)) == []
+    doc["taskParameters"]["optogenetics"]["stimDelay"] = 0.2
+    assert [e.message for e in validator.iter_errors(doc)] == ["0.2 is greater than the maximum of 0"]
+
+
+def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
+    # zapit-v2: Tom's design (40% laser after 20 sham warmup trials, 0.1 s lead, 12.5 s cap). The reward is meant to be
+    # 3 ul, but 2.0 on every stage until the left valves are calibrated: an uncalibrated valve is taken as 2 ul a pulse,
+    # so 2 ul is one opening of Tom's width (42 ms on BLUE-OPTO-2, measured as about 3 ul) and 3 ul was two (BACKLOG).
+    params = task()["taskParameters"]
+    opto = params["optogenetics"]
+    assert (opto["stimProbability"], opto["warmupTrials"], opto["leadTime"], opto["stimDuration"], opto["stimDelay"]) == (0.4, 20, 0.1, 12.5, 0.0)
+    assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {2.0}
 
 
 def test_the_committed_task_schema_is_the_model_s():
