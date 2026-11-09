@@ -1,7 +1,10 @@
 """What the audit of 9 Nov 2026 found wrong in src\\main.bonsai stays fixed."""
 
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+import yaml
 
 W = "{https://bonsai-rx.org/2018/workflow}"
 XSI = "{http://www.w3.org/2001/XMLSchema-instance}type"
@@ -59,6 +62,15 @@ def test_the_safety_stop_and_startup_checks_are_there():
     text = ET.tostring(MAIN, encoding="unicode")
     for name in ("StimulusLeftOn?", "ZapitError?", "ConditionCountReply?", "SoftwareTriggeredRealMouse?", "Settings_ZapitStimConfig"):
         assert ">%s<" % name in text, name
+
+
+def test_the_trial_row_writes_the_schema_s_columns_in_its_order():
+    # schemas\trial-columns.yml is what rig-control checks and the manifest carries; BuildTrialRow is what is written.
+    scr = "{clr-namespace:Bonsai.Scripting.Expressions;assembly=Bonsai.Scripting.Expressions}"
+    build = next(e for e in group("TrialRow").iter() if e.findtext(scr + "Name") == "BuildTrialRow")
+    written = re.findall(r" as (\w+)", build.findtext(scr + "Expression"))
+    schema = yaml.safe_load((Path(__file__).parents[1] / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))
+    assert written == [c for c in schema if c != "Seconds"]
 
 
 def test_the_trial_row_is_built_at_the_outcome_not_two_seconds_later():

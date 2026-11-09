@@ -1,76 +1,80 @@
-"""The optogenetics settings' rules (zapit-v2): lead_time in whole beeps, a stim_duration cap longer than the
-longest trial, stim_delay fixed at 0, and the constants the rules share with main.bonsai and InitialiseOptoTrial.cs."""
+"""The optogenetics settings' rules (zapit-v2): lead_time in whole beeps up to 0.2 s, a stim_duration cap longer than the
+longest trial (trialStructure.closedLoopDuration + lead_time), stim_delay fixed at 0, and the places main.bonsai and
+InitialiseOptoTrial.cs share those rules."""
+import copy
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pydantic
 import pytest
+import yaml
 
 from ucl_open_coen_dome_navigation.task import (
     BEEP_INTERVAL_SEC,
-    MAX_TRIAL_TIME_SEC,
     STIM_DURATION_MARGIN_SEC,
     OptogeneticsConfig,
+    UclOpenCoenDomeNavigationTaskParameters,
 )
 
 ROOT = Path(__file__).parent.parent
+TASK = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_text(encoding="utf-8"))["taskParameters"]
+
+
+def params(closed_loop=None, **opto):
+    """The task file's parameters with optogenetics on and the given changes."""
+    doc = copy.deepcopy(TASK)
+    doc["optogenetics"].update(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml", **opto)
+    if closed_loop is not None:
+        doc["trialStructure"]["closedLoopDuration"] = closed_loop
+    return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
 
 
 @pytest.mark.parametrize("lead_time", [0.05, 0.1, 0.15, 0.2])
-def test_lead_time_in_whole_beeps_is_accepted(lead_time):
-    assert OptogeneticsConfig(lead_time=lead_time, stim_duration=13.5).lead_time == lead_time
+def test_lead_time_in_whole_beeps_up_to_0_2_is_accepted(lead_time):
+    assert OptogeneticsConfig(lead_time=lead_time).lead_time == lead_time
 
 
 @pytest.mark.parametrize("lead_time", [0.0, 0.07, 0.125, 0.25, 0.5, 1.0])
 def test_other_lead_times_are_refused(lead_time):
     with pytest.raises(pydantic.ValidationError, match="lead_time"):
-        OptogeneticsConfig(lead_time=lead_time, stim_duration=13.5)
+        OptogeneticsConfig(lead_time=lead_time)
 
 
-@pytest.mark.parametrize("lead_time, stim_duration", [(0.1, 12.35), (0.1, 12.5), (0.2, 12.45), (0.2, 13.0)])
-def test_a_cap_longer_than_the_longest_trial_is_accepted(lead_time, stim_duration):
-    assert OptogeneticsConfig(lead_time=lead_time, stim_duration=stim_duration).stim_duration == stim_duration
+@pytest.mark.parametrize("closed_loop, lead_time, stim_duration", [(12, 0.1, 12.35), (12, 0.1, 12.5), (12, 0.2, 12.45), (20, 0.1, 20.35)])
+def test_a_cap_longer_than_the_longest_trial_is_accepted(closed_loop, lead_time, stim_duration):
+    assert params(closed_loop, leadTime=lead_time, stimDuration=stim_duration).optogenetics.stim_duration == stim_duration
 
 
-@pytest.mark.parametrize("lead_time, stim_duration", [(0.1, 12.0), (0.2, 12.4), (0.15, 12.3), (0.1, float("inf"))])
-def test_a_cap_that_would_end_a_timeout_trial_early_is_refused(lead_time, stim_duration):
+@pytest.mark.parametrize("closed_loop, lead_time, stim_duration", [(12, 0.1, 12.0), (12, 0.2, 12.4), (15, 0.1, 12.5)])
+def test_a_cap_that_would_end_a_timed_out_trial_early_is_refused(closed_loop, lead_time, stim_duration):
     with pytest.raises(pydantic.ValidationError, match="stim_duration"):
-        OptogeneticsConfig(lead_time=lead_time, stim_duration=stim_duration)
+        params(closed_loop, leadTime=lead_time, stimDuration=stim_duration)
 
 
-def test_stim_delay_must_be_0():
+def test_the_cap_rule_only_applies_with_optogenetics_on():
+    doc = copy.deepcopy(TASK)
+    doc["trialStructure"]["closedLoopDuration"] = 30
+    assert UclOpenCoenDomeNavigationTaskParameters.model_validate(doc).optogenetics.enabled is False
+
+
+def test_stim_duration_must_be_finite_and_stim_delay_0():
+    with pytest.raises(pydantic.ValidationError, match="stim_duration"):
+        OptogeneticsConfig(stim_duration=float("inf"))
     with pytest.raises(pydantic.ValidationError):
         OptogeneticsConfig(stim_delay=0.2)
 
 
-def test_the_workflow_timeout_is_max_trial_time_sec():
-    """The TimeSpanProperty feeding the MaxTrialTimeSec subject is the timeout the stim_duration rule assumes."""
-    xsi = "{http://www.w3.org/2001/XMLSchema-instance}type"
-    local = lambda tag: tag.rsplit("}", 1)[-1]
-    found = []
-    for wf in ET.parse(ROOT / "src" / "main.bonsai").getroot().iter():
-        nodes = next((c for c in wf if local(c.tag) == "Nodes"), None)
-        edges = next((c for c in wf if local(c.tag) == "Edges"), None)
-        if nodes is None or edges is None:
-            continue
-        nodes = list(nodes)
-        for i, node in enumerate(nodes):
-            name = node.find("{*}Name")
-            if "Subject" in (node.get(xsi) or "") and name is not None and name.text == "MaxTrialTimeSec":
-                for e in edges:
-                    if int(e.get("To")) == i:
-                        value = nodes[int(e.get("From"))].find(".//{*}Value")
-                        if value is not None:
-                            found.append(float(re.fullmatch(r"PT([\d.]+)S", value.text).group(1)))
-    assert found == [MAX_TRIAL_TIME_SEC]
+def test_the_workflow_time_limit_is_closed_loop_duration():
+    """MaxTrialTimeSec, the timeout the cap rule assumes, comes from trialStructure.closedLoopDuration."""
+    text = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
+    assert re.search(r"TimeSpan\.FromSeconds\(it\.TrialStructure\.ClosedLoopDuration\)", text)
 
 
 def test_initialise_opto_trial_checks_the_same_rules():
     text = (ROOT / "src" / "Extensions" / "InitialiseOptoTrial.cs").read_text(encoding="utf-8")
-    assert float(re.search(r"const double MaxTrialTimeSec = ([\d.]+);", text).group(1)) == MAX_TRIAL_TIME_SEC
     assert float(re.search(r"const double StimDurationMarginSec = ([\d.]+);", text).group(1)) == STIM_DURATION_MARGIN_SEC
     assert float(re.search(r"const double BeepIntervalSec = ([\d.]+);", text).group(1)) == BEEP_INTERVAL_SEC
+    assert "TrialStructure.ClosedLoopDuration" in text and "Math.Round(beeps) <= 4" in text
 
 
 def test_the_stimulus_config_is_saved_as_json():

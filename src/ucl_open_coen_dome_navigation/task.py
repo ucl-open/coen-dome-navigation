@@ -1,104 +1,85 @@
 """The task file's schema: config/task-abstract-av-corridor.yml, which rig-control copies with the form's edits and the
-workflow reads at Go (TaskPath). Ported from Tom Childs' auditory-vr-corridor task.py; what each
-field does in the task is unchanged unless its description says otherwise."""
+workflow reads at Go (TaskPath). Ported from Tom Childs' auditory-vr-corridor task.py.
+
+Laid out as av-dome's (Pip, 9 Nov 2026): the stage is the TrainingStage experiment setting, a row of trainingStages
+from 0 (Tom's stages 1 to 6 are rows 0 to 5), and each row says what the stage does, where the workflow used to test
+the stage number; trialStructure holds the ITI and time limit, punishment the timeout and error sound, and rngSeed
+seeds every draw."""
 
 import math
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
-from pydantic import ConfigDict, Field, model_validator
+from open_rigs.core.task import Task, TaskParameters
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from swc.aeon.schema import BaseSchema
 
 from ucl_open_coen_dome_navigation import __semver__
-from ucl_open_coen_dome_navigation.helpers import calc_log_window
 
-MAX_SHAPING_STAGE = 6
 BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (HarpBeat)
-MAX_TRIAL_TIME_SEC = 12.0  # main.bonsai's MaxTrialTimeSec: the trial timeout, from the first tone pip on trial 1 and one beep earlier later
-STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial the stim_duration cap must be
+STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial (closedLoopDuration + lead_time) the stim_duration cap must be
+
+STAGE_COUNT = 6
 
 
-class Stage(BaseSchema):
-    """Frequency boundaries for a single shaping stage."""
+class TrialStructure(BaseSchema):
+    """Timing of each trial."""
 
-    floor: int = Field(description="Lower frequency threshold (Hz)", ge=1, le=25000)
-    ceiling: int = Field(description="Upper frequency ceiling (Hz)", ge=1, le=25000)
+    iti_min: float = Field(default=0.0, ge=0, description="Lower bound of the uniformly drawn inter-trial interval, in seconds")
+    iti_max: float = Field(default=1.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds")
+    quiescent_seconds: float = Field(
+        default=1.0,
+        ge=0,
+        description="On a stage with quiescent, the next trial waits until the mouse has gone this long without licking (uncapped), so licks for the last reward cannot carry into the next trial",
+    )
+    closed_loop_duration: float = Field(
+        default=12.0, gt=0, description="On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)"
+    )
+    track_lengths_cm: List[float] = Field(
+        default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
+    )
 
     @model_validator(mode="after")
-    def validate_floor_less_than_ceiling(self):
-        if self.floor >= self.ceiling:
-            raise ValueError("Reward freq floor must be less than ceiling")
+    def _iti_ordered(self) -> "TrialStructure":
+        if self.iti_max < self.iti_min:
+            raise ValueError("iti_max must be >= iti_min")
         return self
 
 
-class ThresholdFrequencies(BaseSchema):
-    """Floor and ceiling frequencies of the reward zone for each shaping stage."""
+class PunishmentSound(BaseSchema):
+    """The error sound played on a punished trial."""
 
-    stage1: Stage
-    stage2: Stage
-    stage3: Stage
-    stage4: Stage
-    stage5: Stage
+    enabled: bool = Field(default=True, description="Whether the error sound plays on a punished trial")
+    path: str = Field(default="waveforms\\error_tone.wav", description="Wav file of the error sound, relative to src")
+    gain: float = Field(default=1.0, ge=0, description="Playback gain of the error sound")
 
 
-class PunishmentConfig(BaseSchema):
-    """Punishment params."""
+class Punishment(BaseSchema):
+    """What an error costs, as the lab's tasks name it (the trial log's punishSound and punishTimeoutSeconds)."""
 
-    timeout_sec: int = Field(default=2, description="Timeout duration in seconds")
-    stage4_punished_lick: int = Field(default=8, description="Punished lick in stage 4", ge=1)
-    stage5_punished_lick: int = Field(default=5, description="Punished lick in stage 5", ge=1)
+    timeout_seconds: float = Field(default=2.0, ge=0, description="Timeout after a punished trial, in seconds")
+    sound: PunishmentSound = Field(default=PunishmentSound(), description="The error sound on a punished trial")
 
 
-class TruncationConfig(BaseSchema):
-    """Truncated trials, used in stage 6 only.
+class Truncation(BaseSchema):
+    """Where the cue switches off on a truncated trial (a stage's truncationFraction says how many).
 
     On a truncated trial the cue (tone and grating) switches off part way along the sweep. Everything else about
     the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
     zone without the cue.
     """
 
-    fraction: float = Field(
-        default=0.16,
-        description="Fraction of stage 6 trials that are truncated, split evenly between the truncation points",
-        ge=0.0,
-        le=1.0,
-    )
-    points: list[float] = Field(
+    points: List[float] = Field(
         default=[0.4, 0.6],
-        description="Where the cue switches off, as a fraction of the sweep on a log scale. The reward floor is at about 0.8",
         min_length=1,
+        description="Where the cue switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
     )
 
-    @model_validator(mode="after")
-    def validate_points(self):
-        if any(not 0 < point < 1 for point in self.points):
+    @field_validator("points")
+    @classmethod
+    def _points_inside(cls, value: List[float]) -> List[float]:
+        if any(not 0 < point < 1 for point in value):
             raise ValueError("Truncation points must be between 0 and 1")
-        return self
-
-
-class EngagementConfig(BaseSchema):
-    """How engagement is labelled: whether the animal is still attempting the task. Kept from Tom Childs'
-    model, whose gen_session.py printed an engaged success rate beside the stage; the stage rules
-    (stage.py) never used it, and nothing here reads it now.
-
-    A mouse partway through an experiment often keeps running but stops licking. Those trials are not failures (it
-    is not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read
-    from whether each trial contained a lick, smoothed over a window of trials.
-    """
-
-    roll_window: int = Field(
-        default=25,
-        description="Trials averaged around each trial when deciding engagement. Prefer an odd value",
-        ge=1,
-    )
-    roll_threshold: float = Field(
-        default=0.5, description="Lick fraction at or below which the animal counts as disengaged", ge=0.0, le=1.0
-    )
-    min_epoch: int = Field(
-        default=10,
-        description="Shortest run of trials that can be called engaged or disengaged; shorter runs are absorbed into their neighbours",
-        ge=1,
-        le=20,
-    )
+        return value
 
 
 class OptogeneticsConfig(BaseSchema):
@@ -144,7 +125,7 @@ class OptogeneticsConfig(BaseSchema):
     stim_duration: float = Field(
         default=12.5,
         gt=0,
-        description="Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. Must be at least 12 s + lead_time + 0.25 s, so it never ends a timeout trial's laser early; stages 1-3 have no timeout, so there a longer trial loses its stimulus",
+        description="Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + lead_time + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its stimulus",
     )
     lead_time: float = Field(
         default=0.1,
@@ -176,31 +157,46 @@ class OptogeneticsConfig(BaseSchema):
         return self
 
     @model_validator(mode="after")
-    def validate_stim_duration(self):
-        # The laser is meant to stay on until the outcome; a cap shorter than the longest trial would cut every timeout trial short
-        shortest = MAX_TRIAL_TIME_SEC + self.lead_time + STIM_DURATION_MARGIN_SEC
-        if not math.isfinite(self.stim_duration) or self.stim_duration < shortest - 1e-9:
-            raise ValueError(
-                f"stim_duration ({self.stim_duration} s) must be at least {shortest:g} s: the {MAX_TRIAL_TIME_SEC:g} s timeout "
-                f"counts from the first tone pip, lead_time ({self.lead_time} s) after onset"
-            )
+    def validate_stim_duration_finite(self):
+        if not math.isfinite(self.stim_duration):
+            raise ValueError(f"stim_duration ({self.stim_duration}) must be a finite number of seconds")
         return self
 
 
-class UclOpenCoenDomeNavigationTaskParameters(BaseSchema):
+class TrainingStage(BaseSchema):
+    """One row of the training stage table: what the stage does. Rows are selected by the TrainingStage setting."""
+
+    label: str = Field(description="The stage's name, for people")
+    reward_floor_hz: float = Field(ge=1, le=25000, description="Lower frequency of the reward zone, in Hz")
+    reward_ceiling_hz: float = Field(ge=1, le=25000, description="Upper frequency of the reward zone, in Hz")
+    reward_size_ul: float = Field(
+        gt=0,
+        description="Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)",
+    )
+    lick_to_reward: bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
+    wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
+    punish_wrong_zone: bool = Field(
+        description="Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage"
+    )
+    quiescent: bool = Field(description="Whether the next trial waits for trialStructure.quiescentSeconds without licks")
+    time_limit: bool = Field(description="Whether a trial ends at trialStructure.closedLoopDuration")
+    track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
+    track_length_scale: float = Field(gt=0, description="The drawn track length is multiplied by this")
+    frequency_drift: bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
+    truncation_fraction: float = Field(ge=0, le=1, description="Fraction of trials whose cue switches off early (truncation.points)")
+
+    @model_validator(mode="after")
+    def _zone_ordered(self) -> "TrainingStage":
+        if self.reward_floor_hz >= self.reward_ceiling_hz:
+            raise ValueError("reward_floor_hz must be below reward_ceiling_hz")
+        return self
+
+
+class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     """Task params."""
 
-    modality: Literal["A", "V", "AV"] = Field(
-        default="A", description="Stimulus modality: auditory (A), visual (V), or audiovisual (AV)"
-    )
-    shaping_stage: int = Field(
-        default=1,
-        description=(
-            "Shaping stage (1-6). rig-control suggests one from the mouse's earlier experiments of this modality "
-            "(stage.py); stage 6 (stage 5 with truncated trials) is only ever chosen by hand"
-        ),
-        ge=1,
-        le=MAX_SHAPING_STAGE,
+    modality: Literal["auditory", "visual", "audiovisual"] = Field(
+        default="auditory", description="What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)"
     )
     start_freq: int = Field(
         default=2000,
@@ -219,22 +215,16 @@ class UclOpenCoenDomeNavigationTaskParameters(BaseSchema):
         description="Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
         ge=10,
     )
-    center_freq: int = Field(default=18000, description="Center frequency of all reward windows (Hz)", ge=1, le=25000)
-    reward_window_size: int = Field(
-        default=6000,
-        ge=1,
-        le=25000,
-        description="Window size around center_freq, setting the reward floor for stages 3-5 and the ceiling for stages 4-5 (Hz)",
+    amplitude: float = Field(
+        default=0.05,
+        description="Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
+        ge=0.0,
+        le=1.0,
     )
-    threshold_frequencies: Optional[ThresholdFrequencies] = None
-    reward_size_ul: float = Field(
-        default=3.0,
-        gt=0,
-        description=(
-            "Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; "
-            "an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)"
-        ),
+    background_noise_level: float = Field(
+        default=0.5, description="Constant background white noise RMS, as a fraction of the beep RMS (0 = off)", ge=0.0, le=1.0
     )
+    quantize_bin_size: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
     wheel_diameter_mm: Optional[float] = Field(
         default=75.0,
         gt=0,
@@ -245,54 +235,47 @@ class UclOpenCoenDomeNavigationTaskParameters(BaseSchema):
             "diameter is settled"
         ),
     )
-    punishment: PunishmentConfig = PunishmentConfig()
-    truncation: TruncationConfig = TruncationConfig()
-    engagement: EngagementConfig = EngagementConfig()
-    optogenetics: OptogeneticsConfig = OptogeneticsConfig()
-    amplitude: float = Field(
-        default=0.05,
-        description="Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-        ge=0.0,
-        le=1.0,
+    trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
+    punishment: Punishment = Field(default=Punishment(), description="The timeout and error sound a punished trial gets")
+    truncation: Truncation = Field(default=Truncation(), description="Where the cue switches off on a truncated trial")
+    optogenetics: OptogeneticsConfig = Field(default=OptogeneticsConfig(), description="Zapit optogenetic stimulation")
+    training_stages: List[TrainingStage] = Field(
+        description="Training stage table, indexed by the TrainingStage setting from 0; a setting past the end uses the last row"
     )
-    background_noise_level: float = Field(
-        default=0.5, description="Constant background white noise RMS, as a fraction of the beep RMS (0 = off)", ge=0.0, le=1.0
-    )
-    quantize_bin_size: int = Field(default=1, description="Bin size for frequency quantization (Hz)", ge=1)
 
     @model_validator(mode="after")
-    def validate_start_less_than_end_freq(self):
-        if self.start_freq >= self.end_freq:
-            raise ValueError("start_freq must be less than end_freq")
-
-        # Reward window with center_freq in the middle of the window in log space
-        reward_floor, reward_ceiling = calc_log_window(center_freq=self.center_freq, window_size=self.reward_window_size)
-        if reward_ceiling > self.end_freq:
+    def _stim_duration_outlasts_the_trial(self):
+        # The laser is meant to stay on until the outcome: the cap must be longer than the longest trial, the time limit
+        # (closedLoopDuration, counted from the first tone pip) plus lead_time (zapit-v2)
+        opto = self.optogenetics
+        shortest = self.trial_structure.closed_loop_duration + opto.lead_time + STIM_DURATION_MARGIN_SEC
+        if opto.enabled and opto.stim_duration < shortest - 1e-9:
             raise ValueError(
-                f"reward_ceiling ({reward_ceiling}) exceeds end_freq ({self.end_freq}) - reduce reward_window_size or increase end_freq."
+                f"optogenetics.stim_duration ({opto.stim_duration} s) must be at least {shortest:g} s: trialStructure.closedLoopDuration "
+                f"({self.trial_structure.closed_loop_duration:g} s) counts from the first tone pip, lead_time ({opto.lead_time} s) after onset"
             )
-        if reward_floor <= self.start_freq:
-            raise ValueError(
-                f"reward_floor ({reward_floor}) is not above start_freq ({self.start_freq}) - reduce reward_window_size or increase center_freq."
-            )
-
-        if self.threshold_frequencies is None:
-            # Windows 'perceptually balanced' around center_freq in log space. The reward floor is the same from
-            # stage 3 onwards and only the ceiling comes down: mice lick in anticipation of the reward frequency, so
-            # moving the floor between stages invalidates the timing they have already learnt.
-            self.threshold_frequencies = ThresholdFrequencies(
-                stage1=Stage(floor=self.center_freq, ceiling=self.end_freq),  # rewarded on entering the zone, no lick needed
-                stage2=Stage(floor=self.center_freq, ceiling=self.end_freq),
-                stage3=Stage(floor=reward_floor, ceiling=self.end_freq),  # must lick, anywhere above the floor
-                stage4=Stage(floor=reward_floor, ceiling=reward_ceiling),  # ceiling comes in; wrong licks punished
-                stage5=Stage(floor=reward_floor, ceiling=reward_ceiling),  # same window, fewer wrong licks tolerated
-            )  # Stage 6 is stage 5 with truncated trials, so it uses the stage 5 window and punishment
         return self
 
+    @model_validator(mode="after")
+    def _zones_inside_sweep(self):
+        if self.start_freq >= self.end_freq:
+            raise ValueError("start_freq must be less than end_freq")
+        for i, stage in enumerate(self.training_stages):
+            if stage.reward_floor_hz <= self.start_freq or stage.reward_ceiling_hz > self.end_freq:
+                raise ValueError(f"training_stages[{i}]'s reward zone is not inside the sweep ({self.start_freq} to {self.end_freq} Hz)")
+        return self
 
-class UclOpenCoenDomeNavigationTaskLogic(BaseSchema):
+    @field_validator("training_stages")
+    @classmethod
+    def _at_least_one_stage(cls, value: List[TrainingStage]) -> List[TrainingStage]:
+        if not value:
+            raise ValueError("training_stages must have at least one entry")
+        return value
+
+
+class UclOpenCoenDomeNavigationTaskLogic(Task):
     """Top-level task logic schema."""
 
     version: Literal[__semver__] = __semver__
     name: Literal["UclOpenCoenDomeNavigation"] = Field(default="UclOpenCoenDomeNavigation", description="Name of the task")
-    task_parameters: UclOpenCoenDomeNavigationTaskParameters = UclOpenCoenDomeNavigationTaskParameters()
+    task_parameters: UclOpenCoenDomeNavigationTaskParameters

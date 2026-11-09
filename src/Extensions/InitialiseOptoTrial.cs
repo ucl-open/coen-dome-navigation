@@ -24,7 +24,7 @@ public class InitialiseOptoTrial
         Seed = -1;
     }
 
-    [Description("Seed for the draws. -1 (recommended) uses a new random seed each experiment. Every trial's draw is in BonsaiData_Trial (optoStimulated, optoCondition), so an experiment can be reconstructed either way.")]
+    [Description("Seed for the stimulation draws. -1 (the default) seeds them from the task's rngSeed, or randomly when it is null. Every trial's draw is in BonsaiData_Trial (optoStimulated, optoCondition), so an experiment can be reconstructed.")]
     public int Seed { get; set; }
 
     // Instance state: this operator sits inside TaskLogic's per-trial Defer, which calls Process again on every trial with
@@ -49,7 +49,7 @@ public class InitialiseOptoTrial
         }
         if (trialNumber == 1 || random == null)
         {
-            Reset();
+            Reset(parameters);
         }
 
         var trial = new OptoTrial();
@@ -66,7 +66,7 @@ public class InitialiseOptoTrial
 
         if (conditions == null)
         {
-            Validate(optogenetics);
+            Validate(optogenetics, parameters);
             conditions = ZapitStimConfig.ReadConditionNumbers(optogenetics.ZapitConfigPath);
             Console.WriteLine("InitialiseOptoTrial: Zapit stimulus config '" + optogenetics.ZapitConfigPath + "' has " +
                 conditions.Count + " conditions");
@@ -80,9 +80,13 @@ public class InitialiseOptoTrial
         return trial;
     }
 
-    private void Reset()
+    private void Reset(UclOpenCoenDomeNavigationTaskParameters parameters)
     {
-        random = Seed != -1 ? new Random(Seed) : new Random(Guid.NewGuid().GetHashCode());
+        // Seed, else the task's rngSeed (one on from TaskRandom's, so the stimulation draws are not the trial draws over
+        // again; Pip, 9 Nov 2026), else a random one.
+        random = Seed != -1 ? new Random(Seed)
+            : parameters.RngSeed.HasValue ? new Random(unchecked((int)parameters.RngSeed.Value + 1))
+            : new Random(Guid.NewGuid().GetHashCode());
         conditions = null;
         stimQueue.Clear();
         shamQueue.Clear();
@@ -98,12 +102,11 @@ public class InitialiseOptoTrial
     }
 
     const double BeepIntervalSec = 0.05;        // HarpBeat's beep; task.py BEEP_INTERVAL_SEC
-    const double MaxTrialTimeSec = 12.0;        // main.bonsai MaxTrialTimeSec; task.py MAX_TRIAL_TIME_SEC
     const double StimDurationMarginSec = 0.25;  // task.py STIM_DURATION_MARGIN_SEC
 
     // The task schema enforces most of these, but rig-control only checks the schema, not task.py's cross-field rules,
     // so they are checked again here: a bad value would silently change every trial.
-    private static void Validate(OptogeneticsConfig optogenetics)
+    private static void Validate(OptogeneticsConfig optogenetics, UclOpenCoenDomeNavigationTaskParameters parameters)
     {
         if (!(optogenetics.StimProbability >= 0 && optogenetics.StimProbability <= 1))
         {
@@ -125,14 +128,15 @@ public class InitialiseOptoTrial
             throw new InvalidOperationException(string.Format(
                 "optogenetics.leadTime must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LeadTime));
         }
-        // The laser is meant to stay on until the outcome, so the cap must be longer than the longest trial: the workflow's
-        // MaxTrialTimeSec (12 s, counted from the first tone pip, LeadTime after onset, on trial 1 and one beep earlier later) plus a margin.
-        var shortestCap = MaxTrialTimeSec + optogenetics.LeadTime + StimDurationMarginSec;
+        // The laser is meant to stay on until the outcome, so the cap must be longer than the longest trial: the time limit
+        // (trialStructure.closedLoopDuration, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LeadTime after onset) plus a margin.
+        var timeLimit = parameters.TrialStructure != null ? parameters.TrialStructure.ClosedLoopDuration : 12.0;
+        var shortestCap = timeLimit + optogenetics.LeadTime + StimDurationMarginSec;
         if (!(optogenetics.StimDuration >= shortestCap - 1e-9) || double.IsInfinity(optogenetics.StimDuration))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.stimDuration must be at least {0} s (the 12 s timeout from the first tone pip, plus leadTime, plus {1} s), "
-                + "or a timeout trial's laser would stop before its outcome; got {2}.", shortestCap, StimDurationMarginSec, optogenetics.StimDuration));
+                "optogenetics.stimDuration must be at least {0} s (trialStructure.closedLoopDuration, {1} s from the first tone pip, plus leadTime, "
+                + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, StimDurationMarginSec, optogenetics.StimDuration));
         }
     }
 

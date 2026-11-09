@@ -1,35 +1,5 @@
 {
   "$defs": {
-    "EngagementConfig": {
-      "description": "How engagement is labelled: whether the animal is still attempting the task. Kept from Tom Childs'\nmodel, whose gen_session.py printed an engaged success rate beside the stage; the stage rules\n(stage.py) never used it, and nothing here reads it now.\n\nA mouse partway through an experiment often keeps running but stops licking. Those trials are not failures (it\nis not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read\nfrom whether each trial contained a lick, smoothed over a window of trials.",
-      "properties": {
-        "rollWindow": {
-          "default": 25,
-          "description": "Trials averaged around each trial when deciding engagement. Prefer an odd value",
-          "minimum": 1,
-          "title": "RollWindow",
-          "type": "integer"
-        },
-        "rollThreshold": {
-          "default": 0.5,
-          "description": "Lick fraction at or below which the animal counts as disengaged",
-          "maximum": 1.0,
-          "minimum": 0.0,
-          "title": "RollThreshold",
-          "type": "number"
-        },
-        "minEpoch": {
-          "default": 10,
-          "description": "Shortest run of trials that can be called engaged or disengaged; shorter runs are absorbed into their neighbours",
-          "maximum": 20,
-          "minimum": 1,
-          "title": "MinEpoch",
-          "type": "integer"
-        }
-      },
-      "title": "EngagementConfig",
-      "type": "object"
-    },
     "OptogeneticsConfig": {
       "description": "Zapit optogenetic stimulation: av-dome's fields, plus lead_time.\n\nThe stimulation sites, laser power and ramp-down are set in the Zapit stimulus config loaded in Zapit, not\nhere. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of\nan optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as sham trials\nwith the laser off, so galvo noise and masking light are the same on every trial. The stimulus is continuous: it\nstarts at the trial's start (beep 0: the trigger pulse on a hardware-triggered rig), lead_time before the first\ntone pip, and Bonsai stops it at the trial's outcome, or after stim_duration if that comes first. Zapit's host,\nport and triggering are rig.yml's zapit block.",
       "if": {
@@ -74,7 +44,7 @@
         },
         "stimDuration": {
           "default": 12.5,
-          "description": "Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. Must be at least 12 s + lead_time + 0.25 s, so it never ends a timeout trial's laser early; stages 1-3 have no timeout, so there a longer trial loses its stimulus",
+          "description": "Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + lead_time + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its stimulus",
           "exclusiveMinimum": 0,
           "title": "StimDuration",
           "type": "number"
@@ -118,109 +88,210 @@
       "title": "OptogeneticsConfig",
       "type": "object"
     },
-    "PunishmentConfig": {
-      "description": "Punishment params.",
+    "Punishment": {
+      "description": "What an error costs, as the lab's tasks name it (the trial log's punishSound and punishTimeoutSeconds).",
       "properties": {
-        "timeoutSec": {
-          "default": 2,
-          "description": "Timeout duration in seconds",
-          "title": "TimeoutSec",
-          "type": "integer"
-        },
-        "stage4PunishedLick": {
-          "default": 8,
-          "description": "Punished lick in stage 4",
-          "minimum": 1,
-          "title": "Stage4PunishedLick",
-          "type": "integer"
-        },
-        "stage5PunishedLick": {
-          "default": 5,
-          "description": "Punished lick in stage 5",
-          "minimum": 1,
-          "title": "Stage5PunishedLick",
-          "type": "integer"
-        }
-      },
-      "title": "PunishmentConfig",
-      "type": "object"
-    },
-    "Stage": {
-      "description": "Frequency boundaries for a single shaping stage.",
-      "properties": {
-        "floor": {
-          "description": "Lower frequency threshold (Hz)",
-          "maximum": 25000,
-          "minimum": 1,
-          "title": "Floor",
-          "type": "integer"
-        },
-        "ceiling": {
-          "description": "Upper frequency ceiling (Hz)",
-          "maximum": 25000,
-          "minimum": 1,
-          "title": "Ceiling",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "floor",
-        "ceiling"
-      ],
-      "title": "Stage",
-      "type": "object"
-    },
-    "ThresholdFrequencies": {
-      "description": "Floor and ceiling frequencies of the reward zone for each shaping stage.",
-      "properties": {
-        "stage1": {
-          "$ref": "#/$defs/Stage",
-          "title": "Stage1"
-        },
-        "stage2": {
-          "$ref": "#/$defs/Stage",
-          "title": "Stage2"
-        },
-        "stage3": {
-          "$ref": "#/$defs/Stage",
-          "title": "Stage3"
-        },
-        "stage4": {
-          "$ref": "#/$defs/Stage",
-          "title": "Stage4"
-        },
-        "stage5": {
-          "$ref": "#/$defs/Stage",
-          "title": "Stage5"
-        }
-      },
-      "required": [
-        "stage1",
-        "stage2",
-        "stage3",
-        "stage4",
-        "stage5"
-      ],
-      "title": "ThresholdFrequencies",
-      "type": "object"
-    },
-    "TruncationConfig": {
-      "description": "Truncated trials, used in stage 6 only.\n\nOn a truncated trial the cue (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the cue.",
-      "properties": {
-        "fraction": {
-          "default": 0.16,
-          "description": "Fraction of stage 6 trials that are truncated, split evenly between the truncation points",
-          "maximum": 1.0,
-          "minimum": 0.0,
-          "title": "Fraction",
+        "timeoutSeconds": {
+          "default": 2.0,
+          "description": "Timeout after a punished trial, in seconds",
+          "minimum": 0,
+          "title": "TimeoutSeconds",
           "type": "number"
         },
+        "sound": {
+          "$ref": "#/$defs/PunishmentSound",
+          "default": {
+            "enabled": true,
+            "path": "waveforms\\error_tone.wav",
+            "gain": 1.0
+          },
+          "description": "The error sound on a punished trial",
+          "title": "Sound"
+        }
+      },
+      "title": "Punishment",
+      "type": "object"
+    },
+    "PunishmentSound": {
+      "description": "The error sound played on a punished trial.",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Whether the error sound plays on a punished trial",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "path": {
+          "default": "waveforms\\error_tone.wav",
+          "description": "Wav file of the error sound, relative to src",
+          "title": "Path",
+          "type": "string"
+        },
+        "gain": {
+          "default": 1.0,
+          "description": "Playback gain of the error sound",
+          "minimum": 0,
+          "title": "Gain",
+          "type": "number"
+        }
+      },
+      "title": "PunishmentSound",
+      "type": "object"
+    },
+    "TrainingStage": {
+      "description": "One row of the training stage table: what the stage does. Rows are selected by the TrainingStage setting.",
+      "properties": {
+        "label": {
+          "description": "The stage's name, for people",
+          "title": "Label",
+          "type": "string"
+        },
+        "rewardFloorHz": {
+          "description": "Lower frequency of the reward zone, in Hz",
+          "maximum": 25000,
+          "minimum": 1,
+          "title": "RewardFloorHz",
+          "type": "number"
+        },
+        "rewardCeilingHz": {
+          "description": "Upper frequency of the reward zone, in Hz",
+          "maximum": 25000,
+          "minimum": 1,
+          "title": "RewardCeilingHz",
+          "type": "number"
+        },
+        "rewardSizeUl": {
+          "description": "Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)",
+          "exclusiveMinimum": 0,
+          "title": "RewardSizeUl",
+          "type": "number"
+        },
+        "lickToReward": {
+          "description": "Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed",
+          "title": "LickToReward",
+          "type": "boolean"
+        },
+        "wrongLickLimit": {
+          "description": "Licks outside the zone that end the trial; 0: wrong licks never end it",
+          "minimum": 0,
+          "title": "WrongLickLimit",
+          "type": "integer"
+        },
+        "punishWrongZone": {
+          "description": "Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage",
+          "title": "PunishWrongZone",
+          "type": "boolean"
+        },
+        "quiescent": {
+          "description": "Whether the next trial waits for trialStructure.quiescentSeconds without licks",
+          "title": "Quiescent",
+          "type": "boolean"
+        },
+        "timeLimit": {
+          "description": "Whether a trial ends at trialStructure.closedLoopDuration",
+          "title": "TimeLimit",
+          "type": "boolean"
+        },
+        "trackEndEndsTrial": {
+          "description": "Whether reaching the end of the track ends the trial",
+          "title": "TrackEndEndsTrial",
+          "type": "boolean"
+        },
+        "trackLengthScale": {
+          "description": "The drawn track length is multiplied by this",
+          "exclusiveMinimum": 0,
+          "title": "TrackLengthScale",
+          "type": "number"
+        },
+        "frequencyDrift": {
+          "description": "Whether the frequency also drifts up with time, not only with distance run",
+          "title": "FrequencyDrift",
+          "type": "boolean"
+        },
+        "truncationFraction": {
+          "description": "Fraction of trials whose cue switches off early (truncation.points)",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "TruncationFraction",
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "rewardFloorHz",
+        "rewardCeilingHz",
+        "rewardSizeUl",
+        "lickToReward",
+        "wrongLickLimit",
+        "punishWrongZone",
+        "quiescent",
+        "timeLimit",
+        "trackEndEndsTrial",
+        "trackLengthScale",
+        "frequencyDrift",
+        "truncationFraction"
+      ],
+      "title": "TrainingStage",
+      "type": "object"
+    },
+    "TrialStructure": {
+      "description": "Timing of each trial.",
+      "properties": {
+        "itiMin": {
+          "default": 0.0,
+          "description": "Lower bound of the uniformly drawn inter-trial interval, in seconds",
+          "minimum": 0,
+          "title": "ItiMin",
+          "type": "number"
+        },
+        "itiMax": {
+          "default": 1.0,
+          "description": "Upper bound of the uniformly drawn inter-trial interval, in seconds",
+          "minimum": 0,
+          "title": "ItiMax",
+          "type": "number"
+        },
+        "quiescentSeconds": {
+          "default": 1.0,
+          "description": "On a stage with quiescent, the next trial waits until the mouse has gone this long without licking (uncapped), so licks for the last reward cannot carry into the next trial",
+          "minimum": 0,
+          "title": "QuiescentSeconds",
+          "type": "number"
+        },
+        "closedLoopDuration": {
+          "default": 12.0,
+          "description": "On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)",
+          "exclusiveMinimum": 0,
+          "title": "ClosedLoopDuration",
+          "type": "number"
+        },
+        "trackLengthsCm": {
+          "default": [
+            80.0,
+            100.0,
+            120.0
+          ],
+          "description": "Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "title": "TrackLengthsCm",
+          "type": "array"
+        }
+      },
+      "title": "TrialStructure",
+      "type": "object"
+    },
+    "Truncation": {
+      "description": "Where the cue switches off on a truncated trial (a stage's truncationFraction says how many).\n\nOn a truncated trial the cue (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the cue.",
+      "properties": {
         "points": {
           "default": [
             0.4,
             0.6
           ],
-          "description": "Where the cue switches off, as a fraction of the sweep on a log scale. The reward floor is at about 0.8",
+          "description": "Where the cue switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
           "items": {
             "type": "number"
           },
@@ -229,12 +300,16 @@
           "type": "array"
         }
       },
-      "title": "TruncationConfig",
+      "title": "Truncation",
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskLogic": {
       "description": "Top-level task logic schema.",
       "properties": {
+        "taskParameters": {
+          "$ref": "#/$defs/UclOpenCoenDomeNavigationTaskParameters",
+          "title": "TaskParameters"
+        },
         "version": {
           "const": "0.0.0-rc1",
           "default": "0.0.0-rc1",
@@ -247,100 +322,36 @@
           "description": "Name of the task",
           "title": "Name",
           "type": "string"
-        },
-        "taskParameters": {
-          "$ref": "#/$defs/UclOpenCoenDomeNavigationTaskParameters",
-          "default": {
-            "modality": "A",
-            "shapingStage": 1,
-            "startFreq": 2000,
-            "endFreq": 25000,
-            "nFreqBins": 100,
-            "centerFreq": 18000,
-            "rewardWindowSize": 6000,
-            "thresholdFrequencies": {
-              "stage1": {
-                "ceiling": 25000,
-                "floor": 18000
-              },
-              "stage2": {
-                "ceiling": 25000,
-                "floor": 18000
-              },
-              "stage3": {
-                "ceiling": 25000,
-                "floor": 15248
-              },
-              "stage4": {
-                "ceiling": 21248,
-                "floor": 15248
-              },
-              "stage5": {
-                "ceiling": 21248,
-                "floor": 15248
-              }
-            },
-            "rewardSizeUl": 3.0,
-            "wheelDiameterMm": 75.0,
-            "punishment": {
-              "stage4PunishedLick": 8,
-              "stage5PunishedLick": 5,
-              "timeoutSec": 2
-            },
-            "truncation": {
-              "fraction": 0.16,
-              "points": [
-                0.4,
-                0.6
-              ]
-            },
-            "engagement": {
-              "minEpoch": 10,
-              "rollThreshold": 0.5,
-              "rollWindow": 25
-            },
-            "optogenetics": {
-              "enabled": false,
-              "excludeRepeats": true,
-              "leadTime": 0.1,
-              "pseudorandomSelection": true,
-              "stimDelay": 0.0,
-              "stimDuration": 12.5,
-              "stimProbability": 0.4,
-              "warmupTrials": 20,
-              "zapitConfigPath": ""
-            },
-            "amplitude": 0.05,
-            "backgroundNoiseLevel": 0.5,
-            "quantizeBinSize": 1
-          },
-          "title": "TaskParameters"
         }
       },
+      "required": [
+        "taskParameters"
+      ],
       "title": "UclOpenCoenDomeNavigationTaskLogic",
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskParameters": {
       "description": "Task params.",
       "properties": {
+        "rngSeed": {
+          "default": null,
+          "description": "Seed of the random number generator for these task parameters",
+          "title": "RngSeed",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "modality": {
-          "default": "A",
-          "description": "Stimulus modality: auditory (A), visual (V), or audiovisual (AV)",
+          "default": "auditory",
+          "description": "What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)",
           "enum": [
-            "A",
-            "V",
-            "AV"
+            "auditory",
+            "visual",
+            "audiovisual"
           ],
           "title": "Modality",
           "type": "string"
-        },
-        "shapingStage": {
-          "default": 1,
-          "description": "Shaping stage (1-6). rig-control suggests one from the mouse's earlier experiments of this modality (stage.py); stage 6 (stage 5 with truncated trials) is only ever chosen by hand",
-          "maximum": 6,
-          "minimum": 1,
-          "title": "ShapingStage",
-          "type": "integer"
         },
         "startFreq": {
           "default": 2000,
@@ -365,99 +376,6 @@
           "title": "NFreqBins",
           "type": "integer"
         },
-        "centerFreq": {
-          "default": 18000,
-          "description": "Center frequency of all reward windows (Hz)",
-          "maximum": 25000,
-          "minimum": 1,
-          "title": "CenterFreq",
-          "type": "integer"
-        },
-        "rewardWindowSize": {
-          "default": 6000,
-          "description": "Window size around center_freq, setting the reward floor for stages 3-5 and the ceiling for stages 4-5 (Hz)",
-          "maximum": 25000,
-          "minimum": 1,
-          "title": "RewardWindowSize",
-          "type": "integer"
-        },
-        "thresholdFrequencies": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ThresholdFrequencies"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "ThresholdFrequencies"
-        },
-        "rewardSizeUl": {
-          "default": 3.0,
-          "description": "Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)",
-          "exclusiveMinimum": 0,
-          "title": "RewardSizeUl",
-          "type": "number"
-        },
-        "wheelDiameterMm": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": 75.0,
-          "description": "Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled",
-          "title": "WheelDiameterMm"
-        },
-        "punishment": {
-          "$ref": "#/$defs/PunishmentConfig",
-          "default": {
-            "timeoutSec": 2,
-            "stage4PunishedLick": 8,
-            "stage5PunishedLick": 5
-          },
-          "title": "Punishment"
-        },
-        "truncation": {
-          "$ref": "#/$defs/TruncationConfig",
-          "default": {
-            "fraction": 0.16,
-            "points": [
-              0.4,
-              0.6
-            ]
-          },
-          "title": "Truncation"
-        },
-        "engagement": {
-          "$ref": "#/$defs/EngagementConfig",
-          "default": {
-            "rollWindow": 25,
-            "rollThreshold": 0.5,
-            "minEpoch": 10
-          },
-          "title": "Engagement"
-        },
-        "optogenetics": {
-          "$ref": "#/$defs/OptogeneticsConfig",
-          "default": {
-            "enabled": false,
-            "zapitConfigPath": "",
-            "stimProbability": 0.4,
-            "stimDelay": 0.0,
-            "stimDuration": 12.5,
-            "leadTime": 0.1,
-            "excludeRepeats": true,
-            "pseudorandomSelection": true,
-            "warmupTrials": 20
-          },
-          "title": "Optogenetics"
-        },
         "amplitude": {
           "default": 0.05,
           "description": "Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
@@ -476,12 +394,90 @@
         },
         "quantizeBinSize": {
           "default": 1,
-          "description": "Bin size for frequency quantization (Hz)",
+          "description": "The distance run is rounded to this before it sets the frequency, in cm",
           "minimum": 1,
           "title": "QuantizeBinSize",
           "type": "integer"
+        },
+        "wheelDiameterMm": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 75.0,
+          "description": "Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled",
+          "title": "WheelDiameterMm"
+        },
+        "trialStructure": {
+          "$ref": "#/$defs/TrialStructure",
+          "default": {
+            "itiMin": 0.0,
+            "itiMax": 1.0,
+            "quiescentSeconds": 1.0,
+            "closedLoopDuration": 12.0,
+            "trackLengthsCm": [
+              80.0,
+              100.0,
+              120.0
+            ]
+          },
+          "description": "Timing of each trial"
+        },
+        "punishment": {
+          "$ref": "#/$defs/Punishment",
+          "default": {
+            "timeoutSeconds": 2.0,
+            "sound": {
+              "enabled": true,
+              "gain": 1.0,
+              "path": "waveforms\\error_tone.wav"
+            }
+          },
+          "description": "The timeout and error sound a punished trial gets"
+        },
+        "truncation": {
+          "$ref": "#/$defs/Truncation",
+          "default": {
+            "points": [
+              0.4,
+              0.6
+            ]
+          },
+          "description": "Where the cue switches off on a truncated trial"
+        },
+        "optogenetics": {
+          "$ref": "#/$defs/OptogeneticsConfig",
+          "default": {
+            "enabled": false,
+            "zapitConfigPath": "",
+            "stimProbability": 0.4,
+            "stimDelay": 0.0,
+            "stimDuration": 12.5,
+            "leadTime": 0.1,
+            "excludeRepeats": true,
+            "pseudorandomSelection": true,
+            "warmupTrials": 20
+          },
+          "description": "Zapit optogenetic stimulation",
+          "title": "Optogenetics"
+        },
+        "trainingStages": {
+          "description": "Training stage table, indexed by the TrainingStage setting from 0; a setting past the end uses the last row",
+          "items": {
+            "$ref": "#/$defs/TrainingStage"
+          },
+          "title": "TrainingStages",
+          "type": "array"
         }
       },
+      "required": [
+        "trainingStages"
+      ],
       "title": "UclOpenCoenDomeNavigationTaskParameters",
       "type": "object"
     }

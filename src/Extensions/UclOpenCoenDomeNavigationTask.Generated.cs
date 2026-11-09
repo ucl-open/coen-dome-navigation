@@ -19,24 +19,39 @@ namespace UclOpenCoenDomeNavigationTask
     public partial class UclOpenCoenDomeNavigationTaskLogic
     {
     
+        private UclOpenCoenDomeNavigationTaskParameters _taskParameters;
+    
         private string _version;
     
         private string _name;
     
-        private UclOpenCoenDomeNavigationTaskParameters _taskParameters;
-    
         public UclOpenCoenDomeNavigationTaskLogic()
         {
+            _taskParameters = new UclOpenCoenDomeNavigationTaskParameters();
             _version = "0.0.0-rc1";
             _name = "UclOpenCoenDomeNavigation";
-            _taskParameters = new UclOpenCoenDomeNavigationTaskParameters();
         }
     
         protected UclOpenCoenDomeNavigationTaskLogic(UclOpenCoenDomeNavigationTaskLogic other)
         {
+            _taskParameters = other._taskParameters;
             _version = other._version;
             _name = other._name;
-            _taskParameters = other._taskParameters;
+        }
+    
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("taskParameters", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="taskParameters")]
+        public UclOpenCoenDomeNavigationTaskParameters TaskParameters
+        {
+            get
+            {
+                return _taskParameters;
+            }
+            set
+            {
+                _taskParameters = value;
+            }
         }
     
         [Newtonsoft.Json.JsonPropertyAttribute("version")]
@@ -71,21 +86,6 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("taskParameters")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="taskParameters")]
-        public UclOpenCoenDomeNavigationTaskParameters TaskParameters
-        {
-            get
-            {
-                return _taskParameters;
-            }
-            set
-            {
-                _taskParameters = value;
-            }
-        }
-    
         public System.IObservable<UclOpenCoenDomeNavigationTaskLogic> Generate()
         {
             return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new UclOpenCoenDomeNavigationTaskLogic(this)));
@@ -98,139 +98,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
+            stringBuilder.Append("TaskParameters = " + _taskParameters + ", ");
             stringBuilder.Append("Version = " + _version + ", ");
-            stringBuilder.Append("Name = " + _name + ", ");
-            stringBuilder.Append("TaskParameters = " + _taskParameters);
-            return true;
-        }
-    
-        public override string ToString()
-        {
-            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
-            stringBuilder.Append(GetType().Name);
-            stringBuilder.Append(" { ");
-            if (PrintMembers(stringBuilder))
-            {
-                stringBuilder.Append(" ");
-            }
-            stringBuilder.Append("}");
-            return stringBuilder.ToString();
-        }
-    }
-
-
-    /// <summary>
-    /// How engagement is labelled: whether the animal is still attempting the task. Kept from Tom Childs'
-    ///model, whose gen_session.py printed an engaged success rate beside the stage; the stage rules
-    ///(stage.py) never used it, and nothing here reads it now.
-    ///
-    ///A mouse partway through an experiment often keeps running but stops licking. Those trials are not failures (it
-    ///is not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read
-    ///from whether each trial contained a lick, smoothed over a window of trials.
-    /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"How engagement is labelled: whether the animal is still attempting the task. Kept from Tom Childs'
-    model, whose gen_session.py printed an engaged success rate beside the stage; the stage rules
-    (stage.py) never used it, and nothing here reads it now.
-
-    A mouse partway through an experiment often keeps running but stops licking. Those trials are not failures (it
-    is not attempting the task), so they are labelled separately rather than scored as misses. Engagement is read
-    from whether each trial contained a lick, smoothed over a window of trials.")]
-    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
-    [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class EngagementConfig
-    {
-    
-        private int _rollWindow;
-    
-        private double _rollThreshold;
-    
-        private int _minEpoch;
-    
-        public EngagementConfig()
-        {
-            _rollWindow = 25;
-            _rollThreshold = 0.5D;
-            _minEpoch = 10;
-        }
-    
-        protected EngagementConfig(EngagementConfig other)
-        {
-            _rollWindow = other._rollWindow;
-            _rollThreshold = other._rollThreshold;
-            _minEpoch = other._minEpoch;
-        }
-    
-        /// <summary>
-        /// Trials averaged around each trial when deciding engagement. Prefer an odd value
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("rollWindow")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rollWindow")]
-        [System.ComponentModel.DescriptionAttribute("Trials averaged around each trial when deciding engagement. Prefer an odd value")]
-        public int RollWindow
-        {
-            get
-            {
-                return _rollWindow;
-            }
-            set
-            {
-                _rollWindow = value;
-            }
-        }
-    
-        /// <summary>
-        /// Lick fraction at or below which the animal counts as disengaged
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("rollThreshold")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rollThreshold")]
-        [System.ComponentModel.DescriptionAttribute("Lick fraction at or below which the animal counts as disengaged")]
-        public double RollThreshold
-        {
-            get
-            {
-                return _rollThreshold;
-            }
-            set
-            {
-                _rollThreshold = value;
-            }
-        }
-    
-        /// <summary>
-        /// Shortest run of trials that can be called engaged or disengaged; shorter runs are absorbed into their neighbours
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("minEpoch")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="minEpoch")]
-        [System.ComponentModel.DescriptionAttribute("Shortest run of trials that can be called engaged or disengaged; shorter runs are" +
-            " absorbed into their neighbours")]
-        public int MinEpoch
-        {
-            get
-            {
-                return _minEpoch;
-            }
-            set
-            {
-                _minEpoch = value;
-            }
-        }
-    
-        public System.IObservable<EngagementConfig> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new EngagementConfig(this)));
-        }
-    
-        public System.IObservable<EngagementConfig> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new EngagementConfig(this));
-        }
-    
-        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
-        {
-            stringBuilder.Append("RollWindow = " + _rollWindow + ", ");
-            stringBuilder.Append("RollThreshold = " + _rollThreshold + ", ");
-            stringBuilder.Append("MinEpoch = " + _minEpoch);
+            stringBuilder.Append("Name = " + _name);
             return true;
         }
     
@@ -398,11 +268,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. Must be at least 12 s + lead_time + 0.25 s, so it never ends a timeout trial's laser early; stages 1-3 have no timeout, so there a longer trial loses its stimulus
+        /// Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + lead_time + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its stimulus
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("stimDuration")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimDuration")]
-        [System.ComponentModel.DescriptionAttribute(@"Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. Must be at least 12 s + lead_time + 0.25 s, so it never ends a timeout trial's laser early; stages 1-3 have no timeout, so there a longer trial loses its stimulus")]
+        [System.ComponentModel.DescriptionAttribute(@"Longest the stimulus runs in one trial, in seconds from onset, timed by Bonsai; the laser then ramps down over the condition's offRampDownDuration_ms. A safety cap: the stimulus normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.closedLoopDuration (the time limit, 12 s) + lead_time + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its stimulus")]
         public double StimDuration
         {
             get
@@ -529,104 +399,83 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Punishment params.
+    /// What an error costs, as the lab's tasks name it (the trial log's punishSound and punishTimeoutSeconds).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Punishment params.")]
+    [System.ComponentModel.DescriptionAttribute("What an error costs, as the lab\'s tasks name it (the trial log\'s punishSound and " +
+        "punishTimeoutSeconds).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class PunishmentConfig
+    public partial class Punishment
     {
     
-        private int _timeoutSec;
+        private double _timeoutSeconds;
     
-        private int _stage4PunishedLick;
+        private PunishmentSound _sound;
     
-        private int _stage5PunishedLick;
-    
-        public PunishmentConfig()
+        public Punishment()
         {
-            _timeoutSec = 2;
-            _stage4PunishedLick = 8;
-            _stage5PunishedLick = 5;
+            _timeoutSeconds = 2D;
+            _sound = new PunishmentSound();
         }
     
-        protected PunishmentConfig(PunishmentConfig other)
+        protected Punishment(Punishment other)
         {
-            _timeoutSec = other._timeoutSec;
-            _stage4PunishedLick = other._stage4PunishedLick;
-            _stage5PunishedLick = other._stage5PunishedLick;
+            _timeoutSeconds = other._timeoutSeconds;
+            _sound = other._sound;
         }
     
         /// <summary>
-        /// Timeout duration in seconds
+        /// Timeout after a punished trial, in seconds
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("timeoutSec")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeoutSec")]
-        [System.ComponentModel.DescriptionAttribute("Timeout duration in seconds")]
-        public int TimeoutSec
+        [Newtonsoft.Json.JsonPropertyAttribute("timeoutSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeoutSeconds")]
+        [System.ComponentModel.DescriptionAttribute("Timeout after a punished trial, in seconds")]
+        public double TimeoutSeconds
         {
             get
             {
-                return _timeoutSec;
+                return _timeoutSeconds;
             }
             set
             {
-                _timeoutSec = value;
+                _timeoutSeconds = value;
             }
         }
     
         /// <summary>
-        /// Punished lick in stage 4
+        /// The error sound on a punished trial
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("stage4PunishedLick")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stage4PunishedLick")]
-        [System.ComponentModel.DescriptionAttribute("Punished lick in stage 4")]
-        public int Stage4PunishedLick
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("sound")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sound")]
+        [System.ComponentModel.DescriptionAttribute("The error sound on a punished trial")]
+        public PunishmentSound Sound
         {
             get
             {
-                return _stage4PunishedLick;
+                return _sound;
             }
             set
             {
-                _stage4PunishedLick = value;
+                _sound = value;
             }
         }
     
-        /// <summary>
-        /// Punished lick in stage 5
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("stage5PunishedLick")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stage5PunishedLick")]
-        [System.ComponentModel.DescriptionAttribute("Punished lick in stage 5")]
-        public int Stage5PunishedLick
+        public System.IObservable<Punishment> Generate()
         {
-            get
-            {
-                return _stage5PunishedLick;
-            }
-            set
-            {
-                _stage5PunishedLick = value;
-            }
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Punishment(this)));
         }
     
-        public System.IObservable<PunishmentConfig> Generate()
+        public System.IObservable<Punishment> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PunishmentConfig(this)));
-        }
-    
-        public System.IObservable<PunishmentConfig> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new PunishmentConfig(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new Punishment(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("TimeoutSec = " + _timeoutSec + ", ");
-            stringBuilder.Append("Stage4PunishedLick = " + _stage4PunishedLick + ", ");
-            stringBuilder.Append("Stage5PunishedLick = " + _stage5PunishedLick);
+            stringBuilder.Append("TimeoutSeconds = " + _timeoutSeconds + ", ");
+            stringBuilder.Append("Sound = " + _sound);
             return true;
         }
     
@@ -646,79 +495,104 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Frequency boundaries for a single shaping stage.
+    /// The error sound played on a punished trial.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Frequency boundaries for a single shaping stage.")]
+    [System.ComponentModel.DescriptionAttribute("The error sound played on a punished trial.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class Stage
+    public partial class PunishmentSound
     {
     
-        private int _floor;
+        private bool _enabled;
     
-        private int _ceiling;
+        private string _path;
     
-        public Stage()
+        private double _gain;
+    
+        public PunishmentSound()
         {
+            _enabled = true;
+            _path = "waveforms\\error_tone.wav";
+            _gain = 1D;
         }
     
-        protected Stage(Stage other)
+        protected PunishmentSound(PunishmentSound other)
         {
-            _floor = other._floor;
-            _ceiling = other._ceiling;
-        }
-    
-        /// <summary>
-        /// Lower frequency threshold (Hz)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("floor", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="floor")]
-        [System.ComponentModel.DescriptionAttribute("Lower frequency threshold (Hz)")]
-        public int Floor
-        {
-            get
-            {
-                return _floor;
-            }
-            set
-            {
-                _floor = value;
-            }
+            _enabled = other._enabled;
+            _path = other._path;
+            _gain = other._gain;
         }
     
         /// <summary>
-        /// Upper frequency ceiling (Hz)
+        /// Whether the error sound plays on a punished trial
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("ceiling", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="ceiling")]
-        [System.ComponentModel.DescriptionAttribute("Upper frequency ceiling (Hz)")]
-        public int Ceiling
+        [Newtonsoft.Json.JsonPropertyAttribute("enabled")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="enabled")]
+        [System.ComponentModel.DescriptionAttribute("Whether the error sound plays on a punished trial")]
+        public bool Enabled
         {
             get
             {
-                return _ceiling;
+                return _enabled;
             }
             set
             {
-                _ceiling = value;
+                _enabled = value;
             }
         }
     
-        public System.IObservable<Stage> Generate()
+        /// <summary>
+        /// Wav file of the error sound, relative to src
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("path")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="path")]
+        [System.ComponentModel.DescriptionAttribute("Wav file of the error sound, relative to src")]
+        public string Path
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Stage(this)));
+            get
+            {
+                return _path;
+            }
+            set
+            {
+                _path = value;
+            }
         }
     
-        public System.IObservable<Stage> Generate<TSource>(System.IObservable<TSource> source)
+        /// <summary>
+        /// Playback gain of the error sound
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("gain")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="gain")]
+        [System.ComponentModel.DescriptionAttribute("Playback gain of the error sound")]
+        public double Gain
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new Stage(this));
+            get
+            {
+                return _gain;
+            }
+            set
+            {
+                _gain = value;
+            }
+        }
+    
+        public System.IObservable<PunishmentSound> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PunishmentSound(this)));
+        }
+    
+        public System.IObservable<PunishmentSound> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new PunishmentSound(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Floor = " + _floor + ", ");
-            stringBuilder.Append("Ceiling = " + _ceiling);
+            stringBuilder.Append("Enabled = " + _enabled + ", ");
+            stringBuilder.Append("Path = " + _path + ", ");
+            stringBuilder.Append("Gain = " + _gain);
             return true;
         }
     
@@ -738,135 +612,326 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Floor and ceiling frequencies of the reward zone for each shaping stage.
+    /// One row of the training stage table: what the stage does. Rows are selected by the TrainingStage setting.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Floor and ceiling frequencies of the reward zone for each shaping stage.")]
+    [System.ComponentModel.DescriptionAttribute("One row of the training stage table: what the stage does. Rows are selected by th" +
+        "e TrainingStage setting.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class ThresholdFrequencies
+    public partial class TrainingStage
     {
     
-        private Stage _stage1;
+        private string _label;
     
-        private Stage _stage2;
+        private double _rewardFloorHz;
     
-        private Stage _stage3;
+        private double _rewardCeilingHz;
     
-        private Stage _stage4;
+        private double _rewardSizeUl;
     
-        private Stage _stage5;
+        private bool _lickToReward;
     
-        public ThresholdFrequencies()
+        private int _wrongLickLimit;
+    
+        private bool _punishWrongZone;
+    
+        private bool _quiescent;
+    
+        private bool _timeLimit;
+    
+        private bool _trackEndEndsTrial;
+    
+        private double _trackLengthScale;
+    
+        private bool _frequencyDrift;
+    
+        private double _truncationFraction;
+    
+        public TrainingStage()
         {
-            _stage1 = new Stage();
-            _stage2 = new Stage();
-            _stage3 = new Stage();
-            _stage4 = new Stage();
-            _stage5 = new Stage();
         }
     
-        protected ThresholdFrequencies(ThresholdFrequencies other)
+        protected TrainingStage(TrainingStage other)
         {
-            _stage1 = other._stage1;
-            _stage2 = other._stage2;
-            _stage3 = other._stage3;
-            _stage4 = other._stage4;
-            _stage5 = other._stage5;
+            _label = other._label;
+            _rewardFloorHz = other._rewardFloorHz;
+            _rewardCeilingHz = other._rewardCeilingHz;
+            _rewardSizeUl = other._rewardSizeUl;
+            _lickToReward = other._lickToReward;
+            _wrongLickLimit = other._wrongLickLimit;
+            _punishWrongZone = other._punishWrongZone;
+            _quiescent = other._quiescent;
+            _timeLimit = other._timeLimit;
+            _trackEndEndsTrial = other._trackEndEndsTrial;
+            _trackLengthScale = other._trackLengthScale;
+            _frequencyDrift = other._frequencyDrift;
+            _truncationFraction = other._truncationFraction;
         }
     
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("stage1", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stage1")]
-        public Stage Stage1
+        /// <summary>
+        /// The stage's name, for people
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("label", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="label")]
+        [System.ComponentModel.DescriptionAttribute("The stage\'s name, for people")]
+        public string Label
         {
             get
             {
-                return _stage1;
+                return _label;
             }
             set
             {
-                _stage1 = value;
+                _label = value;
             }
         }
     
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("stage2", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stage2")]
-        public Stage Stage2
+        /// <summary>
+        /// Lower frequency of the reward zone, in Hz
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardFloorHz", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardFloorHz")]
+        [System.ComponentModel.DescriptionAttribute("Lower frequency of the reward zone, in Hz")]
+        public double RewardFloorHz
         {
             get
             {
-                return _stage2;
+                return _rewardFloorHz;
             }
             set
             {
-                _stage2 = value;
+                _rewardFloorHz = value;
             }
         }
     
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("stage3", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stage3")]
-        public Stage Stage3
+        /// <summary>
+        /// Upper frequency of the reward zone, in Hz
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardCeilingHz", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardCeilingHz")]
+        [System.ComponentModel.DescriptionAttribute("Upper frequency of the reward zone, in Hz")]
+        public double RewardCeilingHz
         {
             get
             {
-                return _stage3;
+                return _rewardCeilingHz;
             }
             set
             {
-                _stage3 = value;
+                _rewardCeilingHz = value;
             }
         }
     
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("stage4", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stage4")]
-        public Stage Stage4
+        /// <summary>
+        /// Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
+        [System.ComponentModel.DescriptionAttribute("Microlitres each reward gives, on the left spout\'s valve. The valve\'s calibration" +
+            " plans the pulses; an uncalibrated valve gives one pulse of rig.yml\'s width per " +
+            "2 ul (av-dome\'s RewardLine)")]
+        public double RewardSizeUl
         {
             get
             {
-                return _stage4;
+                return _rewardSizeUl;
             }
             set
             {
-                _stage4 = value;
+                _rewardSizeUl = value;
             }
         }
     
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("stage5", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stage5")]
-        public Stage Stage5
+        /// <summary>
+        /// Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("lickToReward", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickToReward")]
+        [System.ComponentModel.DescriptionAttribute("Whether a lick in the zone earns the reward; false rewards reaching the zone, no " +
+            "lick needed")]
+        public bool LickToReward
         {
             get
             {
-                return _stage5;
+                return _lickToReward;
             }
             set
             {
-                _stage5 = value;
+                _lickToReward = value;
             }
         }
     
-        public System.IObservable<ThresholdFrequencies> Generate()
+        /// <summary>
+        /// Licks outside the zone that end the trial; 0: wrong licks never end it
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("wrongLickLimit", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wrongLickLimit")]
+        [System.ComponentModel.DescriptionAttribute("Licks outside the zone that end the trial; 0: wrong licks never end it")]
+        public int WrongLickLimit
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new ThresholdFrequencies(this)));
+            get
+            {
+                return _wrongLickLimit;
+            }
+            set
+            {
+                _wrongLickLimit = value;
+            }
         }
     
-        public System.IObservable<ThresholdFrequencies> Generate<TSource>(System.IObservable<TSource> source)
+        /// <summary>
+        /// Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("punishWrongZone", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="punishWrongZone")]
+        [System.ComponentModel.DescriptionAttribute("Whether a trial that ends outside the reward zone is punished. A trial that runs " +
+            "out of time or track with the frequency in the zone is punished on every stage")]
+        public bool PunishWrongZone
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new ThresholdFrequencies(this));
+            get
+            {
+                return _punishWrongZone;
+            }
+            set
+            {
+                _punishWrongZone = value;
+            }
+        }
+    
+        /// <summary>
+        /// Whether the next trial waits for trialStructure.quiescentSeconds without licks
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("quiescent", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="quiescent")]
+        [System.ComponentModel.DescriptionAttribute("Whether the next trial waits for trialStructure.quiescentSeconds without licks")]
+        public bool Quiescent
+        {
+            get
+            {
+                return _quiescent;
+            }
+            set
+            {
+                _quiescent = value;
+            }
+        }
+    
+        /// <summary>
+        /// Whether a trial ends at trialStructure.closedLoopDuration
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("timeLimit", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeLimit")]
+        [System.ComponentModel.DescriptionAttribute("Whether a trial ends at trialStructure.closedLoopDuration")]
+        public bool TimeLimit
+        {
+            get
+            {
+                return _timeLimit;
+            }
+            set
+            {
+                _timeLimit = value;
+            }
+        }
+    
+        /// <summary>
+        /// Whether reaching the end of the track ends the trial
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("trackEndEndsTrial", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackEndEndsTrial")]
+        [System.ComponentModel.DescriptionAttribute("Whether reaching the end of the track ends the trial")]
+        public bool TrackEndEndsTrial
+        {
+            get
+            {
+                return _trackEndEndsTrial;
+            }
+            set
+            {
+                _trackEndEndsTrial = value;
+            }
+        }
+    
+        /// <summary>
+        /// The drawn track length is multiplied by this
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("trackLengthScale", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackLengthScale")]
+        [System.ComponentModel.DescriptionAttribute("The drawn track length is multiplied by this")]
+        public double TrackLengthScale
+        {
+            get
+            {
+                return _trackLengthScale;
+            }
+            set
+            {
+                _trackLengthScale = value;
+            }
+        }
+    
+        /// <summary>
+        /// Whether the frequency also drifts up with time, not only with distance run
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("frequencyDrift", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="frequencyDrift")]
+        [System.ComponentModel.DescriptionAttribute("Whether the frequency also drifts up with time, not only with distance run")]
+        public bool FrequencyDrift
+        {
+            get
+            {
+                return _frequencyDrift;
+            }
+            set
+            {
+                _frequencyDrift = value;
+            }
+        }
+    
+        /// <summary>
+        /// Fraction of trials whose cue switches off early (truncation.points)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("truncationFraction", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncationFraction")]
+        [System.ComponentModel.DescriptionAttribute("Fraction of trials whose cue switches off early (truncation.points)")]
+        public double TruncationFraction
+        {
+            get
+            {
+                return _truncationFraction;
+            }
+            set
+            {
+                _truncationFraction = value;
+            }
+        }
+    
+        public System.IObservable<TrainingStage> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new TrainingStage(this)));
+        }
+    
+        public System.IObservable<TrainingStage> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new TrainingStage(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Stage1 = " + _stage1 + ", ");
-            stringBuilder.Append("Stage2 = " + _stage2 + ", ");
-            stringBuilder.Append("Stage3 = " + _stage3 + ", ");
-            stringBuilder.Append("Stage4 = " + _stage4 + ", ");
-            stringBuilder.Append("Stage5 = " + _stage5);
+            stringBuilder.Append("Label = " + _label + ", ");
+            stringBuilder.Append("RewardFloorHz = " + _rewardFloorHz + ", ");
+            stringBuilder.Append("RewardCeilingHz = " + _rewardCeilingHz + ", ");
+            stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl + ", ");
+            stringBuilder.Append("LickToReward = " + _lickToReward + ", ");
+            stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
+            stringBuilder.Append("PunishWrongZone = " + _punishWrongZone + ", ");
+            stringBuilder.Append("Quiescent = " + _quiescent + ", ");
+            stringBuilder.Append("TimeLimit = " + _timeLimit + ", ");
+            stringBuilder.Append("TrackEndEndsTrial = " + _trackEndEndsTrial + ", ");
+            stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
+            stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");
+            stringBuilder.Append("TruncationFraction = " + _truncationFraction);
             return true;
         }
     
@@ -886,66 +951,211 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Truncated trials, used in stage 6 only.
+    /// Timing of each trial.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("Timing of each trial.")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class TrialStructure
+    {
+    
+        private double _itiMin;
+    
+        private double _itiMax;
+    
+        private double _quiescentSeconds;
+    
+        private double _closedLoopDuration;
+    
+        private System.Collections.Generic.List<double> _trackLengthsCm;
+    
+        public TrialStructure()
+        {
+            _itiMin = 0D;
+            _itiMax = 1D;
+            _quiescentSeconds = 1D;
+            _closedLoopDuration = 12D;
+            _trackLengthsCm = new System.Collections.Generic.List<double>();
+        }
+    
+        protected TrialStructure(TrialStructure other)
+        {
+            _itiMin = other._itiMin;
+            _itiMax = other._itiMax;
+            _quiescentSeconds = other._quiescentSeconds;
+            _closedLoopDuration = other._closedLoopDuration;
+            _trackLengthsCm = other._trackLengthsCm;
+        }
+    
+        /// <summary>
+        /// Lower bound of the uniformly drawn inter-trial interval, in seconds
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("itiMin")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMin")]
+        [System.ComponentModel.DescriptionAttribute("Lower bound of the uniformly drawn inter-trial interval, in seconds")]
+        public double ItiMin
+        {
+            get
+            {
+                return _itiMin;
+            }
+            set
+            {
+                _itiMin = value;
+            }
+        }
+    
+        /// <summary>
+        /// Upper bound of the uniformly drawn inter-trial interval, in seconds
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("itiMax")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMax")]
+        [System.ComponentModel.DescriptionAttribute("Upper bound of the uniformly drawn inter-trial interval, in seconds")]
+        public double ItiMax
+        {
+            get
+            {
+                return _itiMax;
+            }
+            set
+            {
+                _itiMax = value;
+            }
+        }
+    
+        /// <summary>
+        /// On a stage with quiescent, the next trial waits until the mouse has gone this long without licking (uncapped), so licks for the last reward cannot carry into the next trial
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("quiescentSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="quiescentSeconds")]
+        [System.ComponentModel.DescriptionAttribute("On a stage with quiescent, the next trial waits until the mouse has gone this lon" +
+            "g without licking (uncapped), so licks for the last reward cannot carry into the" +
+            " next trial")]
+        public double QuiescentSeconds
+        {
+            get
+            {
+                return _quiescentSeconds;
+            }
+            set
+            {
+                _quiescentSeconds = value;
+            }
+        }
+    
+        /// <summary>
+        /// On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("closedLoopDuration")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="closedLoopDuration")]
+        [System.ComponentModel.DescriptionAttribute("On a stage with timeLimit, the longest a trial runs from its start, in seconds (a" +
+            "v-dome\'s name for its response period)")]
+        public double ClosedLoopDuration
+        {
+            get
+            {
+                return _closedLoopDuration;
+            }
+            set
+            {
+                _closedLoopDuration = value;
+            }
+        }
+    
+        /// <summary>
+        /// Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("trackLengthsCm")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackLengthsCm")]
+        [System.ComponentModel.DescriptionAttribute("Track lengths, one drawn per trial and scaled by the stage\'s trackLengthScale, in" +
+            " cm")]
+        public System.Collections.Generic.List<double> TrackLengthsCm
+        {
+            get
+            {
+                return _trackLengthsCm;
+            }
+            set
+            {
+                _trackLengthsCm = value;
+            }
+        }
+    
+        public System.IObservable<TrialStructure> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new TrialStructure(this)));
+        }
+    
+        public System.IObservable<TrialStructure> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new TrialStructure(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("ItiMin = " + _itiMin + ", ");
+            stringBuilder.Append("ItiMax = " + _itiMax + ", ");
+            stringBuilder.Append("QuiescentSeconds = " + _quiescentSeconds + ", ");
+            stringBuilder.Append("ClosedLoopDuration = " + _closedLoopDuration + ", ");
+            stringBuilder.Append("TrackLengthsCm = " + _trackLengthsCm);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// Where the cue switches off on a truncated trial (a stage's truncationFraction says how many).
     ///
     ///On a truncated trial the cue (tone and grating) switches off part way along the sweep. Everything else about
     ///the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
     ///zone without the cue.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Truncated trials, used in stage 6 only.
+    [System.ComponentModel.DescriptionAttribute(@"Where the cue switches off on a truncated trial (a stage's truncationFraction says how many).
 
     On a truncated trial the cue (tone and grating) switches off part way along the sweep. Everything else about
     the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
     zone without the cue.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class TruncationConfig
+    public partial class Truncation
     {
-    
-        private double _fraction;
     
         private System.Collections.Generic.List<double> _points;
     
-        public TruncationConfig()
+        public Truncation()
         {
-            _fraction = 0.16D;
             _points = new System.Collections.Generic.List<double>();
         }
     
-        protected TruncationConfig(TruncationConfig other)
+        protected Truncation(Truncation other)
         {
-            _fraction = other._fraction;
             _points = other._points;
         }
     
         /// <summary>
-        /// Fraction of stage 6 trials that are truncated, split evenly between the truncation points
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("fraction")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="fraction")]
-        [System.ComponentModel.DescriptionAttribute("Fraction of stage 6 trials that are truncated, split evenly between the truncatio" +
-            "n points")]
-        public double Fraction
-        {
-            get
-            {
-                return _fraction;
-            }
-            set
-            {
-                _fraction = value;
-            }
-        }
-    
-        /// <summary>
-        /// Where the cue switches off, as a fraction of the sweep on a log scale. The reward floor is at about 0.8
+        /// Where the cue switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("points")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="points")]
-        [System.ComponentModel.DescriptionAttribute("Where the cue switches off, as a fraction of the sweep on a log scale. The reward" +
-            " floor is at about 0.8")]
+        [System.ComponentModel.DescriptionAttribute("Where the cue switches off, as a fraction of the sweep on a log scale, split even" +
+            "ly over truncated trials. The reward floor is at about 0.8")]
         public System.Collections.Generic.List<double> Points
         {
             get
@@ -958,19 +1168,18 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
-        public System.IObservable<TruncationConfig> Generate()
+        public System.IObservable<Truncation> Generate()
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new TruncationConfig(this)));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Truncation(this)));
         }
     
-        public System.IObservable<TruncationConfig> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<Truncation> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new TruncationConfig(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new Truncation(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Fraction = " + _fraction + ", ");
             stringBuilder.Append("Points = " + _points);
             return true;
         }
@@ -1000,9 +1209,9 @@ namespace UclOpenCoenDomeNavigationTask
     public partial class UclOpenCoenDomeNavigationTaskParameters
     {
     
-        private UclOpenCoenDomeNavigationTaskParametersModality _modality;
+        private double? _rngSeed;
     
-        private int _shapingStage;
+        private UclOpenCoenDomeNavigationTaskParametersModality _modality;
     
         private int _startFreq;
     
@@ -1010,77 +1219,84 @@ namespace UclOpenCoenDomeNavigationTask
     
         private int _nFreqBins;
     
-        private int _centerFreq;
-    
-        private int _rewardWindowSize;
-    
-        private ThresholdFrequencies _thresholdFrequencies;
-    
-        private double _rewardSizeUl;
-    
-        private double? _wheelDiameterMm;
-    
-        private PunishmentConfig _punishment;
-    
-        private TruncationConfig _truncation;
-    
-        private EngagementConfig _engagement;
-    
-        private OptogeneticsConfig _optogenetics;
-    
         private double _amplitude;
     
         private double _backgroundNoiseLevel;
     
         private int _quantizeBinSize;
     
+        private double? _wheelDiameterMm;
+    
+        private TrialStructure _trialStructure;
+    
+        private Punishment _punishment;
+    
+        private Truncation _truncation;
+    
+        private OptogeneticsConfig _optogenetics;
+    
+        private System.Collections.Generic.List<TrainingStage> _trainingStages;
+    
         public UclOpenCoenDomeNavigationTaskParameters()
         {
-            _modality = UclOpenCoenDomeNavigationTaskParametersModality.A;
-            _shapingStage = 1;
+            _modality = UclOpenCoenDomeNavigationTaskParametersModality.Auditory;
             _startFreq = 2000;
             _endFreq = 25000;
             _nFreqBins = 100;
-            _centerFreq = 18000;
-            _rewardWindowSize = 6000;
-            _rewardSizeUl = 3D;
-            _wheelDiameterMm = 75D;
-            _punishment = new PunishmentConfig();
-            _truncation = new TruncationConfig();
-            _engagement = new EngagementConfig();
-            _optogenetics = new OptogeneticsConfig();
             _amplitude = 0.05D;
             _backgroundNoiseLevel = 0.5D;
             _quantizeBinSize = 1;
+            _wheelDiameterMm = 75D;
+            _trialStructure = new TrialStructure();
+            _punishment = new Punishment();
+            _truncation = new Truncation();
+            _optogenetics = new OptogeneticsConfig();
+            _trainingStages = new System.Collections.Generic.List<TrainingStage>();
         }
     
         protected UclOpenCoenDomeNavigationTaskParameters(UclOpenCoenDomeNavigationTaskParameters other)
         {
+            _rngSeed = other._rngSeed;
             _modality = other._modality;
-            _shapingStage = other._shapingStage;
             _startFreq = other._startFreq;
             _endFreq = other._endFreq;
             _nFreqBins = other._nFreqBins;
-            _centerFreq = other._centerFreq;
-            _rewardWindowSize = other._rewardWindowSize;
-            _thresholdFrequencies = other._thresholdFrequencies;
-            _rewardSizeUl = other._rewardSizeUl;
-            _wheelDiameterMm = other._wheelDiameterMm;
-            _punishment = other._punishment;
-            _truncation = other._truncation;
-            _engagement = other._engagement;
-            _optogenetics = other._optogenetics;
             _amplitude = other._amplitude;
             _backgroundNoiseLevel = other._backgroundNoiseLevel;
             _quantizeBinSize = other._quantizeBinSize;
+            _wheelDiameterMm = other._wheelDiameterMm;
+            _trialStructure = other._trialStructure;
+            _punishment = other._punishment;
+            _truncation = other._truncation;
+            _optogenetics = other._optogenetics;
+            _trainingStages = other._trainingStages;
         }
     
         /// <summary>
-        /// Stimulus modality: auditory (A), visual (V), or audiovisual (AV)
+        /// Seed of the random number generator for these task parameters
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rngSeed")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rngSeed")]
+        [System.ComponentModel.DescriptionAttribute("Seed of the random number generator for these task parameters")]
+        public double? RngSeed
+        {
+            get
+            {
+                return _rngSeed;
+            }
+            set
+            {
+                _rngSeed = value;
+            }
+        }
+    
+        /// <summary>
+        /// What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("modality")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="modality")]
-        [System.ComponentModel.DescriptionAttribute("Stimulus modality: auditory (A), visual (V), or audiovisual (AV)")]
+        [System.ComponentModel.DescriptionAttribute("What the trial shows: the tone sweep (auditory), the grating (visual) or both (au" +
+            "diovisual)")]
         public UclOpenCoenDomeNavigationTaskParametersModality Modality
         {
             get
@@ -1090,26 +1306,6 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _modality = value;
-            }
-        }
-    
-        /// <summary>
-        /// Shaping stage (1-6). rig-control suggests one from the mouse's earlier experiments of this modality (stage.py); stage 6 (stage 5 with truncated trials) is only ever chosen by hand
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("shapingStage")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="shapingStage")]
-        [System.ComponentModel.DescriptionAttribute("Shaping stage (1-6). rig-control suggests one from the mouse\'s earlier experiment" +
-            "s of this modality (stage.py); stage 6 (stage 5 with truncated trials) is only e" +
-            "ver chosen by hand")]
-        public int ShapingStage
-        {
-            get
-            {
-                return _shapingStage;
-            }
-            set
-            {
-                _shapingStage = value;
             }
         }
     
@@ -1171,156 +1367,6 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Center frequency of all reward windows (Hz)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("centerFreq")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="centerFreq")]
-        [System.ComponentModel.DescriptionAttribute("Center frequency of all reward windows (Hz)")]
-        public int CenterFreq
-        {
-            get
-            {
-                return _centerFreq;
-            }
-            set
-            {
-                _centerFreq = value;
-            }
-        }
-    
-        /// <summary>
-        /// Window size around center_freq, setting the reward floor for stages 3-5 and the ceiling for stages 4-5 (Hz)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("rewardWindowSize")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardWindowSize")]
-        [System.ComponentModel.DescriptionAttribute("Window size around center_freq, setting the reward floor for stages 3-5 and the c" +
-            "eiling for stages 4-5 (Hz)")]
-        public int RewardWindowSize
-        {
-            get
-            {
-                return _rewardWindowSize;
-            }
-            set
-            {
-                _rewardWindowSize = value;
-            }
-        }
-    
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("thresholdFrequencies")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="thresholdFrequencies")]
-        public ThresholdFrequencies ThresholdFrequencies
-        {
-            get
-            {
-                return _thresholdFrequencies;
-            }
-            set
-            {
-                _thresholdFrequencies = value;
-            }
-        }
-    
-        /// <summary>
-        /// Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
-        [System.ComponentModel.DescriptionAttribute("Microlitres each reward gives, on the left spout\'s valve. The valve\'s calibration" +
-            " plans the pulses; an uncalibrated valve gives one pulse of rig.yml\'s width per " +
-            "2 ul (av-dome\'s RewardLine)")]
-        public double RewardSizeUl
-        {
-            get
-            {
-                return _rewardSizeUl;
-            }
-            set
-            {
-                _rewardSizeUl = value;
-            }
-        }
-    
-        /// <summary>
-        /// Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("wheelDiameterMm")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelDiameterMm")]
-        [System.ComponentModel.DescriptionAttribute(@"Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled")]
-        public double? WheelDiameterMm
-        {
-            get
-            {
-                return _wheelDiameterMm;
-            }
-            set
-            {
-                _wheelDiameterMm = value;
-            }
-        }
-    
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("punishment")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="punishment")]
-        public PunishmentConfig Punishment
-        {
-            get
-            {
-                return _punishment;
-            }
-            set
-            {
-                _punishment = value;
-            }
-        }
-    
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("truncation")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncation")]
-        public TruncationConfig Truncation
-        {
-            get
-            {
-                return _truncation;
-            }
-            set
-            {
-                _truncation = value;
-            }
-        }
-    
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("engagement")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="engagement")]
-        public EngagementConfig Engagement
-        {
-            get
-            {
-                return _engagement;
-            }
-            set
-            {
-                _engagement = value;
-            }
-        }
-    
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("optogenetics")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="optogenetics")]
-        public OptogeneticsConfig Optogenetics
-        {
-            get
-            {
-                return _optogenetics;
-            }
-            set
-            {
-                _optogenetics = value;
-            }
-        }
-    
-        /// <summary>
         /// Audio amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("amplitude")]
@@ -1358,11 +1404,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Bin size for frequency quantization (Hz)
+        /// The distance run is rounded to this before it sets the frequency, in cm
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("quantizeBinSize")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="quantizeBinSize")]
-        [System.ComponentModel.DescriptionAttribute("Bin size for frequency quantization (Hz)")]
+        [System.ComponentModel.DescriptionAttribute("The distance run is rounded to this before it sets the frequency, in cm")]
         public int QuantizeBinSize
         {
             get
@@ -1372,6 +1418,120 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _quantizeBinSize = value;
+            }
+        }
+    
+        /// <summary>
+        /// Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("wheelDiameterMm")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelDiameterMm")]
+        [System.ComponentModel.DescriptionAttribute(@"Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled")]
+        public double? WheelDiameterMm
+        {
+            get
+            {
+                return _wheelDiameterMm;
+            }
+            set
+            {
+                _wheelDiameterMm = value;
+            }
+        }
+    
+        /// <summary>
+        /// Timing of each trial
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("trialStructure")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialStructure")]
+        [System.ComponentModel.DescriptionAttribute("Timing of each trial")]
+        public TrialStructure TrialStructure
+        {
+            get
+            {
+                return _trialStructure;
+            }
+            set
+            {
+                _trialStructure = value;
+            }
+        }
+    
+        /// <summary>
+        /// The timeout and error sound a punished trial gets
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("punishment")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="punishment")]
+        [System.ComponentModel.DescriptionAttribute("The timeout and error sound a punished trial gets")]
+        public Punishment Punishment
+        {
+            get
+            {
+                return _punishment;
+            }
+            set
+            {
+                _punishment = value;
+            }
+        }
+    
+        /// <summary>
+        /// Where the cue switches off on a truncated trial
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("truncation")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncation")]
+        [System.ComponentModel.DescriptionAttribute("Where the cue switches off on a truncated trial")]
+        public Truncation Truncation
+        {
+            get
+            {
+                return _truncation;
+            }
+            set
+            {
+                _truncation = value;
+            }
+        }
+    
+        /// <summary>
+        /// Zapit optogenetic stimulation
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("optogenetics")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="optogenetics")]
+        [System.ComponentModel.DescriptionAttribute("Zapit optogenetic stimulation")]
+        public OptogeneticsConfig Optogenetics
+        {
+            get
+            {
+                return _optogenetics;
+            }
+            set
+            {
+                _optogenetics = value;
+            }
+        }
+    
+        /// <summary>
+        /// Training stage table, indexed by the TrainingStage setting from 0; a setting past the end uses the last row
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("trainingStages", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trainingStages")]
+        [System.ComponentModel.DescriptionAttribute("Training stage table, indexed by the TrainingStage setting from 0; a setting past" +
+            " the end uses the last row")]
+        public System.Collections.Generic.List<TrainingStage> TrainingStages
+        {
+            get
+            {
+                return _trainingStages;
+            }
+            set
+            {
+                _trainingStages = value;
             }
         }
     
@@ -1387,23 +1547,20 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
+            stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
             stringBuilder.Append("Modality = " + _modality + ", ");
-            stringBuilder.Append("ShapingStage = " + _shapingStage + ", ");
             stringBuilder.Append("StartFreq = " + _startFreq + ", ");
             stringBuilder.Append("EndFreq = " + _endFreq + ", ");
             stringBuilder.Append("NFreqBins = " + _nFreqBins + ", ");
-            stringBuilder.Append("CenterFreq = " + _centerFreq + ", ");
-            stringBuilder.Append("RewardWindowSize = " + _rewardWindowSize + ", ");
-            stringBuilder.Append("ThresholdFrequencies = " + _thresholdFrequencies + ", ");
-            stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl + ", ");
-            stringBuilder.Append("WheelDiameterMm = " + _wheelDiameterMm + ", ");
-            stringBuilder.Append("Punishment = " + _punishment + ", ");
-            stringBuilder.Append("Truncation = " + _truncation + ", ");
-            stringBuilder.Append("Engagement = " + _engagement + ", ");
-            stringBuilder.Append("Optogenetics = " + _optogenetics + ", ");
             stringBuilder.Append("Amplitude = " + _amplitude + ", ");
             stringBuilder.Append("BackgroundNoiseLevel = " + _backgroundNoiseLevel + ", ");
-            stringBuilder.Append("QuantizeBinSize = " + _quantizeBinSize);
+            stringBuilder.Append("QuantizeBinSize = " + _quantizeBinSize + ", ");
+            stringBuilder.Append("WheelDiameterMm = " + _wheelDiameterMm + ", ");
+            stringBuilder.Append("TrialStructure = " + _trialStructure + ", ");
+            stringBuilder.Append("Punishment = " + _punishment + ", ");
+            stringBuilder.Append("Truncation = " + _truncation + ", ");
+            stringBuilder.Append("Optogenetics = " + _optogenetics + ", ");
+            stringBuilder.Append("TrainingStages = " + _trainingStages);
             return true;
         }
     
@@ -1427,17 +1584,17 @@ namespace UclOpenCoenDomeNavigationTask
     public enum UclOpenCoenDomeNavigationTaskParametersModality
     {
     
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="A")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="A")]
-        A = 0,
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="auditory")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
+        Auditory = 0,
     
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="V")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="V")]
-        V = 1,
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="visual")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visual")]
+        Visual = 1,
     
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="AV")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="AV")]
-        AV = 2,
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="audiovisual")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisual")]
+        Audiovisual = 2,
     }
 
 
@@ -1464,34 +1621,34 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<UclOpenCoenDomeNavigationTaskLogic>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<EngagementConfig> source)
-        {
-            return Process<EngagementConfig>(source);
-        }
-
         public System.IObservable<string> Process(System.IObservable<OptogeneticsConfig> source)
         {
             return Process<OptogeneticsConfig>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<PunishmentConfig> source)
+        public System.IObservable<string> Process(System.IObservable<Punishment> source)
         {
-            return Process<PunishmentConfig>(source);
+            return Process<Punishment>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<Stage> source)
+        public System.IObservable<string> Process(System.IObservable<PunishmentSound> source)
         {
-            return Process<Stage>(source);
+            return Process<PunishmentSound>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<ThresholdFrequencies> source)
+        public System.IObservable<string> Process(System.IObservable<TrainingStage> source)
         {
-            return Process<ThresholdFrequencies>(source);
+            return Process<TrainingStage>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<TruncationConfig> source)
+        public System.IObservable<string> Process(System.IObservable<TrialStructure> source)
         {
-            return Process<TruncationConfig>(source);
+            return Process<TrialStructure>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<Truncation> source)
+        {
+            return Process<Truncation>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
@@ -1509,12 +1666,12 @@ namespace UclOpenCoenDomeNavigationTask
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<EngagementConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PunishmentConfig>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Stage>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<ThresholdFrequencies>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TruncationConfig>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Punishment>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PunishmentSound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
     public partial class DeserializeFromJson : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {
@@ -1570,34 +1727,34 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<UclOpenCoenDomeNavigationTaskLogic>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<EngagementConfig> source)
-        {
-            return Process<EngagementConfig>(source);
-        }
-
         public System.IObservable<string> Process(System.IObservable<OptogeneticsConfig> source)
         {
             return Process<OptogeneticsConfig>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<PunishmentConfig> source)
+        public System.IObservable<string> Process(System.IObservable<Punishment> source)
         {
-            return Process<PunishmentConfig>(source);
+            return Process<Punishment>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<Stage> source)
+        public System.IObservable<string> Process(System.IObservable<PunishmentSound> source)
         {
-            return Process<Stage>(source);
+            return Process<PunishmentSound>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<ThresholdFrequencies> source)
+        public System.IObservable<string> Process(System.IObservable<TrainingStage> source)
         {
-            return Process<ThresholdFrequencies>(source);
+            return Process<TrainingStage>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<TruncationConfig> source)
+        public System.IObservable<string> Process(System.IObservable<TrialStructure> source)
         {
-            return Process<TruncationConfig>(source);
+            return Process<TrialStructure>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<Truncation> source)
+        {
+            return Process<Truncation>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
@@ -1615,12 +1772,12 @@ namespace UclOpenCoenDomeNavigationTask
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<EngagementConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PunishmentConfig>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Stage>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<ThresholdFrequencies>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TruncationConfig>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Punishment>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PunishmentSound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
     public partial class DeserializeFromYaml : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {

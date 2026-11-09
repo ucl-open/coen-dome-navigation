@@ -8,17 +8,19 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
   calibrated; the stimulus config named in the task file loaded. Every condition's `offRampDownDuration_ms` at least 100 ms (250 is usual).
 - rig.yml `zapit:` block: host, port, `hardwareTriggered`, `triggerLine`. With `hardwareTriggered: true`, the trigger line must be
   cabled to the Zapit DAQ trigger input. Also check rig.yml's lick thresholds and the left valve's calibration (BACKLOG).
+- If rig-control refuses to launch over names not on the lab's names list, add them on rig-setup's Repos page (Save Names),
+  with Pip's OK (the list is production config).
 
 ## 1. Optogenetics off
 
-rig-control, `test` mouse, stage 5, optogenetics unticked; ~20 trials.
+rig-control, `test` mouse, Training Stage 4 (Tom's 5), optogenetics unticked; ~20 trials.
 **Pass:** task as before; nothing in Zapit's window; no `Zapit\` folder and no `Settings_ZapitStimConfig` file; trial rows
 `optoStimulated` False, `optoCondition` 0.
 
 ## 2. Optogenetics on
 
 Same, optogenetics ticked with `zapitConfigPath`; at least 30 trials (the first 20 are sham warmup: galvos move, laser off).
-With nobody at the wheel every trial times out after 12 s.
+With nobody at the wheel every trial times out after 12 s (`trialStructure.closedLoopDuration`).
 **Pass:**
 - `Zapit\` log: StartStimulus (command 1) then StopStimulus (command 0) on every trial, alternating, `isError` False.
 - Trial rows: `optoCondition` on every trial; `optoStimulated` True on about 40% of trials after the warmup.
@@ -41,7 +43,7 @@ trial start; with the galvos visible or a photodiode, the stimulus starts at the
 ## 5. Laser on (power meter or photodiode)
 
 Laser trials reach the set power; sham trials stay dark; at every offset the light fades over the ramp-down (not a cut: the fade
-is what prevents rebound); a stage 2-3 `test` trial with the wheel still goes dark 12.5 s after onset (the cap).
+is what prevents rebound); a Training Stage 1-2 (no time limit) `test` trial with the wheel still goes dark 12.5 s after onset (the cap).
 
 ## If Bonsai dies mid-experiment
 

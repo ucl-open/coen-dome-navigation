@@ -8,6 +8,12 @@
 # rig-control checks both before it launches the workflow.
 #
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a quantity ends in its unit.
+#
+# Only what changes from trial to trial (Pip, 9 Nov 2026): the task file's values fixed for the
+# experiment (the stage's row, amplitude) are in Settings\Settings_Task_*.json and the stage itself
+# is TrainingStage in Settings\Settings_Experiment_*.json; no column repeats another or sums the Harp logs (lickCount, trialStartWheelCm until 9 Nov 2026).
+# optoStimulated is back (zapit-v2): with sham trials every trial of an optogenetics experiment has a
+# condition, so laser on is no longer optoCondition > 0.
 
 Seconds:
   type: double
@@ -22,49 +28,36 @@ trialType:
   type: string
   values: [auditory, visual, audiovisual]
   formerly: [Modality]
-  description: What the trial showed, in words, as av-dome's trialType - auditory (the tone sweep), visual (the grating) or both; the task file's modality, A, V or AV.
-trainingStage:
-  type: int
-  formerly: [ShapingStage]
-  description: The training stage the trial ran at, 1 to 6 (the task file's shapingStage).
+  description: What the trial showed, in words, as av-dome's trialType - auditory (the tone sweep), visual (the grating) or both; the task file's modality.
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
   formerly: [WasRewarded]
-  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the time limit or the end of the track (endReason says which). rig-control's performance is Correct over all trials, Tom Childs' success rate.
+  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the time limit or the end of the track (endReason says which), or unrewarded on a stage without lickToReward. rig-control's performance is Correct over all trials, Tom Childs' success rate.
 endReason:
   type: string
   values: [FreqReached, CorrectLick, WrongLickLimit, Timeout, EndOfTrack]
   formerly: [EndReason]
   description: Why the trial ended - the reward frequency reached (stages 1-2), a lick in the reward zone, too many wrong licks, the trial's time limit, or the end of the track.
-punished:
+punishSound:
   type: bool
   formerly: [WasPunished]
-  description: True when the error tone and timeout were given.
-lickCount:
-  type: int
-  formerly: [LickCount]
-  description: Licks on the left spout from the trial's start to the outcome (Seconds). Tom Childs' LickCount was read 2 s later, so it also counted the licks while the mouse drank, and a stage 1-2 trial rewarded without a lick now reads 0 (his engagement label used LickCount > 0). Every lick is in the LicketySplit-Left Harp log.
+  description: True when the error tone played (the task's punishment.sound enabled). A trial is punished when it runs out of time or track with the end frequency in the reward zone, and on a stage with punishWrongZone when it ends outside the zone (ProcessTrialEnd); the timeout follows.
+punishTimeoutSeconds:
+  type: double
+  unit: s
+  formerly: [WasPunished]
+  description: The timeout after a punished trial (the task's punishment.timeoutSeconds), 0 when not punished.
 trackLengthCm:
   type: double
   unit: cm
   formerly: [TrackLength]
-  description: The trial's track length, drawn per trial (shorter in stages 1 and 2). Distances are at the task file's wheelDiameterMm.
+  description: The trial's track length, one of trialStructure.trackLengthsCm, drawn per trial, times the stage's trackLengthScale. Distances are at the task file's wheelDiameterMm.
 endPositionCm:
   type: double
   unit: cm
   formerly: [TrialEndPosCm]
   description: Distance run in the trial when the row was built (Seconds). Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
-rewardFloorHz:
-  type: double
-  unit: Hz
-  formerly: [RewAudFreqFloor]
-  description: The reward zone's lower frequency.
-rewardCeilingHz:
-  type: double
-  unit: Hz
-  formerly: [RewAudFreqCeil]
-  description: The reward zone's upper frequency.
 audioEndFrequencyHz:
   type: double
   unit: Hz
@@ -75,14 +68,10 @@ visualEndSpatialFrequencyCpd:
   unit: cycles/deg
   formerly: [TrialEndVisFreq]
   description: The grating's spatial frequency when the trial ended.
-audioAmplitude:
-  type: double
-  formerly: [AudAmplitude]
-  description: The tone scale the trial played at - the task's amplitude, 0 when the modality has no sound.
 truncationFraction:
   type: double
   formerly: [TruncationPoint]
-  description: Where the cue switched off, as a fraction of the sweep; 1 on an untruncated trial.
+  description: Where the cue switched off, as a fraction of the sweep (one of truncation.points, on the stage's truncationFraction of trials); 1 on an untruncated trial.
 itiStartTime:
   type: double
   unit: s
@@ -92,17 +81,12 @@ itiSeconds:
   type: double
   unit: s
   formerly: [ITIDrawnSec]
-  description: The inter-trial interval drawn for this trial.
+  description: The inter-trial interval drawn before this trial, evenly between trialStructure.itiMin and itiMax (Tom Childs' workflow drew 0 or 1 s until 9 Nov 2026). On a stage with quiescent the trial also waited for quiescentSeconds without licks.
 trialStartTime:
   type: double
   unit: s
   formerly: [TrialStartHarp]
   description: Harp time the trial started (position zero).
-trialStartWheelCm:
-  type: double
-  unit: cm
-  formerly: [TrialStartWheelDistanceCm]
-  description: Wheel distance since the start of the experiment when the trial started.
 stimulusOnsetTime:
   type: double
   unit: s
@@ -116,10 +100,10 @@ outcomeTime:
 rewardSizeUl:
   type: double
   unit: ul
-  description: Microlitres a reward on this trial gives (the task file's rewardSizeUl). What was delivered is RewardDelivered in BonsaiData_Async.
+  description: Microlitres a reward on this trial gives (the stage's rewardSizeUl in trainingStages). What was delivered is RewardDelivered in BonsaiData_Async.
 optoStimulated:
   type: bool
   description: True when the laser was on in this trial. False on sham trials (laser off) and without optogenetics.
 optoCondition:
   type: int
-  description: The Zapit condition (stimLocations number) presented in this trial, laser on or off - every trial of an optogenetics experiment has one, so with optoStimulated false it was a sham trial. 0 without optogenetics.
+  description: The Zapit condition (stimLocations number, from 1) presented in this trial, laser on or off - every trial of an optogenetics experiment has one, so with optoStimulated false it was a sham trial. 0 without optogenetics.

@@ -8,7 +8,8 @@ import yaml
 from scipy.io import wavfile
 
 from ucl_open_coen_dome_navigation import waveforms
-from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic, UclOpenCoenDomeNavigationTaskParameters
+from ucl_open_coen_dome_navigation.helpers import calc_log_window
+from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic
 
 ROOT = Path(__file__).parent.parent
 TASK = ROOT / "config" / "task-abstract-av-corridor.yml"
@@ -23,12 +24,22 @@ def test_the_task_file_validates():
     UclOpenCoenDomeNavigationTaskLogic.model_validate(task())
 
 
-def test_the_task_file_s_reward_zones_are_the_ones_the_model_derives():
-    # The workflow reads thresholdFrequencies as written; rig-control does not run the model.
-    params = task()["taskParameters"]
-    written = params.pop("thresholdFrequencies")
-    derived = UclOpenCoenDomeNavigationTaskParameters.model_validate(params).threshold_frequencies
-    assert written == derived.model_dump(by_alias=True)
+def test_the_stage_rows_keep_tom_s_reward_zones():
+    # Tom Childs' zones: from 18 kHz to the sweep's end at his stages 1-2, then a window centred on 18 kHz in
+    # log space (6 kHz wide), its floor from stage 3 and its ceiling from stage 4 (rows 0-5 are his 1-6).
+    floor, ceiling = calc_log_window(center_freq=18000, window_size=6000)
+    rows = task()["taskParameters"]["trainingStages"]
+    assert len(rows) == 6
+    zones = [(r["rewardFloorHz"], r["rewardCeilingHz"]) for r in rows]
+    assert zones == [(18000, 25000)] * 2 + [(floor, 25000)] + [(floor, ceiling)] * 3
+
+
+def test_the_shared_blocks_have_av_dome_s_names():
+    # Pip, 9 Nov 2026: the lab's tasks name the same things the same way.
+    p = task()["taskParameters"]
+    assert {"itiMin", "itiMax", "closedLoopDuration"} <= set(p["trialStructure"])
+    assert list(p["punishment"]) == ["timeoutSeconds", "sound"] and {"enabled", "path", "gain"} <= set(p["punishment"]["sound"])
+    assert "rngSeed" in p and "rewardSizeUl" in p["trainingStages"][0]
 
 
 def test_the_committed_waveforms_are_the_task_file_s():
@@ -98,11 +109,12 @@ def test_the_schema_refuses_a_stim_delay():
     assert [e.message for e in validator.iter_errors(doc)] == ["0.2 is greater than the maximum of 0"]
 
 
-def test_the_task_file_s_optogenetics_is_the_model_s_default():
-    # The task file is what rig-control sends; it must hold the agreed settings (zapit-v2)
-    opto = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"]).optogenetics
-    assert (opto.stim_probability, opto.warmup_trials, opto.lead_time, opto.stim_duration, opto.stim_delay) == (0.4, 20, 0.1, 12.5, 0.0)
-    assert task()["taskParameters"]["rewardSizeUl"] == 3.0
+def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
+    # zapit-v2: Tom's design (40% laser after 20 sham warmup trials, 0.1 s lead, 12.5 s cap) and 3 ul rewards on every stage
+    params = task()["taskParameters"]
+    opto = params["optogenetics"]
+    assert (opto["stimProbability"], opto["warmupTrials"], opto["leadTime"], opto["stimDuration"], opto["stimDelay"]) == (0.4, 20, 0.1, 12.5, 0.0)
+    assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {3.0}
 
 
 def test_the_committed_task_schema_is_the_model_s():
