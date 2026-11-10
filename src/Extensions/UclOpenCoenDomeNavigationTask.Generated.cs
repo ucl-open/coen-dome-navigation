@@ -1374,11 +1374,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled
+        /// Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. 75 is the measured wheel and what Tom Childs' workflow converted at, so each track is the number of wheel turns the mice trained on; every corridor rig's rig.yml has said 75 too since 9 Nov 2026
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("wheelDiameterMm")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelDiameterMm")]
-        [System.ComponentModel.DescriptionAttribute(@"Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. Tom Childs' workflow converted at 75 mm while every corridor rig's rig.yml says 170 mm, so 75 keeps each track the number of wheel turns the mice trained on until the real diameter is settled")]
+        [System.ComponentModel.DescriptionAttribute(@"Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. 75 is the measured wheel and what Tom Childs' workflow converted at, so each track is the number of wheel turns the mice trained on; every corridor rig's rig.yml has said 75 too since 9 Nov 2026")]
         public double? WheelDiameterMm
         {
             get

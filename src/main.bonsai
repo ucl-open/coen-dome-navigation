@@ -4498,7 +4498,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Wheel</Name>
-        <Description>The wheel distance the task runs on, in cm. The Behavior board's include converts the encoder at rig.yml's wheelDiameterMm (BoardWheelDistanceCm); the task file's wheelDiameterMm, when set, replaces it, so a track takes as many wheel turns as it did in Tom Childs' workflow, which converted at 75 mm while rig.yml says 170 mm. Null in the task file: rig.yml's.</Description>
+        <Description>The wheel distance the task runs on, in cm. The Behavior board's include converts the encoder at rig.yml's wheelDiameterMm (BoardWheelDistanceCm); the task file's wheelDiameterMm, when set, replaces it, so a track takes as many wheel turns as it did in Tom Childs' workflow, which converted at 75 mm, the measured wheel (every dome's rig.yml has said 75 since 9 Nov 2026). Null in the task file: rig.yml's.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
