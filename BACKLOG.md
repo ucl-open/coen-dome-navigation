@@ -82,3 +82,13 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 - The live wheel chart in counts/s, not cm/s: the wheel diameter was undecided then, so a cm/s scale would have been a guess. It is now 75 mm (Decided), so cm/s is possible.
 - `BonsaiData_ZapitReplies` not checked by the manifest on its own: it is written only with optogenetics on, and the manifest expects the `BonsaiData` folder, which Trial and Async always fill.
+
+### Not changed on audit (10 Nov 2026, the 9 Nov naming pass)
+
+Fixed the same day: `zapitConfigPath` again (rig-control keeps only fields ending ConfigPath), `truncatedTrialFraction` in trainingStages, the lab-wide `laserCondition`/`laserPowerMw` descriptions in add-names, the old-names test, stale prose; rig-control's names check reads only included workflows. Not changed, each on its merits:
+
+- `toneEndFrequencyHz` and `toneFrequencyHz` beside `visual...`: Pip chose "tone" for the sweep (9 Nov 2026); av-dome's `audio...` is a speaker position, a different thing.
+- Laser timing names differ from av-dome's (`laserLeadsStimulusBySeconds`, `laserMaxSeconds` against `laserDelaySeconds`, `laserDurationSeconds`): measured from different points (first pip against trial start) and a cap against a timed stimulus, so one name would mislabel one task.
+- `trialStructure` shaped unlike av-dome's (one `quiescentSeconds`, `timeLimitSeconds`): the tasks differ (a lick-free wait against a drawn quiescent period; a whole-trial limit against a response window).
+- StimulusState's column meanings in the README only, not the manifest: the lab has no schema for stream columns yet; adding one is a platform change.
+- Zapit's own `StimDuration` in `ZapitCommand.cs` and `CreateStartStimulus.cs`: Zapit's wire names.
