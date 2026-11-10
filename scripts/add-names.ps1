@@ -31,6 +31,16 @@ foreach ($p in $cols.PSObject.Properties) {
     $tc[$p.Name] = [ordered]@{ type = $p.Value.type; description = $p.Value.description }
     $added += "column $($p.Name)"
 }
+# The lab-wide meaning of the laser columns av-dome shares (audit, 10 Nov 2026): the list said "sham" and
+# fitted this task only. av-dome's scripts\add-names.ps1 sets the same text: change both together.
+$labDescriptions = [ordered]@{
+    laserCondition = 'The Zapit condition (stimLocations number, from 1) sent to Zapit this trial, 0 when none was sent. Whether the laser was on is laserPowerMw > 0; each workflow''s trial-columns.yml says when a condition goes with the laser off.'
+    laserPowerMw   = 'Laser power sent to Zapit for this trial (the task''s optogenetics.laserPowerMw), as commanded, not measured. 0 on laser-off trials and without optogenetics.'
+}
+$described = @()
+foreach ($n in $labDescriptions.Keys) {
+    if ($tc.Contains($n) -and $tc[$n].description -cne $labDescriptions[$n]) { $tc[$n].description = $labDescriptions[$n]; $described += $n }
+}
 $streams = @($prev.streams)
 # This workflow's own streams: BonsaiData_StimulusState, Zapit's replies, and the copy of the Zapit conditions file at Go.
 $ownStreams = @('BonsaiData_StimulusState', 'BonsaiData_ZapitReplies', 'Settings_ZapitConditions')
@@ -72,9 +82,10 @@ $body = [ordered]@{ streams = $streams; experimentSettings = $es; trialColumns =
 "would add $($added.Count): $($added -join ', ')"
 "would tag $($tagged.Count) with ${me}: $($tagged -join ', ')"
 "would remove $($removed.Count): $($removed -join ', ')"
-if ($Apply -and ($added -or $tagged -or $removed)) {
+"would describe $($described.Count): $($described -join ', ')"
+if ($Apply -and ($added -or $tagged -or $removed -or $described)) {
     $what = @($(if ($added) { "added $($added -join ', ')" }), $(if ($tagged) { "tagged $($tagged -join ', ') with $me" }),
-              $(if ($removed) { "removed $($removed -join ', ')" })) -join '; '
+              $(if ($removed) { "removed $($removed -join ', ')" }), $(if ($described) { "described $($described -join ', ')" })) -join '; '
     $r = Save-NamesDictionary -Path $path -Body $body -Previous $prev -Was $was -By 'PC' -What "$what (coen-dome-navigation, Tom Childs' auditory VR corridor on open-rigs)"
     "saved: $($r.Ok) $($r.Detail)"
 }

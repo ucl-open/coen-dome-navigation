@@ -23,7 +23,7 @@ TASK = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_t
 def params(closed_loop=None, **opto):
     """The task file's parameters with optogenetics on and the given changes."""
     doc = copy.deepcopy(TASK)
-    doc["optogenetics"].update({"enabled": True, "zapitConditionsPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
+    doc["optogenetics"].update({"enabled": True, "zapitConfigPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
     if closed_loop is not None:
         doc["trialStructure"]["timeLimitSeconds"] = closed_loop
     return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
@@ -78,7 +78,7 @@ def test_initialise_opto_trial_checks_the_same_rules():
 def test_the_stimulus_config_is_saved_as_json():
     # LogDataSchema writes Settings\<Name>_<time>.json and parses its input as JSON, so the YAML goes in wrapped
     text = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
-    block = text[text.index("TaskParameters.Optogenetics.ZapitConditionsPath"):text.index("<Name>Settings_ZapitConditions</Name>")]
+    block = text[text.index("TaskParameters.Optogenetics.ZapitConfigPath"):text.index("<Name>Settings_ZapitConditions</Name>")]
     assert "ext:ZapitConditionsSnapshot" in block and "ReadTextFile" not in block
 
 

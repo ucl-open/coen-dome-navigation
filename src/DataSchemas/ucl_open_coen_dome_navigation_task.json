@@ -20,10 +20,10 @@
           "title": "Enabled",
           "type": "boolean"
         },
-        "zapitConditionsPath": {
+        "zapitConfigPath": {
           "default": "",
           "description": "Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms",
-          "title": "ZapitConditionsPath",
+          "title": "ZapitConfigPath",
           "type": "string"
         },
         "laserPowerMw": {
@@ -74,7 +74,7 @@
       "then": {
         "additionalProperties": true,
         "properties": {
-          "zapitConditionsPath": {
+          "zapitConfigPath": {
             "minLength": 1
           },
           "laserPowerMw": {
@@ -208,11 +208,11 @@
           "title": "FrequencyDrift",
           "type": "boolean"
         },
-        "truncationFraction": {
+        "truncatedTrialFraction": {
           "description": "Fraction of trials whose stimulus switches off early (truncation.sweepFractions)",
           "maximum": 1,
           "minimum": 0,
-          "title": "TruncationFraction",
+          "title": "TruncatedTrialFraction",
           "type": "number"
         }
       },
@@ -229,7 +229,7 @@
         "trackEndEndsTrial",
         "trackLengthScale",
         "frequencyDrift",
-        "truncationFraction"
+        "truncatedTrialFraction"
       ],
       "title": "TrainingStage",
       "type": "object"
@@ -260,7 +260,7 @@
         },
         "timeLimitSeconds": {
           "default": 12.0,
-          "description": "On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)",
+          "description": "On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's response period is its closedLoopSeconds)",
           "exclusiveMinimum": 0,
           "title": "TimeLimitSeconds",
           "type": "number"
@@ -284,7 +284,7 @@
       "type": "object"
     },
     "Truncation": {
-      "description": "Where the stimulus switches off on a truncated trial (a stage's truncationFraction says how many).\n\nOn a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the stimulus.",
+      "description": "Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).\n\nOn a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the stimulus.",
       "properties": {
         "sweepFractions": {
           "default": [
@@ -454,7 +454,7 @@
           "$ref": "#/$defs/OptogeneticsConfig",
           "default": {
             "enabled": false,
-            "zapitConditionsPath": "",
+            "zapitConfigPath": "",
             "laserPowerMw": null,
             "laserOnProbability": 0.4,
             "laserMaxSeconds": 12.5,

@@ -153,7 +153,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _enabled;
     
-        private string _zapitConditionsPath;
+        private string _zapitConfigPath;
     
         private double? _laserPowerMw;
     
@@ -168,7 +168,7 @@ namespace UclOpenCoenDomeNavigationTask
         public OptogeneticsConfig()
         {
             _enabled = false;
-            _zapitConditionsPath = "";
+            _zapitConfigPath = "";
             _laserOnProbability = 0.4D;
             _laserMaxSeconds = 12.5D;
             _laserLeadsStimulusBySeconds = 0.1D;
@@ -178,7 +178,7 @@ namespace UclOpenCoenDomeNavigationTask
         protected OptogeneticsConfig(OptogeneticsConfig other)
         {
             _enabled = other._enabled;
-            _zapitConditionsPath = other._zapitConditionsPath;
+            _zapitConfigPath = other._zapitConfigPath;
             _laserPowerMw = other._laserPowerMw;
             _laserOnProbability = other._laserOnProbability;
             _laserMaxSeconds = other._laserMaxSeconds;
@@ -207,20 +207,20 @@ namespace UclOpenCoenDomeNavigationTask
         /// <summary>
         /// Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("zapitConditionsPath")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="zapitConditionsPath")]
+        [Newtonsoft.Json.JsonPropertyAttribute("zapitConfigPath")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="zapitConfigPath")]
         [System.ComponentModel.DescriptionAttribute("Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01," +
             " stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, " +
             "each with an offRampDownDuration_ms of at least 100 ms")]
-        public string ZapitConditionsPath
+        public string ZapitConfigPath
         {
             get
             {
-                return _zapitConditionsPath;
+                return _zapitConfigPath;
             }
             set
             {
-                _zapitConditionsPath = value;
+                _zapitConfigPath = value;
             }
         }
     
@@ -329,7 +329,7 @@ namespace UclOpenCoenDomeNavigationTask
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
             stringBuilder.Append("Enabled = " + _enabled + ", ");
-            stringBuilder.Append("ZapitConditionsPath = " + _zapitConditionsPath + ", ");
+            stringBuilder.Append("ZapitConfigPath = " + _zapitConfigPath + ", ");
             stringBuilder.Append("LaserPowerMw = " + _laserPowerMw + ", ");
             stringBuilder.Append("LaserOnProbability = " + _laserOnProbability + ", ");
             stringBuilder.Append("LaserMaxSeconds = " + _laserMaxSeconds + ", ");
@@ -601,7 +601,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _frequencyDrift;
     
-        private double _truncationFraction;
+        private double _truncatedTrialFraction;
     
         public TrainingStage()
         {
@@ -621,7 +621,7 @@ namespace UclOpenCoenDomeNavigationTask
             _trackEndEndsTrial = other._trackEndEndsTrial;
             _trackLengthScale = other._trackLengthScale;
             _frequencyDrift = other._frequencyDrift;
-            _truncationFraction = other._truncationFraction;
+            _truncatedTrialFraction = other._truncatedTrialFraction;
         }
     
         /// <summary>
@@ -847,18 +847,18 @@ namespace UclOpenCoenDomeNavigationTask
         /// <summary>
         /// Fraction of trials whose stimulus switches off early (truncation.sweepFractions)
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("truncationFraction", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncationFraction")]
+        [Newtonsoft.Json.JsonPropertyAttribute("truncatedTrialFraction", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncatedTrialFraction")]
         [System.ComponentModel.DescriptionAttribute("Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")]
-        public double TruncationFraction
+        public double TruncatedTrialFraction
         {
             get
             {
-                return _truncationFraction;
+                return _truncatedTrialFraction;
             }
             set
             {
-                _truncationFraction = value;
+                _truncatedTrialFraction = value;
             }
         }
     
@@ -886,7 +886,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("TrackEndEndsTrial = " + _trackEndEndsTrial + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
             stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");
-            stringBuilder.Append("TruncationFraction = " + _truncationFraction);
+            stringBuilder.Append("TruncatedTrialFraction = " + _truncatedTrialFraction);
             return true;
         }
     
@@ -1000,12 +1000,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)
+        /// On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's response period is its closedLoopSeconds)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("timeLimitSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeLimitSeconds")]
         [System.ComponentModel.DescriptionAttribute("On a stage with timeLimit, the longest a trial runs from its start, in seconds (a" +
-            "v-dome\'s name for its response period)")]
+            "v-dome\'s response period is its closedLoopSeconds)")]
         public double TimeLimitSeconds
         {
             get
@@ -1074,14 +1074,14 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Where the stimulus switches off on a truncated trial (a stage's truncationFraction says how many).
+    /// Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).
     ///
     ///On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
     ///the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
     ///zone without the stimulus.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Where the stimulus switches off on a truncated trial (a stage's truncationFraction says how many).
+    [System.ComponentModel.DescriptionAttribute(@"Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).
 
     On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
     the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward

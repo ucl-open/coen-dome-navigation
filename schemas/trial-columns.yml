@@ -3,7 +3,8 @@
 # experiment's manifest.json at Start, so each experiment carries the meaning of its own trial log.
 #
 # Each column: type (int, double, bool or string), and where they apply values, unit, formerly
-# (the name in Tom Childs' auditory-vr-corridor TrialLog) and description. The names and types must
+# (names it was recorded under before, newest first, Tom Childs' auditory-vr-corridor TrialLog
+# names among them) and description. The names and types must
 # also be on the lab's list (K:\config\data-dictionary.json, edited from rig-setup's Repos page):
 # rig-control checks both before it launches the workflow.
 #
@@ -61,7 +62,7 @@ endPositionCm:
 toneEndFrequencyHz:
   type: double
   unit: Hz
-  formerly: [TrialEndAudFreq, audioEndFrequencyHz]
+  formerly: [audioEndFrequencyHz, TrialEndAudFreq]
   description: The sweep's frequency when the trial ended.
 visualEndSpatialFrequencyCpd:
   type: double
@@ -71,7 +72,7 @@ visualEndSpatialFrequencyCpd:
 truncationFraction:
   type: double
   formerly: [TruncationPoint]
-  description: Where the stimulus switched off, as a fraction of the sweep (one of truncation.sweepFractions, on the stage's truncationFraction of trials); 1 on an untruncated trial.
+  description: Where the stimulus switched off, as a fraction of the sweep (one of truncation.sweepFractions, on the stage's truncatedTrialFraction of trials); 1 on an untruncated trial.
 itiStartTime:
   type: double
   unit: s
@@ -108,4 +109,4 @@ laserPowerMw:
 laserCondition:
   type: int
   formerly: [optoCondition]
-  description: The Zapit condition (stimLocations number, from 1) presented in this trial, laser on or off - every trial of an optogenetics experiment has one, so with laserPowerMw 0 it was a laser-off trial. 0 without optogenetics.
+  description: The Zapit condition (stimLocations number, from 1) sent to Zapit this trial, laser on or off - every trial of an optogenetics experiment has one here, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics.

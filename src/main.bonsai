@@ -1599,7 +1599,7 @@
                                 </Workflow>
                               </Expression>
                               <Expression xsi:type="Format">
-                                <Format>Zapit answered {0} with an error (reply value {1}, laserOn {2}). Check the MATLAB window: is the conditions file the task file names (zapitConditionsPath) loaded in Zapit, is Zapit calibrated, and is the DAQ working?</Format>
+                                <Format>Zapit answered {0} with an error (reply value {1}, laserOn {2}). Check the MATLAB window: is the conditions file the task file names (zapitConfigPath) loaded in Zapit, is Zapit calibrated, and is the DAQ working?</Format>
                                 <Selector>Command,Value,LaserOn</Selector>
                               </Expression>
                               <Expression xsi:type="Combinator">
@@ -6440,7 +6440,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         <Expression xsi:type="WorkflowOutput" />
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>TruncationPoint</scr:Name>
-                          <scr:Expression>it.Item1.Item2.TruncationFraction &gt; 0 &amp;&amp; it.Item1.Item1.Item2 &lt; it.Item1.Item2.TruncationFraction &amp;&amp; it.Item2.Truncation.SweepFractions.Count &gt; 0 ? it.Item2.Truncation.SweepFractions[Convert.ToInt32(Math.Floor(it.Item1.Item1.Item2 / it.Item1.Item2.TruncationFraction * it.Item2.Truncation.SweepFractions.Count))] : 1.0</scr:Expression>
+                          <scr:Expression>it.Item1.Item2.TruncatedTrialFraction &gt; 0 &amp;&amp; it.Item1.Item1.Item2 &lt; it.Item1.Item2.TruncatedTrialFraction &amp;&amp; it.Item2.Truncation.SweepFractions.Count &gt; 0 ? it.Item2.Truncation.SweepFractions[Convert.ToInt32(Math.Floor(it.Item1.Item1.Item2 / it.Item1.Item2.TruncatedTrialFraction * it.Item2.Truncation.SweepFractions.Count))] : 1.0</scr:Expression>
                         </Expression>
                         <Expression xsi:type="MulticastSubject">
                           <Name>TruncationPoint</Name>
@@ -10811,7 +10811,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                     </Workflow>
                   </Expression>
                   <Expression xsi:type="MemberSelector">
-                    <Selector>TaskParameters.Optogenetics.ZapitConditionsPath</Selector>
+                    <Selector>TaskParameters.Optogenetics.ZapitConfigPath</Selector>
                   </Expression>
                   <Expression xsi:type="Combinator">
                     <Combinator xsi:type="ext:ZapitConditionsSnapshot" />

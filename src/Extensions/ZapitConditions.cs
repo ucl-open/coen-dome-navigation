@@ -26,7 +26,7 @@ public static class ZapitConditions
         if (string.IsNullOrWhiteSpace(path))
         {
             throw new InvalidOperationException(
-                "No Zapit conditions file was given (optogenetics.zapitConditionsPath is empty). " +
+                "No Zapit conditions file was given (optogenetics.zapitConfigPath is empty). " +
                 "Set it to the conditions file that is loaded in Zapit.");
         }
         if (!File.Exists(path))

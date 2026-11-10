@@ -20,7 +20,7 @@ public class ZapitConditionsSnapshot
         {
             var fullPath = Path.GetFullPath(path);
             var snapshot = new JObject();
-            snapshot["zapitConditionsPath"] = fullPath;
+            snapshot["zapitConfigPath"] = fullPath;
             snapshot["contents"] = File.ReadAllText(fullPath);
             return snapshot.ToString(Formatting.Indented);
         });

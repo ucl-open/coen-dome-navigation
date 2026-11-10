@@ -32,7 +32,7 @@ class TrialStructure(BaseSchema):
         description="On a stage with quiescent, the next trial waits until the mouse has gone this long without licking (uncapped), so licks for the last reward cannot carry into the next trial",
     )
     time_limit_seconds: float = Field(
-        default=12.0, gt=0, description="On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's name for its response period)"
+        default=12.0, gt=0, description="On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's response period is its closedLoopSeconds)"
     )
     track_lengths_cm: List[float] = Field(
         default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
@@ -61,7 +61,7 @@ class Punishment(BaseSchema):
 
 
 class Truncation(BaseSchema):
-    """Where the stimulus switches off on a truncated trial (a stage's truncationFraction says how many).
+    """Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).
 
     On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
     the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
@@ -105,7 +105,7 @@ class OptogeneticsConfig(BaseSchema):
         json_schema_extra={
             "if": {"properties": {"enabled": {"const": True}}, "required": ["enabled"], "additionalProperties": True},
             "then": {
-                "properties": {"zapitConditionsPath": {"minLength": 1}, "laserPowerMw": {"type": "number"}},
+                "properties": {"zapitConfigPath": {"minLength": 1}, "laserPowerMw": {"type": "number"}},
                 "required": ["laserPowerMw"],
                 "additionalProperties": True,
             },
@@ -113,7 +113,7 @@ class OptogeneticsConfig(BaseSchema):
     )
 
     enabled: bool = Field(default=False, description="Whether optogenetic stimulation is enabled")
-    zapit_conditions_path: str = Field(
+    zapit_config_path: str = Field(
         default="",
         description="Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms",
     )
@@ -147,8 +147,8 @@ class OptogeneticsConfig(BaseSchema):
 
     @model_validator(mode="after")
     def validate_config_path(self):
-        if self.enabled and not self.zapit_conditions_path:
-            raise ValueError("optogenetics is enabled but zapit_conditions_path is empty")
+        if self.enabled and not self.zapit_config_path:
+            raise ValueError("optogenetics is enabled but zapit_config_path is empty")
         if self.enabled and self.laser_power_mw is None:
             raise ValueError("optogenetics is enabled but laser_power_mw is not set")
         if self.laser_power_mw is not None and not math.isfinite(self.laser_power_mw):
@@ -190,7 +190,7 @@ class TrainingStage(BaseSchema):
     track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
     track_length_scale: float = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
-    truncation_fraction: float = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")
+    truncated_trial_fraction: float = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")
 
     @model_validator(mode="after")
     def _zone_ordered(self) -> "TrainingStage":

@@ -39,7 +39,7 @@ taskParameters:
     sweepFractions: [0.4, 0.6]
   optogenetics:               # Zapit; the laser runs from beep 0 to the outcome (or laserMaxSeconds), laser-off trials laser off
     enabled: false
-    zapitConditionsPath: ''   # the Zapit conditions file loaded in Zapit
+    zapitConfigPath: ''   # the Zapit conditions file loaded in Zapit
     laserPowerMw: null        # mW on laser-on trials, every condition; required with optogenetics on
     laserOnProbability: 0.4   # laser-on trials after trialsBeforeLaser, balanced over the conditions; the rest are 0 mW
     laserMaxSeconds: 12.5     # s; a cap: at least 12 + laserLeadsStimulusBySeconds + 0.25, the laser stops at the outcome
@@ -60,7 +60,7 @@ taskParameters:
       trackEndEndsTrial: false
       trackLengthScale: 0.125
       frequencyDrift: true
-      truncationFraction: 0.0
+      truncatedTrialFraction: 0.0
     - label: Stage 1 (Tom's 2)   # as stage 0, no drift
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
@@ -73,7 +73,7 @@ taskParameters:
       trackEndEndsTrial: false
       trackLengthScale: 0.125
       frequencyDrift: false
-      truncationFraction: 0.0
+      truncatedTrialFraction: 0.0
     - label: Stage 2 (Tom's 3)   # a lick anywhere above the floor; full tracks; the end of the track ends the trial
       rewardFloorHz: 15248
       rewardCeilingHz: 25000
@@ -86,7 +86,7 @@ taskParameters:
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
-      truncationFraction: 0.0
+      truncatedTrialFraction: 0.0
     - label: Stage 3 (Tom's 4)   # the ceiling comes in; wrong licks and slowness punished
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
@@ -99,7 +99,7 @@ taskParameters:
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
-      truncationFraction: 0.0
+      truncatedTrialFraction: 0.0
     - label: Stage 4 (Tom's 5)   # fewer wrong licks allowed
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
@@ -112,7 +112,7 @@ taskParameters:
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
-      truncationFraction: 0.0
+      truncatedTrialFraction: 0.0
     - label: Stage 5 (Tom's 6)   # stage 4 with 16% truncated trials; only ever chosen by hand
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
@@ -125,4 +125,4 @@ taskParameters:
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
-      truncationFraction: 0.16
+      truncatedTrialFraction: 0.16

@@ -68,8 +68,8 @@ public class InitialiseOptoTrial
         if (conditions == null)
         {
             Validate(optogenetics, parameters);
-            conditions = ZapitConditions.ReadConditionNumbers(optogenetics.ZapitConditionsPath);
-            Console.WriteLine("InitialiseOptoTrial: Zapit conditions file '" + optogenetics.ZapitConditionsPath + "' has " +
+            conditions = ZapitConditions.ReadConditionNumbers(optogenetics.ZapitConfigPath);
+            Console.WriteLine("InitialiseOptoTrial: Zapit conditions file '" + optogenetics.ZapitConfigPath + "' has " +
                 conditions.Count + " conditions");
         }
 
