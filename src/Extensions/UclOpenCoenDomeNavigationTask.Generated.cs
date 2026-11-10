@@ -151,7 +151,7 @@ namespace UclOpenCoenDomeNavigationTask
     public partial class OptogeneticsConfig
     {
     
-        private bool _enabled;
+        private bool _useZapit;
     
         private string _zapitConfigPath;
     
@@ -167,7 +167,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         public OptogeneticsConfig()
         {
-            _enabled = false;
+            _useZapit = false;
             _zapitConfigPath = "";
             _laserOnProbability = 0.4D;
             _laserMaxSeconds = 12.5D;
@@ -177,7 +177,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected OptogeneticsConfig(OptogeneticsConfig other)
         {
-            _enabled = other._enabled;
+            _useZapit = other._useZapit;
             _zapitConfigPath = other._zapitConfigPath;
             _laserPowerMw = other._laserPowerMw;
             _laserOnProbability = other._laserOnProbability;
@@ -187,20 +187,21 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Whether optogenetic stimulation is enabled
+        /// Whether Zapit runs this experiment: every trial sends it a condition, laser on or off, and rig-control checks Zapit is answering before Go
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("enabled")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="enabled")]
-        [System.ComponentModel.DescriptionAttribute("Whether optogenetic stimulation is enabled")]
-        public bool Enabled
+        [Newtonsoft.Json.JsonPropertyAttribute("useZapit")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="useZapit")]
+        [System.ComponentModel.DescriptionAttribute("Whether Zapit runs this experiment: every trial sends it a condition, laser on or" +
+            " off, and rig-control checks Zapit is answering before Go")]
+        public bool UseZapit
         {
             get
             {
-                return _enabled;
+                return _useZapit;
             }
             set
             {
-                _enabled = value;
+                _useZapit = value;
             }
         }
     
@@ -328,7 +329,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Enabled = " + _enabled + ", ");
+            stringBuilder.Append("UseZapit = " + _useZapit + ", ");
             stringBuilder.Append("ZapitConfigPath = " + _zapitConfigPath + ", ");
             stringBuilder.Append("LaserPowerMw = " + _laserPowerMw + ", ");
             stringBuilder.Append("LaserOnProbability = " + _laserOnProbability + ", ");

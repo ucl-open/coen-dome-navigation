@@ -55,7 +55,7 @@ public class InitialiseOptoTrial
         var trial = new OptoTrial();
         trial.TrialNumber = trialNumber;
         var optogenetics = parameters.Optogenetics;
-        if (optogenetics == null || !optogenetics.Enabled)
+        if (optogenetics == null || !optogenetics.UseZapit)
         {
             // Not an optogenetics experiment: nothing is sent to Zapit.
             trial.OptogeneticEnabled = false;

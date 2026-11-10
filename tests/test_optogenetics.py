@@ -23,7 +23,7 @@ TASK = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_t
 def params(closed_loop=None, **opto):
     """The task file's parameters with optogenetics on and the given changes."""
     doc = copy.deepcopy(TASK)
-    doc["optogenetics"].update({"enabled": True, "zapitConfigPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
+    doc["optogenetics"].update({"useZapit": True, "zapitConfigPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
     if closed_loop is not None:
         doc["trialStructure"]["timeLimitSeconds"] = closed_loop
     return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
@@ -54,7 +54,7 @@ def test_a_cap_that_would_end_a_timed_out_trial_early_is_refused(closed_loop, la
 def test_the_cap_rule_only_applies_with_optogenetics_on():
     doc = copy.deepcopy(TASK)
     doc["trialStructure"]["timeLimitSeconds"] = 30
-    assert UclOpenCoenDomeNavigationTaskParameters.model_validate(doc).optogenetics.enabled is False
+    assert UclOpenCoenDomeNavigationTaskParameters.model_validate(doc).optogenetics.use_zapit is False
 
 
 def test_laser_max_seconds_must_be_finite():

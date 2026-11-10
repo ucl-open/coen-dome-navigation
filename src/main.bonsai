@@ -1533,7 +1533,7 @@
                           <Name>TaskConfig</Name>
                         </Expression>
                         <Expression xsi:type="MemberSelector">
-                          <Selector>TaskParameters.Optogenetics.Enabled</Selector>
+                          <Selector>TaskParameters.Optogenetics.UseZapit</Selector>
                         </Expression>
                         <Expression xsi:type="Combinator">
                           <Combinator xsi:type="rx:Take">
@@ -7926,7 +7926,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>StimulusStartBeep</scr:Name>
                           <scr:Description>Skip count before lick detection starts: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
-                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
+                          <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
                         </Expression>
                         <Expression xsi:type="PropertyMapping">
                           <PropertyMappings>
@@ -8185,7 +8185,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>StimulusStartBeep</scr:Name>
                           <scr:Description>Skip count before the timeout starts: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
-                          <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
+                          <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
                         </Expression>
                         <Expression xsi:type="PropertyMapping">
                           <PropertyMappings>
@@ -9894,7 +9894,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   <Expression xsi:type="scr:ExpressionTransform">
                     <scr:Name>StimulusStartBeep</scr:Name>
                     <scr:Description>First beep with a tone pip: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment, so the laser (on at beep 0) leads the stimulus by laserLeadsStimulusBySeconds on every trial of that experiment, laser-on or laser-off.</scr:Description>
-                    <scr:Expression>it.Optogenetics.Enabled ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
+                    <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
                   </Expression>
                   <Expression xsi:type="PropertyMapping">
                     <PropertyMappings>
@@ -10800,7 +10800,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                           <Name>Source1</Name>
                         </Expression>
                         <Expression xsi:type="MemberSelector">
-                          <Selector>TaskParameters.Optogenetics.Enabled</Selector>
+                          <Selector>TaskParameters.Optogenetics.UseZapit</Selector>
                         </Expression>
                         <Expression xsi:type="WorkflowOutput" />
                       </Nodes>

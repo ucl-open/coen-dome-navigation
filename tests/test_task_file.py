@@ -88,16 +88,16 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
         return [e.message for e in validator.iter_errors(doc)]
 
     assert problems() == []
-    assert problems(enabled=True, laserPowerMw=2.0) == ["'' should be non-empty"]
-    assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml") == ["None is not of type 'number'"]
-    assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=0) == ["0 is not valid under any of the given schemas"]
-    assert problems(enabled=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0) == []
+    assert problems(useZapit=True, laserPowerMw=2.0) == ["'' should be non-empty"]
+    assert problems(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml") == ["None is not of type 'number'"]
+    assert problems(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=0) == ["0 is not valid under any of the given schemas"]
+    assert problems(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0) == []
 
 
 def test_the_optogenetics_block_has_pip_s_names():
     # Pip, 9 Nov 2026: av-dome's stimDelay (only 0 works here), excludeRepeats (no repeat trials) and
     # pseudorandomSelection (draws are always balanced) dropped; the rest renamed to say what they do.
-    names = ["enabled", "zapitConfigPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserLeadsStimulusBySeconds",
+    names = ["useZapit", "zapitConfigPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserLeadsStimulusBySeconds",
              "trialsBeforeLaser"]
     assert list(task()["taskParameters"]["optogenetics"]) == names
 
@@ -109,7 +109,7 @@ def test_rig_control_keeps_the_zapit_file():
 
 
 @pytest.mark.parametrize("old", ["stimDelay", "excludeRepeats", "pseudorandomSelection", "warmupTrials", "stimProbability",
-                                 "stimDuration", "leadTime", "zapitStimConfigPath", "zapitConditionsPath", "laserLeadSeconds"])
+                                 "stimDuration", "leadTime", "zapitStimConfigPath", "zapitConditionsPath", "laserLeadSeconds", "enabled"])
 def test_the_schema_refuses_the_old_names(old):
     schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8")))
     validator = jsonschema.Draft202012Validator(schema)

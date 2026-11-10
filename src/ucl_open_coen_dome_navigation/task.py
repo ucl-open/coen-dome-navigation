@@ -103,7 +103,7 @@ class OptogeneticsConfig(BaseSchema):
     # out because rig-control closes every object that lists properties.
     model_config = ConfigDict(
         json_schema_extra={
-            "if": {"properties": {"enabled": {"const": True}}, "required": ["enabled"], "additionalProperties": True},
+            "if": {"properties": {"useZapit": {"const": True}}, "required": ["useZapit"], "additionalProperties": True},
             "then": {
                 "properties": {"zapitConfigPath": {"minLength": 1}, "laserPowerMw": {"type": "number"}},
                 "required": ["laserPowerMw"],
@@ -112,7 +112,7 @@ class OptogeneticsConfig(BaseSchema):
         }
     )
 
-    enabled: bool = Field(default=False, description="Whether optogenetic stimulation is enabled")
+    use_zapit: bool = Field(default=False, description="Whether Zapit runs this experiment: every trial sends it a condition, laser on or off, and rig-control checks Zapit is answering before Go")
     zapit_config_path: str = Field(
         default="",
         description="Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms",
@@ -147,10 +147,10 @@ class OptogeneticsConfig(BaseSchema):
 
     @model_validator(mode="after")
     def validate_config_path(self):
-        if self.enabled and not self.zapit_config_path:
-            raise ValueError("optogenetics is enabled but zapit_config_path is empty")
-        if self.enabled and self.laser_power_mw is None:
-            raise ValueError("optogenetics is enabled but laser_power_mw is not set")
+        if self.use_zapit and not self.zapit_config_path:
+            raise ValueError("use_zapit is on but zapit_config_path is empty")
+        if self.use_zapit and self.laser_power_mw is None:
+            raise ValueError("use_zapit is on but laser_power_mw is not set")
         if self.laser_power_mw is not None and not math.isfinite(self.laser_power_mw):
             raise ValueError(f"laser_power_mw ({self.laser_power_mw}) must be a finite number of mW")
         return self
@@ -256,7 +256,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         # (timeLimitSeconds, counted from the first tone pip) plus laser_leads_stimulus_by_seconds (zapit-v2)
         opto = self.optogenetics
         shortest = self.trial_structure.time_limit_seconds + opto.laser_leads_stimulus_by_seconds + STIM_DURATION_MARGIN_SEC
-        if opto.enabled and opto.laser_max_seconds < shortest - 1e-9:
+        if opto.use_zapit and opto.laser_max_seconds < shortest - 1e-9:
             raise ValueError(
                 f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: trialStructure.timeLimitSeconds "
                 f"({self.trial_structure.time_limit_seconds:g} s) counts from the first tone pip, laser_leads_stimulus_by_seconds ({opto.laser_leads_stimulus_by_seconds} s) after onset"
