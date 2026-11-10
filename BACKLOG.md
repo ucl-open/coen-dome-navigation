@@ -117,3 +117,9 @@ Fixed the same night: endReason's meaning (copied into every manifest) said Freq
 Fixed the same night: this file said no rig has this workflow, but every dome has pulled it since 9 Nov 2026 (above); `laserMaxSeconds`'s description and the task file's comment quoted the time limit as 12 s, now `timeLimitSeconds`; the cap's margin and validators were named "stim" (`STIM_DURATION_MARGIN_SEC`, `StimDurationMarginSec`), now "laser max"; `CheckZapitConditionCount`'s comment called the Zapit file the "stimulus config" (tests added). Not changed, each on its merits:
 
 - `rewardSizeUl` on every trial row though fixed for the experiment: a lab-wide column shared with av-dome, where large-reward trials make it vary, so one reader serves both tasks.
+
+### Not changed on audit (10 Nov 2026, round 4 of 5)
+
+Fixed the same night: `ZapitConditions`' ramp-down comment described MATLAB Zapit 1.0.4's `stopOptoStim` shortcut as Zapit's; it now says so, and that the lab's Python Zapit (Coen-Lab/zapit `pointer.stop_opto_stim`) stops the DAQ task 0.2 s after any ramp-down. The check stays, as the rig test runs MATLAB Zapit. Not changed, each on its merits:
+
+- "Required with optogenetics on" and `ConnectZapit`'s "when the task YAML enables optogenetics", though the switch is `useZapit`: plain English for the block's one switch; the schema and the validator messages name `useZapit`.

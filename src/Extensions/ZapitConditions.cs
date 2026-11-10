@@ -89,9 +89,10 @@ public static class ZapitConditions
 
     // Every condition must ramp down over at least MinimumRampDownMs and over more than one stimulus cycle:
     // - a ramp-down fades the light out, so stopping inhibition does not cause rebound excitation (usually 100-250 ms);
-    // - Zapit's stopOptoStim ramps in whole cycles, and a ramp of one cycle or less (offRampDownDuration_ms <= 1000 /
-    //   stimModulationFreqHz) takes a shortcut that writes zeros without stopping the DAQ task, so on a hardware-triggered rig
-    //   the next trial's stimulus would start as soon as it is armed instead of at the trigger.
+    // - MATLAB Zapit's stopOptoStim (1.0.4, the Zapit docs\zapit-rig-test.md runs) ramps in whole cycles, and a ramp of one
+    //   cycle or less (offRampDownDuration_ms <= 1000 / stimModulationFreqHz) takes a shortcut that writes zeros without
+    //   stopping the DAQ task, so on a hardware-triggered rig the next trial's stimulus would start as soon as it is armed
+    //   instead of at the trigger. (The lab's Python Zapit, Coen-Lab/zapit, stops the task 0.2 s after any ramp-down.)
     // And at most MaximumRampDownMs: the masking LEDs on the trigger line go out 1 s after the outcome (OptoOnset), which
     // must be after the laser has ramped down, with room for Zapit's delay in stopping (Tom Childs and Pip, 10 Nov 2026).
     public const double MinimumRampDownMs = 100;
