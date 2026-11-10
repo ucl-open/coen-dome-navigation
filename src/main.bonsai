@@ -3366,7 +3366,7 @@
                                 <Text><![CDATA[Motor1_IN_position]]></Text>
                               </Expression>
                               <Expression xsi:type="MemberSelector">
-                                <Selector>LeftElevation</Selector>
+                                <Selector>BaseTransverse</Selector>
                               </Expression>
                               <Expression xsi:type="rx:BehaviorSubject">
                                 <Name>Motor1_Position</Name>
@@ -3376,7 +3376,7 @@
                                 <Text><![CDATA[Motor2_IN_position]]></Text>
                               </Expression>
                               <Expression xsi:type="MemberSelector">
-                                <Selector>RightElevation</Selector>
+                                <Selector>LeftRadial</Selector>
                               </Expression>
                               <Expression xsi:type="rx:BehaviorSubject">
                                 <Name>Motor2_Position</Name>
@@ -3396,7 +3396,7 @@
                                 <Text><![CDATA[Motor4_IN_position]]></Text>
                               </Expression>
                               <Expression xsi:type="MemberSelector">
-                                <Selector>LeftRadial</Selector>
+                                <Selector>LeftElevation</Selector>
                               </Expression>
                               <Expression xsi:type="rx:BehaviorSubject">
                                 <Name>Motor4_Position</Name>
@@ -3406,7 +3406,7 @@
                                 <Text><![CDATA[Motor5_IN_position]]></Text>
                               </Expression>
                               <Expression xsi:type="MemberSelector">
-                                <Selector>BaseTransverse</Selector>
+                                <Selector>RightElevation</Selector>
                               </Expression>
                               <Expression xsi:type="rx:BehaviorSubject">
                                 <Name>Motor5_Position</Name>
