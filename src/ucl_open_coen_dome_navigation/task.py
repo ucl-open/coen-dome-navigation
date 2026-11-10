@@ -16,7 +16,7 @@ from swc.aeon.schema import BaseSchema
 from ucl_open_coen_dome_navigation import __semver__
 
 BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (HarpBeat)
-STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
+LASER_MAX_MARGIN_SEC = 0.25  # how much longer than the longest trial (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
 
 STAGE_COUNT = 6
 
@@ -130,7 +130,7 @@ class OptogeneticsConfig(BaseSchema):
     laser_max_seconds: float = Field(
         default=12.5,
         gt=0,
-        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
+        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
     )
     laser_to_stimulus_seconds: float = Field(
         default=0.1,
@@ -163,7 +163,7 @@ class OptogeneticsConfig(BaseSchema):
         return self
 
     @model_validator(mode="after")
-    def validate_stim_duration_finite(self):
+    def validate_laser_max_finite(self):
         if not math.isfinite(self.laser_max_seconds):
             raise ValueError(f"laser_max_seconds ({self.laser_max_seconds}) must be a finite number of seconds")
         return self
@@ -250,11 +250,11 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     )
 
     @model_validator(mode="after")
-    def _stim_duration_outlasts_the_trial(self):
+    def _laser_max_outlasts_the_trial(self):
         # The laser is meant to stay on until the outcome: the cap must be longer than the longest trial, the time limit
         # (timeLimitSeconds, counted from the first tone pip) plus laser_to_stimulus_seconds (zapit-v2)
         opto = self.optogenetics
-        shortest = self.trial_structure.time_limit_seconds + opto.laser_to_stimulus_seconds + STIM_DURATION_MARGIN_SEC
+        shortest = self.trial_structure.time_limit_seconds + opto.laser_to_stimulus_seconds + LASER_MAX_MARGIN_SEC
         if opto.use_zapit and opto.laser_max_seconds < shortest - 1e-9:
             raise ValueError(
                 f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: trialStructure.timeLimitSeconds "

@@ -4,8 +4,8 @@ using System.ComponentModel;
 using System.Reactive.Linq;
 using UclOpenCoenDomeNavigationTask;
 
-// Startup check for optogenetics experiments. Bonsai sends Zapit condition numbers that it reads from the experiment's stimulus
-// config (optogenetics.zapitConfigPath), and Zapit presents whatever it has at that position in the config it has loaded.
+// Startup check for optogenetics experiments. Bonsai sends Zapit condition numbers that it reads from the task's Zapit
+// conditions file (optogenetics.zapitConfigPath), and Zapit presents whatever it has at that position in the file it has loaded.
 // If the two files differ, the wrong sites would be stimulated without any error, so the experiment stops at startup instead.
 [Combinator]
 [Description("Compares Zapit's GetNumConditions reply with the number of conditions in the task file's Zapit conditions file, and stops the experiment if they differ or Zapit answered with an error. Passes the reply through when they match. Input is the GetNumConditions reply and the task parameters.")]

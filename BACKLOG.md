@@ -27,7 +27,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 ### Before a rig runs it
 
 - **GREEN-DOME-2**, one of Tom's rigs, had no rig.yml on `K:\config\machines`; it has one now (`GREEN-DOME-2_rig.yml`, 9 Nov 2026). Check it has `rewardValves` and this workflow's devices before it runs this.
-- Not in rig-setup's Repos, so no rig has it; adding it deploys `C:\Github\Coen-Lab\coen-dome-navigation` where ticked. Never on a rig while it records.
+- In rig-setup's Repos since 9 Nov 2026: BLUE-OPTO-1, BLUE-OPTO-2, GREEN-DOME-1 and GREEN-DOME-2 each pull `main` into `C:\Github\Coen-Lab\coen-dome-navigation` within 30 minutes of a push, never while recording, and check its names. A push here deploys to all four.
 - **Tested on BLUE-OPTO-2** (9 Nov 2026, `test` mouse), with optogenetics off and then on: Bonsai and Zapit agree on every trial. The logging bugs found are fixed (Decided); the Zapit rig issues are above. Not yet run: one of Tom's mice, a dome.
 - **Tom's mice move between BLUE-OPTO-1, BLUE-OPTO-2, GREEN-DOME-1 and GREEN-DOME-2**, so each needs a rig.yml, this clone and the calibration folder (above). A mouse without a spout file gets rig.yml's `lickSpoutDefaultPosition` (all 0 on BLUE-OPTO-2), not Tom's In positions (3550, 5500, 4700, 2150, 950): set those as the default on the corridor rigs, or save each mouse's positions in its first experiment.
 - No `config\main.layout` yet: save one with the camera windows on a machine with the Spinnaker SDK, then commit it (`.bonsai\Setup.ps1` copies it).
@@ -111,3 +111,9 @@ Fixed the same night: endReason's meaning (copied into every manifest) said Freq
 - `triggerLine: 0` allowed by the rig model (ge=0, as av-dome's, whose model this one copies field for field) while `DigitalOutputLine` refuses it at start: every rig.yml on the share says 3, and the refusal is loud.
 - `Settings_ZapitConditions` and rig-control's kept copy of the Zapit file are two copies: the settings copy is this workflow's record beside its other settings, the kept copy rig-control's rule for every `...ConfigPath` field.
 - `CreateStartStimulus`'s description still offers `StartDelay`: a generic Zapit operator, the same in both repos; no task maps it.
+
+### Not changed on audit (10 Nov 2026, round 3 of 5)
+
+Fixed the same night: this file said no rig has this workflow, but every dome has pulled it since 9 Nov 2026 (above); `laserMaxSeconds`'s description and the task file's comment quoted the time limit as 12 s, now `timeLimitSeconds`; the cap's margin and validators were named "stim" (`STIM_DURATION_MARGIN_SEC`, `StimDurationMarginSec`), now "laser max"; `CheckZapitConditionCount`'s comment called the Zapit file the "stimulus config" (tests added). Not changed, each on its merits:
+
+- `rewardSizeUl` on every trial row though fixed for the experiment: a lab-wide column shared with av-dome, where large-reward trials make it vary, so one reader serves both tasks.

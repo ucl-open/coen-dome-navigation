@@ -11,7 +11,7 @@ import yaml
 
 from ucl_open_coen_dome_navigation.task import (
     BEEP_INTERVAL_SEC,
-    STIM_DURATION_MARGIN_SEC,
+    LASER_MAX_MARGIN_SEC,
     OptogeneticsConfig,
     UclOpenCoenDomeNavigationTaskParameters,
 )
@@ -70,7 +70,7 @@ def test_the_workflow_time_limit_is_closed_loop_duration():
 
 def test_initialise_opto_trial_checks_the_same_rules():
     text = (ROOT / "src" / "Extensions" / "InitialiseOptoTrial.cs").read_text(encoding="utf-8")
-    assert float(re.search(r"const double StimDurationMarginSec = ([\d.]+);", text).group(1)) == STIM_DURATION_MARGIN_SEC
+    assert float(re.search(r"const double LaserMaxMarginSec = ([\d.]+);", text).group(1)) == LASER_MAX_MARGIN_SEC
     assert float(re.search(r"const double BeepIntervalSec = ([\d.]+);", text).group(1)) == BEEP_INTERVAL_SEC
     assert "TrialStructure.TimeLimitSeconds" in text and "Math.Round(beeps) <= 4" in text
 
@@ -97,6 +97,21 @@ def test_both_start_stimulus_commands_send_the_trial_s_power_and_the_row_logs_it
     assert text.count('<Property Name="LaserPower" Selector="Item1.OptogeneticLaserPowerMw" />') == 1
     assert text.count("<Combinator xsi:type=\"ext:CreateStartStimulus\">") == 2
     assert "OptogeneticLaserPowerMw as laserPowerMw" in text and "optoStimulated" not in text
+
+
+def test_the_cap_s_text_names_the_time_limit_field_not_a_number():
+    # Audit, 10 Nov 2026, round 3: the description and the task file quoted the time limit as 12 s, stale once timeLimitSeconds changes.
+    description = OptogeneticsConfig.model_fields["laser_max_seconds"].description
+    assert "timeLimitSeconds" in description and "12 s" not in description
+    line = next(l for l in (ROOT / "config" / "task-abstract-av-corridor.yml").read_text(encoding="utf-8").splitlines() if "laserMaxSeconds:" in l)
+    assert "timeLimitSeconds" in line and "at least 12 " not in line
+
+
+def test_the_laser_cap_s_code_says_laser_not_stimulus():
+    # "Stimulus" is the tone and grating only (Pip, 9 Nov 2026); Zapit's own StimDuration wire name is exempt.
+    for path in (ROOT / "src" / "ucl_open_coen_dome_navigation" / "task.py", ROOT / "src" / "Extensions" / "InitialiseOptoTrial.cs"):
+        text = path.read_text(encoding="utf-8-sig")
+        assert not re.search(r"stim_duration|StimDurationMargin|STIM_DURATION", text, re.IGNORECASE), path.name
 
 
 def test_each_condition_is_drawn_at_random_with_no_queue():

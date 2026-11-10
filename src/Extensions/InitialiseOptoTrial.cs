@@ -91,7 +91,7 @@ public class InitialiseOptoTrial
     }
 
     const double BeepIntervalSec = 0.05;        // HarpBeat's beep; task.py BEEP_INTERVAL_SEC
-    const double StimDurationMarginSec = 0.25;  // task.py STIM_DURATION_MARGIN_SEC
+    const double LaserMaxMarginSec = 0.25;  // task.py LASER_MAX_MARGIN_SEC
 
     // The task schema enforces most of these, but rig-control only checks the schema, not task.py's cross-field rules,
     // so they are checked again here: a bad value would silently change every trial.
@@ -120,12 +120,12 @@ public class InitialiseOptoTrial
         // The laser is meant to stay on until the outcome, so the cap must be longer than the longest trial: the time limit
         // (trialStructure.timeLimitSeconds, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LaserToStimulusSeconds after onset) plus a margin.
         var timeLimit = parameters.TrialStructure != null ? parameters.TrialStructure.TimeLimitSeconds : 12.0;
-        var shortestCap = timeLimit + optogenetics.LaserToStimulusSeconds + StimDurationMarginSec;
+        var shortestCap = timeLimit + optogenetics.LaserToStimulusSeconds + LaserMaxMarginSec;
         if (!(optogenetics.LaserMaxSeconds >= shortestCap - 1e-9) || double.IsInfinity(optogenetics.LaserMaxSeconds))
         {
             throw new InvalidOperationException(string.Format(
                 "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.timeLimitSeconds, {1} s from the first tone pip, plus laserToStimulusSeconds, "
-                + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, StimDurationMarginSec, optogenetics.LaserMaxSeconds));
+                + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, LaserMaxMarginSec, optogenetics.LaserMaxSeconds));
         }
     }
 }
