@@ -3491,11 +3491,12 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Left spout elevation axis absolute position (steps). Maps to motor 1
+        /// Left spout elevation axis absolute position (steps). Maps to motor 4 (StepperDriver b, motor 0)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("leftElevation", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="leftElevation")]
-        [System.ComponentModel.DescriptionAttribute("Left spout elevation axis absolute position (steps). Maps to motor 1")]
+        [System.ComponentModel.DescriptionAttribute("Left spout elevation axis absolute position (steps). Maps to motor 4 (StepperDriv" +
+            "er b, motor 0)")]
         public int LeftElevation
         {
             get
@@ -3509,11 +3510,12 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Right spout elevation axis absolute position (steps). Maps to motor 2
+        /// Right spout elevation axis absolute position (steps). Maps to motor 5 (StepperDriver b, motor 1)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("rightElevation", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rightElevation")]
-        [System.ComponentModel.DescriptionAttribute("Right spout elevation axis absolute position (steps). Maps to motor 2")]
+        [System.ComponentModel.DescriptionAttribute("Right spout elevation axis absolute position (steps). Maps to motor 5 (StepperDri" +
+            "ver b, motor 1)")]
         public int RightElevation
         {
             get
@@ -3527,11 +3529,12 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Right spout radial axis (in/out) absolute position (steps). Maps to motor 3
+        /// Right spout radial axis (in/out) absolute position (steps). Maps to motor 3 (StepperDriver a, motor 2)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("rightRadial", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rightRadial")]
-        [System.ComponentModel.DescriptionAttribute("Right spout radial axis (in/out) absolute position (steps). Maps to motor 3")]
+        [System.ComponentModel.DescriptionAttribute("Right spout radial axis (in/out) absolute position (steps). Maps to motor 3 (Step" +
+            "perDriver a, motor 2)")]
         public int RightRadial
         {
             get
@@ -3545,11 +3548,12 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Left spout radial axis (in/out) absolute position (steps). Maps to motor 4
+        /// Left spout radial axis (in/out) absolute position (steps). Maps to motor 2 (StepperDriver a, motor 1)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("leftRadial", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="leftRadial")]
-        [System.ComponentModel.DescriptionAttribute("Left spout radial axis (in/out) absolute position (steps). Maps to motor 4")]
+        [System.ComponentModel.DescriptionAttribute("Left spout radial axis (in/out) absolute position (steps). Maps to motor 2 (Stepp" +
+            "erDriver a, motor 1)")]
         public int LeftRadial
         {
             get
@@ -3563,11 +3567,12 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Base transverse axis absolute position (steps). Maps to motor 5
+        /// Base transverse axis absolute position (steps). Maps to motor 1 (StepperDriver a, motor 0)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("baseTransverse", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="baseTransverse")]
-        [System.ComponentModel.DescriptionAttribute("Base transverse axis absolute position (steps). Maps to motor 5")]
+        [System.ComponentModel.DescriptionAttribute("Base transverse axis absolute position (steps). Maps to motor 1 (StepperDriver a," +
+            " motor 0)")]
         public int BaseTransverse
         {
             get
