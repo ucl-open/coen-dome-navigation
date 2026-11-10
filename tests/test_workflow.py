@@ -76,6 +76,15 @@ def test_the_lead_time_moves_the_first_pip_and_what_waits_for_it():
     assert text.count(">StimulusStartBeep<") == 3
 
 
+def test_the_onset_column_says_where_the_moved_pip_is():
+    # Audit, 10 Nov 2026 (round 1): stimulusOnsetTime was described as beep 1 always; with optogenetics on the first pip is
+    # laserToStimulusSeconds after beep 0 (StimulusStartBeep sets how many beeps Skip drops before LogStimulus's first row).
+    columns = yaml.safe_load((Path(__file__).parents[1] / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))
+    assert "laserToStimulusSeconds after beep 0" in columns["stimulusOnsetTime"]["description"]
+    log = next(e for e in MAIN.iter(W + "Expression") if e.findtext(W + "Name") == "LogStimulus")
+    assert "StimulusStartBeep" in log.findtext(W + "Description")
+
+
 def test_the_safety_stop_and_startup_checks_are_there():
     text = ET.tostring(MAIN, encoding="unicode")
     for name in ("StimulusLeftOn?", "ZapitError?", "ConditionCountReply?", "SoftwareTriggeredRealMouse?", "Settings_ZapitConditions"):

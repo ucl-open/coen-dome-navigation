@@ -83,18 +83,17 @@ class Truncation(BaseSchema):
 
 
 class OptogeneticsConfig(BaseSchema):
-    """Zapit optogenetic stimulation (names Pip's, 9 Nov 2026; av-dome's stimDelay, excludeRepeats and
-    pseudorandomSelection dropped: a delay must be 0, there are no repeat trials, and every condition is drawn at random).
+    """Zapit optogenetic stimulation.
 
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser
     power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and
-    logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...). Every trial of
-    an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as laser-off trials
-    with the laser off, so galvo noise and masking light are the same on every trial. "Stimulus" is the tone and
-    grating; the laser is continuous: it starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered
-    rig), laser_to_stimulus_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
-    laser_max_seconds if that comes first. Zapit's host,
-    port and triggering are rig.yml's zapit block.
+    logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...).
+    Every trial of an optogenetics experiment sends Zapit a condition drawn at random: laser-on trials with the laser
+    on, all others as laser-off trials with the laser off, so galvo noise and masking light are the same on every
+    trial. "Stimulus" is the tone and grating; the laser is continuous: it starts at the trial's start (beep 0, the
+    trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip, and
+    Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. Zapit's host, port and
+    triggering are rig.yml's zapit block.
     """
 
     # The same rule as validate_config_path's, in the JSON schema: rig-control checks the task file

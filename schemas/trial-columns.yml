@@ -92,7 +92,7 @@ stimulusOnsetTime:
   type: double
   unit: s
   formerly: [CueOnsetHarp]
-  description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame (beep 1, 50 ms after the trial's start at beep 0), as Tom Childs' CueOnsetHarp. In an optogenetics experiment the laser comes on laserToStimulusSeconds before it. The physical onset is in the hardware logs.
+  description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame, as Tom Childs' CueOnsetHarp. That is beep 1, 50 ms after the trial's start at beep 0; in an optogenetics experiment it is laserToStimulusSeconds after beep 0, when the laser came on (beep 2 at 0.1 s). The physical onset is in the hardware logs.
 outcomeTime:
   type: double
   unit: s

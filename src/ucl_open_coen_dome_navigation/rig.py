@@ -38,8 +38,9 @@ class ZapitServer(BaseSchema):
         ge=0,
         le=3,
         description=(
-            "Behavior board digital output (0 to 3) wired to the Zapit DAQ trigger input; pulsed with the width set in "
-            "behaviorBoard.pulseController.pulseWidths for that line. Only used when hardwareTriggered is true."
+            "Behavior board digital output wired to the Zapit DAQ trigger input and the masking LEDs, DO1 to DO3 (the "
+            "workflow stops at start on 0). This workflow holds it high from every trial's start to 1 s after the outcome, "
+            "whatever hardwareTriggered says; av-dome pulses it for its pulseWidths width."
         ),
     )
 

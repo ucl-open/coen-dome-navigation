@@ -172,7 +172,7 @@ zapit:
   host: 127.0.0.1         # PC running Zapit; 127.0.0.1 when Zapit runs on this rig PC
   port: 1488
   hardwareTriggered: false  # true once DO<triggerLine> is cabled to the Zapit DAQ trigger input
-  triggerLine: 3            # behavior board DO line for the TTL; width from outputs.DO3
+  triggerLine: 3            # behavior board DO line for the TTL; held from beep 0 to 1 s after the outcome (av-dome pulses it for outputs.DO3's width)
 # Default absolute stage position at experiment start (steps)
 lickSpoutDefaultPosition:
   leftElevation: 0        # motor 1
