@@ -92,14 +92,18 @@ public static class ZapitConditions
     // - Zapit's stopOptoStim ramps in whole cycles, and a ramp of one cycle or less (offRampDownDuration_ms <= 1000 /
     //   stimModulationFreqHz) takes a shortcut that writes zeros without stopping the DAQ task, so on a hardware-triggered rig
     //   the next trial's stimulus would start as soon as it is armed instead of at the trigger.
+    // And at most MaximumRampDownMs: the masking LEDs on the trigger line go out 1 s after the outcome (OptoOnset), which
+    // must be after the laser has ramped down, with room for Zapit's delay in stopping (Tom Childs and Pip, 10 Nov 2026).
     public const double MinimumRampDownMs = 100;
+    public const double MaximumRampDownMs = 500;
     private static readonly Regex TopLevelKey = new Regex(@"^([A-Za-z_]\w*)\s*:", RegexOptions.Multiline | RegexOptions.CultureInvariant);
     private static readonly Regex RampDown = new Regex(@"offRampDownDuration_ms\s*:\s*([0-9.eE+-]+)", RegexOptions.CultureInvariant);
     private static readonly Regex ModulationFrequency = new Regex(@"stimModulationFreqHz\s*:\s*([0-9.eE+-]+)", RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Throws InvalidOperationException if any condition in the Zapit conditions file at <paramref name="path"/> has no
-    /// offRampDownDuration_ms, one shorter than MinimumRampDownMs, or one that is not longer than one stimulus cycle.
+    /// offRampDownDuration_ms, one shorter than MinimumRampDownMs or longer than MaximumRampDownMs, or one that is not longer
+    /// than one stimulus cycle.
     /// </summary>
     public static void CheckRampDowns(string path)
     {
@@ -146,6 +150,11 @@ public static class ZapitConditions
                 problems.Add(string.Format(CultureInfo.InvariantCulture,
                     "{0} ramps down over {1} ms, less than {2} ms", pair.Key, rampMs, MinimumRampDownMs));
             }
+            else if (rampMs > MaximumRampDownMs)
+            {
+                problems.Add(string.Format(CultureInfo.InvariantCulture,
+                    "{0} ramps down over {1} ms, more than {2} ms", pair.Key, rampMs, MaximumRampDownMs));
+            }
             else if (rampMs <= cycleMs)
             {
                 problems.Add(string.Format(CultureInfo.InvariantCulture,
@@ -155,10 +164,11 @@ public static class ZapitConditions
         if (problems.Count > 0)
         {
             throw new InvalidOperationException(string.Format(
-                "The Zapit conditions file '{0}': {1}. Each condition needs offRampDownDuration_ms of at least {2} ms and longer than one " +
+                "The Zapit conditions file '{0}': {1}. Each condition needs offRampDownDuration_ms of {2} to {3} ms and longer than one " +
                 "stimulus cycle: a short ramp lets inhibition end abruptly (rebound excitation), and one of a cycle or less leaves Zapit's " +
-                "DAQ running after each stop, so a hardware-triggered trial would start before its trigger. 250 ms is Zapit's usual.",
-                path, string.Join("; ", problems.ToArray()), MinimumRampDownMs));
+                "DAQ running after each stop, so a hardware-triggered trial would start before its trigger; a longer one would outlast the " +
+                "masking light, which goes out 1 s after the outcome. 250 ms is Zapit's usual.",
+                path, string.Join("; ", problems.ToArray()), MinimumRampDownMs, MaximumRampDownMs));
         }
     }
 

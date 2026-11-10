@@ -5,7 +5,7 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
 ## Before you start
 
 - Zapit (MATLAB): real DAQ, not `start_zapit('simulated', true)` (its simulated DAQ hides stop problems); `tcpServer.enable: true`;
-  calibrated; the conditions file named in the task file loaded. Every condition's `offRampDownDuration_ms` at least 100 ms (250 is usual).
+  calibrated; the conditions file named in the task file loaded. Every condition's `offRampDownDuration_ms` 100 to 500 ms (250 is usual).
 - rig.yml `zapit:` block: host, port, `hardwareTriggered`, `triggerLine`. With `hardwareTriggered: true`, the trigger line must be
   cabled to the Zapit DAQ trigger input. Also check rig.yml's lick thresholds and the left valve's calibration (BACKLOG).
 - If rig-control refuses to launch over names not on the lab's names list, add them on rig-setup's Repos page (Save Names),
@@ -30,13 +30,15 @@ With nobody at the wheel every trial times out after 12 s (`trialStructure.timeL
 ## 3. Hardware-triggered rig
 
 Step 2 on the rig with `hardwareTriggered: true`.
-**Pass:** each trial's StartStimulus reply arrives just after the ITI ends; the Behavior board log has the trigger write at every
-trial start; with the galvos visible or a photodiode, the stimulus starts at the trigger, not at the command.
+**Pass:** each trial's StartStimulus reply arrives just after the ITI ends; the Behavior board log has the trigger line going high at
+every trial start and low about 1 s after each outcome (it is held, not pulsed, since 10 Nov 2026); the masking LEDs stay lit for all of
+that, on laser-off trials too; Zapit starts every trial (one rising edge each), including the first after a long trial; with the galvos
+visible or a photodiode, the stimulus starts at the trigger, not at the command.
 
 ## 4. Failures (each should stop the experiment with a message)
 
 - A different config (different number of conditions) loaded in Zapit, at Go.
-- A config with a ramp-down under 100 ms, named in `zapitConfigPath` (and loaded in Zapit), at Go.
+- A config with a ramp-down under 100 ms or over 500 ms, named in `zapitConfigPath` (and loaded in Zapit), at Go.
 - A non-`test` mouse on a rig with `hardwareTriggered: false`, at Go.
 - Zapit closed mid-experiment.
 
@@ -48,4 +50,5 @@ is what prevents rebound); a Training Stage 1-2 (no time limit) `test` trial wit
 ## If Bonsai dies mid-experiment
 
 Nothing tells Zapit, and a continuous stimulus keeps playing: stop it in Zapit straight away (Stop in the GUI, or `hZP.stopOptoStim`)
-or close the shutter. Stopping the workflow, or an error, is fine: Bonsai sends StopStimulus itself.
+or close the shutter. Stopping the workflow, or an error, is fine: Bonsai sends StopStimulus itself. Stopped mid-trial, the trigger line
+(and the masking LEDs) stays high until the next workflow on the rig starts, which clears DO1-DO3.

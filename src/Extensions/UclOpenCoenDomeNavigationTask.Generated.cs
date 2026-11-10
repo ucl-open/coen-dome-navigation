@@ -206,13 +206,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of at least 100 ms
+        /// Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out 1 s after the outcome)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("zapitConfigPath")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="zapitConfigPath")]
-        [System.ComponentModel.DescriptionAttribute("Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01," +
-            " stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, " +
-            "each with an offRampDownDuration_ms of at least 100 ms")]
+        [System.ComponentModel.DescriptionAttribute(@"Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out 1 s after the outcome)")]
         public string ZapitConfigPath
         {
             get

@@ -233,7 +233,6 @@
                       <Property Name="EnableTrigger1" Selector="Settings.CameraTriggerController.Trigger1Enabled" />
                       <Property Name="Trigger0Frequency" Selector="Settings.CameraTriggerController.Trigger0Frequency" />
                       <Property Name="Trigger1Frequency" Selector="Settings.CameraTriggerController.Trigger1Frequency" />
-                      <Property Name="OutputPulseEnable" Selector="Settings.PulseController.OutputPulseEnable" />
                     </PropertyMappings>
                   </Expression>
                   <Expression xsi:type="GroupWorkflow">
@@ -459,6 +458,29 @@
                         <Expression xsi:type="MulticastSubject">
                           <Name>StartCameras</Name>
                         </Expression>
+                        <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Int32">
+                          <rx:Name>ZapitTriggerClear</rx:Name>
+                        </Expression>
+                        <Expression xsi:type="SubscribeSubject">
+                          <Name>ZapitTriggerClear</Name>
+                        </Expression>
+                        <Expression xsi:type="Combinator">
+                          <Combinator xsi:type="ext:DigitalOutputLine" />
+                        </Expression>
+                        <Expression xsi:type="PropertyMapping">
+                          <PropertyMappings>
+                            <Property Name="OutputClear" />
+                          </PropertyMappings>
+                        </Expression>
+                        <Expression xsi:type="beh:CreateMessage">
+                          <harp:MessageType>Write</harp:MessageType>
+                          <harp:Payload xsi:type="beh:CreateOutputClearPayload">
+                            <beh:OutputClear>DO3</beh:OutputClear>
+                          </harp:Payload>
+                        </Expression>
+                        <Expression xsi:type="MulticastSubject">
+                          <Name>BehaviorBoard-Main.Commands</Name>
+                        </Expression>
                       </Nodes>
                       <Edges>
                         <Edge From="0" To="1" Label="Source1" />
@@ -468,6 +490,11 @@
                         <Edge From="8" To="9" Label="Source1" />
                         <Edge From="10" To="11" Label="Source1" />
                         <Edge From="11" To="12" Label="Source1" />
+                        <Edge From="14" To="15" Label="Source1" />
+                        <Edge From="15" To="16" Label="Source1" />
+                        <Edge From="15" To="17" Label="Source1" />
+                        <Edge From="16" To="17" Label="Source2" />
+                        <Edge From="17" To="18" Label="Source1" />
                       </Edges>
                     </Workflow>
                   </Expression>
@@ -1719,6 +1746,29 @@
                       <Property Name="PulseDO3" Selector="PulseWidthMs" />
                     </PropertyMappings>
                   </Expression>
+                  <Expression xsi:type="SubscribeSubject">
+                    <Name>BehaviorBoard-Main</Name>
+                  </Expression>
+                  <Expression xsi:type="MemberSelector">
+                    <Selector>Settings.PulseController.OutputPulseEnable</Selector>
+                  </Expression>
+                  <Expression xsi:type="SubscribeSubject">
+                    <Name>RigConfigs</Name>
+                  </Expression>
+                  <Expression xsi:type="MemberSelector">
+                    <Selector>Zapit.TriggerLine</Selector>
+                  </Expression>
+                  <Expression xsi:type="Combinator">
+                    <Combinator xsi:type="rx:Zip" />
+                  </Expression>
+                  <Expression xsi:type="Combinator">
+                    <Combinator xsi:type="ext:WithoutPulseLine" />
+                  </Expression>
+                  <Expression xsi:type="PropertyMapping">
+                    <PropertyMappings>
+                      <Property Name="OutputPulseEnable" />
+                    </PropertyMappings>
+                  </Expression>
                 </Nodes>
                 <Edges>
                   <Edge From="0" To="1" Label="Source1" />
@@ -1729,6 +1779,13 @@
                   <Edge From="16" To="17" Label="Source1" />
                   <Edge From="17" To="18" Label="Source1" />
                   <Edge From="18" To="10" Label="Source2" />
+                  <Edge From="19" To="20" Label="Source1" />
+                  <Edge From="21" To="22" Label="Source1" />
+                  <Edge From="20" To="23" Label="Source1" />
+                  <Edge From="22" To="23" Label="Source2" />
+                  <Edge From="23" To="24" Label="Source1" />
+                  <Edge From="24" To="25" Label="Source1" />
+                  <Edge From="25" To="10" Label="Source3" />
                   <Edge From="3" To="4" Label="Source1" />
                   <Edge From="6" To="7" Label="Source1" />
                 </Edges>
@@ -5693,7 +5750,7 @@
                         </Expression>
                         <Expression xsi:type="Annotation">
                           <Name>Optogenetics</Name>
-                          <Text><![CDATA[At ITI start InitialiseOptoTrial draws this trial's Zapit command: after the first trialsBeforeLaser trials, laser on with probability laserOnProbability, otherwise a laser-off trial, each with a condition from the Zapit conditions file, so galvos and masking light are the same on every trial. On hardware-triggered rigs ArmZapit sends it once the ITI has ended and waits for Zapit to confirm; OptoOnset pulses the trigger at beep 0, laserLeadsStimulusBySeconds before the first tone pip, and LaserOnUntilOutcome stops the stimulus at the outcome or after laserMaxSeconds. Zapit only gets continuous stimuli.
+                          <Text><![CDATA[At ITI start InitialiseOptoTrial draws this trial's Zapit command: after the first trialsBeforeLaser trials, laser on with probability laserOnProbability, otherwise a laser-off trial, each with a condition from the Zapit conditions file, so galvos and masking light are the same on every trial. On hardware-triggered rigs ArmZapit sends it once the ITI has ended and waits for Zapit to confirm; OptoOnset raises the trigger line at beep 0, laserLeadsStimulusBySeconds before the first tone pip, and LaserOnUntilOutcome stops the stimulus at the outcome or after laserMaxSeconds. Zapit only gets continuous stimuli.
 
 StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its StopStimulus, the next ITI start sends one.]]></Text>
                         </Expression>
@@ -5768,7 +5825,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         </Expression>
                         <Expression xsi:type="rx:SelectMany">
                           <Name>ArmZapit</Name>
-                          <Description>Hardware-triggered rigs (rig.yml zapit.hardwareTriggered): once the ITI has ended, sends this trial's StartStimulus - laser on, or laser off on a laser-off trial - so Zapit loads the waveform and waits for the trigger pulse OptoOnset sends at beep 0, and passes only once Zapit has answered that it is armed with the requested condition and laser state. Continuous waveform (no StimDuration): Zapit ignores StopStimulus for a timed stimulus, so LaserOnUntilOutcome stops it. Arming after the ITI keeps Zapit armed for only the round trip, so the trial waits the same few tens of ms on every trial. Rigs without hardware triggering, and experiments without optogenetics, pass straight through.</Description>
+                          <Description>Hardware-triggered rigs (rig.yml zapit.hardwareTriggered): once the ITI has ended, sends this trial's StartStimulus - laser on, or laser off on a laser-off trial - so Zapit loads the waveform and waits for the trigger line's rising edge OptoOnset makes at beep 0, and passes only once Zapit has answered that it is armed with the requested condition and laser state. Continuous waveform (no StimDuration): Zapit ignores StopStimulus for a timed stimulus, so LaserOnUntilOutcome stops it. Arming after the ITI keeps Zapit armed for only the round trip, so the trial waits the same few tens of ms on every trial. Rigs without hardware triggering, and experiments without optogenetics, pass straight through.</Description>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="WorkflowInput">
@@ -6011,7 +6068,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         </Expression>
                         <Expression xsi:type="rx:SelectMany">
                           <Name>OptoOnset</Name>
-                          <Description>At beep 0, the trial's start: pulses zapit.triggerLine on every trial (as av-dome's StartLaser), which on a hardware-triggered rig starts the stimulus ArmZapit loaded, and on trials with a Zapit condition (every trial of an optogenetics experiment) runs LaserOnUntilOutcome, which stops it.</Description>
+                          <Description>At beep 0, the trial's start: sets zapit.triggerLine high on every trial (as av-dome's StartLaser pulses it), which on a hardware-triggered rig starts the stimulus ArmZapit loaded (Zapit starts on the rising edge), and on trials with a Zapit condition (every trial of an optogenetics experiment) runs LaserOnUntilOutcome, which stops it. The board does not pulse that line (WithoutPulseLine), so it stays high, and the masking LEDs wired to it stay lit, until it is cleared (ZapitTriggerClear) 1 s after the outcome: past the laser's ramp-down (at most 500 ms, ZapitConditions) and Zapit's delay in stopping, and before the next trial's beep 0, at least 2 s after the outcome (Tom Childs and Pip, 10 Nov 2026; the clear is timed by Bonsai, so a few ms of jitter, and the Behavior board's log has the exact time).</Description>
                           <Workflow>
                             <Nodes>
                               <Expression xsi:type="WorkflowInput">
@@ -6102,7 +6159,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                               </Expression>
                               <Expression xsi:type="rx:SelectMany">
                                 <Name>LaserOnUntilOutcome</Name>
-                                <Description>One optogenetics-experiment trial, from beep 0 to the stop. On a hardware-triggered rig the trigger pulse above starts the waveform ArmZapit loaded (onset is in the Behavior board's Harp log); a rig without hardware triggering (test mice only) sends StartStimulus now and Zapit starts on receipt. Laser-off trials do exactly the same with the laser off. The stimulus is stopped once, at the trial outcome (TrialActive back to 0) or after OptogeneticMaxDuration (laserMaxSeconds), whichever comes first; the laser then ramps down over the condition's offRampDownDuration_ms.</Description>
+                                <Description>One optogenetics-experiment trial, from beep 0 to the stop. On a hardware-triggered rig the trigger line's rising edge above starts the waveform ArmZapit loaded (onset is in the Behavior board's Harp log); a rig without hardware triggering (test mice only) sends StartStimulus now and Zapit starts on receipt. Laser-off trials do exactly the same with the laser off. The stimulus is stopped once, at the trial outcome (TrialActive back to 0) or after OptogeneticMaxDuration (laserMaxSeconds), whichever comes first; the laser then ramps down over the condition's offRampDownDuration_ms.</Description>
                                 <Workflow>
                                   <Nodes>
                                     <Expression xsi:type="WorkflowInput">
@@ -6245,6 +6302,46 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                                   </Edges>
                                 </Workflow>
                               </Expression>
+                              <Expression xsi:type="SubscribeSubject">
+                                <Name>TrialActive</Name>
+                              </Expression>
+                              <Expression xsi:type="rx:Condition">
+                                <Name>Outcome?</Name>
+                                <Workflow>
+                                  <Nodes>
+                                    <Expression xsi:type="WorkflowInput">
+                                      <Name>Source1</Name>
+                                    </Expression>
+                                    <Expression xsi:type="scr:ExpressionTransform">
+                                      <scr:Expression>it == 0.0</scr:Expression>
+                                    </Expression>
+                                    <Expression xsi:type="WorkflowOutput" />
+                                  </Nodes>
+                                  <Edges>
+                                    <Edge From="0" To="1" Label="Source1" />
+                                    <Edge From="1" To="2" Label="Source1" />
+                                  </Edges>
+                                </Workflow>
+                              </Expression>
+                              <Expression xsi:type="Combinator">
+                                <Combinator xsi:type="rx:Take">
+                                  <rx:Count>1</rx:Count>
+                                </Combinator>
+                              </Expression>
+                              <Expression xsi:type="Combinator">
+                                <Combinator xsi:type="rx:Delay">
+                                  <rx:DueTime>PT1S</rx:DueTime>
+                                </Combinator>
+                              </Expression>
+                              <Expression xsi:type="Combinator">
+                                <Combinator xsi:type="rx:WithLatestFrom" />
+                              </Expression>
+                              <Expression xsi:type="MemberSelector">
+                                <Selector>Item2</Selector>
+                              </Expression>
+                              <Expression xsi:type="MulticastSubject">
+                                <Name>ZapitTriggerClear</Name>
+                              </Expression>
                             </Nodes>
                             <Edges>
                               <Edge From="1" To="2" Label="Source1" />
@@ -6256,6 +6353,13 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                               <Edge From="8" To="9" Label="Source1" />
                               <Edge From="6" To="10" Label="Source1" />
                               <Edge From="10" To="11" Label="Source1" />
+                              <Edge From="12" To="13" Label="Source1" />
+                              <Edge From="13" To="14" Label="Source1" />
+                              <Edge From="14" To="15" Label="Source1" />
+                              <Edge From="15" To="16" Label="Source1" />
+                              <Edge From="8" To="16" Label="Source2" />
+                              <Edge From="16" To="17" Label="Source1" />
+                              <Edge From="17" To="18" Label="Source1" />
                             </Edges>
                           </Workflow>
                         </Expression>

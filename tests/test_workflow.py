@@ -25,10 +25,28 @@ def test_the_behavior_board_encoder_counts_position_not_displacement():
     assert "BoardWheelDistanceCm" in wheel
 
 
+def test_the_zapit_trigger_line_is_held_until_after_the_outcome():
+    # Tom Childs and Pip, 10 Nov 2026: the masking LEDs on the trigger line lasted only rig.yml's 3000 ms pulse while the
+    # laser lasts to the outcome. The board no longer pulses that line: TriggerPulse sets it at beep 0 and OptoOnset
+    # clears it (ZapitTriggerClear) 1 s after the outcome, past the laser's ramp-down (at most 500 ms).
+    text = ET.tostring(MAIN, encoding="unicode")
+    assert 'Selector="Settings.PulseController.OutputPulseEnable"' not in text  # rig.yml's lines reach the board only through:
+    raw = (Path(__file__).parents[1] / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
+    assert raw.count('xsi:type="ext:WithoutPulseLine"') == 1 and ">Zapit.TriggerLine<" in text
+    board = ET.tostring(group("BehaviorBoards"), encoding="unicode")
+    assert ">ZapitTriggerClear<" in board and "CreateOutputClearPayload" in board and "DigitalOutputLine" in board
+    onset = ET.tostring(group("OptoOnset"), encoding="unicode")
+    assert onset.count(">ZapitTriggerClear<") == 1 and ">TriggerPulse<" in onset
+    delays = [e.text for e in group("OptoOnset").iter() if e.tag.endswith("}DueTime")]
+    assert "PT1S" in delays
+    source = (Path(__file__).parents[1] / "src" / "Extensions" / "ZapitConditions.cs").read_text(encoding="utf-8-sig")
+    assert float(re.search(r"MaximumRampDownMs = ([\d.]+);", source).group(1)) <= 500
+
+
 def test_the_laser_is_continuous_and_stopped_by_bonsai():
     # zapit-v2: Zapit only gets continuous stimuli (it ignores StopStimulus for a timed one, so a StimDuration or StartDelay
     # sent to it would leave the laser on past the outcome); LaserOnUntilOutcome stops each trial's once, at the outcome
-    # (TrialActive back to 0) or after OptogeneticMaxDuration. The trigger is still pulsed on every trial, as av-dome's.
+    # (TrialActive back to 0) or after OptogeneticMaxDuration. The trigger line is raised on every trial, as av-dome's (held, not pulsed: below).
     text = ET.tostring(MAIN, encoding="unicode")
     for gone in ('Selector="OptogeneticDelay"', 'Selector="OptogeneticDuration"', 'Property Name="StimDuration"', 'Property Name="StartDelay"'):
         assert gone not in text
