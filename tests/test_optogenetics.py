@@ -97,3 +97,10 @@ def test_both_start_stimulus_commands_send_the_trial_s_power_and_the_row_logs_it
     assert text.count('<Property Name="LaserPower" Selector="Item1.OptogeneticLaserPowerMw" />') == 1
     assert text.count("<Combinator xsi:type=\"ext:CreateStartStimulus\">") == 2
     assert "OptogeneticLaserPowerMw as laserPowerMw" in text and "optoStimulated" not in text
+
+
+def test_each_condition_is_drawn_at_random_with_no_queue():
+    # Pip, 10 Nov 2026: shuffled queues made a site unlikely to follow itself and the end of each cycle predictable.
+    source = (ROOT / "src" / "Extensions" / "InitialiseOptoTrial.cs").read_text(encoding="utf-8-sig")
+    assert "ConditionQueue" not in source
+    assert "trial.OptogeneticCondition = conditions[random.Next(conditions.Count)];" in source

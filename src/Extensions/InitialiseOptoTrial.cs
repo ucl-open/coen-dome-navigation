@@ -10,7 +10,7 @@ using UclOpenCoenDomeNavigationTask;
 // Differences from av-dome:
 // - Laser-off trials: in an optogenetics experiment every trial sends a StartStimulus. Laser-off trials (the first trialsBeforeLaser included) still get
 //   a real condition, so the galvos move and the masking light comes on exactly as on laser-on trials.
-// - Laser-on and laser-off conditions are drawn from separate shuffled queues, so each set is balanced on its own.
+// - Each trial's condition is drawn at random from all of them, independently of every other trial: a shuffled queue made a site unlikely to follow itself and the end of each cycle predictable, which confounds trial-history analyses (Pip, 10 Nov 2026).
 // - OptogeneticMaxDuration (laserMaxSeconds) is set on every trial: Bonsai stops the stimulus at the outcome or after this many
 //   seconds, whichever comes first. Zapit itself only ever gets continuous stimuli (it ignores StopStimulus for timed ones).
 // - Conditions come from ZapitConditions (no YAML library), which also checks they are numbered 1 to N.
@@ -29,11 +29,9 @@ public class InitialiseOptoTrial
 
     // Instance state: this operator sits inside TaskLogic's per-trial Defer, which calls Process again on every trial with
     // the same instance, so state kept inside Process would be lost between trials. Reset on trial 1, so each experiment starts
-    // with a fresh random stream and fresh queues.
+    // with a fresh random stream.
     private Random random;
     private List<int> conditions; // null until read from the Zapit conditions file, on the first trial of an optogenetics experiment
-    private readonly ConditionQueue laserOnQueue = new ConditionQueue();
-    private readonly ConditionQueue laserOffQueue = new ConditionQueue();
 
     public IObservable<OptoTrial> Process(IObservable<Tuple<int, UclOpenCoenDomeNavigationTaskParameters>> source)
     {
@@ -77,7 +75,7 @@ public class InitialiseOptoTrial
         var laserOn = trialNumber > optogenetics.TrialsBeforeLaser && random.NextDouble() < optogenetics.LaserOnProbability;
         trial.OptogeneticEnabled = laserOn;
         trial.OptogeneticLaserPowerMw = laserOn ? optogenetics.LaserPowerMw.Value : 0;
-        trial.OptogeneticCondition = (laserOn ? laserOnQueue : laserOffQueue).Next(conditions, random);
+        trial.OptogeneticCondition = conditions[random.Next(conditions.Count)];
         trial.OptogeneticMaxDuration = optogenetics.LaserMaxSeconds;
         return trial;
     }
@@ -90,8 +88,6 @@ public class InitialiseOptoTrial
             : parameters.RngSeed.HasValue ? new Random(unchecked((int)parameters.RngSeed.Value + 1))
             : new Random(Guid.NewGuid().GetHashCode());
         conditions = null;
-        laserOnQueue.Clear();
-        laserOffQueue.Clear();
     }
 
     const double BeepIntervalSec = 0.05;        // HarpBeat's beep; task.py BEEP_INTERVAL_SEC
@@ -130,40 +126,6 @@ public class InitialiseOptoTrial
             throw new InvalidOperationException(string.Format(
                 "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.timeLimitSeconds, {1} s from the first tone pip, plus laserToStimulusSeconds, "
                 + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, StimDurationMarginSec, optogenetics.LaserMaxSeconds));
-        }
-    }
-
-    /// <summary>
-    /// The conditions in a shuffled order (Fisher-Yates), handed out one at a time and reshuffled when used up,
-    /// so every block of N draws presents each condition once.
-    /// </summary>
-    private sealed class ConditionQueue
-    {
-        private readonly List<int> order = new List<int>();
-        private int position;
-
-        public void Clear()
-        {
-            order.Clear();
-            position = 0;
-        }
-
-        public int Next(List<int> conditions, Random random)
-        {
-            if (position >= order.Count)
-            {
-                order.Clear();
-                order.AddRange(conditions);
-                for (int i = order.Count - 1; i > 0; i--)
-                {
-                    int j = random.Next(i + 1);
-                    int swap = order[i];
-                    order[i] = order[j];
-                    order[j] = swap;
-                }
-                position = 0;
-            }
-            return order[position++];
         }
     }
 }

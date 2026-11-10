@@ -96,7 +96,7 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
 
 def test_the_optogenetics_block_has_pip_s_names():
     # Pip, 9 Nov 2026: av-dome's stimDelay (only 0 works here), excludeRepeats (no repeat trials) and
-    # pseudorandomSelection (draws are always balanced) dropped; the rest renamed to say what they do.
+    # pseudorandomSelection (every condition is drawn at random) dropped; the rest renamed to say what they do.
     names = ["useZapit", "zapitConfigPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserToStimulusSeconds",
              "trialsBeforeLaser"]
     assert list(task()["taskParameters"]["optogenetics"]) == names

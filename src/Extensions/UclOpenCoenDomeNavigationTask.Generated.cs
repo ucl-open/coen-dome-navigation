@@ -121,7 +121,7 @@ namespace UclOpenCoenDomeNavigationTask
 
     /// <summary>
     /// Zapit optogenetic stimulation (names Pip's, 9 Nov 2026; av-dome's stimDelay, excludeRepeats and
-    ///pseudorandomSelection dropped: a delay must be 0, there are no repeat trials, and draws are always balanced).
+    ///pseudorandomSelection dropped: a delay must be 0, there are no repeat trials, and every condition is drawn at random).
     ///
     ///The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser
     ///power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and
@@ -135,7 +135,7 @@ namespace UclOpenCoenDomeNavigationTask
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute(@"Zapit optogenetic stimulation (names Pip's, 9 Nov 2026; av-dome's stimDelay, excludeRepeats and
-    pseudorandomSelection dropped: a delay must be 0, there are no repeat trials, and draws are always balanced).
+    pseudorandomSelection dropped: a delay must be 0, there are no repeat trials, and every condition is drawn at random).
 
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser
     power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and
@@ -242,11 +242,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are laser-off trials: Zapit is sent a condition with the laser off. Conditions come from shuffled queues, one for laser-on and one for laser-off trials, so each is used equally often
+        /// Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are laser-off trials: Zapit is sent a condition with the laser off. Each trial's condition is drawn at random from all of them, laser on or off, independently of every other trial (no queue: one would make sequences predictable)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserOnProbability")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserOnProbability")]
-        [System.ComponentModel.DescriptionAttribute(@"Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are laser-off trials: Zapit is sent a condition with the laser off. Conditions come from shuffled queues, one for laser-on and one for laser-off trials, so each is used equally often")]
+        [System.ComponentModel.DescriptionAttribute(@"Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are laser-off trials: Zapit is sent a condition with the laser off. Each trial's condition is drawn at random from all of them, laser on or off, independently of every other trial (no queue: one would make sequences predictable)")]
         public double LaserOnProbability
         {
             get
