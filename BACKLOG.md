@@ -123,3 +123,9 @@ Fixed the same night: this file said no rig has this workflow, but every dome ha
 Fixed the same night: `ZapitConditions`' ramp-down comment described MATLAB Zapit 1.0.4's `stopOptoStim` shortcut as Zapit's; it now says so, and that the lab's Python Zapit (Coen-Lab/zapit `pointer.stop_opto_stim`) stops the DAQ task 0.2 s after any ramp-down. The check stays, as the rig test runs MATLAB Zapit. Not changed, each on its merits:
 
 - "Required with optogenetics on" and `ConnectZapit`'s "when the task YAML enables optogenetics", though the switch is `useZapit`: plain English for the block's one switch; the schema and the validator messages name `useZapit`.
+
+### Not changed on audit (10 Nov 2026, round 5 of 5)
+
+Fixed the same night: `stage.py` read another workflow's experiment of the same mouse as this task's whenever its data was there (av-dome's trial log has `trialType` visual or auditory and `outcome` too; reproduced: one av-dome experiment, 80 visual Correct at stage 3, suggested Stage 4). Only an ingested one was passed over; now any experiment whose manifest names another repo is (test). `docs\zapit-rig-test.md` step 1 looked for a `BonsaiData_ZapitReplies` folder; it is `BonsaiData\BonsaiData_ZapitReplies_*.csv`. Not changed, each on its merits:
+
+- rig-control's `taskfile.py` docstring names `taskParameters.trialStructure.itiMin` as its example of a dotted field: a generic example matching rig-control's own synthetic tests, not a workflow's field.

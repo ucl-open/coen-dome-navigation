@@ -163,15 +163,18 @@ def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unrea
             for folder in folders:
                 if folder.name in found or not folder.is_dir():
                     continue
-                if reader is read_new and (folder / "manifest.json").is_file() and not (folder / "BonsaiData").is_dir():
-                    # Ingested: staging keeps only the manifest, so an older experiment would decide
-                    # (audit round 2, 9 Nov 2026). Every experiment writes BonsaiData (Go is logged).
-                    # Said only once every root is read, if its data is in none (an ingest
-                    # destination among the roots, in any order), and only for this workflow's
-                    # (another workflow's never decides) (audit round 3).
-                    if ours(folder / "manifest.json"):
+                if reader is read_new and (folder / "manifest.json").is_file():
+                    if not ours(folder / "manifest.json"):
+                        # Another workflow's experiment never decides: av-dome's trial log has trialType
+                        # (visual, auditory) and outcome too, so it read as this task's (audit, 10 Nov 2026, round 5).
+                        continue
+                    if not (folder / "BonsaiData").is_dir():
+                        # Ingested: staging keeps only the manifest, so an older experiment would decide
+                        # (audit round 2, 9 Nov 2026). Every experiment writes BonsaiData (Go is logged).
+                        # Said only once every root is read, if its data is in none (an ingest
+                        # destination among the roots, in any order) (audit round 3).
                         manifest_only.append(folder.name)
-                    continue
+                        continue
                 try:
                     e = reader(folder)
                 except (OSError, ValueError, KeyError):

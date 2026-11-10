@@ -127,6 +127,17 @@ def test_another_workflow_s_ingested_experiment_never_decides(tmp_path):
     assert experiments("TC9", [tmp_path], [], unread) == [] and unread == []
 
 
+def test_another_workflow_s_experiment_never_decides(tmp_path):
+    # Audit, 10 Nov 2026, round 5: an av-dome experiment of the same mouse, with its data, has trialType and
+    # outcome too, and was read as this task's (80 visual Correct at stage 3 suggested Stage 4).
+    folder = tmp_path / "sub-TC9" / "ses-010_2026-11-12T09-00-00"
+    write_new(folder, 3, [["visual", "Correct"]] * 80)
+    (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/av-dome.git"}}), encoding="utf-8")
+    assert experiments("TC9", [tmp_path], []) == []
+    (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/coen-dome-navigation.git"}}), encoding="utf-8")
+    assert [e.name for e in experiments("TC9", [tmp_path], [])] == [folder.name]
+
+
 def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
     from ucl_open_coen_dome_navigation.stage import unanswered
 

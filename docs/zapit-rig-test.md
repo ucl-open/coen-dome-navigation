@@ -14,7 +14,7 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
 ## 1. Optogenetics off
 
 rig-control, `test` mouse, Training Stage 4 (Tom's 5), optogenetics unticked; ~20 trials.
-**Pass:** task as before; nothing in Zapit's window; no `BonsaiData_ZapitReplies` folder and no `Settings_ZapitConditions` file; trial rows
+**Pass:** task as before; nothing in Zapit's window; no `BonsaiData\BonsaiData_ZapitReplies_*.csv` and no `Settings_ZapitConditions` file; trial rows
 `laserPowerMw` 0, `laserCondition` 0.
 
 ## 2. Optogenetics on
