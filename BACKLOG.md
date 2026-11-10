@@ -103,3 +103,11 @@ Fixed the same night: `stimulusOnsetTime`'s description said beep 1 always; with
 - rig.yml's `PulseDO3` width still written to the board: unused while DO3 is not pulse-enabled; the mapping keeps the board's settings as av-dome's.
 - `InitialiseOptoTrial` has only text tests: probed this round over 2000 trials (the seed reproduces them; no laser-on in the first 20; every trial has a condition; 0.424 laser-on after them at p 0.4; conditions 671/650/679; the same condition as the trial before 0.325, independent being 1/3; a missing file throws). A C# test harness here is more than its rules need now.
 - Two `add-names.ps1` copies, and the Zapit C# (`ZapitCommand`, `ZapitClient`, `CreateStartStimulus`) in both repos: one shared script or a lab package is a platform decision for Pip, worth it once a third workflow uses Zapit.
+
+### Not changed on audit (10 Nov 2026, round 2 of 5)
+
+Fixed the same night: endReason's meaning (copied into every manifest) said FreqReached at "stages 1-2", and two descriptions said "stage 6": stages are trainingStages rows from 0 now (rows 0 and 1, Tom's 1 and 2; row 5, Tom's 6); LogStimulus's description named the beep log StimulusLog, not BonsaiData_StimulusState (test added). av-dome now checks Zapit's loaded condition count against the task's file at startup, as this workflow does. Not changed, each on its merits:
+
+- `triggerLine: 0` allowed by the rig model (ge=0, as av-dome's, whose model this one copies field for field) while `DigitalOutputLine` refuses it at start: every rig.yml on the share says 3, and the refusal is loud.
+- `Settings_ZapitConditions` and rig-control's kept copy of the Zapit file are two copies: the settings copy is this workflow's record beside its other settings, the kept copy rig-control's rule for every `...ConfigPath` field.
+- `CreateStartStimulus`'s description still offers `StartDelay`: a generic Zapit operator, the same in both repos; no task maps it.

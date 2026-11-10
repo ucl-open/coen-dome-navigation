@@ -180,3 +180,15 @@ def test_the_manifest_hashes_the_rig_s_calibration_folder_as_av_dome_s():
     rig = "C:\\Coen-Lab-Local\\RigConfigs\\%COMPUTERNAME%\\"
     assert files == [rig + "rig.yml", rig + r"calibration\MeshMap.csv", rig + r"calibration\gammalut.bmp",
                      rig + r"calibration\LickSpoutPositions\{SubjectId}.csv"]
+
+
+def test_descriptions_use_the_task_file_s_stage_rows():
+    # Audit, 10 Nov 2026, round 2: stages are trainingStages rows from 0 (Tom Childs' 1 to 6 are rows 0 to 5), and the
+    # beep log is BonsaiData_StimulusState; the trial log's endReason meaning (copied into every manifest) and two
+    # descriptions still said "stages 1-2", "stage 6" and "StimulusLog row".
+    root = Path(__file__).parents[1]
+    columns = yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))
+    assert "lickToReward" in columns["endReason"]["description"]
+    descriptions = [e.findtext(W + "Description") or "" for e in MAIN.iter(W + "Expression")]
+    for text in descriptions + [c["description"] for c in columns.values()]:
+        assert "(stage 6)" not in text and "(stages 1-2)" not in text and "StimulusLog row" not in text

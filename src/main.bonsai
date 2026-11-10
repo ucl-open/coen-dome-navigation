@@ -6942,7 +6942,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   </Expression>
                   <Expression xsi:type="GroupWorkflow">
                     <Name>SilenceAfterTruncation</Name>
-                    <Description>Silences the tone past the truncation point on truncated trials (stage 6)</Description>
+                    <Description>Silences the tone past the truncation point on truncated trials (a stage's truncatedTrialFraction of its trials; row 5, Tom Childs' stage 6, in the task file)</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="WorkflowInput">
@@ -9727,7 +9727,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   </Expression>
                   <Expression xsi:type="GroupWorkflow">
                     <Name>HideAfterTruncation</Name>
-                    <Description>Hides the grating past the truncation point on truncated trials (stage 6)</Description>
+                    <Description>Hides the grating past the truncation point on truncated trials (a stage's truncatedTrialFraction of its trials; row 5, Tom Childs' stage 6, in the task file)</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="WorkflowInput">
@@ -9768,7 +9768,7 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   </Expression>
                   <Expression xsi:type="GroupWorkflow">
                     <Name>LogStimulus</Name>
-                    <Description>One StimulusLog row per beep while the trial is active (TrialActive = 1, so rows stop at the outcome): the beep count and position from Skip and the grating from the visual branch, zipped beep by beep, with the tone values that same beep set (CurrFreq, AudBin, StimulusActive are updated by the tone branch before the grating branch runs). Reads the tone only through those subjects, so the tone's chain is untouched. Also publishes StimulusOnsetTime, the Harp time of the trial's first row: its first tone pip and grating frame, since Skip has already dropped the beeps before it (StimulusStartBeep: beep 1, or laserToStimulusSeconds / 50 ms in an optogenetics experiment; beep 0 is the trial's start and its laser trigger). BonsaiData_Trial's stimulusOnsetTime. Sits in series between HideAfterTruncation and GratingOpacity and passes the opacity straight through: a branch that did not lead on to the Repeat would stop the trials restarting.</Description>
+                    <Description>One BonsaiData_StimulusState row per beep while the trial is active (TrialActive = 1, so rows stop at the outcome): the beep count and position from Skip and the grating from the visual branch, zipped beep by beep, with the tone values that same beep set (CurrFreq, AudBin, StimulusActive are updated by the tone branch before the grating branch runs). Reads the tone only through those subjects, so the tone's chain is untouched. Also publishes StimulusOnsetTime, the Harp time of the trial's first row: its first tone pip and grating frame, since Skip has already dropped the beeps before it (StimulusStartBeep: beep 1, or laserToStimulusSeconds / 50 ms in an optogenetics experiment; beep 0 is the trial's start and its laser trigger). BonsaiData_Trial's stimulusOnsetTime. Sits in series between HideAfterTruncation and GratingOpacity and passes the opacity straight through: a branch that did not lead on to the Repeat would stop the trials restarting.</Description>
                     <Workflow>
                       <Nodes>
                         <Expression xsi:type="WorkflowInput">

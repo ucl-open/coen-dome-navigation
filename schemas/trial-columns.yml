@@ -39,7 +39,7 @@ endReason:
   type: string
   values: [FreqReached, CorrectLick, WrongLickLimit, Timeout, EndOfTrack]
   formerly: [EndReason]
-  description: Why the trial ended - the reward frequency reached (stages 1-2), a lick in the reward zone, too many wrong licks, the trial's time limit, or the end of the track.
+  description: Why the trial ended - the reward frequency reached (on a stage without lickToReward, rows 0 and 1 of the task file, Tom Childs' stages 1 and 2), a lick in the reward zone, too many wrong licks, the trial's time limit, or the end of the track.
 punishSound:
   type: bool
   formerly: [WasPunished]
