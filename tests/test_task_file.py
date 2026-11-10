@@ -97,7 +97,7 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
 def test_the_optogenetics_block_has_pip_s_names():
     # Pip, 9 Nov 2026: av-dome's stimDelay (only 0 works here), excludeRepeats (no repeat trials) and
     # pseudorandomSelection (draws are always balanced) dropped; the rest renamed to say what they do.
-    names = ["useZapit", "zapitConfigPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserLeadsStimulusBySeconds",
+    names = ["useZapit", "zapitConfigPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserToStimulusSeconds",
              "trialsBeforeLaser"]
     assert list(task()["taskParameters"]["optogenetics"]) == names
 
@@ -109,7 +109,7 @@ def test_rig_control_keeps_the_zapit_file():
 
 
 @pytest.mark.parametrize("old", ["stimDelay", "excludeRepeats", "pseudorandomSelection", "warmupTrials", "stimProbability",
-                                 "stimDuration", "leadTime", "zapitStimConfigPath", "zapitConditionsPath", "laserLeadSeconds", "enabled"])
+                                 "stimDuration", "leadTime", "zapitStimConfigPath", "zapitConditionsPath", "laserLeadSeconds", "enabled", "laserLeadsStimulusBySeconds"])
 def test_the_schema_refuses_the_old_names(old):
     schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8")))
     validator = jsonschema.Draft202012Validator(schema)
@@ -125,7 +125,7 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
     # so 2 ul is one opening of Tom's width (42 ms on BLUE-OPTO-2, measured as about 3 ul) and 3 ul was two (BACKLOG).
     params = task()["taskParameters"]
     opto = params["optogenetics"]
-    assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserLeadsStimulusBySeconds"], opto["laserMaxSeconds"]) == (0.4, 20, 0.1, 12.5)
+    assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserToStimulusSeconds"], opto["laserMaxSeconds"]) == (0.4, 20, 0.1, 12.5)
     assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {2.0}
 
 

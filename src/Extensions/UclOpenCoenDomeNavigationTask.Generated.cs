@@ -129,7 +129,7 @@ namespace UclOpenCoenDomeNavigationTask
     ///an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as laser-off trials
     ///with the laser off, so galvo noise and masking light are the same on every trial. "Stimulus" is the tone and
     ///grating; the laser is continuous: it starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered
-    ///rig), laser_leads_stimulus_by_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
+    ///rig), laser_to_stimulus_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
     ///laser_max_seconds if that comes first. Zapit's host,
     ///port and triggering are rig.yml's zapit block.
     /// </summary>
@@ -143,7 +143,7 @@ namespace UclOpenCoenDomeNavigationTask
     an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as laser-off trials
     with the laser off, so galvo noise and masking light are the same on every trial. ""Stimulus"" is the tone and
     grating; the laser is continuous: it starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered
-    rig), laser_leads_stimulus_by_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
+    rig), laser_to_stimulus_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
     laser_max_seconds if that comes first. Zapit's host,
     port and triggering are rig.yml's zapit block.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
@@ -161,7 +161,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _laserMaxSeconds;
     
-        private double _laserLeadsStimulusBySeconds;
+        private double _laserToStimulusSeconds;
     
         private int _trialsBeforeLaser;
     
@@ -171,7 +171,7 @@ namespace UclOpenCoenDomeNavigationTask
             _zapitConfigPath = "";
             _laserOnProbability = 0.4D;
             _laserMaxSeconds = 12.5D;
-            _laserLeadsStimulusBySeconds = 0.1D;
+            _laserToStimulusSeconds = 0.1D;
             _trialsBeforeLaser = 20;
         }
     
@@ -182,7 +182,7 @@ namespace UclOpenCoenDomeNavigationTask
             _laserPowerMw = other._laserPowerMw;
             _laserOnProbability = other._laserOnProbability;
             _laserMaxSeconds = other._laserMaxSeconds;
-            _laserLeadsStimulusBySeconds = other._laserLeadsStimulusBySeconds;
+            _laserToStimulusSeconds = other._laserToStimulusSeconds;
             _trialsBeforeLaser = other._trialsBeforeLaser;
         }
     
@@ -260,11 +260,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome
+        /// Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserMaxSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserMaxSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome")]
+        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome")]
         public double LaserMaxSeconds
         {
             get
@@ -278,20 +278,20 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_leads_stimulus_by_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip
+        /// How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("laserLeadsStimulusBySeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserLeadsStimulusBySeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_leads_stimulus_by_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip")]
-        public double LaserLeadsStimulusBySeconds
+        [Newtonsoft.Json.JsonPropertyAttribute("laserToStimulusSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserToStimulusSeconds")]
+        [System.ComponentModel.DescriptionAttribute(@"How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip")]
+        public double LaserToStimulusSeconds
         {
             get
             {
-                return _laserLeadsStimulusBySeconds;
+                return _laserToStimulusSeconds;
             }
             set
             {
-                _laserLeadsStimulusBySeconds = value;
+                _laserToStimulusSeconds = value;
             }
         }
     
@@ -332,7 +332,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("LaserPowerMw = " + _laserPowerMw + ", ");
             stringBuilder.Append("LaserOnProbability = " + _laserOnProbability + ", ");
             stringBuilder.Append("LaserMaxSeconds = " + _laserMaxSeconds + ", ");
-            stringBuilder.Append("LaserLeadsStimulusBySeconds = " + _laserLeadsStimulusBySeconds + ", ");
+            stringBuilder.Append("LaserToStimulusSeconds = " + _laserToStimulusSeconds + ", ");
             stringBuilder.Append("TrialsBeforeLaser = " + _trialsBeforeLaser);
             return true;
         }

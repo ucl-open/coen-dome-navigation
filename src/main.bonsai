@@ -5750,7 +5750,7 @@
                         </Expression>
                         <Expression xsi:type="Annotation">
                           <Name>Optogenetics</Name>
-                          <Text><![CDATA[At ITI start InitialiseOptoTrial draws this trial's Zapit command: after the first trialsBeforeLaser trials, laser on with probability laserOnProbability, otherwise a laser-off trial, each with a condition from the Zapit conditions file, so galvos and masking light are the same on every trial. On hardware-triggered rigs ArmZapit sends it once the ITI has ended and waits for Zapit to confirm; OptoOnset raises the trigger line at beep 0, laserLeadsStimulusBySeconds before the first tone pip, and LaserOnUntilOutcome stops the stimulus at the outcome or after laserMaxSeconds. Zapit only gets continuous stimuli.
+                          <Text><![CDATA[At ITI start InitialiseOptoTrial draws this trial's Zapit command: after the first trialsBeforeLaser trials, laser on with probability laserOnProbability, otherwise a laser-off trial, each with a condition from the Zapit conditions file, so galvos and masking light are the same on every trial. On hardware-triggered rigs ArmZapit sends it once the ITI has ended and waits for Zapit to confirm; OptoOnset raises the trigger line at beep 0, laserToStimulusSeconds before the first tone pip, and LaserOnUntilOutcome stops the stimulus at the outcome or after laserMaxSeconds. Zapit only gets continuous stimuli.
 
 StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its StopStimulus, the next ITI start sends one.]]></Text>
                         </Expression>
@@ -8029,8 +8029,8 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>StimulusStartBeep</scr:Name>
-                          <scr:Description>Skip count before lick detection starts: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
-                          <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
+                          <scr:Description>Skip count before lick detection starts: 1 as before, or laserToStimulusSeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
+                          <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserToStimulusSeconds / 0.05)) : 1</scr:Expression>
                         </Expression>
                         <Expression xsi:type="PropertyMapping">
                           <PropertyMappings>
@@ -8288,8 +8288,8 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                         </Expression>
                         <Expression xsi:type="scr:ExpressionTransform">
                           <scr:Name>StimulusStartBeep</scr:Name>
-                          <scr:Description>Skip count before the timeout starts: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
-                          <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
+                          <scr:Description>Skip count before the timeout starts: 1 as before, or laserToStimulusSeconds / 50 ms in an optogenetics experiment. As before, it arms at the first tone pip on trial 1 and one beep (50 ms) earlier from trial 2, because BeepTimer replays the previous trial's last beep to the new subscription.</scr:Description>
+                          <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserToStimulusSeconds / 0.05)) : 1</scr:Expression>
                         </Expression>
                         <Expression xsi:type="PropertyMapping">
                           <PropertyMappings>
@@ -9997,8 +9997,8 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
                     <scr:Name>StimulusStartBeep</scr:Name>
-                    <scr:Description>First beep with a tone pip: 1 as before, or laserLeadsStimulusBySeconds / 50 ms in an optogenetics experiment, so the laser (on at beep 0) leads the stimulus by laserLeadsStimulusBySeconds on every trial of that experiment, laser-on or laser-off.</scr:Description>
-                    <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserLeadsStimulusBySeconds / 0.05)) : 1</scr:Expression>
+                    <scr:Description>First beep with a tone pip: 1 as before, or laserToStimulusSeconds / 50 ms in an optogenetics experiment, so the laser (on at beep 0) leads the stimulus by laserToStimulusSeconds on every trial of that experiment, laser-on or laser-off.</scr:Description>
+                    <scr:Expression>it.Optogenetics.UseZapit ? Convert.ToInt32(Math.Round(it.Optogenetics.LaserToStimulusSeconds / 0.05)) : 1</scr:Expression>
                   </Expression>
                   <Expression xsi:type="PropertyMapping">
                     <PropertyMappings>

@@ -16,7 +16,7 @@ from swc.aeon.schema import BaseSchema
 from ucl_open_coen_dome_navigation import __semver__
 
 BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (HarpBeat)
-STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial (timeLimitSeconds + laser_leads_stimulus_by_seconds) the laser_max_seconds cap must be
+STIM_DURATION_MARGIN_SEC = 0.25  # how much longer than the longest trial (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
 
 STAGE_COUNT = 6
 
@@ -92,7 +92,7 @@ class OptogeneticsConfig(BaseSchema):
     an optogenetics experiment sends Zapit a condition: laser-on trials with the laser on, all others as laser-off trials
     with the laser off, so galvo noise and masking light are the same on every trial. "Stimulus" is the tone and
     grating; the laser is continuous: it starts at the trial's start (beep 0: the trigger pulse on a hardware-triggered
-    rig), laser_leads_stimulus_by_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
+    rig), laser_to_stimulus_seconds before the first tone pip, and Bonsai stops it at the trial's outcome, or after
     laser_max_seconds if that comes first. Zapit's host,
     port and triggering are rig.yml's zapit block.
     """
@@ -131,13 +131,13 @@ class OptogeneticsConfig(BaseSchema):
     laser_max_seconds: float = Field(
         default=12.5,
         gt=0,
-        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_leads_stimulus_by_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
+        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds (the time limit, 12 s) + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
     )
-    laser_leads_stimulus_by_seconds: float = Field(
+    laser_to_stimulus_seconds: float = Field(
         default=0.1,
         ge=0.05,
         le=0.2,
-        description="How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_leads_stimulus_by_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip",
+        description="How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip",
     )
     trials_before_laser: int = Field(
         default=20,
@@ -157,10 +157,10 @@ class OptogeneticsConfig(BaseSchema):
 
     @model_validator(mode="after")
     def validate_lead_time(self):
-        # Bonsai starts the laser on a beep and moves the first tone pip laser_leads_stimulus_by_seconds later, so it is a whole number of beeps
-        beeps = self.laser_leads_stimulus_by_seconds / BEEP_INTERVAL_SEC
+        # Bonsai starts the laser on a beep and moves the first tone pip laser_to_stimulus_seconds later, so it is a whole number of beeps
+        beeps = self.laser_to_stimulus_seconds / BEEP_INTERVAL_SEC
         if abs(beeps - round(beeps)) > 1e-6:
-            raise ValueError(f"laser_leads_stimulus_by_seconds ({self.laser_leads_stimulus_by_seconds}) must be a multiple of the {BEEP_INTERVAL_SEC} s beep interval")
+            raise ValueError(f"laser_to_stimulus_seconds ({self.laser_to_stimulus_seconds}) must be a multiple of the {BEEP_INTERVAL_SEC} s beep interval")
         return self
 
     @model_validator(mode="after")
@@ -253,13 +253,13 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     @model_validator(mode="after")
     def _stim_duration_outlasts_the_trial(self):
         # The laser is meant to stay on until the outcome: the cap must be longer than the longest trial, the time limit
-        # (timeLimitSeconds, counted from the first tone pip) plus laser_leads_stimulus_by_seconds (zapit-v2)
+        # (timeLimitSeconds, counted from the first tone pip) plus laser_to_stimulus_seconds (zapit-v2)
         opto = self.optogenetics
-        shortest = self.trial_structure.time_limit_seconds + opto.laser_leads_stimulus_by_seconds + STIM_DURATION_MARGIN_SEC
+        shortest = self.trial_structure.time_limit_seconds + opto.laser_to_stimulus_seconds + STIM_DURATION_MARGIN_SEC
         if opto.use_zapit and opto.laser_max_seconds < shortest - 1e-9:
             raise ValueError(
                 f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: trialStructure.timeLimitSeconds "
-                f"({self.trial_structure.time_limit_seconds:g} s) counts from the first tone pip, laser_leads_stimulus_by_seconds ({opto.laser_leads_stimulus_by_seconds} s) after onset"
+                f"({self.trial_structure.time_limit_seconds:g} s) counts from the first tone pip, laser_to_stimulus_seconds ({opto.laser_to_stimulus_seconds} s) after onset"
             )
         return self
 

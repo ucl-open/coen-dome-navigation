@@ -112,23 +112,23 @@ public class InitialiseOptoTrial
                 "optogenetics.laserPowerMw must be a power in mW above 0 when optogenetics is on; got {0}.",
                 optogenetics.LaserPowerMw.HasValue ? optogenetics.LaserPowerMw.Value.ToString() : "nothing"));
         }
-        // The stimulus starts on a beep and the first tone pip comes LaserLeadsStimulusBySeconds later, so LaserLeadsStimulusBySeconds must be 1 to 4 whole beeps.
+        // The stimulus starts on a beep and the first tone pip comes LaserToStimulusSeconds later, so LaserToStimulusSeconds must be 1 to 4 whole beeps.
         // At most 4 (0.2 s): licks before the first pip count toward the wrong-lick limits, and a longer lead could end a
         // trial before its first pip, which leaves the trial loop without an outcome.
-        var beeps = optogenetics.LaserLeadsStimulusBySeconds / BeepIntervalSec;
+        var beeps = optogenetics.LaserToStimulusSeconds / BeepIntervalSec;
         if (!(Math.Abs(beeps - Math.Round(beeps)) < 1e-6 && Math.Round(beeps) >= 1 && Math.Round(beeps) <= 4))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.laserLeadsStimulusBySeconds must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LaserLeadsStimulusBySeconds));
+                "optogenetics.laserToStimulusSeconds must be a multiple of 0.05 s from 0.05 to 0.2; got {0}.", optogenetics.LaserToStimulusSeconds));
         }
         // The laser is meant to stay on until the outcome, so the cap must be longer than the longest trial: the time limit
-        // (trialStructure.timeLimitSeconds, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LaserLeadsStimulusBySeconds after onset) plus a margin.
+        // (trialStructure.timeLimitSeconds, main.bonsai's MaxTrialTimeSec, counted from the first tone pip, LaserToStimulusSeconds after onset) plus a margin.
         var timeLimit = parameters.TrialStructure != null ? parameters.TrialStructure.TimeLimitSeconds : 12.0;
-        var shortestCap = timeLimit + optogenetics.LaserLeadsStimulusBySeconds + StimDurationMarginSec;
+        var shortestCap = timeLimit + optogenetics.LaserToStimulusSeconds + StimDurationMarginSec;
         if (!(optogenetics.LaserMaxSeconds >= shortestCap - 1e-9) || double.IsInfinity(optogenetics.LaserMaxSeconds))
         {
             throw new InvalidOperationException(string.Format(
-                "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.timeLimitSeconds, {1} s from the first tone pip, plus laserLeadsStimulusBySeconds, "
+                "optogenetics.laserMaxSeconds must be at least {0} s (trialStructure.timeLimitSeconds, {1} s from the first tone pip, plus laserToStimulusSeconds, "
                 + "plus {2} s), or a timed-out trial's laser would stop before its outcome; got {3}.", shortestCap, timeLimit, StimDurationMarginSec, optogenetics.LaserMaxSeconds));
         }
     }
