@@ -4,6 +4,12 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 ## Open
 
+### To fix later (Tom, 10 Nov 2026)
+
+- **The masking LEDs stay on after a Stop mid-trial.** They are wired to the Zapit trigger line (DO3), which the workflow holds high during each trial and clears 1 s after the outcome. A Stop mid-trial skips that clear, so the LEDs stay on until Bonsai is next started. The 10 Nov audit left this as is (round 1, below); fix it so DO3 goes low whenever the workflow stops.
+- **rig-control lets you close an experiment without stopping it.** It should not: while an experiment is running, closing it must be refused, or must ask to stop the experiment first.
+- **rig-control's text panel pops outside its window.** In the panel where you enter text, clicking Show (or a similar button) makes the panel spill past the window's frame, so it looks broken. Note the exact panel and button next time, then fix the layout.
+
 ### For Pip (found 9 Nov 2026 on BLUE-OPTO-2, with Claude)
 
 - **Calibration folder switch-over** (rig-setup's): BLUE-OPTO-2 done by hand (MeshMap.csv, gammalut.bmp and LickSpoutPositions copied from `C:\RigConfigs` into `calibration\`, rig.yml's `projectionCalibration` pointed there). BLUE-OPTO-1 and GREEN-DOME-2 still need it; whether rig-setup should do the copy is yours.
