@@ -7,7 +7,6 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 ### To fix later (Tom, 10 Nov 2026)
 
 - **The masking LEDs stay on after a Stop mid-trial: fixed in the workflow, not yet checked on a rig** (11 Nov 2026, Decided below). Check on BLUE-OPTO-2 with a `test` mouse: Stop mid-trial, by rig-control's Stop and by the editor's, and the LEDs go off within a second; the board is in Standby by then, so if they stay on, the board ignores writes in Standby.
-- **rig-control lets you close an experiment without stopping it.** It should not: while an experiment is running, closing it must be refused, or must ask to stop the experiment first.
 - **rig-control's text panel pops outside its window.** In the panel where you enter text, clicking Show (or a similar button) makes the panel spill past the window's frame, so it looks broken. Note the exact panel and button next time, then fix the layout.
 
 ### For Pip (found 9 Nov 2026 on BLUE-OPTO-2, with Claude)
