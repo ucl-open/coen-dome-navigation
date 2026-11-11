@@ -43,6 +43,28 @@ def test_the_zapit_trigger_line_is_held_until_after_the_outcome():
     assert float(re.search(r"MaximumRampDownMs = ([\d.]+);", source).group(1)) <= 500
 
 
+def test_the_zapit_trigger_line_is_cleared_however_the_workflow_stops():
+    # Tom Childs, 10 Nov 2026: a Stop mid-trial left DO3 high, and the masking LEDs on it lit until the next launch.
+    # ClearOutputsOnStop sits on the Behavior board include's output, so stopping disposes the board first (its port
+    # closes) and then writes OutputClear DO3 on the board's port, mapped from the group's PortName as the board's is.
+    workflow = group("BehaviorBoards").find(W + "Workflow")
+    nodes = list(workflow.find(W + "Nodes"))
+    edges = [(int(e.get("From")), int(e.get("To")), e.get("Label")) for e in workflow.find(W + "Edges")]
+    clear = [i for i, n in enumerate(nodes)
+             if n.find(W + "Combinator") is not None and n.find(W + "Combinator").get(XSI) == "ext:ClearOutputsOnStop"]
+    assert len(clear) == 1
+    clear = clear[0]
+    ext = "{clr-namespace:;assembly=Extensions}"
+    assert nodes[clear].find(W + "Combinator").findtext(ext + "Outputs") == "DO3"
+    board = next(i for i, n in enumerate(nodes) if n.get("Path") == "OpenRigs.Devices:BehaviorBoard.BehaviorBoard.bonsai")
+    assert (board, clear, "Source1") in edges
+    mapping = next(a for a, b, _ in edges if b == board and nodes[a].get(XSI) == "ExternalizedMapping")
+    assert [p.get("Name") for p in nodes[mapping]] == ["PortName"] and any(a == mapping and b == clear for a, b, _ in edges)
+    assert not any(a == clear for a, b, _ in edges)  # a sink: its lifetime is the board's
+    source = (Path(__file__).parents[1] / "src" / "Extensions" / "ClearOutputsOnStop.cs").read_text(encoding="utf-8-sig")
+    assert re.search(r"subscription\.Dispose\(\);\s*Clear\(portName, outputs\);", source)
+
+
 def test_the_laser_is_continuous_and_stopped_by_bonsai():
     # zapit-v2: Zapit only gets continuous stimuli (it ignores StopStimulus for a timed one, so a StimDuration or StartDelay
     # sent to it would leave the laser on past the outcome); LaserOnUntilOutcome stops each trial's once, at the outcome
