@@ -11,7 +11,12 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 ### For Pip (found 9 Nov 2026 on BLUE-OPTO-2, with Claude)
 
-- **Tom's mice are launched by eartag, but their files and history use the lab ID** (12 Nov 2026): rig-control lists TC001-LL and passes `PCO1-01456`, so the spout file (`LickSpoutPositions\<SubjectId>.csv`) and `stage.py`'s history (the share's `sub-TC001`) were not found: spouts went to rig.yml's all-0 default and the suggestion was Stage 0. BLUE-OPTO-2's spout files are copied under eartags (TC001 `PCO1-01456`, TC002 `PCO1-01454`, TC005 `PCO1-01554`; TC003 `PCO1-01474`, TC004 `PCO1-01553`, TC006 `PCO1-01556` have none here), from pyrat\data\training_schedule.json; other rigs need the same. `stage.py` needs the schedule's eartag-to-lab-ID mapping to find Tom's old experiments; until then set the stage by hand.
+- **Tom's mice are launched by eartag, but their data, files and history use the lab ID** (12 Nov 2026). rig-control lists TC001-LL but passes `PCO1-01456` as SubjectId, so:
+  - **Sessions save under the eartag:** `Acquired-Data\sub-PCO1-01456\`, not `sub-TC001\`, which splits TC001's data from its earlier sessions. Tom wants new sessions saved as `sub-TC001` (the lab ID without the `-LL` suffix, as on the RDSS share).
+  - **The spout file** (`LickSpoutPositions\<SubjectId>.csv`) wasn't found, so the spouts went to rig.yml's all-0 default. Worked around: BLUE-OPTO-2's spout files are copied under eartags (TC001 `PCO1-01456`, TC002 `PCO1-01454`, TC005 `PCO1-01554`; TC003 `PCO1-01474`, TC004 `PCO1-01553` and TC006 `PCO1-01556` have no file here). Other rigs need the same, and the copies go stale whenever Tom's old workflow re-saves `TC00X.csv`.
+  - **`stage.py`'s history** (the share's `sub-TC001`) wasn't found, so it suggested Stage 0. Until it's fixed, set the stage by hand.
+
+  All three need the eartag-to-lab-ID mapping, which is in `pyrat\data\training_schedule.json`. Pip, your call where to apply it: in rig-control (pass or add the lab ID) or in the workflow and `stage.py`.
 - **Calibration folder switch-over** (rig-setup's): BLUE-OPTO-2 done by hand (MeshMap.csv, gammalut.bmp and LickSpoutPositions copied from `C:\RigConfigs` into `calibration\`, rig.yml's `projectionCalibration` pointed there). BLUE-OPTO-1 and GREEN-DOME-2 still need it; whether rig-setup should do the copy is yours.
 
 ### Zapit on BLUE-OPTO-2: before any optogenetics with a mouse (found 9 Nov 2026; affects av-dome too; for Pip, Tom and Ainiah)
