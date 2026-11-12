@@ -10195,6 +10195,11 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
             <Expression xsi:type="rx:PublishSubject">
               <Name>MouseVirtualPosition</Name>
             </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:ObserveOn">
+                <rx:Scheduler>NewThreadScheduler</rx:Scheduler>
+              </Combinator>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="2" Label="Source1" />
@@ -10202,7 +10207,8 @@ StimulusLeftOn? (from the StartITI monitor): if a trial ever ends without its St
             <Edge From="2" To="3" Label="Source1" />
             <Edge From="3" To="4" Label="Source1" />
             <Edge From="5" To="7" Label="Source1" />
-            <Edge From="6" To="7" Label="Source2" />
+            <Edge From="6" To="17" Label="Source1" />
+            <Edge From="17" To="7" Label="Source2" />
             <Edge From="7" To="9" Label="Source1" />
             <Edge From="8" To="9" Label="Source2" />
             <Edge From="9" To="11" Label="Source1" />
