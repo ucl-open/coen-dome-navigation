@@ -787,11 +787,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Quiet wait: Go needs this long without a lick, in seconds, counted from the interval's start and restarted by every lick (uncapped), so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026
+        /// Quiet wait: Go needs this long with the spout released, in seconds, counted from the interval's start and restarted by every touch and release (uncapped); a held contact holds Go until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("lickQuietSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickQuietSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: Go needs this long without a lick, in seconds, counted from the interval's start and restarted by every lick (uncapped), so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026")]
+        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: Go needs this long with the spout released, in seconds, counted from the interval's start and restarted by every touch and release (uncapped); a held contact holds Go until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026")]
         public double LickQuietSeconds
         {
             get
@@ -805,14 +805,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start and restarted whenever the wheel's total distance (forward and back added) since the last restart passes wheelQuietCm; 0: off (with wheelQuietCm 0)
+        /// Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("wheelQuietSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelQuietSeconds")]
         [System.ComponentModel.DescriptionAttribute("Quiet wait: Go needs this long with the wheel still, in seconds, counted from the" +
-            " interval\'s start and restarted whenever the wheel\'s total distance (forward and" +
-            " back added) since the last restart passes wheelQuietCm; 0: off (with wheelQuiet" +
-            "Cm 0)")]
+            " interval\'s start: the wheel\'s distance (forward and back added) over the last w" +
+            "heelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)")]
         public double WheelQuietSeconds
         {
             get
@@ -826,12 +825,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The wheel distance, forward and back added, that restarts the wheel's quiet wait, in cm; 0: off (with wheelQuietSeconds 0)
+        /// The most the wheel may move, forward and back added, within the last wheelQuietSeconds before Go, in cm; 0: off (with wheelQuietSeconds 0)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("wheelQuietCm")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelQuietCm")]
-        [System.ComponentModel.DescriptionAttribute("The wheel distance, forward and back added, that restarts the wheel\'s quiet wait," +
-            " in cm; 0: off (with wheelQuietSeconds 0)")]
+        [System.ComponentModel.DescriptionAttribute("The most the wheel may move, forward and back added, within the last wheelQuietSe" +
+            "conds before Go, in cm; 0: off (with wheelQuietSeconds 0)")]
         public double WheelQuietCm
         {
             get

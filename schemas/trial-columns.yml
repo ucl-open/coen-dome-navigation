@@ -104,7 +104,7 @@ rewardSizeUl:
 laserPowerMw:
   type: double
   unit: mW
-  description: Laser power sent to Zapit for this trial (the task's optogenetics.laserPowerMw), as commanded, not measured. 0 on laser-off trials and without optogenetics.
+  description: Laser power sent to Zapit for this trial (the task's optogenetics.laserPowerMw), as commanded, not measured. 0 on laser-off trials, without optogenetics, and on a trial answered before its trigger (no laser after an answer, from 13 Nov 2026).
 laserCondition:
   type: int
   formerly: [optoCondition]

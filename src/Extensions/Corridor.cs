@@ -273,16 +273,19 @@ public enum CorridorEventKind
 }
 
 /// <summary>
-/// A trial's quiet waits (Pip, 13 Nov 2026), on the Harp clock, as coen-dome-decision-making's: from the interval's start,
-/// Go needs lickSeconds with no lick and wheelSeconds in which the wheel's total distance (forward and back added) stays
-/// within wheelCm, each wait restarting on its own; Go is the first moment at or after earliest at which both hold.
+/// A trial's quiet waits (Pip, 13 Nov 2026), on the Harp clock, counted from the interval's start: Go needs every
+/// spout released for lickSeconds (a held contact blocks Go), and the wheel's distance (forward and back added)
+/// within wheelCm over the last wheelSeconds; Go is the first moment at or after earliest at which both hold. With both
+/// off Go is earliest. coen-dome-decision-making's TrialLogic.cs has the same class: change both together.
 /// </summary>
 public class QuietWait
 {
     readonly double earliest, lickSeconds, wheelSeconds, wheelCm;
-    double lickSince, wheelSince, wheelMoved, lastWheel;
+    readonly Queue<KeyValuePair<double, double>> moves = new Queue<KeyValuePair<double, double>>();  // (Harp time, cm) in the window
+    double lickSince, wheelSince, lastWheel, recentCm;
+    bool held;
 
-    public QuietWait(double intervalStart, double earliest, double lickSeconds, double wheelSeconds, double wheelCm, double wheelAtStart)
+    public QuietWait(double intervalStart, double earliest, double lickSeconds, double wheelSeconds, double wheelCm, double wheelAtStart, bool lickHeld)
     {
         this.earliest = earliest;
         this.lickSeconds = lickSeconds;
@@ -290,30 +293,43 @@ public class QuietWait
         this.wheelCm = wheelCm;
         lickSince = wheelSince = intervalStart;
         lastWheel = wheelAtStart;
+        held = lickHeld;
     }
 
-    /// <summary>A lick at Harp time now restarts the lick wait.</summary>
-    public void Lick(double now)
+    /// <summary>A spout touched or released at Harp time now (held: any spout still touched) restarts the lick wait.</summary>
+    public void Lick(bool anyHeld, double now)
     {
-        if (lickSeconds > 0) lickSince = Math.Max(lickSince, now);
+        held = anyHeld;
+        lickSince = Math.Max(lickSince, now);
     }
 
-    /// <summary>The wheel's distance in cm at Harp time now: past wheelCm of travel since the last restart restarts the wait.</summary>
+    /// <summary>The wheel's distance in cm at Harp time now: once the travel within the last wheelSeconds passes wheelCm,
+    /// the wait restarts at the latest move that still takes it past.</summary>
     public void Wheel(double cm, double now)
     {
-        if (!double.IsNaN(lastWheel)) wheelMoved += Math.Abs(cm - lastWheel);
+        var moved = double.IsNaN(lastWheel) ? 0 : Math.Abs(cm - lastWheel);
         lastWheel = cm;
-        if (wheelSeconds > 0 && wheelMoved > wheelCm)
+        if (!(wheelSeconds > 0)) return;
+        while (moves.Count > 0 && moves.Peek().Key <= now - wheelSeconds) recentCm -= moves.Dequeue().Value;
+        if (moved == 0) return;
+        moves.Enqueue(new KeyValuePair<double, double>(now, moved));
+        recentCm += moved;
+        while (recentCm > wheelCm)
         {
-            wheelSince = Math.Max(wheelSince, now);
-            wheelMoved = 0;
+            var oldest = moves.Dequeue();
+            recentCm -= oldest.Value;
+            wheelSince = Math.Max(wheelSince, oldest.Key);
         }
     }
 
-    /// <summary>When Go falls if nothing more restarts a wait: exact, not rounded to a clock tick.</summary>
+    /// <summary>When Go falls if nothing more restarts a wait (infinity while a spout is held): exact, not rounded to a clock tick.</summary>
     public double GoTime
     {
-        get { return Math.Max(earliest, Math.Max(lickSince + lickSeconds, wheelSince + wheelSeconds)); }
+        get
+        {
+            if (lickSeconds > 0 && held) return double.PositiveInfinity;
+            return Math.Max(earliest, Math.Max(lickSeconds > 0 ? lickSince + lickSeconds : 0, wheelSince + wheelSeconds));
+        }
     }
 
     public double Earliest { get { return earliest; } }
@@ -395,7 +411,7 @@ public class CorridorState
     CorridorTrial trial;
     VirtualTrack track;
     QuietWait wait;
-    bool wheelSeen;
+    bool wheelSeen, touched;   // touched: the lick detector's state now
     double now = double.NaN, wheel, itiStart = double.NaN, waitUntil, start, onset, quietWait, armAt, lastOutcome = double.NaN, laserOnset;
     int nextBeep, wrongLicks;
     bool capped, armSent, armed, triggered;
@@ -427,8 +443,10 @@ public class CorridorState
 
     public IEnumerable<CorridorEvent> OnLick(bool lick)
     {
+        if (lick == touched) yield break;
+        touched = lick;
+        if (phase == Phase.Interval && !double.IsNaN(now)) wait.Lick(touched, now);
         if (!lick) yield break;
-        if (phase == Phase.Interval && !double.IsNaN(now)) wait.Lick(now);
         if (phase != Phase.Running || last == null || !trial.lickToReward) yield break;  // licks count from the first pip
         if (OnTarget(last.Row.toneFrequencyHz)) { yield return End("Lick"); yield break; }
         wrongLicks++;
@@ -471,7 +489,7 @@ public class CorridorState
         trial = draw.Next();
         phase = Phase.Interval;
         var lead = trial.firstPipBeep * CorridorSetup.BeepSeconds;
-        wait = new QuietWait(itiStart, itiStart + trial.itiSeconds - lead, trial.lickQuietSeconds, trial.wheelQuietSeconds, trial.wheelQuietCm, wheelSeen ? wheel : double.NaN);
+        wait = new QuietWait(itiStart, itiStart + trial.itiSeconds - lead, trial.lickQuietSeconds, trial.wheelQuietSeconds, trial.wheelQuietCm, wheelSeen ? wheel : double.NaN, touched);
         // Armed once the last trial's trigger line has fallen (its ramp-down done), at the interval's start at the soonest.
         armAt = double.IsNaN(lastOutcome) ? itiStart : Math.Max(itiStart, lastOutcome + trial.triggerHoldSeconds);
         armSent = false;
@@ -591,7 +609,7 @@ public class CorridorState
             trialStartTime = start,
             stimulusOnsetTime = onset,
             rewardSizeUl = trial.rewardSizeUl,
-            laserPowerMw = trial.laserPowerMw,
+            laserPowerMw = triggered ? trial.laserPowerMw : 0,  // a trial ended before its trigger had no laser
             laserCondition = trial.laserCondition
         };
         var outcome = new CorridorEvent { Kind = CorridorEventKind.Outcome, Seconds = now, Trial = trial, Row = row, Rewarded = rewarded, ErrorSound = row.punishSound, RewardSide = "left" };

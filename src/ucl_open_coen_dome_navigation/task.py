@@ -201,14 +201,14 @@ class TrainingStage(BaseSchema):
     lick_quiet_seconds: float = Field(
         default=0.0,
         ge=0,
-        description="Quiet wait: Go needs this long without a lick, in seconds, counted from the interval's start and restarted by every lick (uncapped), so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026",
+        description="Quiet wait: Go needs this long with the spout released, in seconds, counted from the interval's start and restarted by every touch and release (uncapped); a held contact holds Go until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026",
     )
     wheel_quiet_seconds: float = Field(
         default=0.0,
         ge=0,
-        description="Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start and restarted whenever the wheel's total distance (forward and back added) since the last restart passes wheelQuietCm; 0: off (with wheelQuietCm 0)",
+        description="Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)",
     )
-    wheel_quiet_cm: float = Field(default=0.0, ge=0, description="The wheel distance, forward and back added, that restarts the wheel's quiet wait, in cm; 0: off (with wheelQuietSeconds 0)")
+    wheel_quiet_cm: float = Field(default=0.0, ge=0, description="The most the wheel may move, forward and back added, within the last wheelQuietSeconds before Go, in cm; 0: off (with wheelQuietSeconds 0)")
     time_limit_seconds: float | None = Field(
         default=None, gt=0, description="The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit"
     )
