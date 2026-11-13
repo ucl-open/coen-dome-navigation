@@ -591,7 +591,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Task</Name>
-        <Description>Reads the task file at Go (TaskConfig) and checks it with the stage, rig.yml and the mouse (CreateCorridorSetup: a stage past the table, a reward zone outside the sweep in src\waveforms\sweep.json, the optogenetics rules, optogenetics on a software-triggered rig with a real mouse, the Zapit conditions file).</Description>
+        <Description>Reads the task file at Go (TaskConfig) and checks it with the stage and rig.yml (CreateCorridorSetup: a stage past the table, a reward zone outside the sweep in src\waveforms\sweep.json, the optogenetics rules, the Zapit conditions file). A real mouse on a rig without hardware triggering is the Zapit group's refusal.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -615,9 +615,6 @@
             <Expression xsi:type="SubscribeSubject">
               <Name>RigConfigs</Name>
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>SubjectId</Name>
-            </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:Zip" />
             </Expression>
@@ -634,25 +631,21 @@
             <Edge From="0" To="1" Label="Source1" />
             <Edge From="1" To="2" Label="Source1" />
             <Edge From="2" To="3" Label="Source1" />
-            <Edge From="4" To="8" Label="Source1" />
-            <Edge From="5" To="8" Label="Source2" />
-            <Edge From="6" To="8" Label="Source3" />
-            <Edge From="7" To="8" Label="Source4" />
+            <Edge From="4" To="7" Label="Source1" />
+            <Edge From="5" To="7" Label="Source2" />
+            <Edge From="6" To="7" Label="Source3" />
+            <Edge From="7" To="8" Label="Source1" />
             <Edge From="8" To="9" Label="Source1" />
-            <Edge From="9" To="10" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Zapit</Name>
-        <Description>Zapit (OpenRigs.Devices.Zapit), only in an optogenetics experiment.</Description>
+        <Description>Zapit, only in an optogenetics experiment: OpenRigs.Devices Zapit.ConnectZapit, given the task's conditions file, connects to rig.yml's Zapit, carries ZapitCommands and ZapitReplies, and stops the workflow on an error reply, no conditions file loaded, a conditions count other than the file's, or a real mouse on a rig without hardware triggering.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
               <Name>TaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.Optogenetics.UseZapit</Selector>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:Take">
@@ -666,8 +659,8 @@
                   <Expression xsi:type="WorkflowInput">
                     <Name>Source1</Name>
                   </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>it</scr:Expression>
+                  <Expression xsi:type="MemberSelector">
+                    <Selector>TaskParameters.Optogenetics.UseZapit</Selector>
                   </Expression>
                   <Expression xsi:type="WorkflowOutput" />
                 </Nodes>
@@ -677,147 +670,10 @@
                 </Edges>
               </Workflow>
             </Expression>
-            <Expression xsi:type="rx:SelectMany">
-              <Name>ConnectZapit</Name>
-              <Description>Connects to rig.yml's Zapit once Go says the experiment uses it: every ZapitCommands value goes out and every reply comes back on ZapitReplies. Stops the workflow on an error reply, no conditions file loaded, or a number of conditions other than the task's file has.</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>ZapitCommands</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Timer">
-                      <rx:DueTime>PT0S</rx:DueTime>
-                      <rx:Period>PT0S</rx:Period>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="zap:CreateZapitQuery">
-                      <zap:Query>IsStimConfigLoaded</zap:Query>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="zap:CreateZapitQuery">
-                      <zap:Query>GetNumConditions</zap:Query>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Merge" />
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>RigConfigs</Name>
-                  </Expression>
-                  <Expression xsi:type="PropertyMapping">
-                    <PropertyMappings>
-                      <Property Name="Host" Selector="Zapit.Host" />
-                      <Property Name="Port" Selector="Zapit.Port" />
-                    </PropertyMappings>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="zap:ZapitClient">
-                      <zap:Host>127.0.0.1</zap:Host>
-                      <zap:Port>1488</zap:Port>
-                      <zap:ReceiveTimeout>5000</zap:ReceiveTimeout>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="MulticastSubject">
-                    <Name>ZapitReplies</Name>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>ZapitReplies</Name>
-                  </Expression>
-                  <Expression xsi:type="rx:Condition">
-                    <Name>ZapitError?</Name>
-                    <Description>An error reply, or no conditions file loaded in Zapit.</Description>
-                    <Workflow>
-                      <Nodes>
-                        <Expression xsi:type="WorkflowInput">
-                          <Name>Source1</Name>
-                        </Expression>
-                        <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Expression>IsError || (CommandCode == 2 &amp;&amp; Value == 0)</scr:Expression>
-                        </Expression>
-                        <Expression xsi:type="WorkflowOutput" />
-                      </Nodes>
-                      <Edges>
-                        <Edge From="0" To="1" Label="Source1" />
-                        <Edge From="1" To="2" Label="Source1" />
-                      </Edges>
-                    </Workflow>
-                  </Expression>
-                  <Expression xsi:type="Format">
-                    <Format>Zapit answered {0}: an error, or no conditions file loaded. Load the conditions file the task names in Zapit and check its DAQ.</Format>
-                    <Selector>it</Selector>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="core:ThrowError" />
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>ZapitReplies</Name>
-                  </Expression>
-                  <Expression xsi:type="rx:Condition">
-                    <Name>ConditionCountReply?</Name>
-                    <Workflow>
-                      <Nodes>
-                        <Expression xsi:type="WorkflowInput">
-                          <Name>Source1</Name>
-                        </Expression>
-                        <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Expression>CommandCode == 4</scr:Expression>
-                        </Expression>
-                        <Expression xsi:type="WorkflowOutput" />
-                      </Nodes>
-                      <Edges>
-                        <Edge From="0" To="1" Label="Source1" />
-                        <Edge From="1" To="2" Label="Source1" />
-                      </Edges>
-                    </Workflow>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Take">
-                      <rx:Count>1</rx:Count>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>TaskConfig</Name>
-                  </Expression>
-                  <Expression xsi:type="MemberSelector">
-                    <Selector>TaskParameters.Optogenetics.ZapitConfigPath</Selector>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Zip" />
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="zap:CheckZapitConditionCount" />
-                  </Expression>
-                </Nodes>
-                <Edges>
-                  <Edge From="2" To="3" Label="Source1" />
-                  <Edge From="2" To="4" Label="Source1" />
-                  <Edge From="1" To="5" Label="Source1" />
-                  <Edge From="3" To="5" Label="Source2" />
-                  <Edge From="4" To="5" Label="Source3" />
-                  <Edge From="6" To="7" Label="Source1" />
-                  <Edge From="5" To="8" Label="Source1" />
-                  <Edge From="7" To="8" Label="Source2" />
-                  <Edge From="8" To="9" Label="Source1" />
-                  <Edge From="9" To="10" Label="Source1" />
-                  <Edge From="11" To="12" Label="Source1" />
-                  <Edge From="12" To="13" Label="Source1" />
-                  <Edge From="13" To="14" Label="Source1" />
-                  <Edge From="15" To="16" Label="Source1" />
-                  <Edge From="16" To="17" Label="Source1" />
-                  <Edge From="18" To="19" Label="Source1" />
-                  <Edge From="17" To="20" Label="Source1" />
-                  <Edge From="19" To="20" Label="Source2" />
-                  <Edge From="20" To="21" Label="Source1" />
-                </Edges>
-              </Workflow>
+            <Expression xsi:type="MemberSelector">
+              <Selector>TaskParameters.Optogenetics.ZapitConfigPath</Selector>
             </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ConnectZapit.bonsai" />
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
@@ -941,7 +797,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay (at least 3 s) after Start: one mixer source each for the pips (Buffer), the reward tone and the error tone, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. Every file in src\waveforms is one channel, at the loudness it plays at.</Description>
+        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay (at least 3 s) after Start: one mixer source each for the pips (Buffer), the reward tone and the error tone, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. Every file in src\waveforms is one channel, at the loudness it plays at. Every rig.yml speaker needs a filter or the workflow stops at Start naming it (RequireSpeakerFilters, the rule every dome holds).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="GroupWorkflow">
@@ -1227,6 +1083,15 @@
                 <mix:Duration>2</mix:Duration>
               </Combinator>
             </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>RigConfigs</Name>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>SpeakerArray</Selector>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="ext:RequireSpeakerFilters" />
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="2" To="3" Label="Source1" />
@@ -1264,6 +1129,8 @@
             <Edge From="41" To="42" Label="Source2" />
             <Edge From="42" To="43" Label="Source1" />
             <Edge From="43" To="44" Label="Source1" />
+            <Edge From="45" To="46" Label="Source1" />
+            <Edge From="46" To="47" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

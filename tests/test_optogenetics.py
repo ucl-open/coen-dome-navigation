@@ -103,8 +103,11 @@ def test_corridor_cs_uses_the_same_constants():
     assert float(re.search(r"const double BeepSeconds = ([\d.]+);", CORRIDOR).group(1)) == BEEP_INTERVAL_SEC
     from ucl_open_coen_dome_navigation import task
 
-    for py, cs in (("ZAPIT_REPLY_MARGIN_SEC", "ZapitReplyMarginSec"), ("MAX_LEAD_SEC", "MaxLeadSec"), ("NO_TIME_LIMIT_TRIGGER_AFTER_SEC", "NoTimeLimitTriggerAfterSec")):
+    for py, cs in (("MAX_LEAD_SEC", "MaxLeadSec"), ("NO_TIME_LIMIT_TRIGGER_AFTER_SEC", "NoTimeLimitTriggerAfterSec")):
         assert float(re.search(rf"const double {cs} = ([\d.]+);", CORRIDOR).group(1)) == getattr(task, py)
+    # Zapit's reply margin is lib-open-rigs' alone (ZapitTrial.ReplyMarginSeconds, ZAPIT_REPLY_MARGIN_SECONDS; audit round 3).
+    assert "ZapitTrial.ReplyMarginSeconds" in CORRIDOR and "ZapitReplyMarginSec " not in CORRIDOR
+    assert not hasattr(task, "ZAPIT_REPLY_MARGIN_SEC")
 
 
 def test_the_laser_cap_s_code_says_laser_not_stimulus():

@@ -164,3 +164,23 @@ def test_the_readme_lists_every_open_rigs_block():
     missing = sorted(b for b in used if f"`{b}`" not in table)
     assert not missing, missing
     assert "dome-building-blocks" in table
+
+def test_zapit_is_the_shared_include_given_the_conditions_file():
+    # Audit round 3: the connect, check and refusal chain is lib-open-rigs' Zapit.ConnectZapit (its stops are tested C#
+    # there, a real mouse on a rig without hardware triggering among them), shared with coen-dome-decision-making.
+    nodes, edges = _scope(group("Zapit"))
+    include = next(i for i, n in enumerate(nodes) if n.get("Path") == "OpenRigs.Devices:Zapit.ConnectZapit.bonsai")
+    path = [nodes[i] for i in _upstream(edges, include)]
+    assert any(n.findtext(W + "Selector") == "TaskParameters.Optogenetics.ZapitConfigPath" for n in path)
+    assert any(n.get(XSI) == "rx:Condition" and "Optogenetics.UseZapit" in ET.tostring(n, encoding="unicode") for n in path)
+    for local in ("zap:ZapitClient", "zap:CheckZapitConditionCount", "core:ThrowError", "ConnectZapit</Name>"):
+        assert local not in TEXT
+
+
+def test_every_speaker_needs_a_filter_at_start():
+    # Pip, 13 Nov 2026: as coen-dome-decision-making, a speaker without a filter stops the workflow at Start, naming it.
+    nodes, edges = _scope(group("Audio"))
+    check = next(i for i, n in enumerate(nodes) if "ext:RequireSpeakerFilters" in combinators(n))
+    assert [nodes[i].findtext(W + "Name") or nodes[i].findtext(W + "Selector") for i in sorted(_upstream(edges, check))] == ["RigConfigs", "SpeakerArray"]
+    template = (ROOT / "config" / "rig-template.yml").read_text(encoding="utf-8")
+    assert "unequalised" not in template and "Every speaker needs one" in template

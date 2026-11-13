@@ -28,9 +28,9 @@ static class Fixture
         return global::Sweep.Load(Path.Combine(Repo(), "src", "waveforms", "sweep.json"));
     }
 
-    public static CorridorSetup Setup(UclOpenCoenDomeNavigationTaskParameters task, int stage, bool hardware = true, string subject = "TC001")
+    public static CorridorSetup Setup(UclOpenCoenDomeNavigationTaskParameters task, int stage, bool hardware = true)
     {
-        return CorridorSetup.Create(task, stage, Sweep(), hardware, subject, path => 4);
+        return CorridorSetup.Create(task, stage, Sweep(), hardware, path => 4);
     }
 
     public static void Opto(UclOpenCoenDomeNavigationTaskParameters task)
@@ -180,12 +180,12 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void OptogeneticsOnASoftwareTriggeredRigIsForTheTestMouseOnly()
+    public void ASoftwareTriggeredRigIsNeverArmedAhead()
     {
+        // Only the test mouse runs there: lib-open-rigs' ConnectZapit refuses a real one (RequireZapitHardwareTrigger, audit round 3).
         var task = Fixture.Task();
         Fixture.Opto(task);
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4, false, "TC001")).Message, "test mouse");
-        Assert.IsFalse(new TrialDraw(Fixture.Setup(task, 4, false, "test")).Next().armZapit);
+        Assert.IsFalse(new TrialDraw(Fixture.Setup(task, 4, false)).Next().armZapit);
     }
 
     [TestMethod]
@@ -504,7 +504,7 @@ public class CorridorStateTests
     {
         var task = Fixture.Task();
         Fixture.Opto(task);
-        var rig = new Rig(Fixture.Setup(task, 2, false, "test"));
+        var rig = new Rig(Fixture.Setup(task, 2, false));
         var start = rig.RunTo(CorridorEventKind.Start);
         var cap = rig.RunTo(CorridorEventKind.LaserCap);
         Assert.AreEqual(start.Seconds + 12.5, cap.Seconds, 0.0011);   // from the trigger, at Go with the 0.1 s lead

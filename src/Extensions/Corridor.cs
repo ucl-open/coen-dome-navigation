@@ -127,7 +127,6 @@ public class CorridorSetup
 {
     public const double BeepSeconds = 0.05;       // task.py BEEP_INTERVAL_SEC
     public const double LaserMaxMarginSec = 0.25; // task.py LASER_MAX_MARGIN_SEC
-    public const double ZapitReplyMarginSec = 0.2;   // task.py ZAPIT_REPLY_MARGIN_SEC: Zapit's armed reply must be in this long before the trigger
     public const double MaxLeadSec = 0.2;            // task.py MAX_LEAD_SEC: the furthest the trigger may come before the first pip
     public const double NoTimeLimitTriggerAfterSec = 2.0; // task.py NO_TIME_LIMIT_TRIGGER_AFTER_SEC: the furthest after the first pip it may come on a stage without timeLimitSeconds
     public const int DriftBeeps = 500;            // a drift stage's frequency reaches the sweep's end on its own after this many beeps (25 s)
@@ -146,7 +145,7 @@ public class CorridorSetup
 
     /// <summary>Checks what pydantic would (Bonsai reads the task file without it) and what only the rig and the files
     /// can say; throws naming every problem.</summary>
-    public static CorridorSetup Create(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, bool hardwareTriggered, string subjectId, Func<string, int> zapitConditionCount)
+    public static CorridorSetup Create(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
     {
         if (stage < 0 || stage >= task.TrainingStages.Count)
         {
@@ -166,12 +165,12 @@ public class CorridorSetup
         var leadBeeps = lead / BeepSeconds;
         if (!(Math.Abs(leadBeeps - Math.Round(leadBeeps)) < 1e-6)) problems.Add("optogenetics.laserToStimulusSeconds must be a whole number of 0.05 s beeps");
         if (lead > MaxLeadSec + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, MaxLeadSec));
-        if (lead + ZapitReplyMarginSec > task.TrialStructure.ItiMinSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) plus Zapit's {1} s reply margin must be at most trialStructure.itiMinSeconds ({2} s), the shortest interval", lead, ZapitReplyMarginSec, task.TrialStructure.ItiMinSeconds));
+        if (lead + ZapitTrial.ReplyMarginSeconds > task.TrialStructure.ItiMinSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) plus Zapit's {1} s reply margin must be at most trialStructure.itiMinSeconds ({2} s), the shortest interval", lead, ZapitTrial.ReplyMarginSeconds, task.TrialStructure.ItiMinSeconds));
         var after = row.TimeLimitSeconds ?? NoTimeLimitTriggerAfterSec;
         if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage '{2}''s {3}", lead, after, row.Label, row.TimeLimitSeconds.HasValue ? "timeLimitSeconds" : "limit for a stage without timeLimitSeconds"));
         var hold = task.Optogenetics.TriggerHoldSeconds;
-        var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitReplyMarginSec;
-        if (task.Optogenetics.UseZapit && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitReplyMarginSec));
+        var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;
+        if (task.Optogenetics.UseZapit && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitTrial.ReplyMarginSeconds));
         if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage '" + row.Label + "' truncates trials but truncation.sweepFractions is empty");
         if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage '{0}''s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", row.Label, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
         var opto = task.Optogenetics;
@@ -184,10 +183,6 @@ public class CorridorSetup
             if (limits.Count > 0 && opto.LaserMaxSeconds < limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSec - 1e-9)
             {
                 problems.Add(string.Format("optogenetics.laserMaxSeconds must be at least {0} s (the longest timeLimitSeconds plus laserToStimulusSeconds plus {1} s)", limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSec, LaserMaxMarginSec));
-            }
-            if (!hardwareTriggered && (subjectId ?? "").Trim().ToLowerInvariant() != "test")
-            {
-                problems.Add("this rig's Zapit is not hardware-triggered (rig.yml zapit.hardwareTriggered), so only the test mouse may run optogenetics on it, not " + subjectId);
             }
         }
         if (problems.Count > 0) throw new InvalidOperationException("The task cannot be run: " + string.Join("; ", problems) + ".");
@@ -626,7 +621,7 @@ public class CorridorState
 }
 
 [Combinator]
-[Description("Checks the task at Go and makes what the trials are drawn from. Input: (task file, TrainingStage, rig.yml, SubjectId). Stops the workflow on a stage past the table, a reward zone outside the sweep, the optogenetics rules, or optogenetics on a software-triggered rig with a real mouse.")]
+[Description("Checks the task at Go and makes what the trials are drawn from. Input: (task file, TrainingStage, rig.yml). Stops the workflow on a stage past the table, a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CreateCorridorSetup
 {
@@ -638,9 +633,9 @@ public class CreateCorridorSetup
     [Description("sweep.json, relative to the workflow's folder (src).")]
     public string SweepFile { get; set; }
 
-    public IObservable<CorridorSetup> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, DomeRig, string>> source)
+    public IObservable<CorridorSetup> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, DomeRig>> source)
     {
-        return source.Select(x => CorridorSetup.Create(x.Item1.TaskParameters, x.Item2, Sweep.Load(SweepFile), x.Item3.Zapit.HardwareTriggered, x.Item4, null));
+        return source.Select(x => CorridorSetup.Create(x.Item1.TaskParameters, x.Item2, Sweep.Load(SweepFile), x.Item3.Zapit.HardwareTriggered, null));
     }
 }
 
@@ -707,6 +702,22 @@ public class CreateStimulusRow
     public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<CorridorEvent> source)
     {
         return source.Where(e => e.Kind == CorridorEventKind.Pip).Select(e => Timestamped.Create(e.Frame.Row, e.Seconds));
+    }
+}
+
+[Combinator]
+[Description("Stops the workflow at Start, naming each, if any rig.yml speaker has no filter (OpenRigs.Devices DomeSpeakers.RequireFilters, Pip 13 Nov 2026): a dome plays every speaker equalised. Input: rig.yml's speakerArray.")]
+[WorkflowElementCategory(ElementCategory.Sink)]
+public class RequireSpeakerFilters
+{
+    public IObservable<DomeSpeakerArray> Process(IObservable<DomeSpeakerArray> source)
+    {
+        return source.Do(Check);
+    }
+
+    public static void Check(DomeSpeakerArray speakerArray)
+    {
+        OpenRigs.Devices.DomeSpeakers.RequireFilters(speakerArray.Speakers.Select(entry => new KeyValuePair<string, string>(entry.Key, entry.Value.Filter)));
     }
 }
 

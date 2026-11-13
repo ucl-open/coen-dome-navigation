@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Literal
 
 from open_rigs.core.task import Task, TaskParameters
+from open_rigs.rigs.dome import ZAPIT_REPLY_MARGIN_SECONDS
 from pydantic import ConfigDict, Field, field_validator, model_validator
 from swc.aeon.schema import BaseSchema
 
@@ -20,7 +21,6 @@ from ucl_open_coen_dome_navigation import __semver__
 
 BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (Corridor.cs BeepSeconds)
 LASER_MAX_MARGIN_SEC = 0.25  # how much longer than the longest laser (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
-ZAPIT_REPLY_MARGIN_SEC = 0.2  # Zapit's armed reply must be in this long before the trigger (Corridor.cs ZapitReplyMarginSec)
 MAX_LEAD_SEC = 0.2  # the furthest the trigger may come before the first pip, in whole beeps (Corridor.cs MaxLeadSec)
 NO_TIME_LIMIT_TRIGGER_AFTER_SEC = 2.0  # the furthest after the first pip the trigger may come on a stage without timeLimitSeconds (Corridor.cs)
 
@@ -264,9 +264,9 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     def _the_lead_fits(self):
         # Corridor.cs CorridorSetup.Create's same rules (Pip, 13 Nov 2026).
         lead, iti = self.optogenetics.laser_to_stimulus_seconds, self.trial_structure.iti_min_seconds
-        if lead + ZAPIT_REPLY_MARGIN_SEC > iti + 1e-9:
+        if lead + ZAPIT_REPLY_MARGIN_SECONDS > iti + 1e-9:
             raise ValueError(
-                f"optogenetics.laser_to_stimulus_seconds ({lead} s) plus Zapit's {ZAPIT_REPLY_MARGIN_SEC} s reply margin must be at most "
+                f"optogenetics.laser_to_stimulus_seconds ({lead} s) plus Zapit's {ZAPIT_REPLY_MARGIN_SECONDS} s reply margin must be at most "
                 f"trial_structure.iti_min_seconds ({iti} s), the shortest interval"
             )
         # A negative lead puts the trigger after the first pip, at most the stage's timeLimitSeconds (any stage here; Go checks the one chosen).
@@ -280,11 +280,11 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         # The next trial is armed once the trigger line falls, trigger_hold_seconds after the outcome; its trigger comes at the
         # soonest iti_min_seconds - laser_to_stimulus_seconds after that outcome, and Zapit's reply needs its margin before it.
         hold, iti, lead = self.optogenetics.trigger_hold_seconds, self.trial_structure.iti_min_seconds, self.optogenetics.laser_to_stimulus_seconds
-        longest = iti - lead - ZAPIT_REPLY_MARGIN_SEC
+        longest = iti - lead - ZAPIT_REPLY_MARGIN_SECONDS
         if self.optogenetics.use_zapit and hold > longest + 1e-9:
             raise ValueError(
                 f"optogenetics.trigger_hold_seconds ({hold} s) must be at most {longest:g} s (trial_structure.iti_min_seconds - laser_to_stimulus_seconds - "
-                f"{ZAPIT_REPLY_MARGIN_SEC} s): the next trial is armed once the line falls"
+                f"{ZAPIT_REPLY_MARGIN_SECONDS} s): the next trial is armed once the line falls"
             )
         return self
 

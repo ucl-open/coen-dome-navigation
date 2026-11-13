@@ -35,4 +35,15 @@ public class RigTemplateTests
     {
         Assert.ThrowsException<YamlDotNet.Core.YamlException>(() => Deserialize(Template() + "\nrewardValves: { left: DO1, right: DO2 }\n"));
     }
+
+    [TestMethod]
+    public void EverySpeakerNeedsAFilter()
+    {
+        // Pip, 13 Nov 2026: no speaker plays unequalised; the workflow stops at Start naming it (RequireSpeakerFilters).
+        var rig = Deserialize(Template());
+        RequireSpeakerFilters.Check(rig.SpeakerArray);
+        rig.SpeakerArray.Speakers["right"].Filter = null;
+        var error = Assert.ThrowsException<System.InvalidOperationException>(() => RequireSpeakerFilters.Check(rig.SpeakerArray));
+        StringAssert.Contains(error.Message, "speaker 'right' has no filter");
+    }
 }

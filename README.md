@@ -44,7 +44,7 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `ReadRigConfig`, `ResolveRigConfigDirectory` | read this machine's rig.yml | `OpenRigs.Core:ReadRigConfig.bonsai` |
 | `DomeHardware` | every device, the Harp clock (`Timestamp`), the wheel's distance (`WheelDistanceCm`), the left lick detector (`LickStateLeft`), the ZapitTrigger line, the spout stage and its commands | `OpenRigs.Devices:DomeHardware.bonsai` |
 | `DomeDisplay` | the dome's window, where the grating draws | `OpenRigs.Vision:DomeDisplay.bonsai` |
-| `DeliverReward` | each reward on the left spout, planned from the valve's calibration; `MissingCalibration` is a launch property | `OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai` |
+| `DeliverReward` | each reward on the left spout, planned from the valve's calibration; a reward over `MaxRewardUl` (20 µl, `LoadRewardLine`) stops the workflow; `MissingCalibration` is a launch property | `OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai` |
 | `DomeHarpLogs` | the Harp boards' logs | `OpenRigs.Devices:DomeHarpLogs.bonsai` |
 | `HarpDelay` | the trigger line cleared `triggerHoldSeconds` after the outcome, on the Harp clock, in an optogenetics experiment | `OpenRigs.Core` |
 | `ExperimentControl`, `ExperimentSettings`, `OnCommand`, `OnParameterSet`, `ParameterDefault`, `ParameterValue`, `ReportMetric`, `ReportPhase` | parameters, commands, Go and phases for rig-control; the settings files; the metrics the view shows | `OpenRigs.Control` (`ExperimentControl.bonsai`) |
@@ -53,8 +53,9 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `ExperimentManifest` | `manifest.json`: what ran, the config files by hash, what the experiment must leave | `OpenRigs.Manifest` |
 | `StreamDevices` | the live view (the last node) | `OpenRigs.LiveView` |
 | `StartupWatchdog` | Ready once the clock is set and the spouts are homed, or a stop naming what never came | `OpenRigs.Core` |
-| `ThrowError` | stops the workflow on a Zapit error | `OpenRigs.Core` |
-| `ZapitClient`, `CreateZapitQuery`, `CheckZapitConditionCount`, `ZapitConditionsSnapshot`, `ZapitLineMessage` | Zapit: commands and replies, the trigger line's set and clear, its loaded conditions checked against the task's file, the file copied into the experiment | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |
+| `ConnectZapit` | Zapit's commands and replies once the task uses it, and the stops at start: an error reply, no conditions file loaded, a conditions count other than the task's file, a real mouse on a rig without hardware triggering | `OpenRigs.Devices:Zapit.ConnectZapit.bonsai` |
+| `ZapitConditionsSnapshot`, `ZapitLineMessage`, `ZapitTrial.ReplyMarginSeconds` | the conditions file copied into the experiment, the trigger line's set and clear, the 0.2 s Zapit reply margin the task's checks use | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |
+| `DomeSpeakers.RequireFilters` | every rig.yml speaker needs a filter, or the workflow stops at Start naming it (`RequireSpeakerFilters`) | `OpenRigs.Devices` |
 
 ## Checks
 

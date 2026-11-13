@@ -10,6 +10,21 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - **Pip, 13 Nov 2026 (audit round 2): the wheel's quiet wait counts the travel in the last `wheelQuietSeconds`** (was all travel since the last restart, so slow fidgeting delayed Go); **the lick wait needs the spout released** for `lickQuietSeconds` (a held contact holds Go); **no laser after an answer** in both domes, and such a trial logs `laserPowerMw` 0. **Tell Tom.**
 - **Untried**: unit-tested (`CorridorTests.cs`) and build-checked only.
 
+## 2026-11-13 Audit round 3: changed
+
+- Zapit's connection, its start checks and the refusal of a real mouse on a rig without hardware triggering are lib-open-rigs' `Zapit.ConnectZapit` (Devices coen-lab.8), shared with coen-dome-decision-making; the refusal left `CorridorSetup`. The 0.2 s reply margin is lib-open-rigs' `ZapitTrial.ReplyMarginSeconds` and `ZAPIT_REPLY_MARGIN_SECONDS`.
+- Pip, 13 Nov 2026: every rig.yml speaker needs a filter, or the workflow stops at Start naming it (`RequireSpeakerFilters`, lib-open-rigs `DomeSpeakers.RequireFilters`), as in coen-dome-decision-making. Unit-tested and build-checked only.
+
+## Audit round 3 (13 Nov 2026): not changed
+
+- coen-dome-decision-making: a laser-off control trial and a laser trial skipped because it was answered first look alike in the row (`laserPowerMw` 0); which one follows from `choiceTime` and the lead.
+- coen-dome-decision-making: discrimination's minimum interval equals its `drinkSeconds`; both are Gerion's measured values.
+- jsonschema accepts K:'s old rig.yml keys, but the generated deserializer and app-rig-control's key walk refuse them.
+- `usedBy` stays incomplete until `add-names.ps1` runs at switch step 8.
+- A skipped trial leaves Zapit armed; app-zapit disarms it.
+- coen-dome-navigation arms the next trial during the last one's ramp-down; the trigger hold is at least the longest ramp-down.
+- coen-dome-decision-making has no `goTime` column; it is `itiStartTime + itiSeconds - lead + quietWaitSeconds`.
+
 ## Audit round 2 (13 Nov 2026): not changed
 
 - `QuietWait` is the same class here and in coen-dome-decision-making's `TrialLogic.cs`: moving it into the fork needs a package bump pushed into every in-use workflow, and each copy is tested where it runs. Change both copies together; move it if a third workflow needs it.
