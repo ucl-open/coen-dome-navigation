@@ -9,6 +9,10 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - **Pip, 13 Nov 2026: quiet waits per stage** (`lickQuietSeconds`, Tom's `quietSeconds` renamed with its values, 1 s on stages 3-5; `wheelQuietSeconds` and `wheelQuietCm`, 0, the same names as coen-dome-decision-making's). `quietWaitSeconds` (new column) says how much they held the start.
 - **Untried**: unit-tested (`CorridorTests.cs`) and build-checked only.
 
+## Audit round 2 (13 Nov 2026): not changed
+
+- `QuietWait` is the same class here and in coen-dome-decision-making's `TrialLogic.cs`: moving it into the fork needs a package bump pushed into every in-use workflow, and each copy is tested where it runs. Change both copies together; move it if a third workflow needs it.
+
 ## Open
 
 ### To fix later (Tom, 10 Nov 2026)
