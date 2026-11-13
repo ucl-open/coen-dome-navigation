@@ -212,14 +212,14 @@ def suggest(history: list[Experiment], modality: str) -> tuple[int, str]:
         # An optogenetics experiment never changes the stage (zapit-v2): the laser is meant to change behaviour
         on = [r for r, l in zip(last.rewarded, _laser(last)) if l]
         off = [r for r, l in zip(last.rewarded, _laser(last)) if not l]
-        return stage, (f"Optogenetics Experiment ({last.name}: {_rate(on):.0%} of {len(on)} laser-on and {_rate(off):.0%} of "
-                       f"{len(off)} laser-off trials rewarded): Stage {stage} Again")
+        return stage, (f"Optogenetics Experiment ({last.name}: {_rate(on):.0%} of {len(on)} Laser-On and {_rate(off):.0%} of "
+                       f"{len(off)} Laser-Off Trials Rewarded): Stage {stage} Again")
     # Trials of the experiment's last stage only (a stage changed mid-experiment uses the last)
     rewarded = [r for r, s in zip(last.rewarded, last.stage) if s == stage]
     total = len(last.rewarded)
     # Over every trial of the experiment, as Tom's: rewarded at the last stage / all trials
     rate = sum(rewarded) / total
-    where = f"{last.name}: {total} trials, {rate:.0%} rewarded at stage {stage}"
+    where = f"{last.name}: {total} Trials, {rate:.0%} Rewarded at Stage {stage}"
     if total < MIN_TRIALS:
         return stage, f"Under {MIN_TRIALS} Trials ({where}): Stage {stage} Again"
     if stage == TWO_IN_A_ROW_STAGE:
@@ -229,7 +229,7 @@ def suggest(history: list[Experiment], modality: str) -> tuple[int, str]:
             return s2 + 1, f"{n}+ Rewarded in Two Experiments in a Row ({where}): Stage {s2 + 1}"
         if rate < REGRESS_RATE:
             return s2 - 1, f"Under {REGRESS_RATE:.0%} Rewarded ({where}): Back to Stage {s2 - 1}"
-        return s2, f"Stage {s2} Needs {n}+ Rewarded in Two Experiments in a Row ({where}, before {sum(before)}): Stage {s2} Again"
+        return s2, f"Stage {s2} Needs {n}+ Rewarded in Two Experiments in a Row ({where}, Before {sum(before)}): Stage {s2} Again"
     if EARLY_ADVANCE_FROM <= stage < MAX_AUTO_STAGE:
         for n in (100, 150):
             early = rewarded[:n]

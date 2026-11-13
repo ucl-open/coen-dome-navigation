@@ -155,7 +155,7 @@ def test_an_optogenetics_experiment_keeps_its_stage():
     # zapit-v2: 100% rewarded would advance stage 3 (Tom's 4), but an optogenetics experiment never changes the stage
     e = Experiment("2026-01-02", "2026-01-02", ["auditory"] * 200, [3] * 200, [True] * 200, [i % 3 == 0 for i in range(200)], True)
     stage, why = suggest([e], "auditory")
-    assert stage == 3 and why.startswith("Optogenetics Experiment") and "of 67 laser-on" in why
+    assert stage == 3 and why.startswith("Optogenetics Experiment") and "of 67 Laser-On" in why
 
 
 def test_laser_on_trials_do_not_count_in_stage_1_s_two_experiments_in_a_row():
