@@ -50,7 +50,7 @@
         },
         "laserMaxSeconds": {
           "default": 12.5,
-          "description": "Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
+          "description": "Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
           "exclusiveMinimum": 0,
           "title": "LaserMaxSeconds",
           "type": "number"
@@ -61,6 +61,13 @@
           "maximum": 0.2,
           "minimum": 0.05,
           "title": "LaserToStimulusSeconds",
+          "type": "number"
+        },
+        "triggerHoldSeconds": {
+          "default": 1.0,
+          "description": "How long the trigger line, and the masking light on it, stays high after the outcome, in seconds: at least 0.5, the longest ramp-down a conditions file may have",
+          "minimum": 0.5,
+          "title": "TriggerHoldSeconds",
           "type": "number"
         },
         "trialsBeforeLaser": {
@@ -182,15 +189,33 @@
           "title": "PunishWrongZone",
           "type": "boolean"
         },
-        "quiescent": {
-          "description": "Whether the next trial waits for trialStructure.quiescentSeconds without licks",
-          "title": "Quiescent",
-          "type": "boolean"
+        "quietSeconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "After the inter-trial interval, the trial waits until the mouse has gone this long without licking, in seconds (uncapped), so licks for the last reward cannot carry into the next trial; null: no wait",
+          "title": "QuietSeconds"
         },
-        "timeLimit": {
-          "description": "Whether a trial ends at trialStructure.timeLimitSeconds",
-          "title": "TimeLimit",
-          "type": "boolean"
+        "timeLimitSeconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit",
+          "title": "TimeLimitSeconds"
         },
         "trackEndEndsTrial": {
           "description": "Whether reaching the end of the track ends the trial",
@@ -224,8 +249,6 @@
         "lickToReward",
         "wrongLickLimit",
         "punishWrongZone",
-        "quiescent",
-        "timeLimit",
         "trackEndEndsTrial",
         "trackLengthScale",
         "frequencyDrift",
@@ -251,18 +274,11 @@
           "title": "ItiMaxSeconds",
           "type": "number"
         },
-        "quiescentSeconds": {
-          "default": 1.0,
-          "description": "On a stage with quiescent, the next trial waits until the mouse has gone this long without licking (uncapped), so licks for the last reward cannot carry into the next trial",
+        "drinkSeconds": {
+          "default": 2.0,
+          "description": "After each outcome, and a punished trial's timeout, before the next trial's inter-trial interval begins, in seconds: time to drink (Tom Childs' fixed 2 s)",
           "minimum": 0,
-          "title": "QuiescentSeconds",
-          "type": "number"
-        },
-        "timeLimitSeconds": {
-          "default": 12.0,
-          "description": "On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's response period is its closedLoopSeconds)",
-          "exclusiveMinimum": 0,
-          "title": "TimeLimitSeconds",
+          "title": "DrinkSeconds",
           "type": "number"
         },
         "trackLengthsCm": {
@@ -353,37 +369,6 @@
           "title": "Modality",
           "type": "string"
         },
-        "sweepStartHz": {
-          "default": 2000,
-          "description": "Start frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-          "maximum": 25000,
-          "minimum": 1,
-          "title": "SweepStartHz",
-          "type": "integer"
-        },
-        "sweepEndHz": {
-          "default": 25000,
-          "description": "End frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-          "maximum": 25000,
-          "minimum": 1,
-          "title": "SweepEndHz",
-          "type": "integer"
-        },
-        "sweepSteps": {
-          "default": 100,
-          "description": "Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-          "minimum": 10,
-          "title": "SweepSteps",
-          "type": "integer"
-        },
-        "toneAmplitude": {
-          "default": 0.05,
-          "description": "Tone amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-          "maximum": 1.0,
-          "minimum": 0.0,
-          "title": "ToneAmplitude",
-          "type": "number"
-        },
         "backgroundNoiseLevel": {
           "default": 0.5,
           "description": "Constant background white noise RMS, as a fraction of the beep RMS (0 = off)",
@@ -399,27 +384,12 @@
           "title": "PositionStepCm",
           "type": "integer"
         },
-        "wheelDiameterMm": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": 75.0,
-          "description": "Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. 75 is the measured wheel and what Tom Childs' workflow converted at, so each track is the number of wheel turns the mice trained on; every corridor rig's rig.yml has said 75 too since 9 Nov 2026",
-          "title": "WheelDiameterMm"
-        },
         "trialStructure": {
           "$ref": "#/$defs/TrialStructure",
           "default": {
             "itiMinSeconds": 0.0,
             "itiMaxSeconds": 1.0,
-            "quiescentSeconds": 1.0,
-            "timeLimitSeconds": 12.0,
+            "drinkSeconds": 2.0,
             "trackLengthsCm": [
               80.0,
               100.0,
@@ -459,13 +429,14 @@
             "laserOnProbability": 0.4,
             "laserMaxSeconds": 12.5,
             "laserToStimulusSeconds": 0.1,
+            "triggerHoldSeconds": 1.0,
             "trialsBeforeLaser": 20
           },
           "description": "Zapit optogenetic stimulation",
           "title": "Optogenetics"
         },
         "trainingStages": {
-          "description": "Training stage table, indexed by the TrainingStage setting from 0; a setting past the end uses the last row",
+          "description": "Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go",
           "items": {
             "$ref": "#/$defs/TrainingStage"
           },

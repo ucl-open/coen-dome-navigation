@@ -161,6 +161,8 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _laserToStimulusSeconds;
     
+        private double _triggerHoldSeconds;
+    
         private int _trialsBeforeLaser;
     
         public OptogeneticsConfig()
@@ -170,6 +172,7 @@ namespace UclOpenCoenDomeNavigationTask
             _laserOnProbability = 0.4D;
             _laserMaxSeconds = 12.5D;
             _laserToStimulusSeconds = 0.1D;
+            _triggerHoldSeconds = 1D;
             _trialsBeforeLaser = 20;
         }
     
@@ -181,6 +184,7 @@ namespace UclOpenCoenDomeNavigationTask
             _laserOnProbability = other._laserOnProbability;
             _laserMaxSeconds = other._laserMaxSeconds;
             _laserToStimulusSeconds = other._laserToStimulusSeconds;
+            _triggerHoldSeconds = other._triggerHoldSeconds;
             _trialsBeforeLaser = other._trialsBeforeLaser;
         }
     
@@ -258,11 +262,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome
+        /// Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserMaxSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserMaxSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome")]
+        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome")]
         public double LaserMaxSeconds
         {
             get
@@ -290,6 +294,25 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _laserToStimulusSeconds = value;
+            }
+        }
+    
+        /// <summary>
+        /// How long the trigger line, and the masking light on it, stays high after the outcome, in seconds: at least 0.5, the longest ramp-down a conditions file may have
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("triggerHoldSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="triggerHoldSeconds")]
+        [System.ComponentModel.DescriptionAttribute("How long the trigger line, and the masking light on it, stays high after the outc" +
+            "ome, in seconds: at least 0.5, the longest ramp-down a conditions file may have")]
+        public double TriggerHoldSeconds
+        {
+            get
+            {
+                return _triggerHoldSeconds;
+            }
+            set
+            {
+                _triggerHoldSeconds = value;
             }
         }
     
@@ -331,6 +354,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("LaserOnProbability = " + _laserOnProbability + ", ");
             stringBuilder.Append("LaserMaxSeconds = " + _laserMaxSeconds + ", ");
             stringBuilder.Append("LaserToStimulusSeconds = " + _laserToStimulusSeconds + ", ");
+            stringBuilder.Append("TriggerHoldSeconds = " + _triggerHoldSeconds + ", ");
             stringBuilder.Append("TrialsBeforeLaser = " + _trialsBeforeLaser);
             return true;
         }
@@ -588,9 +612,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _punishWrongZone;
     
-        private bool _quiescent;
+        private double? _quietSeconds;
     
-        private bool _timeLimit;
+        private double? _timeLimitSeconds;
     
         private bool _trackEndEndsTrial;
     
@@ -613,8 +637,8 @@ namespace UclOpenCoenDomeNavigationTask
             _lickToReward = other._lickToReward;
             _wrongLickLimit = other._wrongLickLimit;
             _punishWrongZone = other._punishWrongZone;
-            _quiescent = other._quiescent;
-            _timeLimit = other._timeLimit;
+            _quietSeconds = other._quietSeconds;
+            _timeLimitSeconds = other._timeLimitSeconds;
             _trackEndEndsTrial = other._trackEndEndsTrial;
             _trackLengthScale = other._trackLengthScale;
             _frequencyDrift = other._frequencyDrift;
@@ -752,38 +776,41 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Whether the next trial waits for trialStructure.quiescentSeconds without licks
+        /// After the inter-trial interval, the trial waits until the mouse has gone this long without licking, in seconds (uncapped), so licks for the last reward cannot carry into the next trial; null: no wait
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("quiescent", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="quiescent")]
-        [System.ComponentModel.DescriptionAttribute("Whether the next trial waits for trialStructure.quiescentSeconds without licks")]
-        public bool Quiescent
+        [Newtonsoft.Json.JsonPropertyAttribute("quietSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="quietSeconds")]
+        [System.ComponentModel.DescriptionAttribute("After the inter-trial interval, the trial waits until the mouse has gone this lon" +
+            "g without licking, in seconds (uncapped), so licks for the last reward cannot ca" +
+            "rry into the next trial; null: no wait")]
+        public double? QuietSeconds
         {
             get
             {
-                return _quiescent;
+                return _quietSeconds;
             }
             set
             {
-                _quiescent = value;
+                _quietSeconds = value;
             }
         }
     
         /// <summary>
-        /// Whether a trial ends at trialStructure.timeLimitSeconds
+        /// The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("timeLimit", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeLimit")]
-        [System.ComponentModel.DescriptionAttribute("Whether a trial ends at trialStructure.timeLimitSeconds")]
-        public bool TimeLimit
+        [Newtonsoft.Json.JsonPropertyAttribute("timeLimitSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeLimitSeconds")]
+        [System.ComponentModel.DescriptionAttribute("The longest a trial runs from its first tone pip, in seconds, after which it ends" +
+            " as a Timeout; null: no limit")]
+        public double? TimeLimitSeconds
         {
             get
             {
-                return _timeLimit;
+                return _timeLimitSeconds;
             }
             set
             {
-                _timeLimit = value;
+                _timeLimitSeconds = value;
             }
         }
     
@@ -878,8 +905,8 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("LickToReward = " + _lickToReward + ", ");
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
             stringBuilder.Append("PunishWrongZone = " + _punishWrongZone + ", ");
-            stringBuilder.Append("Quiescent = " + _quiescent + ", ");
-            stringBuilder.Append("TimeLimit = " + _timeLimit + ", ");
+            stringBuilder.Append("QuietSeconds = " + _quietSeconds + ", ");
+            stringBuilder.Append("TimeLimitSeconds = " + _timeLimitSeconds + ", ");
             stringBuilder.Append("TrackEndEndsTrial = " + _trackEndEndsTrial + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
             stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");
@@ -916,9 +943,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _itiMaxSeconds;
     
-        private double _quiescentSeconds;
-    
-        private double _timeLimitSeconds;
+        private double _drinkSeconds;
     
         private System.Collections.Generic.List<double> _trackLengthsCm;
     
@@ -926,8 +951,7 @@ namespace UclOpenCoenDomeNavigationTask
         {
             _itiMinSeconds = 0D;
             _itiMaxSeconds = 1D;
-            _quiescentSeconds = 1D;
-            _timeLimitSeconds = 12D;
+            _drinkSeconds = 2D;
             _trackLengthsCm = new System.Collections.Generic.List<double>();
         }
     
@@ -935,8 +959,7 @@ namespace UclOpenCoenDomeNavigationTask
         {
             _itiMinSeconds = other._itiMinSeconds;
             _itiMaxSeconds = other._itiMaxSeconds;
-            _quiescentSeconds = other._quiescentSeconds;
-            _timeLimitSeconds = other._timeLimitSeconds;
+            _drinkSeconds = other._drinkSeconds;
             _trackLengthsCm = other._trackLengthsCm;
         }
     
@@ -977,41 +1000,21 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// On a stage with quiescent, the next trial waits until the mouse has gone this long without licking (uncapped), so licks for the last reward cannot carry into the next trial
+        /// After each outcome, and a punished trial's timeout, before the next trial's inter-trial interval begins, in seconds: time to drink (Tom Childs' fixed 2 s)
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("quiescentSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="quiescentSeconds")]
-        [System.ComponentModel.DescriptionAttribute("On a stage with quiescent, the next trial waits until the mouse has gone this lon" +
-            "g without licking (uncapped), so licks for the last reward cannot carry into the" +
-            " next trial")]
-        public double QuiescentSeconds
+        [Newtonsoft.Json.JsonPropertyAttribute("drinkSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="drinkSeconds")]
+        [System.ComponentModel.DescriptionAttribute("After each outcome, and a punished trial\'s timeout, before the next trial\'s inter" +
+            "-trial interval begins, in seconds: time to drink (Tom Childs\' fixed 2 s)")]
+        public double DrinkSeconds
         {
             get
             {
-                return _quiescentSeconds;
+                return _drinkSeconds;
             }
             set
             {
-                _quiescentSeconds = value;
-            }
-        }
-    
-        /// <summary>
-        /// On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's response period is its closedLoopSeconds)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("timeLimitSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeLimitSeconds")]
-        [System.ComponentModel.DescriptionAttribute("On a stage with timeLimit, the longest a trial runs from its start, in seconds (a" +
-            "v-dome\'s response period is its closedLoopSeconds)")]
-        public double TimeLimitSeconds
-        {
-            get
-            {
-                return _timeLimitSeconds;
-            }
-            set
-            {
-                _timeLimitSeconds = value;
+                _drinkSeconds = value;
             }
         }
     
@@ -1049,8 +1052,7 @@ namespace UclOpenCoenDomeNavigationTask
         {
             stringBuilder.Append("ItiMinSeconds = " + _itiMinSeconds + ", ");
             stringBuilder.Append("ItiMaxSeconds = " + _itiMaxSeconds + ", ");
-            stringBuilder.Append("QuiescentSeconds = " + _quiescentSeconds + ", ");
-            stringBuilder.Append("TimeLimitSeconds = " + _timeLimitSeconds + ", ");
+            stringBuilder.Append("DrinkSeconds = " + _drinkSeconds + ", ");
             stringBuilder.Append("TrackLengthsCm = " + _trackLengthsCm);
             return true;
         }
@@ -1165,19 +1167,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         private UclOpenCoenDomeNavigationTaskParametersModality _modality;
     
-        private int _sweepStartHz;
-    
-        private int _sweepEndHz;
-    
-        private int _sweepSteps;
-    
-        private double _toneAmplitude;
-    
         private double _backgroundNoiseLevel;
     
         private int _positionStepCm;
-    
-        private double? _wheelDiameterMm;
     
         private TrialStructure _trialStructure;
     
@@ -1192,13 +1184,8 @@ namespace UclOpenCoenDomeNavigationTask
         public UclOpenCoenDomeNavigationTaskParameters()
         {
             _modality = UclOpenCoenDomeNavigationTaskParametersModality.Auditory;
-            _sweepStartHz = 2000;
-            _sweepEndHz = 25000;
-            _sweepSteps = 100;
-            _toneAmplitude = 0.05D;
             _backgroundNoiseLevel = 0.5D;
             _positionStepCm = 1;
-            _wheelDiameterMm = 75D;
             _trialStructure = new TrialStructure();
             _punishment = new Punishment();
             _truncation = new Truncation();
@@ -1210,13 +1197,8 @@ namespace UclOpenCoenDomeNavigationTask
         {
             _rngSeed = other._rngSeed;
             _modality = other._modality;
-            _sweepStartHz = other._sweepStartHz;
-            _sweepEndHz = other._sweepEndHz;
-            _sweepSteps = other._sweepSteps;
-            _toneAmplitude = other._toneAmplitude;
             _backgroundNoiseLevel = other._backgroundNoiseLevel;
             _positionStepCm = other._positionStepCm;
-            _wheelDiameterMm = other._wheelDiameterMm;
             _trialStructure = other._trialStructure;
             _punishment = other._punishment;
             _truncation = other._truncation;
@@ -1262,82 +1244,6 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Start frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("sweepStartHz")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sweepStartHz")]
-        [System.ComponentModel.DescriptionAttribute("Start frequency of the sweep (Hz). The tone files in src/waveforms are made for t" +
-            "his value: the workflow stops at Go if they differ")]
-        public int SweepStartHz
-        {
-            get
-            {
-                return _sweepStartHz;
-            }
-            set
-            {
-                _sweepStartHz = value;
-            }
-        }
-    
-        /// <summary>
-        /// End frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("sweepEndHz")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sweepEndHz")]
-        [System.ComponentModel.DescriptionAttribute("End frequency of the sweep (Hz). The tone files in src/waveforms are made for thi" +
-            "s value: the workflow stops at Go if they differ")]
-        public int SweepEndHz
-        {
-            get
-            {
-                return _sweepEndHz;
-            }
-            set
-            {
-                _sweepEndHz = value;
-            }
-        }
-    
-        /// <summary>
-        /// Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("sweepSteps")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sweepSteps")]
-        [System.ComponentModel.DescriptionAttribute("Number of frequency bins for quantization. The tone files in src/waveforms are ma" +
-            "de for this value: the workflow stops at Go if they differ")]
-        public int SweepSteps
-        {
-            get
-            {
-                return _sweepSteps;
-            }
-            set
-            {
-                _sweepSteps = value;
-            }
-        }
-    
-        /// <summary>
-        /// Tone amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("toneAmplitude")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="toneAmplitude")]
-        [System.ComponentModel.DescriptionAttribute("Tone amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this va" +
-            "lue: the workflow stops at Go if they differ")]
-        public double ToneAmplitude
-        {
-            get
-            {
-                return _toneAmplitude;
-            }
-            set
-            {
-                _toneAmplitude = value;
-            }
-        }
-    
-        /// <summary>
         /// Constant background white noise RMS, as a fraction of the beep RMS (0 = off)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("backgroundNoiseLevel")]
@@ -1370,24 +1276,6 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _positionStepCm = value;
-            }
-        }
-    
-        /// <summary>
-        /// Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. 75 is the measured wheel and what Tom Childs' workflow converted at, so each track is the number of wheel turns the mice trained on; every corridor rig's rig.yml has said 75 too since 9 Nov 2026
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("wheelDiameterMm")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelDiameterMm")]
-        [System.ComponentModel.DescriptionAttribute(@"Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel wheelDiameterMm; null uses rig.yml's. 75 is the measured wheel and what Tom Childs' workflow converted at, so each track is the number of wheel turns the mice trained on; every corridor rig's rig.yml has said 75 too since 9 Nov 2026")]
-        public double? WheelDiameterMm
-        {
-            get
-            {
-                return _wheelDiameterMm;
-            }
-            set
-            {
-                _wheelDiameterMm = value;
             }
         }
     
@@ -1468,13 +1356,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Training stage table, indexed by the TrainingStage setting from 0; a setting past the end uses the last row
+        /// Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("trainingStages", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trainingStages")]
         [System.ComponentModel.DescriptionAttribute("Training stage table, indexed by the TrainingStage setting from 0; a setting past" +
-            " the end uses the last row")]
+            " the end stops the workflow at Go")]
         public System.Collections.Generic.List<TrainingStage> TrainingStages
         {
             get
@@ -1501,13 +1389,8 @@ namespace UclOpenCoenDomeNavigationTask
         {
             stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
             stringBuilder.Append("Modality = " + _modality + ", ");
-            stringBuilder.Append("SweepStartHz = " + _sweepStartHz + ", ");
-            stringBuilder.Append("SweepEndHz = " + _sweepEndHz + ", ");
-            stringBuilder.Append("SweepSteps = " + _sweepSteps + ", ");
-            stringBuilder.Append("ToneAmplitude = " + _toneAmplitude + ", ");
             stringBuilder.Append("BackgroundNoiseLevel = " + _backgroundNoiseLevel + ", ");
             stringBuilder.Append("PositionStepCm = " + _positionStepCm + ", ");
-            stringBuilder.Append("WheelDiameterMm = " + _wheelDiameterMm + ", ");
             stringBuilder.Append("TrialStructure = " + _trialStructure + ", ");
             stringBuilder.Append("Punishment = " + _punishment + ", ");
             stringBuilder.Append("Truncation = " + _truncation + ", ");

@@ -10,32 +10,22 @@ namespace UclOpenCoenDomeNavigation
     #pragma warning disable // Disable all warnings
 
     /// <summary>
-    /// Rig configuration for the coen-dome-navigation experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).
-    ///
-    ///Each kind of device is a group of named entries, as the lab's rig.yml (open_rigs.rigs.behaviour_box):
-    ///the name in the data is the kind and the entry joined by a hyphen, so behaviorBoard: main: is
-    ///BehaviorBoard-Main. The workflow takes each device it drives by that name (RigDevice). Harp kinds
-    ///are named as lib-open-rigs' HarpRig names them, so RecordHarpDevices checks each board's WhoAmI.
+    /// A dome: Behavior board, timestamp generator, two-driver lick spout stage, two lick detectors,
+    ///cameras, projection, speaker array and Zapit.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Rig configuration for the coen-dome-navigation experiment: the same as av-dome's (UclOpenAvDomeRig), field for field, because both workflows read the one rig.yml each dome and BLUE-OPTO rig has. The generated deserializer refuses a key it lacks, so a field added to av-dome's model is added here too (tests/test_rig_schema.py checks the shared template).
-
-    Each kind of device is a group of named entries, as the lab's rig.yml (open_rigs.rigs.behaviour_box):
-    the name in the data is the kind and the entry joined by a hyphen, so behaviorBoard: main: is
-    BehaviorBoard-Main. The workflow takes each device it drives by that name (RigDevice). Harp kinds
-    are named as lib-open-rigs' HarpRig names them, so RecordHarpDevices checks each board's WhoAmI.")]
+    [System.ComponentModel.DescriptionAttribute("A dome: Behavior board, timestamp generator, two-driver lick spout stage, two lic" +
+        "k detectors,\ncameras, projection, speaker array and Zapit.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class UclOpenCoenDomeNavigationRig
+    public partial class DomeRig
     {
     
         private string _rootPath;
     
         private string _rigId;
     
-        private string _version;
-    
-        private System.Collections.Generic.Dictionary<string, BehaviorBoard> _behaviorBoard;
+        private System.Collections.Generic.Dictionary<string, DomeBehaviorBoard> _behaviorBoard;
     
         private System.Collections.Generic.Dictionary<string, HarpTimestampGeneratorGen3> _timestampGeneratorGen3;
     
@@ -47,37 +37,29 @@ namespace UclOpenCoenDomeNavigation
     
         private ProjectionCalibration _projectionCalibration;
     
-        private SpeakerArray _speakerArray;
+        private DomeSpeakerArray _speakerArray;
     
         private StepperPositions _lickSpoutDefaultPosition;
     
         private ZapitServer _zapit;
     
-        private RewardValves _rewardValves;
-    
-        private int _interPulseInterval;
-    
-        public UclOpenCoenDomeNavigationRig()
+        public DomeRig()
         {
-            _version = "0.0.0-rc1";
-            _behaviorBoard = new System.Collections.Generic.Dictionary<string, BehaviorBoard>();
+            _behaviorBoard = new System.Collections.Generic.Dictionary<string, DomeBehaviorBoard>();
             _timestampGeneratorGen3 = new System.Collections.Generic.Dictionary<string, HarpTimestampGeneratorGen3>();
             _stepperDriver = new System.Collections.Generic.Dictionary<string, HarpStepperDriver>();
             _licketySplit = new System.Collections.Generic.Dictionary<string, LicketySplit>();
             _camera = new System.Collections.Generic.Dictionary<string, SpinnakerCamera>();
             _projectionCalibration = new ProjectionCalibration();
-            _speakerArray = new SpeakerArray();
+            _speakerArray = new DomeSpeakerArray();
             _lickSpoutDefaultPosition = new StepperPositions();
             _zapit = new ZapitServer();
-            _rewardValves = new RewardValves();
-            _interPulseInterval = 50;
         }
     
-        protected UclOpenCoenDomeNavigationRig(UclOpenCoenDomeNavigationRig other)
+        protected DomeRig(DomeRig other)
         {
             _rootPath = other._rootPath;
             _rigId = other._rigId;
-            _version = other._version;
             _behaviorBoard = other._behaviorBoard;
             _timestampGeneratorGen3 = other._timestampGeneratorGen3;
             _stepperDriver = other._stepperDriver;
@@ -87,8 +69,6 @@ namespace UclOpenCoenDomeNavigation
             _speakerArray = other._speakerArray;
             _lickSpoutDefaultPosition = other._lickSpoutDefaultPosition;
             _zapit = other._zapit;
-            _rewardValves = other._rewardValves;
-            _interPulseInterval = other._interPulseInterval;
         }
     
         /// <summary>
@@ -129,29 +109,15 @@ namespace UclOpenCoenDomeNavigation
             }
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("version")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="version")]
-        public string Version
-        {
-            get
-            {
-                return _version;
-            }
-            set
-            {
-                _version = value;
-            }
-        }
-    
         /// <summary>
-        /// Harp Behavior boards by name: main (BehaviorBoard-Main) drives the valves, camera trigger and wheel encoder
+        /// Harp Behavior boards by name: main (BehaviorBoard-Main) drives the valves, camera trigger, Zapit trigger and wheel encoder.
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("behaviorBoard", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="behaviorBoard")]
         [System.ComponentModel.DescriptionAttribute("Harp Behavior boards by name: main (BehaviorBoard-Main) drives the valves, camera" +
-            " trigger and wheel encoder")]
-        public System.Collections.Generic.Dictionary<string, BehaviorBoard> BehaviorBoard
+            " trigger, Zapit trigger and wheel encoder.")]
+        public System.Collections.Generic.Dictionary<string, DomeBehaviorBoard> BehaviorBoard
         {
             get
             {
@@ -164,13 +130,13 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Harp timestamp generators by name: main (TimestampGeneratorGen3-Main) syncs the boards' clocks
+        /// Harp timestamp generators by name: main (TimestampGeneratorGen3-Main) syncs the boards' clocks.
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("timestampGeneratorGen3", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timestampGeneratorGen3")]
         [System.ComponentModel.DescriptionAttribute("Harp timestamp generators by name: main (TimestampGeneratorGen3-Main) syncs the b" +
-            "oards\' clocks")]
+            "oards\' clocks.")]
         public System.Collections.Generic.Dictionary<string, HarpTimestampGeneratorGen3> TimestampGeneratorGen3
         {
             get
@@ -184,14 +150,13 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Harp StepperDriver boards by name: a and b (StepperDriver-A, StepperDriver-B) drive the lick spout stage's 5 axes; which motor moves which axis is fixed in the workflow
+        /// Harp StepperDriver boards by name: a and b (StepperDriver-A, StepperDriver-B) drive the lick spout stage's five axes.
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("stepperDriver", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stepperDriver")]
         [System.ComponentModel.DescriptionAttribute("Harp StepperDriver boards by name: a and b (StepperDriver-A, StepperDriver-B) dri" +
-            "ve the lick spout stage\'s 5 axes; which motor moves which axis is fixed in the w" +
-            "orkflow")]
+            "ve the lick spout stage\'s five axes.")]
         public System.Collections.Generic.Dictionary<string, HarpStepperDriver> StepperDriver
         {
             get
@@ -205,12 +170,12 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Lick detectors by name: left (LicketySplit-Left) and right (LicketySplit-Right)
+        /// Lick detectors by name: left (LicketySplit-Left) and right (LicketySplit-Right).
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("licketySplit", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="licketySplit")]
-        [System.ComponentModel.DescriptionAttribute("Lick detectors by name: left (LicketySplit-Left) and right (LicketySplit-Right)")]
+        [System.ComponentModel.DescriptionAttribute("Lick detectors by name: left (LicketySplit-Left) and right (LicketySplit-Right).")]
         public System.Collections.Generic.Dictionary<string, LicketySplit> LicketySplit
         {
             get
@@ -224,13 +189,13 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Spinnaker cameras by name: face, pupil and body (Camera-Face, Camera-Pupil, Camera-Body)
+        /// Triggered Spinnaker cameras by name, exactly three: face, pupil and body (Camera-Face, Camera-Pupil, Camera-Body).
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("camera", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="camera")]
-        [System.ComponentModel.DescriptionAttribute("Spinnaker cameras by name: face, pupil and body (Camera-Face, Camera-Pupil, Camer" +
-            "a-Body)")]
+        [System.ComponentModel.DescriptionAttribute("Triggered Spinnaker cameras by name, exactly three: face, pupil and body (Camera-" +
+            "Face, Camera-Pupil, Camera-Body).")]
         public System.Collections.Generic.Dictionary<string, SpinnakerCamera> Camera
         {
             get
@@ -244,12 +209,12 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Mesh-map and gamma-LUT file paths for the dome projection
+        /// Mesh-map and gamma-LUT file paths for the dome projection.
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("projectionCalibration", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="projectionCalibration")]
-        [System.ComponentModel.DescriptionAttribute("Mesh-map and gamma-LUT file paths for the dome projection")]
+        [System.ComponentModel.DescriptionAttribute("Mesh-map and gamma-LUT file paths for the dome projection.")]
         public ProjectionCalibration ProjectionCalibration
         {
             get
@@ -263,13 +228,13 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Dome speaker array and audio output device
+        /// Dome speaker array and audio output device.
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("speakerArray", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="speakerArray")]
-        [System.ComponentModel.DescriptionAttribute("Dome speaker array and audio output device")]
-        public SpeakerArray SpeakerArray
+        [System.ComponentModel.DescriptionAttribute("Dome speaker array and audio output device.")]
+        public DomeSpeakerArray SpeakerArray
         {
             get
             {
@@ -282,12 +247,13 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Default absolute stage position at session start
+        /// The stage's in position, in steps, for a mouse with no positions file of its own.
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("lickSpoutDefaultPosition", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickSpoutDefaultPosition")]
-        [System.ComponentModel.DescriptionAttribute("Default absolute stage position at session start")]
+        [System.ComponentModel.DescriptionAttribute("The stage\'s in position, in steps, for a mouse with no positions file of its own." +
+            "")]
         public StepperPositions LickSpoutDefaultPosition
         {
             get
@@ -301,13 +267,13 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Zapit optogenetics server endpoint; only contacted when the task enables optogenetics
+        /// Zapit optogenetics server endpoint; contacted only when the task enables optogenetics.
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("zapit", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="zapit")]
-        [System.ComponentModel.DescriptionAttribute("Zapit optogenetics server endpoint; only contacted when the task enables optogene" +
-            "tics")]
+        [System.ComponentModel.DescriptionAttribute("Zapit optogenetics server endpoint; contacted only when the task enables optogene" +
+            "tics.")]
         public ZapitServer Zapit
         {
             get
@@ -320,61 +286,20 @@ namespace UclOpenCoenDomeNavigation
             }
         }
     
-        /// <summary>
-        /// Which behavior board line drives the left and which the right reward valve, such as { left: DO1, right: DO2 }
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("rewardValves", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardValves")]
-        [System.ComponentModel.DescriptionAttribute("Which behavior board line drives the left and which the right reward valve, such " +
-            "as { left: DO1, right: DO2 }")]
-        public RewardValves RewardValves
+        public System.IObservable<DomeRig> Generate()
         {
-            get
-            {
-                return _rewardValves;
-            }
-            set
-            {
-                _rewardValves = value;
-            }
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new DomeRig(this)));
         }
     
-        /// <summary>
-        /// Gap between consecutive reward pulses, in milliseconds. Must be long enough for the valve to seat before the next trigger; 0 re-triggers the instant the board closes the valve and risks merged or dropped pulses.
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("interPulseInterval")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="interPulseInterval")]
-        [System.ComponentModel.DescriptionAttribute("Gap between consecutive reward pulses, in milliseconds. Must be long enough for t" +
-            "he valve to seat before the next trigger; 0 re-triggers the instant the board cl" +
-            "oses the valve and risks merged or dropped pulses.")]
-        public int InterPulseInterval
+        public System.IObservable<DomeRig> Generate<TSource>(System.IObservable<TSource> source)
         {
-            get
-            {
-                return _interPulseInterval;
-            }
-            set
-            {
-                _interPulseInterval = value;
-            }
-        }
-    
-        public System.IObservable<UclOpenCoenDomeNavigationRig> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new UclOpenCoenDomeNavigationRig(this)));
-        }
-    
-        public System.IObservable<UclOpenCoenDomeNavigationRig> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new UclOpenCoenDomeNavigationRig(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new DomeRig(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
             stringBuilder.Append("RootPath = " + _rootPath + ", ");
             stringBuilder.Append("RigId = " + _rigId + ", ");
-            stringBuilder.Append("Version = " + _version + ", ");
             stringBuilder.Append("BehaviorBoard = " + _behaviorBoard + ", ");
             stringBuilder.Append("TimestampGeneratorGen3 = " + _timestampGeneratorGen3 + ", ");
             stringBuilder.Append("StepperDriver = " + _stepperDriver + ", ");
@@ -383,9 +308,7 @@ namespace UclOpenCoenDomeNavigation
             stringBuilder.Append("ProjectionCalibration = " + _projectionCalibration + ", ");
             stringBuilder.Append("SpeakerArray = " + _speakerArray + ", ");
             stringBuilder.Append("LickSpoutDefaultPosition = " + _lickSpoutDefaultPosition + ", ");
-            stringBuilder.Append("Zapit = " + _zapit + ", ");
-            stringBuilder.Append("RewardValves = " + _rewardValves + ", ");
-            stringBuilder.Append("InterPulseInterval = " + _interPulseInterval);
+            stringBuilder.Append("Zapit = " + _zapit);
             return true;
         }
     
@@ -572,216 +495,6 @@ namespace UclOpenCoenDomeNavigation
             stringBuilder.Append("ChannelCount = " + _channelCount + ", ");
             stringBuilder.Append("SuggestedLatency = " + _suggestedLatency + ", ");
             stringBuilder.Append("BootDelay = " + _bootDelay);
-            return true;
-        }
-    
-        public override string ToString()
-        {
-            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
-            stringBuilder.Append(GetType().Name);
-            stringBuilder.Append(" { ");
-            if (PrintMembers(stringBuilder))
-            {
-                stringBuilder.Append(" ");
-            }
-            stringBuilder.Append("}");
-            return stringBuilder.ToString();
-        }
-    }
-
-
-    /// <summary>
-    /// Represents a Harp Behavior Board device.
-    /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Represents a Harp Behavior Board device.")]
-    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
-    [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class BehaviorBoard
-    {
-    
-        private string _portName;
-    
-        private string _usbSerial;
-    
-        private PulseController _pulseController;
-    
-        private CameraTriggerController _cameraTriggerController;
-    
-        private RunningWheel _runningWheel;
-    
-        private LiveView _liveView;
-    
-        private BoardWiring _wiring;
-    
-        public BehaviorBoard()
-        {
-        }
-    
-        protected BehaviorBoard(BehaviorBoard other)
-        {
-            _portName = other._portName;
-            _usbSerial = other._usbSerial;
-            _pulseController = other._pulseController;
-            _cameraTriggerController = other._cameraTriggerController;
-            _runningWheel = other._runningWheel;
-            _liveView = other._liveView;
-            _wiring = other._wiring;
-        }
-    
-        /// <summary>
-        /// The name of the device serial port.
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("portName", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="portName")]
-        [System.ComponentModel.DescriptionAttribute("The name of the device serial port.")]
-        public string PortName
-        {
-            get
-            {
-                return _portName;
-            }
-            set
-            {
-                _portName = value;
-            }
-        }
-    
-        /// <summary>
-        /// The board's USB serial number, its FTDI chip's (AB0M7PLB): which board this is. OpenRigs.HarpDevices stops the workflow at Start if the board on portName has another. The rig's hardware scan lists each port's (serialPorts, usbSerial).
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("usbSerial", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="usbSerial")]
-        [System.ComponentModel.DescriptionAttribute("The board\'s USB serial number, its FTDI chip\'s (AB0M7PLB): which board this is. O" +
-            "penRigs.HarpDevices stops the workflow at Start if the board on portName has ano" +
-            "ther. The rig\'s hardware scan lists each port\'s (serialPorts, usbSerial).")]
-        public string UsbSerial
-        {
-            get
-            {
-                return _usbSerial;
-            }
-            set
-            {
-                _usbSerial = value;
-            }
-        }
-    
-        /// <summary>
-        /// Optional PulseController module for generating digital output pulses.
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("pulseController")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="pulseController")]
-        [System.ComponentModel.DescriptionAttribute("Optional PulseController module for generating digital output pulses.")]
-        public PulseController PulseController
-        {
-            get
-            {
-                return _pulseController;
-            }
-            set
-            {
-                _pulseController = value;
-            }
-        }
-    
-        /// <summary>
-        /// Optional CameraTriggerController module for emitting camera trigger pulses.
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("cameraTriggerController")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="cameraTriggerController")]
-        [System.ComponentModel.DescriptionAttribute("Optional CameraTriggerController module for emitting camera trigger pulses.")]
-        public CameraTriggerController CameraTriggerController
-        {
-            get
-            {
-                return _cameraTriggerController;
-            }
-            set
-            {
-                _cameraTriggerController = value;
-            }
-        }
-    
-        /// <summary>
-        /// Optional RunningWheelModule module to define wheel geometry.
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("runningWheel")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="runningWheel")]
-        [System.ComponentModel.DescriptionAttribute("Optional RunningWheelModule module to define wheel geometry.")]
-        public RunningWheel RunningWheel
-        {
-            get
-            {
-                return _runningWheel;
-            }
-            set
-            {
-                _runningWheel = value;
-            }
-        }
-    
-        /// <summary>
-        /// Live view settings for this board (OpenRigs.LiveView).
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("liveView")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="liveView")]
-        [System.ComponentModel.DescriptionAttribute("Live view settings for this board (OpenRigs.LiveView).")]
-        public LiveView LiveView
-        {
-            get
-            {
-                return _liveView;
-            }
-            set
-            {
-                _liveView = value;
-            }
-        }
-    
-        /// <summary>
-        /// What is plugged into each line (Pip, 7 Nov 2026): checked at Start against the lines the workflow uses (its schemas/board-lines.yml) by OpenRigs.HarpDevices.
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("wiring")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wiring")]
-        [System.ComponentModel.DescriptionAttribute("What is plugged into each line (Pip, 7 Nov 2026): checked at Start against the li" +
-            "nes the workflow uses (its schemas/board-lines.yml) by OpenRigs.HarpDevices.")]
-        public BoardWiring Wiring
-        {
-            get
-            {
-                return _wiring;
-            }
-            set
-            {
-                _wiring = value;
-            }
-        }
-    
-        public System.IObservable<BehaviorBoard> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new BehaviorBoard(this)));
-        }
-    
-        public System.IObservable<BehaviorBoard> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new BehaviorBoard(this));
-        }
-    
-        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
-        {
-            stringBuilder.Append("PortName = " + _portName + ", ");
-            stringBuilder.Append("UsbSerial = " + _usbSerial + ", ");
-            stringBuilder.Append("PulseController = " + _pulseController + ", ");
-            stringBuilder.Append("CameraTriggerController = " + _cameraTriggerController + ", ");
-            stringBuilder.Append("RunningWheel = " + _runningWheel + ", ");
-            stringBuilder.Append("LiveView = " + _liveView + ", ");
-            stringBuilder.Append("Wiring = " + _wiring);
             return true;
         }
     
@@ -1383,11 +1096,11 @@ namespace UclOpenCoenDomeNavigation
 
 
     /// <summary>
-    /// A pulsed output whose width comes from a calibration curve at run time, such as a reward valve.
+    /// A pulsed output whose width comes from a calibration curve's linear fit at run time, such as a reward valve.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("A pulsed output whose width comes from a calibration curve at run time, such as a" +
-        " reward valve.")]
+    [System.ComponentModel.DescriptionAttribute("A pulsed output whose width comes from a calibration curve\'s linear fit at run ti" +
+        "me, such as a reward valve.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class CalibratedPulse : PulseOutput
@@ -1395,32 +1108,24 @@ namespace UclOpenCoenDomeNavigation
     
         private string _artefact;
     
-        private OpenRigs.Core.CalibrationModel _fit;
-    
-        private int _maxAgeDays;
-    
         public CalibratedPulse()
         {
-            _fit = OpenRigs.Core.CalibrationModel.LinearFit;
-            _maxAgeDays = 90;
         }
     
         protected CalibratedPulse(CalibratedPulse other) : 
                 base(other)
         {
             _artefact = other._artefact;
-            _fit = other._fit;
-            _maxAgeDays = other._maxAgeDays;
         }
     
         /// <summary>
-        /// Relative path of the CalibrationCurve that converts the requested quantity to a pulse width: a file written by the platform's DispenseCalibration procedure into this machine's calibration folder.
+        /// Relative path of the CalibrationCurve that converts the requested quantity to a pulse width: a file in this machine's calibration folder holding the measured points and their linear fit.
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("artefact", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="artefact")]
         [System.ComponentModel.DescriptionAttribute("Relative path of the CalibrationCurve that converts the requested quantity to a p" +
-            "ulse width: a file written by the platform\'s DispenseCalibration procedure into " +
-            "this machine\'s calibration folder.")]
+            "ulse width: a file in this machine\'s calibration folder holding the measured poi" +
+            "nts and their linear fit.")]
         public string Artefact
         {
             get
@@ -1430,44 +1135,6 @@ namespace UclOpenCoenDomeNavigation
             set
             {
                 _artefact = value;
-            }
-        }
-    
-        /// <summary>
-        /// How the rig fits the artefact's points at startup. LinearFit suits repeated weighings.
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("fit")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="fit")]
-        [System.ComponentModel.DescriptionAttribute("How the rig fits the artefact\'s points at startup. LinearFit suits repeated weigh" +
-            "ings.")]
-        public OpenRigs.Core.CalibrationModel Fit
-        {
-            get
-            {
-                return _fit;
-            }
-            set
-            {
-                _fit = value;
-            }
-        }
-    
-        /// <summary>
-        /// Warn at startup when the artefact is older than this many days. 0 disables the check.
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("maxAgeDays")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="maxAgeDays")]
-        [System.ComponentModel.DescriptionAttribute("Warn at startup when the artefact is older than this many days. 0 disables the ch" +
-            "eck.")]
-        public int MaxAgeDays
-        {
-            get
-            {
-                return _maxAgeDays;
-            }
-            set
-            {
-                _maxAgeDays = value;
             }
         }
     
@@ -1487,9 +1154,7 @@ namespace UclOpenCoenDomeNavigation
             {
                 stringBuilder.Append(", ");
             }
-            stringBuilder.Append("Artefact = " + _artefact + ", ");
-            stringBuilder.Append("Fit = " + _fit + ", ");
-            stringBuilder.Append("MaxAgeDays = " + _maxAgeDays);
+            stringBuilder.Append("Artefact = " + _artefact);
             return true;
         }
     }
@@ -1626,6 +1291,404 @@ namespace UclOpenCoenDomeNavigation
             stringBuilder.Append("Trigger0Frequency = " + _trigger0Frequency + ", ");
             stringBuilder.Append("Trigger1Enabled = " + _trigger1Enabled + ", ");
             stringBuilder.Append("Trigger1Frequency = " + _trigger1Frequency);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// Represents a Harp Behavior Board device.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("Represents a Harp Behavior Board device.")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class DomeBehaviorBoard
+    {
+    
+        private string _portName;
+    
+        private string _usbSerial;
+    
+        private PulseController _pulseController;
+    
+        private CameraTriggerController _cameraTriggerController;
+    
+        private RunningWheel _runningWheel;
+    
+        private LiveView _liveView;
+    
+        private BoardWiring _wiring;
+    
+        public DomeBehaviorBoard()
+        {
+            _wiring = new BoardWiring();
+        }
+    
+        protected DomeBehaviorBoard(DomeBehaviorBoard other)
+        {
+            _portName = other._portName;
+            _usbSerial = other._usbSerial;
+            _pulseController = other._pulseController;
+            _cameraTriggerController = other._cameraTriggerController;
+            _runningWheel = other._runningWheel;
+            _liveView = other._liveView;
+            _wiring = other._wiring;
+        }
+    
+        /// <summary>
+        /// The name of the device serial port.
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("portName", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="portName")]
+        [System.ComponentModel.DescriptionAttribute("The name of the device serial port.")]
+        public string PortName
+        {
+            get
+            {
+                return _portName;
+            }
+            set
+            {
+                _portName = value;
+            }
+        }
+    
+        /// <summary>
+        /// The board's USB serial number, its FTDI chip's (AB0M7PLB): which board this is. OpenRigs.HarpDevices stops the workflow at Start if the board on portName has another. The rig's hardware scan lists each port's (serialPorts, usbSerial).
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("usbSerial", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="usbSerial")]
+        [System.ComponentModel.DescriptionAttribute("The board\'s USB serial number, its FTDI chip\'s (AB0M7PLB): which board this is. O" +
+            "penRigs.HarpDevices stops the workflow at Start if the board on portName has ano" +
+            "ther. The rig\'s hardware scan lists each port\'s (serialPorts, usbSerial).")]
+        public string UsbSerial
+        {
+            get
+            {
+                return _usbSerial;
+            }
+            set
+            {
+                _usbSerial = value;
+            }
+        }
+    
+        /// <summary>
+        /// Optional PulseController module for generating digital output pulses.
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("pulseController")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="pulseController")]
+        [System.ComponentModel.DescriptionAttribute("Optional PulseController module for generating digital output pulses.")]
+        public PulseController PulseController
+        {
+            get
+            {
+                return _pulseController;
+            }
+            set
+            {
+                _pulseController = value;
+            }
+        }
+    
+        /// <summary>
+        /// Optional CameraTriggerController module for emitting camera trigger pulses.
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("cameraTriggerController")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="cameraTriggerController")]
+        [System.ComponentModel.DescriptionAttribute("Optional CameraTriggerController module for emitting camera trigger pulses.")]
+        public CameraTriggerController CameraTriggerController
+        {
+            get
+            {
+                return _cameraTriggerController;
+            }
+            set
+            {
+                _cameraTriggerController = value;
+            }
+        }
+    
+        /// <summary>
+        /// Optional RunningWheelModule module to define wheel geometry.
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("runningWheel")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="runningWheel")]
+        [System.ComponentModel.DescriptionAttribute("Optional RunningWheelModule module to define wheel geometry.")]
+        public RunningWheel RunningWheel
+        {
+            get
+            {
+                return _runningWheel;
+            }
+            set
+            {
+                _runningWheel = value;
+            }
+        }
+    
+        /// <summary>
+        /// Live view settings for this board (OpenRigs.LiveView).
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("liveView")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="liveView")]
+        [System.ComponentModel.DescriptionAttribute("Live view settings for this board (OpenRigs.LiveView).")]
+        public LiveView LiveView
+        {
+            get
+            {
+                return _liveView;
+            }
+            set
+            {
+                _liveView = value;
+            }
+        }
+    
+        /// <summary>
+        /// What is plugged into each line: one RewardValve per side, each with its side, and one ZapitTrigger. Reward and Zapit lines are read from here.
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("wiring", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wiring")]
+        [System.ComponentModel.DescriptionAttribute("What is plugged into each line: one RewardValve per side, each with its side, and" +
+            " one ZapitTrigger. Reward and Zapit lines are read from here.")]
+        public BoardWiring Wiring
+        {
+            get
+            {
+                return _wiring;
+            }
+            set
+            {
+                _wiring = value;
+            }
+        }
+    
+        public System.IObservable<DomeBehaviorBoard> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new DomeBehaviorBoard(this)));
+        }
+    
+        public System.IObservable<DomeBehaviorBoard> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new DomeBehaviorBoard(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("PortName = " + _portName + ", ");
+            stringBuilder.Append("UsbSerial = " + _usbSerial + ", ");
+            stringBuilder.Append("PulseController = " + _pulseController + ", ");
+            stringBuilder.Append("CameraTriggerController = " + _cameraTriggerController + ", ");
+            stringBuilder.Append("RunningWheel = " + _runningWheel + ", ");
+            stringBuilder.Append("LiveView = " + _liveView + ", ");
+            stringBuilder.Append("Wiring = " + _wiring);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// A spatial speaker array driven by a single audio device.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("A spatial speaker array driven by a single audio device.")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class DomeSpeakerArray
+    {
+    
+        private AudioDevice _device;
+    
+        private System.Collections.Generic.Dictionary<string, Speaker> _speakers;
+    
+        private int? _syncChannel;
+    
+        private double _syncGain;
+    
+        private System.Collections.Generic.List<int> _unusedChannels;
+    
+        private int _errorSoundChannel;
+    
+        public DomeSpeakerArray()
+        {
+            _device = new AudioDevice();
+            _speakers = new System.Collections.Generic.Dictionary<string, Speaker>();
+            _syncGain = 0.2D;
+            _unusedChannels = new System.Collections.Generic.List<int>();
+        }
+    
+        protected DomeSpeakerArray(DomeSpeakerArray other)
+        {
+            _device = other._device;
+            _speakers = other._speakers;
+            _syncChannel = other._syncChannel;
+            _syncGain = other._syncGain;
+            _unusedChannels = other._unusedChannels;
+            _errorSoundChannel = other._errorSoundChannel;
+        }
+    
+        /// <summary>
+        /// The audio device driving the array.
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("device", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="device")]
+        [System.ComponentModel.DescriptionAttribute("The audio device driving the array.")]
+        public AudioDevice Device
+        {
+            get
+            {
+                return _device;
+            }
+            set
+            {
+                _device = value;
+            }
+        }
+    
+        /// <summary>
+        /// Speakers in the array, keyed by name.
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("speakers", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="speakers")]
+        [System.ComponentModel.DescriptionAttribute("Speakers in the array, keyed by name.")]
+        public System.Collections.Generic.Dictionary<string, Speaker> Speakers
+        {
+            get
+            {
+                return _speakers;
+            }
+            set
+            {
+                _speakers = value;
+            }
+        }
+    
+        /// <summary>
+        /// Channel carrying a sync copy of each stimulus, for alignment with acquisition.
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("syncChannel")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="syncChannel")]
+        [System.ComponentModel.DescriptionAttribute("Channel carrying a sync copy of each stimulus, for alignment with acquisition.")]
+        public int? SyncChannel
+        {
+            get
+            {
+                return _syncChannel;
+            }
+            set
+            {
+                _syncChannel = value;
+            }
+        }
+    
+        /// <summary>
+        /// Gain applied to the sync channel.
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("syncGain")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="syncGain")]
+        [System.ComponentModel.DescriptionAttribute("Gain applied to the sync channel.")]
+        public double SyncGain
+        {
+            get
+            {
+                return _syncGain;
+            }
+            set
+            {
+                _syncGain = value;
+            }
+        }
+    
+        /// <summary>
+        /// Output channels with nothing connected.
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("unusedChannels")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="unusedChannels")]
+        [System.ComponentModel.DescriptionAttribute("Output channels with nothing connected.")]
+        public System.Collections.Generic.List<int> UnusedChannels
+        {
+            get
+            {
+                return _unusedChannels;
+            }
+            set
+            {
+                _unusedChannels = value;
+            }
+        }
+    
+        /// <summary>
+        /// Mixer output channel the error sound plays on.
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("errorSoundChannel", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="errorSoundChannel")]
+        [System.ComponentModel.DescriptionAttribute("Mixer output channel the error sound plays on.")]
+        public int ErrorSoundChannel
+        {
+            get
+            {
+                return _errorSoundChannel;
+            }
+            set
+            {
+                _errorSoundChannel = value;
+            }
+        }
+    
+        public System.IObservable<DomeSpeakerArray> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new DomeSpeakerArray(this)));
+        }
+    
+        public System.IObservable<DomeSpeakerArray> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new DomeSpeakerArray(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("Device = " + _device + ", ");
+            stringBuilder.Append("Speakers = " + _speakers + ", ");
+            stringBuilder.Append("SyncChannel = " + _syncChannel + ", ");
+            stringBuilder.Append("SyncGain = " + _syncGain + ", ");
+            stringBuilder.Append("UnusedChannels = " + _unusedChannels + ", ");
+            stringBuilder.Append("ErrorSoundChannel = " + _errorSoundChannel);
             return true;
         }
     
@@ -2651,104 +2714,6 @@ namespace UclOpenCoenDomeNavigation
 
 
     /// <summary>
-    /// Which behavior board line drives each side's reward valve. The workflow reads it at startup
-    ///(LoadSideRewardLine): a left reward pulses the left line, a right reward the right line, each
-    ///with that line's entry in behaviorBoard.main.pulseController.outputs. rig-control's Calibrations
-    ///page names each valve line's side from it.
-    /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Which behavior board line drives each side's reward valve. The workflow reads it at startup
-    (LoadSideRewardLine): a left reward pulses the left line, a right reward the right line, each
-    with that line's entry in behaviorBoard.main.pulseController.outputs. rig-control's Calibrations
-    page names each valve line's side from it.")]
-    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
-    [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class RewardValves
-    {
-    
-        private ValveLine _left;
-    
-        private ValveLine _right;
-    
-        public RewardValves()
-        {
-        }
-    
-        protected RewardValves(RewardValves other)
-        {
-            _left = other._left;
-            _right = other._right;
-        }
-    
-        /// <summary>
-        /// The line that drives the left lick spout's reward valve
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("left", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="left")]
-        [System.ComponentModel.DescriptionAttribute("The line that drives the left lick spout\'s reward valve")]
-        public ValveLine Left
-        {
-            get
-            {
-                return _left;
-            }
-            set
-            {
-                _left = value;
-            }
-        }
-    
-        /// <summary>
-        /// The line that drives the right lick spout's reward valve
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("right", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="right")]
-        [System.ComponentModel.DescriptionAttribute("The line that drives the right lick spout\'s reward valve")]
-        public ValveLine Right
-        {
-            get
-            {
-                return _right;
-            }
-            set
-            {
-                _right = value;
-            }
-        }
-    
-        public System.IObservable<RewardValves> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new RewardValves(this)));
-        }
-    
-        public System.IObservable<RewardValves> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new RewardValves(this));
-        }
-    
-        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
-        {
-            stringBuilder.Append("Left = " + _left + ", ");
-            stringBuilder.Append("Right = " + _right);
-            return true;
-        }
-    
-        public override string ToString()
-        {
-            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
-            stringBuilder.Append(GetType().Name);
-            stringBuilder.Append(" { ");
-            if (PrintMembers(stringBuilder))
-            {
-                stringBuilder.Append(" ");
-            }
-            stringBuilder.Append("}");
-            return stringBuilder.ToString();
-        }
-    }
-
-
-    /// <summary>
     /// Represents configuration parameters of the RunningWheel module.
     ///Exposes wheel geometry parameters used to compute speed and distance from encoder counts.
     /// </summary>
@@ -2982,171 +2947,6 @@ namespace UclOpenCoenDomeNavigation
             stringBuilder.Append("Channel = " + _channel + ", ");
             stringBuilder.Append("Gain = " + _gain + ", ");
             stringBuilder.Append("Filter = " + _filter);
-            return true;
-        }
-    
-        public override string ToString()
-        {
-            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
-            stringBuilder.Append(GetType().Name);
-            stringBuilder.Append(" { ");
-            if (PrintMembers(stringBuilder))
-            {
-                stringBuilder.Append(" ");
-            }
-            stringBuilder.Append("}");
-            return stringBuilder.ToString();
-        }
-    }
-
-
-    /// <summary>
-    /// A spatial speaker array driven by a single audio device.
-    /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("A spatial speaker array driven by a single audio device.")]
-    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
-    [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class SpeakerArray
-    {
-    
-        private AudioDevice _device;
-    
-        private System.Collections.Generic.Dictionary<string, Speaker> _speakers;
-    
-        private int? _syncChannel;
-    
-        private double _syncGain;
-    
-        private System.Collections.Generic.List<int> _unusedChannels;
-    
-        public SpeakerArray()
-        {
-            _device = new AudioDevice();
-            _speakers = new System.Collections.Generic.Dictionary<string, Speaker>();
-            _syncGain = 0.2D;
-            _unusedChannels = new System.Collections.Generic.List<int>();
-        }
-    
-        protected SpeakerArray(SpeakerArray other)
-        {
-            _device = other._device;
-            _speakers = other._speakers;
-            _syncChannel = other._syncChannel;
-            _syncGain = other._syncGain;
-            _unusedChannels = other._unusedChannels;
-        }
-    
-        /// <summary>
-        /// The audio device driving the array.
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("device", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="device")]
-        [System.ComponentModel.DescriptionAttribute("The audio device driving the array.")]
-        public AudioDevice Device
-        {
-            get
-            {
-                return _device;
-            }
-            set
-            {
-                _device = value;
-            }
-        }
-    
-        /// <summary>
-        /// Speakers in the array, keyed by name.
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("speakers", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="speakers")]
-        [System.ComponentModel.DescriptionAttribute("Speakers in the array, keyed by name.")]
-        public System.Collections.Generic.Dictionary<string, Speaker> Speakers
-        {
-            get
-            {
-                return _speakers;
-            }
-            set
-            {
-                _speakers = value;
-            }
-        }
-    
-        /// <summary>
-        /// Channel carrying a sync copy of each stimulus, for alignment with acquisition.
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("syncChannel")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="syncChannel")]
-        [System.ComponentModel.DescriptionAttribute("Channel carrying a sync copy of each stimulus, for alignment with acquisition.")]
-        public int? SyncChannel
-        {
-            get
-            {
-                return _syncChannel;
-            }
-            set
-            {
-                _syncChannel = value;
-            }
-        }
-    
-        /// <summary>
-        /// Gain applied to the sync channel.
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("syncGain")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="syncGain")]
-        [System.ComponentModel.DescriptionAttribute("Gain applied to the sync channel.")]
-        public double SyncGain
-        {
-            get
-            {
-                return _syncGain;
-            }
-            set
-            {
-                _syncGain = value;
-            }
-        }
-    
-        /// <summary>
-        /// Output channels with nothing connected.
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("unusedChannels")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="unusedChannels")]
-        [System.ComponentModel.DescriptionAttribute("Output channels with nothing connected.")]
-        public System.Collections.Generic.List<int> UnusedChannels
-        {
-            get
-            {
-                return _unusedChannels;
-            }
-            set
-            {
-                _unusedChannels = value;
-            }
-        }
-    
-        public System.IObservable<SpeakerArray> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new SpeakerArray(this)));
-        }
-    
-        public System.IObservable<SpeakerArray> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new SpeakerArray(this));
-        }
-    
-        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
-        {
-            stringBuilder.Append("Device = " + _device + ", ");
-            stringBuilder.Append("Speakers = " + _speakers + ", ");
-            stringBuilder.Append("SyncChannel = " + _syncChannel + ", ");
-            stringBuilder.Append("SyncGain = " + _syncGain + ", ");
-            stringBuilder.Append("UnusedChannels = " + _unusedChannels);
             return true;
         }
     
@@ -3909,28 +3709,6 @@ namespace UclOpenCoenDomeNavigation
 
 
     /// <summary>
-    /// A behavior board digital output that can drive a reward valve.
-    /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-    public enum ValveLine
-    {
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="DO1")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="DO1")]
-        DO1 = 0,
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="DO2")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="DO2")]
-        DO2 = 1,
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="DO3")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="DO3")]
-        DO3 = 2,
-    }
-
-
-    /// <summary>
     /// What is plugged into one line of the board. A workflow's schemas/board-lines.yml says what it
     ///uses each line for, and OpenRigs.HarpDevices compares the two at Start: device, side and targets
     ///must agree on every line the workflow uses, or the workflow stops. part and note are for people.
@@ -4098,11 +3876,11 @@ namespace UclOpenCoenDomeNavigation
 
 
     /// <summary>
-    /// TCP endpoint of the Zapit optogenetics server (tcpServer section of the Zapit settings file).
+    /// TCP endpoint of the Zapit optogenetics server (tcpServer section of the Zapit settings file). The trigger line is the board's ZapitTrigger in wiring.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("TCP endpoint of the Zapit optogenetics server (tcpServer section of the Zapit set" +
-        "tings file).")]
+        "tings file). The trigger line is the board\'s ZapitTrigger in wiring.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class ZapitServer
@@ -4114,14 +3892,11 @@ namespace UclOpenCoenDomeNavigation
     
         private bool _hardwareTriggered;
     
-        private int _triggerLine;
-    
         public ZapitServer()
         {
             _host = "127.0.0.1";
             _port = 1488;
             _hardwareTriggered = false;
-            _triggerLine = 3;
         }
     
         protected ZapitServer(ZapitServer other)
@@ -4129,16 +3904,14 @@ namespace UclOpenCoenDomeNavigation
             _host = other._host;
             _port = other._port;
             _hardwareTriggered = other._hardwareTriggered;
-            _triggerLine = other._triggerLine;
         }
     
         /// <summary>
-        /// Host name or IP address of the PC running Zapit; 127.0.0.1 when Zapit runs on this rig PC
+        /// Host name or IP address of the PC running Zapit.
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("host")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="host")]
-        [System.ComponentModel.DescriptionAttribute("Host name or IP address of the PC running Zapit; 127.0.0.1 when Zapit runs on thi" +
-            "s rig PC")]
+        [System.ComponentModel.DescriptionAttribute("Host name or IP address of the PC running Zapit.")]
         public string Host
         {
             get
@@ -4152,11 +3925,11 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// TCP port the Zapit server listens on
+        /// TCP port the Zapit server listens on.
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("port")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="port")]
-        [System.ComponentModel.DescriptionAttribute("TCP port the Zapit server listens on")]
+        [System.ComponentModel.DescriptionAttribute("TCP port the Zapit server listens on.")]
         public int Port
         {
             get
@@ -4170,13 +3943,12 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// True: Zapit arms the DAQ on the TCP command and the behavior board fires a TTL on triggerLine when Zapit confirms it is armed. False: Zapit starts the stimulus on receipt of the command.
+        /// True: Zapit arms its DAQ on the TCP command and the ZapitTrigger line starts the stimulus. False: Zapit starts the stimulus on receipt of the command.
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("hardwareTriggered")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="hardwareTriggered")]
-        [System.ComponentModel.DescriptionAttribute("True: Zapit arms the DAQ on the TCP command and the behavior board fires a TTL on" +
-            " triggerLine when Zapit confirms it is armed. False: Zapit starts the stimulus o" +
-            "n receipt of the command.")]
+        [System.ComponentModel.DescriptionAttribute("True: Zapit arms its DAQ on the TCP command and the ZapitTrigger line starts the " +
+            "stimulus. False: Zapit starts the stimulus on receipt of the command.")]
         public bool HardwareTriggered
         {
             get
@@ -4186,24 +3958,6 @@ namespace UclOpenCoenDomeNavigation
             set
             {
                 _hardwareTriggered = value;
-            }
-        }
-    
-        /// <summary>
-        /// Behavior board digital output wired to the Zapit DAQ trigger input and the masking LEDs, DO1 to DO3 (the workflow stops at start on 0). This workflow holds it high from every trial's start to 1 s after the outcome, whatever hardwareTriggered says; av-dome pulses it for its pulseWidths width.
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("triggerLine")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="triggerLine")]
-        [System.ComponentModel.DescriptionAttribute(@"Behavior board digital output wired to the Zapit DAQ trigger input and the masking LEDs, DO1 to DO3 (the workflow stops at start on 0). This workflow holds it high from every trial's start to 1 s after the outcome, whatever hardwareTriggered says; av-dome pulses it for its pulseWidths width.")]
-        public int TriggerLine
-        {
-            get
-            {
-                return _triggerLine;
-            }
-            set
-            {
-                _triggerLine = value;
             }
         }
     
@@ -4221,8 +3975,7 @@ namespace UclOpenCoenDomeNavigation
         {
             stringBuilder.Append("Host = " + _host + ", ");
             stringBuilder.Append("Port = " + _port + ", ");
-            stringBuilder.Append("HardwareTriggered = " + _hardwareTriggered + ", ");
-            stringBuilder.Append("TriggerLine = " + _triggerLine);
+            stringBuilder.Append("HardwareTriggered = " + _hardwareTriggered);
             return true;
         }
     
@@ -4638,19 +4391,14 @@ namespace UclOpenCoenDomeNavigation
             return System.Reactive.Linq.Observable.Select(source, value => Newtonsoft.Json.JsonConvert.SerializeObject(value, formatting));
         }
 
-        public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationRig> source)
+        public System.IObservable<string> Process(System.IObservable<DomeRig> source)
         {
-            return Process<UclOpenCoenDomeNavigationRig>(source);
+            return Process<DomeRig>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<AudioDevice> source)
         {
             return Process<AudioDevice>(source);
-        }
-
-        public System.IObservable<string> Process(System.IObservable<BehaviorBoard> source)
-        {
-            return Process<BehaviorBoard>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<BoardWiring> source)
@@ -4666,6 +4414,16 @@ namespace UclOpenCoenDomeNavigation
         public System.IObservable<string> Process(System.IObservable<CameraTriggerController> source)
         {
             return Process<CameraTriggerController>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<DomeBehaviorBoard> source)
+        {
+            return Process<DomeBehaviorBoard>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<DomeSpeakerArray> source)
+        {
+            return Process<DomeSpeakerArray>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<FixedPulse> source)
@@ -4713,11 +4471,6 @@ namespace UclOpenCoenDomeNavigation
             return Process<PulseOutputs>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<RewardValves> source)
-        {
-            return Process<RewardValves>(source);
-        }
-
         public System.IObservable<string> Process(System.IObservable<RunningWheel> source)
         {
             return Process<RunningWheel>(source);
@@ -4726,11 +4479,6 @@ namespace UclOpenCoenDomeNavigation
         public System.IObservable<string> Process(System.IObservable<Speaker> source)
         {
             return Process<Speaker>(source);
-        }
-
-        public System.IObservable<string> Process(System.IObservable<SpeakerArray> source)
-        {
-            return Process<SpeakerArray>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<SphericalPosition> source)
@@ -4782,12 +4530,13 @@ namespace UclOpenCoenDomeNavigation
     [System.ComponentModel.DescriptionAttribute("Deserializes a sequence of JSON strings into data model objects.")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationRig>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<DomeRig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<AudioDevice>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BehaviorBoard>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BoardWiring>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<CalibratedPulse>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<CameraTriggerController>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<DomeBehaviorBoard>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<DomeSpeakerArray>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<FixedPulse>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<HarpStepperDriver>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<HarpTimestampGeneratorGen3>))]
@@ -4797,10 +4546,8 @@ namespace UclOpenCoenDomeNavigation
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PulseController>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PulseOutput>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PulseOutputs>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardValves>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RunningWheel>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Speaker>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<SpeakerArray>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<SphericalPosition>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<SpinnakerCamera>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StepperPositions>))]
@@ -4814,7 +4561,7 @@ namespace UclOpenCoenDomeNavigation
     
         public DeserializeFromJson()
         {
-            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationRig>();
+            Type = new Bonsai.Expressions.TypeMapping<DomeRig>();
         }
 
         public Bonsai.Expressions.TypeMapping Type { get; set; }
@@ -4969,19 +4716,14 @@ namespace UclOpenCoenDomeNavigation
             });
         }
 
-        public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationRig> source)
+        public System.IObservable<string> Process(System.IObservable<DomeRig> source)
         {
-            return Process<UclOpenCoenDomeNavigationRig>(source);
+            return Process<DomeRig>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<AudioDevice> source)
         {
             return Process<AudioDevice>(source);
-        }
-
-        public System.IObservable<string> Process(System.IObservable<BehaviorBoard> source)
-        {
-            return Process<BehaviorBoard>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<BoardWiring> source)
@@ -4997,6 +4739,16 @@ namespace UclOpenCoenDomeNavigation
         public System.IObservable<string> Process(System.IObservable<CameraTriggerController> source)
         {
             return Process<CameraTriggerController>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<DomeBehaviorBoard> source)
+        {
+            return Process<DomeBehaviorBoard>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<DomeSpeakerArray> source)
+        {
+            return Process<DomeSpeakerArray>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<FixedPulse> source)
@@ -5044,11 +4796,6 @@ namespace UclOpenCoenDomeNavigation
             return Process<PulseOutputs>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<RewardValves> source)
-        {
-            return Process<RewardValves>(source);
-        }
-
         public System.IObservable<string> Process(System.IObservable<RunningWheel> source)
         {
             return Process<RunningWheel>(source);
@@ -5057,11 +4804,6 @@ namespace UclOpenCoenDomeNavigation
         public System.IObservable<string> Process(System.IObservable<Speaker> source)
         {
             return Process<Speaker>(source);
-        }
-
-        public System.IObservable<string> Process(System.IObservable<SpeakerArray> source)
-        {
-            return Process<SpeakerArray>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<SphericalPosition> source)
@@ -5113,12 +4855,13 @@ namespace UclOpenCoenDomeNavigation
     [System.ComponentModel.DescriptionAttribute("Deserializes a sequence of YAML strings into data model objects.")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationRig>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<DomeRig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<AudioDevice>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BehaviorBoard>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BoardWiring>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<CalibratedPulse>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<CameraTriggerController>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<DomeBehaviorBoard>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<DomeSpeakerArray>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<FixedPulse>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<HarpStepperDriver>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<HarpTimestampGeneratorGen3>))]
@@ -5128,10 +4871,8 @@ namespace UclOpenCoenDomeNavigation
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PulseController>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PulseOutput>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PulseOutputs>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardValves>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RunningWheel>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Speaker>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<SpeakerArray>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<SphericalPosition>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<SpinnakerCamera>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StepperPositions>))]
@@ -5145,7 +4886,7 @@ namespace UclOpenCoenDomeNavigation
     
         public DeserializeFromYaml()
         {
-            Type = new Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationRig>();
+            Type = new Bonsai.Expressions.TypeMapping<DomeRig>();
         }
 
         public Bonsai.Expressions.TypeMapping Type { get; set; }

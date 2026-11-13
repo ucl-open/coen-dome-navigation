@@ -12,22 +12,13 @@ name: UclOpenCoenDomeNavigation
 taskParameters:
   modality: auditory          # auditory (the tone sweep), visual (the grating) or audiovisual
   rngSeed: null               # null = rig-control draws one at Go; each seed used is a RngSeed event in BonsaiData_Async
-  # The sweep and its loudness. src\waveforms is made for these four: change them only together
-  # with `uv run generate-waveforms` and a commit, or the workflow stops at Go.
-  sweepStartHz: 2000
-  sweepEndHz: 25000
-  sweepSteps: 100             # log-spaced tone frequencies from sweepStartHz to sweepEndHz
-  toneAmplitude: 0.05         # a tone pip peaks at toneAmplitude squared
+  # The sweep and its loudness are src\waveforms\sweep.json's, made with the tone files (generate-waveforms).
   backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
   positionStepCm: 1           # the distance run is rounded to this before it sets the frequency
-  # The wheel diameter distances are worked out at; null takes rig.yml's (75 mm on every corridor
-  # rig since 9 Nov 2026). 75 is the measured wheel and what Tom's workflow used.
-  wheelDiameterMm: 75.0
   trialStructure:
     itiMinSeconds: 0.0        # Tom's workflow drew 0 or 1 s, now evenly between (Pip, 9 Nov 2026)
     itiMaxSeconds: 1.0
-    quiescentSeconds: 1.0     # without licks before the next trial, on stages with quiescent
-    timeLimitSeconds: 12.0    # on stages with timeLimit
+    drinkSeconds: 2.0         # after the outcome (and a punished trial's timeout) before the next interval
     trackLengthsCm: [80, 100, 120]   # one drawn per trial, times the stage's trackLengthScale
   punishment:
     timeoutSeconds: 2.0       # s after a punished trial
@@ -42,10 +33,11 @@ taskParameters:
     zapitConfigPath: ''   # the Zapit conditions file loaded in Zapit
     laserPowerMw: null        # mW on laser-on trials, every condition; required with optogenetics on
     laserOnProbability: 0.4   # laser-on trials after trialsBeforeLaser; the rest are 0 mW; each trial's condition drawn at random
-    laserMaxSeconds: 12.5     # s; a cap: at least timeLimitSeconds + laserToStimulusSeconds + 0.25, the laser stops at the outcome
+    laserMaxSeconds: 12.5     # s; a cap: at least the longest timeLimitSeconds + laserToStimulusSeconds + 0.25, the laser stops at the outcome
     laserToStimulusSeconds: 0.1   # s the laser is on before the first tone pip and grating frame (multiple of 0.05)
+    triggerHoldSeconds: 1.0   # s the trigger line and masking light stay on after the outcome (at least 0.5, the longest ramp-down)
     trialsBeforeLaser: 20     # no laser-on trial among the first this many
-  # Rows by the Training Stage setting (a setting past the end uses the last row). The reward zones are
+  # Rows by the Training Stage setting (a setting past the end stops the workflow at Go). The reward zones are
   # Tom's: centred on 18 kHz in log space, a 6 kHz window from stage 2 (task.py's old derivation).
   trainingStages:
     - label: Stage 0 (Tom's 1)   # rewarded on reaching the zone, no lick; short tracks; the frequency drifts too
@@ -55,8 +47,8 @@ taskParameters:
       lickToReward: false
       wrongLickLimit: 0
       punishWrongZone: false
-      quiescent: false
-      timeLimit: false
+      quietSeconds: null
+      timeLimitSeconds: null
       trackEndEndsTrial: false
       trackLengthScale: 0.125
       frequencyDrift: true
@@ -68,8 +60,8 @@ taskParameters:
       lickToReward: false
       wrongLickLimit: 0
       punishWrongZone: false
-      quiescent: false
-      timeLimit: false
+      quietSeconds: null
+      timeLimitSeconds: null
       trackEndEndsTrial: false
       trackLengthScale: 0.125
       frequencyDrift: false
@@ -81,8 +73,8 @@ taskParameters:
       lickToReward: true
       wrongLickLimit: 0
       punishWrongZone: false
-      quiescent: false
-      timeLimit: false
+      quietSeconds: null
+      timeLimitSeconds: null
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
@@ -94,8 +86,8 @@ taskParameters:
       lickToReward: true
       wrongLickLimit: 8
       punishWrongZone: true
-      quiescent: true
-      timeLimit: true
+      quietSeconds: 1.0       # without licks after the interval
+      timeLimitSeconds: 12.0  # from the first tone pip
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
@@ -107,8 +99,8 @@ taskParameters:
       lickToReward: true
       wrongLickLimit: 5
       punishWrongZone: true
-      quiescent: true
-      timeLimit: true
+      quietSeconds: 1.0       # without licks after the interval
+      timeLimitSeconds: 12.0  # from the first tone pip
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
@@ -120,8 +112,8 @@ taskParameters:
       lickToReward: true
       wrongLickLimit: 5
       punishWrongZone: true
-      quiescent: true
-      timeLimit: true
+      quietSeconds: 1.0       # without licks after the interval
+      timeLimitSeconds: 12.0  # from the first tone pip
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false

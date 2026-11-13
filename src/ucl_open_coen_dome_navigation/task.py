@@ -3,10 +3,13 @@ workflow reads at Go (TaskPath). Ported from Tom Childs' auditory-vr-corridor ta
 
 Laid out as av-dome's (Pip, 9 Nov 2026): the stage is the TrainingStage experiment setting, a row of trainingStages
 from 0 (Tom's stages 1 to 6 are rows 0 to 5), and each row says what the stage does, where the workflow used to test
-the stage number; trialStructure holds the ITI and time limit, punishment the timeout and error sound, and rngSeed
-seeds every draw."""
+the stage number; trialStructure holds the ITI, the drink time and the track lengths, punishment the timeout and error
+sound, and rngSeed seeds every draw. The sweep and its loudness are src/waveforms/sweep.json's, made with the tone files
+(`uv run generate-waveforms`), not the task file's (plan v11)."""
 
+import json
 import math
+from pathlib import Path
 from typing import List, Literal, Optional
 
 from open_rigs.core.task import Task, TaskParameters
@@ -15,10 +18,16 @@ from swc.aeon.schema import BaseSchema
 
 from ucl_open_coen_dome_navigation import __semver__
 
-BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (HarpBeat)
+BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (Corridor.cs BeepSeconds)
 LASER_MAX_MARGIN_SEC = 0.25  # how much longer than the longest trial (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
 
 STAGE_COUNT = 6
+SWEEP_FILE = Path(__file__).resolve().parents[1] / "waveforms" / "sweep.json"  # src/waveforms/sweep.json
+
+
+def sweep() -> dict:
+    """The sweep the committed tone files were made for: sweepStartHz, sweepEndHz, sweepSteps and pipPeak."""
+    return json.loads(SWEEP_FILE.read_text(encoding="utf-8"))
 
 
 class TrialStructure(BaseSchema):
@@ -26,13 +35,10 @@ class TrialStructure(BaseSchema):
 
     iti_min_seconds: float = Field(default=0.0, ge=0, description="Lower bound of the uniformly drawn inter-trial interval, in seconds")
     iti_max_seconds: float = Field(default=1.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds")
-    quiescent_seconds: float = Field(
-        default=1.0,
+    drink_seconds: float = Field(
+        default=2.0,
         ge=0,
-        description="On a stage with quiescent, the next trial waits until the mouse has gone this long without licking (uncapped), so licks for the last reward cannot carry into the next trial",
-    )
-    time_limit_seconds: float = Field(
-        default=12.0, gt=0, description="On a stage with timeLimit, the longest a trial runs from its start, in seconds (av-dome's response period is its closedLoopSeconds)"
+        description="After each outcome, and a punished trial's timeout, before the next trial's inter-trial interval begins, in seconds: time to drink (Tom Childs' fixed 2 s)",
     )
     track_lengths_cm: List[float] = Field(
         default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
@@ -130,13 +136,18 @@ class OptogeneticsConfig(BaseSchema):
     laser_max_seconds: float = Field(
         default=12.5,
         gt=0,
-        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. With optogenetics on it must be at least trialStructure.timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimit a longer trial loses its laser before the outcome",
+        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
     )
     laser_to_stimulus_seconds: float = Field(
         default=0.1,
         ge=0.05,
         le=0.2,
         description="How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip",
+    )
+    trigger_hold_seconds: float = Field(
+        default=1.0,
+        ge=0.5,
+        description="How long the trigger line, and the masking light on it, stays high after the outcome, in seconds: at least 0.5, the longest ramp-down a conditions file may have",
     )
     trials_before_laser: int = Field(
         default=20,
@@ -184,8 +195,14 @@ class TrainingStage(BaseSchema):
     punish_wrong_zone: bool = Field(
         description="Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage"
     )
-    quiescent: bool = Field(description="Whether the next trial waits for trialStructure.quiescentSeconds without licks")
-    time_limit: bool = Field(description="Whether a trial ends at trialStructure.timeLimitSeconds")
+    quiet_seconds: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="After the inter-trial interval, the trial waits until the mouse has gone this long without licking, in seconds (uncapped), so licks for the last reward cannot carry into the next trial; null: no wait",
+    )
+    time_limit_seconds: Optional[float] = Field(
+        default=None, gt=0, description="The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit"
+    )
     track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
     track_length_scale: float = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
@@ -204,71 +221,42 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     modality: Literal["auditory", "visual", "audiovisual"] = Field(
         default="auditory", description="What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)"
     )
-    sweep_start_hz: int = Field(
-        default=2000,
-        description="Start frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-        ge=1,
-        le=25000,
-    )
-    sweep_end_hz: int = Field(
-        default=25000,
-        description="End frequency of the sweep (Hz). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-        ge=1,
-        le=25000,
-    )
-    sweep_steps: int = Field(
-        default=100,
-        description="Number of frequency bins for quantization. The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-        ge=10,
-    )
-    tone_amplitude: float = Field(
-        default=0.05,
-        description="Tone amplitude (0.0 to 1.0). The tone files in src/waveforms are made for this value: the workflow stops at Go if they differ",
-        ge=0.0,
-        le=1.0,
-    )
     background_noise_level: float = Field(
         default=0.5, description="Constant background white noise RMS, as a fraction of the beep RMS (0 = off)", ge=0.0, le=1.0
     )
     position_step_cm: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
-    wheel_diameter_mm: Optional[float] = Field(
-        default=75.0,
-        gt=0,
-        description=(
-            "Wheel diameter the task converts encoder counts to cm with, replacing rig.yml's behaviorBoard runningWheel "
-            "wheelDiameterMm; null uses rig.yml's. 75 is the measured wheel and what Tom Childs' workflow converted at, "
-            "so each track is the number of wheel turns the mice trained on; every corridor rig's rig.yml has said 75 "
-            "too since 9 Nov 2026"
-        ),
-    )
     trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
     punishment: Punishment = Field(default=Punishment(), description="The timeout and error sound a punished trial gets")
     truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
     optogenetics: OptogeneticsConfig = Field(default=OptogeneticsConfig(), description="Zapit optogenetic stimulation")
     training_stages: List[TrainingStage] = Field(
-        description="Training stage table, indexed by the TrainingStage setting from 0; a setting past the end uses the last row"
+        description="Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go"
     )
 
     @model_validator(mode="after")
     def _laser_max_outlasts_the_trial(self):
-        # The laser is meant to stay on until the outcome: the cap must be longer than the longest trial, the time limit
-        # (timeLimitSeconds, counted from the first tone pip) plus laser_to_stimulus_seconds (zapit-v2)
+        # The laser is meant to stay on until the outcome: the cap must be longer than the longest timed trial, a stage's
+        # time limit (timeLimitSeconds, counted from the first tone pip) plus laser_to_stimulus_seconds (zapit-v2)
         opto = self.optogenetics
-        shortest = self.trial_structure.time_limit_seconds + opto.laser_to_stimulus_seconds + LASER_MAX_MARGIN_SEC
-        if opto.use_zapit and opto.laser_max_seconds < shortest - 1e-9:
+        limits = [stage.time_limit_seconds for stage in self.training_stages if stage.time_limit_seconds is not None]
+        if not opto.use_zapit or not limits:
+            return self
+        shortest = max(limits) + opto.laser_to_stimulus_seconds + LASER_MAX_MARGIN_SEC
+        if opto.laser_max_seconds < shortest - 1e-9:
             raise ValueError(
-                f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: trialStructure.timeLimitSeconds "
-                f"({self.trial_structure.time_limit_seconds:g} s) counts from the first tone pip, laser_to_stimulus_seconds ({opto.laser_to_stimulus_seconds} s) after onset"
+                f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: the longest stage timeLimitSeconds "
+                f"({max(limits):g} s) counts from the first tone pip, laser_to_stimulus_seconds ({opto.laser_to_stimulus_seconds} s) after onset"
             )
         return self
 
     @model_validator(mode="after")
     def _zones_inside_sweep(self):
-        if self.sweep_start_hz >= self.sweep_end_hz:
-            raise ValueError("sweep_start_hz must be less than sweep_end_hz")
+        made = sweep()
         for i, stage in enumerate(self.training_stages):
-            if stage.reward_floor_hz <= self.sweep_start_hz or stage.reward_ceiling_hz > self.sweep_end_hz:
-                raise ValueError(f"training_stages[{i}]'s reward zone is not inside the sweep ({self.sweep_start_hz} to {self.sweep_end_hz} Hz)")
+            if stage.reward_floor_hz <= made["sweepStartHz"] or stage.reward_ceiling_hz > made["sweepEndHz"]:
+                raise ValueError(
+                    f"training_stages[{i}]'s reward zone is not inside the sweep ({made['sweepStartHz']} to {made['sweepEndHz']} Hz, src/waveforms/sweep.json)"
+                )
         return self
 
     @field_validator("training_stages")

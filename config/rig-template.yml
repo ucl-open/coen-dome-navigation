@@ -1,8 +1,6 @@
 # yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_dome_navigation.json
 #
-# coen-dome-navigation rig configuration TEMPLATE: av-dome's (pip/main-switchover), unchanged. Every
-# corridor rig is a dome or BLUE-OPTO rig with av-dome's rig.yml, and both workflows read the one
-# file, so keep this template and av-dome's the same (tests\test_rig_schema.py validates it).
+# coen-dome-navigation rig configuration TEMPLATE: the dome rig model (open_rigs.rigs.dome), as every dome workflow's
 #
 # Per-rig configuration files are NOT committed to this repo. To deploy a rig:
 #   1. Copy this file to <ConfigRoot>\<MACHINE-NAME>\rig.yml, where ConfigRoot is
@@ -12,7 +10,7 @@
 #   2. Fill in the values for that rig. Calibration artefacts (valve curves and the like) go in
 #      calibration\ beside rig.yml and are referenced by paths relative to that directory.
 #   3. Off-repo copies should replace the $schema path above with an absolute path
-#      to a checked-out src/DataSchemas/ucl_open_av_dome.json (or a raw GitHub URL)
+#      to a checked-out src/DataSchemas/ucl_open_coen_dome_navigation.json (or a raw GitHub URL)
 #      to keep editor validation working.
 #
 rootPath: C:\Coen-Lab-Local\Acquired-Data   # the acquisition folder itself: experiments go to <rootPath>\sub-<mouse>\ses-...
@@ -30,22 +28,26 @@ behaviorBoard:
     usbSerial: CHANGE-ME
     pulseController:
       outputPulseEnable: "DO1, DO2, DO3"
-      # Each line is a FixedPulse (width set here) or a CalibratedPulse (width looked up per reward
-      # on a valve calibration curve in calibration\). A fixed reward line delivers ceil(ul / 2)
-      # pulses of its width, assuming 2 ul per pulse; a calibrated one delivers the requested volume.
+      # Each reward valve is a CalibratedPulse: its curve, in calibration\ beside this file, plans every
+      # reward's pulses at the gap it was calibrated at. The ZapitTrigger line is held high, never pulsed.
       outputs:
-        DO1: { discriminatorType: FixedPulse, pulseWidthMs: 40 }   # a reward valve, ms (which side: rewardValves)
-        DO2: { discriminatorType: FixedPulse, pulseWidthMs: 40 }   # a reward valve, ms
-        DO3: { discriminatorType: FixedPulse, pulseWidthMs: 5 }    # Zapit TTL (used when zapit.hardwareTriggered is true)
-        # Calibrated reward line:
-        # DO1: { discriminatorType: CalibratedPulse, artefact: calibration/valve-DO1.json }
+        DO1: { discriminatorType: CalibratedPulse, artefact: calibration/valve-DO1.json }
+        DO2: { discriminatorType: CalibratedPulse, artefact: calibration/valve-DO2.json }
+        DO3: { discriminatorType: FixedPulse, pulseWidthMs: 0 }
+    # What each line drives (dome rig model, open_rigs.rigs.dome): one RewardValve per side and one
+    # ZapitTrigger. The workflow reads the reward and Zapit lines from here.
+    wiring:
+      DO0: { device: CameraTrigger, targets: [Camera-Face, Camera-Pupil, Camera-Body] }
+      DO1: { device: RewardValve, side: left }
+      DO2: { device: RewardValve, side: right }
+      DO3: { device: ZapitTrigger, note: also the masking light }
     cameraTriggerController:
       trigger0Enabled: true     # camera trigger 0 shares the DO0 pin
       trigger0Frequency: 50     # Hz
-      trigger1Enabled: false    # camera trigger 1 shares the DO1 pin, which drives a reward valve; off means nothing is written to it
+      trigger1Enabled: false    # camera trigger 1 shares the DO1 pin, a reward valve's
       trigger1Frequency: 50     # Hz, used only if trigger 1 is enabled
     runningWheel:
-      wheelDiameterMm: 170
+      wheelDiameterMm: 75       # mm; the measured wheel on every dome (9 Nov 2026): the corridor's distances are run on it
       countsPerRev: 4096
 
 timestampGeneratorGen3:
@@ -54,11 +56,8 @@ timestampGeneratorGen3:
     usbSerial: CHANGE-ME
     timerFrequency: Timer1000Hz
 
-# The lick spout stage's two Harp StepperDriver boards. The workflow drives the axes by motor
-# number, fixed: board a motor 0 base transverse (1), motor 1 left radial (2), motor 2 right
-# radial (3); board b motor 0 left elevation (4), motor 1 right elevation (5). The rest are spare.
-# Only portName and usbSerial are read: the schema's optional stepInterval, microstepResolution
-# and maximumRunCurrent are not (the run current is set in the workflow).
+# The lick spout stage's two Harp StepperDriver boards (HarpLickSpoutStage): board a drives the base
+# transverse, left radial and right radial axes, board b the left and right elevations.
 stepperDriver:
   a:
     portName: COM3
@@ -79,6 +78,7 @@ licketySplit:
     channel0TriggerThreshold: 0
     channel0UntriggerThreshold: 0
 
+# Exactly three cameras, on the board's trigger 0 (DomeHardware).
 camera:
   face:
     serialNumber: "00000000"
@@ -108,9 +108,10 @@ speakerArray:
     sampleRate: 48000       # Hz; the stimulus WAVs and speaker filters must be at this rate
     channelCount: 32
     suggestedLatency: 0.002 # s
-    bootDelay: 3.0          # s; documented only: the workflow's mixer start delay is fixed at 3 s
-  syncChannel: 31           # documented only: the workflow plays the sync copy on channel 31 at gain 0.2
+    bootDelay: 3.0          # s before the mixer starts: a fault while the sound card boots can blue-screen the PC
+  syncChannel: 31           # the sync copy of each stimulus
   syncGain: 0.2
+  errorSoundChannel: 2      # the error sound's channel
   unusedChannels: [30]      # not connected
   # Speakers currently wired on this rig. Position is relative to the subject:
   # azimuth 0 = straight ahead, positive to the right; elevation 0 = horizontal.
@@ -131,52 +132,18 @@ speakerArray:
       position: { azimuth: 0, elevation: 15 }
       channel: 2
       filter: calibration/speaker-centre.json
-  # Full 25-speaker dome layout, transcribed from the legacy SpeakerCalibration map in
-  # TrialTypeInitialise.cs. Channel numbers below are the legacy 1-based speaker IDs and MUST be
-  # re-checked against the actual mixer wiring before use. Enable per rig once the speakers are wired.
-  #   layer1_0:      { position: { azimuth: 0,      elevation: 75 },  channel: 1 }
-  #   layer1_90:     { position: { azimuth: 90,     elevation: 75 },  channel: 2 }
-  #   layer1_-90:    { position: { azimuth: -90,    elevation: 75 },  channel: 3 }
-  #   layer2_22:     { position: { azimuth: 22.5,   elevation: 45 },  channel: 4 }
-  #   layer2_67:     { position: { azimuth: 67.5,   elevation: 45 },  channel: 5 }
-  #   layer2_112:    { position: { azimuth: 112.5,  elevation: 45 },  channel: 6 }
-  #   layer2_-22:    { position: { azimuth: -22.5,  elevation: 45 },  channel: 7 }
-  #   layer2_-67:    { position: { azimuth: -67.5,  elevation: 45 },  channel: 8 }
-  #   layer2_-112:   { position: { azimuth: -112.5, elevation: 45 },  channel: 9 }
-  #   layer3_30:     { position: { azimuth: 30,     elevation: 15 },  channel: 10 }
-  #   layer3_60:     { position: { azimuth: 60,     elevation: 15 },  channel: 11 }
-  #   layer3_90:     { position: { azimuth: 90,     elevation: 15 },  channel: 12 }
-  #   layer3_120:    { position: { azimuth: 120,    elevation: 15 },  channel: 13 }
-  #   layer3_-30:    { position: { azimuth: -30,    elevation: 15 },  channel: 14 }
-  #   layer3_-60:    { position: { azimuth: -60,    elevation: 15 },  channel: 15 }
-  #   layer3_-90:    { position: { azimuth: -90,    elevation: 15 },  channel: 16 }
-  #   layer3_-120:   { position: { azimuth: -120,   elevation: 15 },  channel: 17 }
-  #   layer4_30:     { position: { azimuth: 30,     elevation: -15 }, channel: 18 }
-  #   layer4_60:     { position: { azimuth: 60,     elevation: -15 }, channel: 19 }
-  #   layer4_90:     { position: { azimuth: 90,     elevation: -15 }, channel: 20 }
-  #   layer4_120:    { position: { azimuth: 120,    elevation: -15 }, channel: 21 }
-  #   layer4_-30:    { position: { azimuth: -30,    elevation: -15 }, channel: 22 }
-  #   layer4_-60:    { position: { azimuth: -60,    elevation: -15 }, channel: 23 }
-  #   layer4_-90:    { position: { azimuth: -90,    elevation: -15 }, channel: 24 }
-  #   layer4_-120:   { position: { azimuth: -120,   elevation: -15 }, channel: 25 }
 
-# Which line drives each side's reward valve: a left reward pulses the left line, a right reward the
-# right line, each as its outputs entry says. Required; rig-control's Calibrations page names each
-# valve line's side from it too.
-rewardValves: { left: DO1, right: DO2 }
-interPulseInterval: 50   # ms between consecutive reward pulses; must let the valve seat
-
-# Zapit optogenetics server (tcpServer section of the Zapit settings file). Only contacted
-# when the task YAML sets optogenetics.useZapit: true, so non-opto rigs can leave the defaults.
+# Zapit optogenetics server (tcpServer section of the Zapit settings file). Contacted only when the
+# task sets optogenetics.useZapit: true. The trigger is the board's ZapitTrigger line in wiring.
 zapit:
-  host: 127.0.0.1         # PC running Zapit; 127.0.0.1 when Zapit runs on this rig PC
+  host: 127.0.0.1           # PC running Zapit; 127.0.0.1 when Zapit runs on this rig PC
   port: 1488
-  hardwareTriggered: false  # true once DO<triggerLine> is cabled to the Zapit DAQ trigger input
-  triggerLine: 3            # behavior board DO line for the TTL; held from beep 0 to 1 s after the outcome (av-dome pulses it for outputs.DO3's width)
-# Default absolute stage position at experiment start (steps)
+  hardwareTriggered: false  # true once the ZapitTrigger line is cabled to the Zapit DAQ trigger input
+
+# The stage's in position, in steps, for a mouse with no positions file of its own
 lickSpoutDefaultPosition:
-  baseTransverse: 0       # motor 1
-  leftRadial: 0           # motor 2
-  rightRadial: 0          # motor 3
-  leftElevation: 0        # motor 4
-  rightElevation: 0       # motor 5
+  baseTransverse: 0
+  leftRadial: 0
+  rightRadial: 0
+  leftElevation: 0
+  rightElevation: 0
