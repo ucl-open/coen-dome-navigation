@@ -34,7 +34,7 @@ outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
   formerly: [WasRewarded]
-  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the time limit or the end of the track (endReason says which), or unrewarded on a stage without lickToReward. rig-control's performance is Correct over all trials, Tom Childs' success rate.
+  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the time limit or the end of the track (endReason says which), or unrewarded on a stage without lickToReward. rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
 endReason:
   type: string
   values: [FreqReached, CorrectLick, WrongLickLimit, Timeout, EndOfTrack]

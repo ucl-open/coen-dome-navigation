@@ -106,14 +106,50 @@ def test_the_workflow_declares_every_command_the_stage_listens_for():
     assert declared - stage == {"RewardLeft", "RewardRight"}
 
 
-def test_the_readme_lists_every_shared_block():
-    # Plan v11: the README's Shared Blocks table names each lib-open-rigs block the workflow uses.
+def _scope(element: ET.Element) -> tuple[list[ET.Element], list[tuple[int, int]]]:
+    workflow = element.find(W + "Workflow")
+    return list(workflow.find(W + "Nodes")), [(int(e.get("From")), int(e.get("To"))) for e in workflow.find(W + "Edges")]
+
+
+def _upstream(edges: list[tuple[int, int]], node: int) -> set[int]:
+    seen, frontier = set(), [node]
+    while frontier:
+        to = frontier.pop()
+        for a, b in edges:
+            if b == to and a not in seen:
+                seen.add(a)
+                frontier.append(a)
+    return seen
+
+
+def test_the_mixer_never_starts_sooner_than_3_s():
+    # Deliberate: a fault while the sound card boots can blue-screen the PC. Never remove or shorten it.
+    nodes, edges = _scope(group("Mixer"))
+    delay = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "MixerBootDelay")
+    assert nodes[delay].find(W + "Combinator").get(XSI) == "rx:DelaySubscription"
+    assert nodes[delay].find(W + "Combinator").findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}DueTime") == "PT3S"
+    feeding = [nodes[a] for a in _upstream(edges, delay)]
+    expressions = [n.findtext("{clr-namespace:Bonsai.Scripting.Expressions;assembly=Bonsai.Scripting.Expressions}Expression") for n in feeding]
+    assert "TimeSpan.FromSeconds(Math.Max(3.0, SpeakerArray.Device.BootDelay))" in expressions
+
+
+def test_the_trigger_line_rises_and_falls_on_every_trial():
+    # BACKLOG (Decided): DO3 is held on every trial, optogenetics on or off, so the masking LEDs on it mask alike in every experiment.
+    nodes, edges = _scope(group("TaskLogic"))
+    lines = [i for i, n in enumerate(nodes) if (n.find(W + "Combinator") is not None and n.find(W + "Combinator").get(XSI) == "ext:LineMessage")]
+    assert len(lines) == 2
+    for line in lines:
+        assert not [a for a in _upstream(edges, line) if nodes[a].get(XSI) == "rx:Condition"]
+
+
+def test_the_readme_lists_every_open_rigs_block():
+    # Every node from an OpenRigs package (any xmlns naming an OpenRigs namespace, and every OpenRigs include) has a row.
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     table = readme[readme.index("## Shared Blocks"):]
     table = table[: table.index("\n## ", 4)] if "\n## " in table[4:] else table
-    used = {p.split(":")[1].replace(".bonsai", "").split(".")[-1] for e in MAIN.iter(W + "Expression")
-            if (p := e.get("Path") or "").startswith(("OpenRigs.Devices:", "OpenRigs.Vision:", "OpenRigs.Core:"))}
-    used |= {c.split(":")[1] for c in combinators(MAIN) if c.startswith(("core:", "zap:"))}
+    prefixes = [p for p, ns in re.findall(r'xmlns:(\w+)="clr-namespace:([\w.]+);', TEXT) if ns.startswith("OpenRigs")]
+    used = {name for p in prefixes for name in re.findall(r'xsi:type="' + p + r':(\w+)"', TEXT)}
+    used |= {p.split(":")[1].replace(".bonsai", "").split(".")[-1] for p in re.findall(r'Path="(OpenRigs\.[^"]+)"', TEXT)}
     missing = sorted(b for b in used if f"`{b}`" not in table)
     assert not missing, missing
     assert "dome-building-blocks" in table

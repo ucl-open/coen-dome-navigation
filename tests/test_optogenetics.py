@@ -72,17 +72,10 @@ def test_the_trigger_hold_outlasts_the_longest_ramp_down():
         OptogeneticsConfig(trigger_hold_seconds=0.4)
 
 
-def test_corridor_cs_checks_the_same_rules():
+def test_corridor_cs_uses_the_same_constants():
+    # Corridor.cs's own checks of these rules, and the laser-off trials' 0 mW, are tests\Extensions.Tests' (CorridorTests.cs).
     assert float(re.search(r"const double LaserMaxMarginSec = ([\d.]+);", CORRIDOR).group(1)) == LASER_MAX_MARGIN_SEC
     assert float(re.search(r"const double BeepSeconds = ([\d.]+);", CORRIDOR).group(1)) == BEEP_INTERVAL_SEC
-    assert "Math.Round(beeps) <= 4" in CORRIDOR and "TimeLimitSeconds.HasValue" in CORRIDOR
-
-
-def test_every_optogenetics_trial_has_a_condition_and_laser_off_is_0_mw():
-    # Pip's decision 11: laser-off trials send their condition at 0 mW (galvos move, masking light on).
-    assert "t.laserCondition = random.Next(setup.ConditionCount) + 1;" in CORRIDOR
-    assert "t.laserPowerMw = t.laserOn ? opto.LaserPowerMw.Value : 0;" in CORRIDOR
-    assert "LaserPower = (float)trial.laserPowerMw," in CORRIDOR and "LaserOn = trial.laserOn," in CORRIDOR
 
 
 def test_the_laser_cap_s_code_says_laser_not_stimulus():

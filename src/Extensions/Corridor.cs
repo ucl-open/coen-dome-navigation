@@ -115,7 +115,7 @@ public class CorridorTrial
     public bool laserOn;
     public double laserPowerMw;         // 0 with the laser off
     public double laserMaxSeconds;
-    public double triggerHoldSeconds;   // the trigger line stays high this long after the outcome
+    public double triggerHoldSeconds;   // the trigger line stays high this long after the outcome, on every trial
     public int rngSeed;                 // the experiment's seed, for the RngSeed event
 }
 
@@ -151,6 +151,7 @@ public class CorridorSetup
         var problems = new List<string>();
         if (task.TrialStructure.TrackLengthsCm == null || task.TrialStructure.TrackLengthsCm.Count == 0 || task.TrialStructure.TrackLengthsCm.Any(l => !(l > 0))) problems.Add("trialStructure.trackLengthsCm needs at least one length above 0");
         if (task.TrialStructure.ItiMaxSeconds < task.TrialStructure.ItiMinSeconds) problems.Add("trialStructure.itiMaxSeconds is below itiMinSeconds");
+        if (task.Optogenetics.TriggerHoldSeconds >= task.TrialStructure.ItiMinSeconds) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be below trialStructure.itiMinSeconds ({1} s): the trigger line, held that long after every outcome, must fall before the next trial raises it", task.Optogenetics.TriggerHoldSeconds, task.TrialStructure.ItiMinSeconds));
         if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage '" + row.Label + "' truncates trials but truncation.sweepFractions is empty");
         if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage '{0}''s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", row.Label, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
         var opto = task.Optogenetics;
@@ -164,7 +165,7 @@ public class CorridorSetup
             {
                 problems.Add(string.Format("optogenetics.laserMaxSeconds must be at least {0} s (the longest timeLimitSeconds plus laserToStimulusSeconds plus {1} s)", limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSec, LaserMaxMarginSec));
             }
-            if (!hardwareTriggered && !(subjectId ?? "").Trim().ToLowerInvariant().StartsWith("test"))
+            if (!hardwareTriggered && (subjectId ?? "").Trim().ToLowerInvariant() != "test")
             {
                 problems.Add("this rig's Zapit is not hardware-triggered (rig.yml zapit.hardwareTriggered), so only the test mouse may run optogenetics on it, not " + subjectId);
             }
@@ -221,6 +222,7 @@ public class TrialDraw
         var opto = task.Optogenetics;
         t.optogenetics = opto.UseZapit;
         t.firstPipBeep = 1;
+        t.triggerHoldSeconds = opto.TriggerHoldSeconds;  // the trigger line (and the masking light on it) rises on every trial
         if (opto.UseZapit)
         {
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
@@ -230,7 +232,6 @@ public class TrialDraw
             t.laserOn = t.trialNumber > opto.TrialsBeforeLaser && random.NextDouble() < opto.LaserOnProbability;
             t.laserPowerMw = t.laserOn ? opto.LaserPowerMw.Value : 0;
             t.laserMaxSeconds = opto.LaserMaxSeconds;
-            t.triggerHoldSeconds = opto.TriggerHoldSeconds;
         }
         return t;
     }
@@ -417,11 +418,12 @@ public class CorridorState
     List<CorridorEvent> Run()
     {
         var events = new List<CorridorEvent>();
-        while (phase == Phase.Running && now >= start + nextBeep * CorridorSetup.BeepSeconds - 1e-9)
+        // Only the latest beep due: after a gap in the Harp clock the missed pips are not played at once.
+        var due = (int)Math.Floor((now - start + 1e-9) / CorridorSetup.BeepSeconds);
+        if (phase == Phase.Running && due >= nextBeep && due >= trial.firstPipBeep)
         {
-            var beep = nextBeep++;
-            if (beep < trial.firstPipBeep) continue;
-            last = Frame(beep);
+            nextBeep = due + 1;
+            last = Frame(due);
             if (double.IsNaN(onset)) onset = now;
             events.Add(new CorridorEvent { Kind = CorridorEventKind.Pip, Seconds = now, Trial = trial, Frame = last });
             if (!trial.lickToReward && last.Row.toneFrequencyHz >= trial.rewardFloorHz) events.Add(End("FreqReached"));
@@ -469,11 +471,12 @@ public class CorridorState
 
     /// <summary>The outcome (Tom Childs' ProcessTrialEnd): a trial that ends on a lick in the zone or the zone reached
     /// is rewarded; one that runs out of time or track in the zone is punished, as is one ending outside it on a stage
-    /// with punishWrongZone.</summary>
+    /// with punishWrongZone. Reaching the zone is the floor alone, as in Tom's FreqAboveThreshold: a drifting stage's
+    /// tone can pass the ceiling (and the sweep's end) on the beep it crosses the floor, and is rewarded.</summary>
     CorridorEvent End(string reason)
     {
         var tone = last != null ? last.Row.toneFrequencyHz : 0;
-        var onTarget = OnTarget(tone);
+        var onTarget = reason == "FreqReached" || OnTarget(tone);
         var timedOut = reason == "Timeout" || reason == "EndOfTrack";
         var rewarded = onTarget && (reason == "Lick" || reason == "FreqReached");
         var punished = onTarget ? timedOut : trial.punishWrongZone;

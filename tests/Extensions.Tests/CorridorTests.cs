@@ -190,6 +190,39 @@ public class TrialDrawTests
     }
 
     [TestMethod]
+    public void ALeadTimeOutsideWholeBeepsUpTo200MsIsRefused()
+    {
+        foreach (var seconds in new[] { 0.0, 0.07, 0.25 })
+        {
+            var task = Fixture.Task();
+            Fixture.Opto(task);
+            task.Optogenetics.LaserToStimulusSeconds = seconds;
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message, "laserToStimulusSeconds");
+        }
+        var ok = Fixture.Task();
+        Fixture.Opto(ok);
+        ok.Optogenetics.LaserToStimulusSeconds = 0.2;
+        Assert.AreEqual(4, new TrialDraw(Fixture.Setup(ok, 4)).Next().firstPipBeep);
+    }
+
+    [TestMethod]
+    public void ZapitIsSentEachTrialsConditionPowerAndLaserState()
+    {
+        var off = new CorridorTrial { trialNumber = 3, laserCondition = 2, laserOn = false, laserPowerMw = 0 };
+        var on = new CorridorTrial { trialNumber = 4, laserCondition = 1, laserOn = true, laserPowerMw = 2.0 };
+        var a = ZapitTrialCommand.Build(off, true);
+        Assert.AreEqual(2, a.ConditionNumber);
+        Assert.IsFalse(a.LaserOn);
+        Assert.AreEqual(0f, a.LaserPower);
+        Assert.IsTrue(a.HardwareTriggered);
+        var b = ZapitTrialCommand.Build(on, false);
+        Assert.IsTrue(b.LaserOn);
+        Assert.AreEqual(2f, b.LaserPower);
+        Assert.AreEqual(0, b.StimDuration);   // continuous: Bonsai stops it
+        Assert.ThrowsException<InvalidOperationException>(() => ZapitTrialCommand.Build(new CorridorTrial(), true));
+    }
+
+    [TestMethod]
     public void ALaserCapShorterThanTheLongestTrialIsRefused()
     {
         var task = Fixture.Task();
@@ -363,5 +396,61 @@ public class CorridorStateTests
         var state = new CorridorState(Fixture.Setup(Fixture.Task(), 0));
         state.OnClock(10).ToList();
         Assert.ThrowsException<InvalidOperationException>(() => state.OnClock(9).ToList());
+    }
+
+    [TestMethod]
+    public void Stage0RunningAt40CmPerSecondPastTheCeilingIsStillRewarded()
+    {
+        // 6 s of drift, then 2 cm a beep: the beep that crosses the floor is above the ceiling (the sweep's end, 25000 Hz).
+        var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
+        rig.RunTo(CorridorEventKind.Start);
+        rig.Until(rig.Now + 6.0);
+        double cm = 0;
+        CorridorEvent outcome = null;
+        for (int i = 0; i < 200 && outcome == null; i++)
+        {
+            cm += 2.0;
+            rig.Wheel(cm);
+            var seen = rig.Events.Count;
+            rig.Until(rig.Now + 0.05);
+            outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == CorridorEventKind.Outcome);
+        }
+        Assert.AreEqual("FreqReached", outcome.Row.endReason);
+        Assert.IsTrue(outcome.Row.toneEndFrequencyHz > 25000, outcome.Row.toneEndFrequencyHz.ToString());
+        Assert.IsTrue(outcome.Rewarded);
+        Assert.AreEqual("Correct", outcome.Row.outcome);
+        Assert.IsFalse(outcome.Row.punishSound);
+    }
+
+    [TestMethod]
+    public void AfterAGapInTheHarpClockOnlyTheLatestBeepPips()
+    {
+        var rig = new Rig(Fixture.Setup(Fixture.Task(), 3));
+        var start = rig.RunTo(CorridorEventKind.Start);
+        rig.Until(rig.Now + 0.2);
+        var seen = rig.Events.Count;
+        rig.Now = Math.Round(rig.Now + 0.2, 6);
+        rig.Events.AddRange(rig.State.OnClock(rig.Now));
+        Assert.AreEqual(1, rig.Events.Skip(seen).Count(e => e.Kind == CorridorEventKind.Pip));
+        rig.Until(rig.Now + 0.2);
+        var pips = rig.Events.Where(e => e.Kind == CorridorEventKind.Pip).Select(e => e.Seconds).ToList();
+        for (int i = 1; i < pips.Count; i++) Assert.IsTrue(pips[i] - pips[i - 1] > 0.049, pips[i].ToString());
+        Assert.AreEqual(start.Seconds + 0.6, pips.Last(), 0.0011);   // back on the 50 ms grid
+    }
+
+    [TestMethod]
+    public void TheTriggerLineIsHeldOnEveryTrialWithOptogeneticsOff()
+    {
+        var trial = new TrialDraw(Fixture.Setup(Fixture.Task(), 3)).Next();
+        Assert.IsFalse(trial.optogenetics);
+        Assert.AreEqual(1.0, trial.triggerHoldSeconds);
+    }
+
+    [TestMethod]
+    public void ATriggerHoldAsLongAsTheShortestIntervalIsRefused()
+    {
+        var task = Fixture.Task();
+        task.Optogenetics.TriggerHoldSeconds = 2.0;
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 0)).Message, "triggerHoldSeconds");
     }
 }

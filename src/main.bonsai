@@ -68,7 +68,7 @@
               <Name>RigConfigs</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>StepperStepSize</Name>
+              <Name>SpoutStepSize</Name>
             </Expression>
             <Expression xsi:type="PropertyMapping">
               <PropertyMappings>
@@ -77,7 +77,6 @@
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
               <Description>Every dome device, named as in the data, behind its subjects (Dome Building Blocks): the Behavior board (wheel distance, pulses, the ZapitTrigger line cleared however the workflow stops), the timestamp generator (Timestamp, HarpClockSet), both Lickety Splits, the three cameras and the lick spout stage, which homes, goes in and handles the spout commands.</Description>
-              <SpoutStepSize>150</SpoutStepSize>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="BooleanProperty">
@@ -130,7 +129,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, ManualRewardUl and SpoutStepSize settable live, the spout commands (handled by HarpLickSpoutStage in DomeHardware) at any time; at Go RunSettings (subject, session), TaskFilePath (TaskPath, the task file rig-control wrote) and TrainingStage are published.</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, ManualRewardUl and SpoutStepSize settable live (each a subject of its name, its one default there, shown to the controller by ParameterDefault a second after Start), the spout commands (handled by HarpLickSpoutStage in DomeHardware) at any time; at Go RunSettings (subject, session), TaskFilePath (TaskPath, the task file rig-control wrote) and TrainingStage are published.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -175,14 +174,14 @@
                 </Parameter>
                 <Parameter>
                   <Name>ManualRewardUl</Name>
-                  <Value>3</Value>
-                  <Description>Microlitres RewardLeft and RewardRight deliver before Go, taken live; after Go too. The task's own rewards are this stage's rewardSizeUl (trainingStages).</Description>
+                  <Value />
+                  <Description>Microlitres RewardLeft and RewardRight deliver, taken live before Go and kept after it; until set, the ManualRewardUl subject's default (Initialization). The task's own rewards are this stage's rewardSizeUl (trainingStages).</Description>
                   <Minimum>0</Minimum>
                 </Parameter>
                 <Parameter>
                   <Name>SpoutStepSize</Name>
-                  <Value>150</Value>
-                  <Description>Motor steps each spout nudge command moves, taken live while ready.</Description>
+                  <Value />
+                  <Description>Motor steps each spout nudge command moves, taken live while ready; until set, the SpoutStepSize subject's default (Initialization).</Description>
                   <Minimum>1</Minimum>
                   <WholeNumber>true</WholeNumber>
                 </Parameter>
@@ -352,7 +351,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject">
-              <Name>StepperStepSize</Name>
+              <Name>SpoutStepSize</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>ControlEvents</Name>
@@ -367,7 +366,7 @@
               <scr:Expression>Convert.ToInt32(it)</scr:Expression>
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>StepperStepSize</Name>
+              <Name>SpoutStepSize</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="DoubleProperty">
@@ -375,7 +374,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject">
-              <Name>RewardUl</Name>
+              <Name>ManualRewardUl</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>ControlEvents</Name>
@@ -409,7 +408,43 @@
               <scr:Expression>Convert.ToDouble(it)</scr:Expression>
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>RewardUl</Name>
+              <Name>ManualRewardUl</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>SpoutStepSize</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Take">
+                <rx:Count>1</rx:Count>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:DelaySubscription">
+                <rx:DueTime>PT1S</rx:DueTime>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ParameterDefault">
+                <orcl:Name>SpoutStepSize</orcl:Name>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>ManualRewardUl</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Take">
+                <rx:Count>1</rx:Count>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:DelaySubscription">
+                <rx:DueTime>PT1S</rx:DueTime>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ParameterDefault">
+                <orcl:Name>ManualRewardUl</orcl:Name>
+              </Combinator>
             </Expression>
           </Nodes>
           <Edges>
@@ -446,12 +481,18 @@
             <Edge From="39" To="40" Label="Source1" />
             <Edge From="40" To="41" Label="Source1" />
             <Edge From="41" To="42" Label="Source1" />
+            <Edge From="43" To="44" Label="Source1" />
+            <Edge From="44" To="45" Label="Source1" />
+            <Edge From="45" To="46" Label="Source1" />
+            <Edge From="47" To="48" Label="Source1" />
+            <Edge From="48" To="49" Label="Source1" />
+            <Edge From="49" To="50" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Declarations</Name>
-        <Description>Subjects several groups share: Zapit's commands and replies, reward requests (side, microlitres) for DeliverReward, the mixer's buffers, the task's events and rows, and TrialActive (true from a trial's start to its outcome).</Description>
+        <Description>Subjects several groups share: Zapit's commands and replies, reward requests (side, microlitres) for DeliverReward, the mixer's buffers, and the task's events and rows.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="zap:ZapitCommand">
@@ -481,18 +522,8 @@
             <Expression xsi:type="rx:PublishSubject" TypeArguments="harp:Timestamped(ext:StimulusStateRow)">
               <rx:Name>StimulusRows</rx:Name>
             </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="BooleanProperty">
-                <Value>false</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:BehaviorSubject">
-              <Name>TrialActive</Name>
-            </Expression>
           </Nodes>
-          <Edges>
-            <Edge From="9" To="10" Label="Source1" />
-          </Edges>
+          <Edges />
         </Workflow>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
@@ -815,7 +846,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>RewardUl</Name>
+              <Name>ManualRewardUl</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -834,7 +865,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>RewardUl</Name>
+              <Name>ManualRewardUl</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -910,7 +941,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay after Start: one mixer source each for the pips (Buffer), the reward tone and the error tone, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. Every file in src\waveforms is at the loudness it plays at, on all 32 channels.</Description>
+        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay (at least 3 s) after Start: one mixer source each for the pips (Buffer), the reward tone and the error tone, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. Every file in src\waveforms is one channel, at the loudness it plays at.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="GroupWorkflow">
@@ -961,8 +992,8 @@
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
                     <scr:Name>BootDelay</scr:Name>
-                    <scr:Description>rig.yml's speakerArray.device.bootDelay (3 s on every dome): an error while the sound card boots can blue-screen the PC, so the mixer starts this long after Start.</scr:Description>
-                    <scr:Expression>TimeSpan.FromSeconds(SpeakerArray.Device.BootDelay)</scr:Expression>
+                    <scr:Description>rig.yml's bootDelay, never under 3 s: a fault while the sound card boots can blue-screen the PC.</scr:Description>
+                    <scr:Expression>TimeSpan.FromSeconds(Math.Max(3.0, SpeakerArray.Device.BootDelay))</scr:Expression>
                   </Expression>
                   <Expression xsi:type="PropertyMapping">
                     <PropertyMappings>
@@ -970,6 +1001,8 @@
                     </PropertyMappings>
                   </Expression>
                   <Expression xsi:type="Combinator">
+                    <Name>MixerBootDelay</Name>
+                    <Description>Deliberate: the mixer starts at least 3 s after Start. Never remove or shorten it.</Description>
                     <Combinator xsi:type="rx:DelaySubscription">
                       <rx:DueTime>PT3S</rx:DueTime>
                     </Combinator>
@@ -1275,7 +1308,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\Corridor.cs, tests\Extensions.Tests): CorridorTask draws each trial (TrialDraw), waits its interval and the stage's quiet period, has a hardware-triggered Zapit armed, then runs it along the virtual track (VirtualTrack) with a pip every 50 ms, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm and Start send Zapit the trial's condition (laser-off trials at 0 mW), Start raises the ZapitTrigger line, Pip plays the pip and sets the grating, Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the error tone, and clears the trigger line triggerHoldSeconds later (HarpDelay).</Description>
+        <Description>The task in tested C# (src\Extensions\Corridor.cs, tests\Extensions.Tests): CorridorTask draws each trial (TrialDraw), waits its interval and the stage's quiet period, has a hardware-triggered Zapit armed, then runs it along the virtual track (VirtualTrack) with a pip every 50 ms, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm and Start send Zapit the trial's condition (laser-off trials at 0 mW), Start raises the ZapitTrigger line on every trial, optogenetics on or off, so the masking light on it is alike in every experiment, Pip plays the pip and sets the grating, Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the error tone, and clears the trigger line triggerHoldSeconds later (HarpDelay), on every trial.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -1327,14 +1360,6 @@
               <Combinator xsi:type="ext:CorridorEvents">
                 <ext:Kind>Start</ext:Kind>
               </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="BooleanProperty">
-                <Value>true</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>TrialActive</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
               <Selector>Trial.trialNumber</Selector>
@@ -1544,14 +1569,6 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="BooleanProperty">
-                <Value>false</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>TrialActive</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
               <Combinator xsi:type="DoubleProperty">
                 <Value>0</Value>
               </Combinator>
@@ -1631,24 +1648,6 @@
             <Expression xsi:type="MulticastSubject">
               <Name>ErrorBuffer</Name>
             </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>OptogeneticsOutcome?</Name>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Trial.optogenetics</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
             <Expression xsi:type="InputMapping">
               <PropertyMappings>
                 <Property Name="DueSeconds" Selector="Trial.triggerHoldSeconds" />
@@ -1700,56 +1699,51 @@
             <Edge From="13" To="18" Label="Source1" />
             <Edge From="18" To="19" Label="Source1" />
             <Edge From="13" To="20" Label="Source1" />
-            <Edge From="20" To="21" Label="Source1" />
             <Edge From="13" To="22" Label="Source1" />
-            <Edge From="22" To="24" Label="Source1" />
-            <Edge From="23" To="24" Label="Source2" />
+            <Edge From="21" To="22" Label="Source2" />
+            <Edge From="22" To="23" Label="Source1" />
+            <Edge From="23" To="24" Label="Source1" />
             <Edge From="24" To="25" Label="Source1" />
-            <Edge From="25" To="26" Label="Source1" />
+            <Edge From="13" To="26" Label="Source1" />
             <Edge From="26" To="27" Label="Source1" />
-            <Edge From="13" To="28" Label="Source1" />
-            <Edge From="28" To="29" Label="Source1" />
-            <Edge From="29" To="30" Label="Source1" />
-            <Edge From="22" To="31" Label="Source1" />
-            <Edge From="32" To="33" Label="Source1" />
-            <Edge From="33" To="35" Label="Source1" />
-            <Edge From="34" To="35" Label="Source2" />
-            <Edge From="35" To="36" Label="Source1" />
+            <Edge From="27" To="28" Label="Source1" />
+            <Edge From="20" To="29" Label="Source1" />
+            <Edge From="30" To="31" Label="Source1" />
+            <Edge From="31" To="33" Label="Source1" />
+            <Edge From="32" To="33" Label="Source2" />
+            <Edge From="33" To="34" Label="Source1" />
+            <Edge From="34" To="35" Label="Source1" />
+            <Edge From="31" To="36" Label="Source1" />
             <Edge From="36" To="37" Label="Source1" />
-            <Edge From="33" To="38" Label="Source1" />
+            <Edge From="31" To="38" Label="Source1" />
             <Edge From="38" To="39" Label="Source1" />
-            <Edge From="33" To="40" Label="Source1" />
+            <Edge From="31" To="40" Label="Source1" />
             <Edge From="40" To="41" Label="Source1" />
-            <Edge From="33" To="42" Label="Source1" />
             <Edge From="42" To="43" Label="Source1" />
+            <Edge From="43" To="44" Label="Source1" />
             <Edge From="44" To="45" Label="Source1" />
-            <Edge From="45" To="46" Label="Source1" />
+            <Edge From="43" To="46" Label="Source1" />
             <Edge From="46" To="47" Label="Source1" />
-            <Edge From="45" To="48" Label="Source1" />
+            <Edge From="43" To="48" Label="Source1" />
             <Edge From="48" To="49" Label="Source1" />
-            <Edge From="45" To="50" Label="Source1" />
-            <Edge From="50" To="51" Label="Source1" />
-            <Edge From="45" To="52" Label="Source1" />
+            <Edge From="49" To="50" Label="Source1" />
+            <Edge From="48" To="52" Label="Source1" />
+            <Edge From="51" To="52" Label="Source2" />
             <Edge From="52" To="53" Label="Source1" />
             <Edge From="53" To="54" Label="Source1" />
-            <Edge From="52" To="56" Label="Source1" />
-            <Edge From="55" To="56" Label="Source2" />
-            <Edge From="56" To="57" Label="Source1" />
+            <Edge From="43" To="55" Label="Source1" />
+            <Edge From="55" To="57" Label="Source1" />
+            <Edge From="56" To="57" Label="Source2" />
             <Edge From="57" To="58" Label="Source1" />
-            <Edge From="45" To="59" Label="Source1" />
-            <Edge From="59" To="61" Label="Source1" />
-            <Edge From="60" To="61" Label="Source2" />
-            <Edge From="61" To="62" Label="Source1" />
-            <Edge From="62" To="63" Label="Source1" />
-            <Edge From="45" To="64" Label="Source1" />
+            <Edge From="58" To="59" Label="Source1" />
+            <Edge From="43" To="60" Label="Source1" />
+            <Edge From="60" To="62" Label="Source1" />
+            <Edge From="61" To="62" Label="Source2" />
+            <Edge From="62" To="64" Label="Source1" />
+            <Edge From="63" To="64" Label="Source2" />
             <Edge From="64" To="65" Label="Source1" />
-            <Edge From="65" To="67" Label="Source1" />
-            <Edge From="66" To="67" Label="Source2" />
-            <Edge From="67" To="69" Label="Source1" />
-            <Edge From="68" To="69" Label="Source2" />
-            <Edge From="69" To="70" Label="Source1" />
-            <Edge From="70" To="71" Label="Source1" />
-            <Edge From="71" To="72" Label="Source1" />
+            <Edge From="65" To="66" Label="Source1" />
+            <Edge From="66" To="67" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -1999,7 +1993,7 @@
                   </Expression>
                   <Expression xsi:type="GroupWorkflow">
                       <Name>ZapitReplies</Name>
-                      <Description>Harp-timestamped log of every Zapit reply: the presented condition and laser state per StartStimulus, plus the last startup query reply (GetNumConditions), handed over by the ZapitReplies BehaviorSubject when ExperimentLogs starts.</Description>
+                      <Description>Harp-timestamped log of every Zapit reply from when ExperimentLogs starts (the presented condition and laser state per StartStimulus). ZapitReplies is a PublishSubject, so a reply before then, such as the startup GetNumConditions, is not in it.</Description>
                       <Workflow>
                         <Nodes>
                           <Expression xsi:type="SubscribeSubject">

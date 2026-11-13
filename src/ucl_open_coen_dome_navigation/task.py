@@ -10,7 +10,7 @@ sound, and rngSeed seeds every draw. The sweep and its loudness are src/waveform
 import json
 import math
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import Literal
 
 from open_rigs.core.task import Task, TaskParameters
 from pydantic import ConfigDict, Field, field_validator, model_validator
@@ -39,7 +39,7 @@ class TrialStructure(BaseSchema):
         description="Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)",
     )
     iti_max_seconds: float = Field(default=3.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)")
-    track_lengths_cm: List[float] = Field(
+    track_lengths_cm: list[float] = Field(
         default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
     )
 
@@ -73,7 +73,7 @@ class Truncation(BaseSchema):
     zone without the stimulus.
     """
 
-    sweep_fractions: List[float] = Field(
+    sweep_fractions: list[float] = Field(
         default=[0.4, 0.6],
         min_length=1,
         description="Where the stimulus switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
@@ -81,7 +81,7 @@ class Truncation(BaseSchema):
 
     @field_validator("sweep_fractions")
     @classmethod
-    def _fractions_inside(cls, value: List[float]) -> List[float]:
+    def _fractions_inside(cls, value: list[float]) -> list[float]:
         if any(not 0 < fraction < 1 for fraction in value):
             raise ValueError("Truncation sweep fractions must be between 0 and 1")
         return value
@@ -119,9 +119,9 @@ class OptogeneticsConfig(BaseSchema):
     use_zapit: bool = Field(default=False, description="Whether Zapit runs this experiment: every trial sends it a condition, laser on or off, and rig-control checks Zapit is answering before Go")
     zapit_config_path: str = Field(
         default="",
-        description="Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out 1 s after the outcome)",
+        description="Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out trigger_hold_seconds after the outcome)",
     )
-    laser_power_mw: Optional[float] = Field(
+    laser_power_mw: float | None = Field(
         default=None,
         gt=0,
         description="Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the conditions file's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on laser-off trials). Required with optogenetics on",
@@ -141,12 +141,12 @@ class OptogeneticsConfig(BaseSchema):
         default=0.1,
         ge=0.05,
         le=0.2,
-        description="How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip",
+        description="How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)",
     )
     trigger_hold_seconds: float = Field(
         default=1.0,
         ge=0.5,
-        description="How long the trigger line, and the masking light on it, stays high after the outcome, in seconds: at least 0.5, the longest ramp-down a conditions file may have",
+        description="How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial (optogenetics on or off, so the light masks alike in every experiment): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it",
     )
     trials_before_laser: int = Field(
         default=20,
@@ -187,19 +187,19 @@ class TrainingStage(BaseSchema):
     reward_ceiling_hz: float = Field(ge=1, le=25000, description="Upper frequency of the reward zone, in Hz")
     reward_size_ul: float = Field(
         gt=0,
-        description="Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)",
+        description="Microlitres each reward gives, on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)",
     )
     lick_to_reward: bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
     punish_wrong_zone: bool = Field(
         description="Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage"
     )
-    quiet_seconds: Optional[float] = Field(
+    quiet_seconds: float | None = Field(
         default=None,
         gt=0,
         description="After the inter-trial interval, the trial waits until the mouse has gone this long without licking, in seconds (uncapped), so licks for the last reward cannot carry into the next trial; null: no wait",
     )
-    time_limit_seconds: Optional[float] = Field(
+    time_limit_seconds: float | None = Field(
         default=None, gt=0, description="The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit"
     )
     track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
@@ -228,7 +228,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     punishment: Punishment = Field(default=Punishment(), description="The timeout and error sound a punished trial gets")
     truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
     optogenetics: OptogeneticsConfig = Field(default=OptogeneticsConfig(), description="Zapit optogenetic stimulation")
-    training_stages: List[TrainingStage] = Field(
+    training_stages: list[TrainingStage] = Field(
         description="Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go"
     )
 
@@ -249,6 +249,16 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         return self
 
     @model_validator(mode="after")
+    def _trigger_falls_before_the_next_trial(self):
+        hold, iti = self.optogenetics.trigger_hold_seconds, self.trial_structure.iti_min_seconds
+        if hold >= iti:
+            raise ValueError(
+                f"optogenetics.trigger_hold_seconds ({hold} s) must be below trial_structure.iti_min_seconds ({iti} s): "
+                "the trigger line, held that long after every outcome, must fall before the next trial raises it"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _zones_inside_sweep(self):
         made = sweep()
         for i, stage in enumerate(self.training_stages):
@@ -260,7 +270,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
 
     @field_validator("training_stages")
     @classmethod
-    def _at_least_one_stage(cls, value: List[TrainingStage]) -> List[TrainingStage]:
+    def _at_least_one_stage(cls, value: list[TrainingStage]) -> list[TrainingStage]:
         if not value:
             raise ValueError("training_stages must have at least one entry")
         return value

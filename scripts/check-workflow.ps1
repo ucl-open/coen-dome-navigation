@@ -1,15 +1,19 @@
 param(
     # Internal: the step this script runs in a fresh process of its own (assemblies stay loaded).
-    [ValidateSet('', 'Build')][string]$Step = ''
+    [ValidateSet('', 'Build', 'Checks')][string]$Step = ''
 )
 # Checks a change to src\ without the rig and without opening Bonsai: no window, no device.
 #   1. Compiles src\Extensions under C# 5, the language Bonsai compiles it with.
-#   2. Builds src\main.bonsai with Bonsai's own expression builders, as Bonsai does at Start before it
+#   2. Runs tests\Extensions.Tests (the corridor's draw, interval, run and outcome, the Zapit command, rig-template.yml
+#      through the generated deserializer).
+#   3. Builds src\main.bonsai with Bonsai's own expression builders, as Bonsai does at Start before it
 #      subscribes anything (every type, selector, include, subject and mapping), against
 #      config\rig-template.yml filled in as a rig's, every node that reads rig.yml pointed at that copy.
-#      Then checks what the build made: RecordHarpDevices' boards, ExperimentManifest's expected files,
-#      the trial row's columns against schemas\trial-columns.yml, and no wait but the laser cap's backstop
-#      on the wall clock inside TaskLogic.
+#      Then checks what the build made: RecordHarpDevices' boards, ExperimentManifest's expected files and
+#      the trial row's columns against schemas\trial-columns.yml.
+#   4. Each config\task*.yml reads as the workflow reads it at Go, TaskPath and MissingCalibration are exposed,
+#      and every key in the template reaches the Settings_Rig JSON the experiment logs.
+# TaskLogic's waits (all on the Harp clock but the laser cap's backstop) are tests\test_workflow.py's.
 # Needs the environment set up (.bonsai\Setup.ps1: .bonsai\Packages). Exit 0 when all pass.
 $ErrorActionPreference = 'Stop'
 $self = $MyInvocation.MyCommand.Path
@@ -29,7 +33,7 @@ function Initialize-Assemblies {
         if ($f.platform -eq 'x64') { $env:PATH = (Join-Path $bonsaiDir $f.path) + ';' + $env:PATH }
     }
     $script:resolveMap = $map; $script:resolvePkgs = Join-Path $bonsaiDir 'Packages'
-    [AppDomain]::CurrentDomain.add_AssemblyResolve([ResolveEventHandler]{
+    $script:resolver = [ResolveEventHandler]{
         param($s, $e)
         $n = (New-Object Reflection.AssemblyName $e.Name).Name
         $loaded = [AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -eq $n } | Select-Object -First 1
@@ -41,7 +45,8 @@ function Initialize-Assemblies {
         }
         if ($p -and (Test-Path $p)) { return [Reflection.Assembly]::LoadFrom($p) }
         return $null
-    })
+    }
+    [AppDomain]::CurrentDomain.add_AssemblyResolve($script:resolver)
     foreach ($n in 'Bonsai.Core', 'Bonsai', 'Extensions') { $null = [Reflection.Assembly]::LoadFrom($map[$n]) }
 }
 
@@ -134,14 +139,74 @@ public class BuiltObjects : System.Linq.Expressions.ExpressionVisitor {
     exit $(if ($failed) { 1 } else { 0 })
 }
 
+if ($Step -eq 'Checks') {
+    Initialize-Assemblies
+    foreach ($p in $script:resolveMap.Values) { if (Test-Path $p) { try { $null = [Reflection.Assembly]::LoadFrom($p) } catch {} } }
+    [AppDomain]::CurrentDomain.remove_AssemblyResolve($script:resolver)
+    $failed = 0
+    # Each task file as the workflow reads it at Go (the generated deserializer: no unknown key).
+    foreach ($file in Get-ChildItem (Join-Path $repo 'config') -Filter 'task*.yml') {
+        try {
+            $d = (New-Object YamlDotNet.Serialization.DeserializerBuilder).Build()
+            $c = $d.Deserialize((New-Object IO.StringReader ([IO.File]::ReadAllText($file.FullName))), [UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskLogic])
+            if ($c.TaskParameters.TrainingStages.Count -gt 0) { "  ok    config\$($file.Name) reads as the workflow reads it at Go" }
+            else { "  FAIL  config\$($file.Name) has no trainingStages"; $failed++ }
+        } catch { $x = $_.Exception; while ($x.InnerException) { $x = $x.InnerException }; "  FAIL  config\$($file.Name): $($x.Message)"; $failed++ }
+    }
+    $wf = Get-Content (Join-Path $repo 'src\main.bonsai') -Raw
+    if ($wf -match '<Property Name="TaskPath"' -and $wf -match '<Property Name="MissingCalibration"') { "  ok    main.bonsai exposes TaskPath and MissingCalibration" }
+    else { "  FAIL  main.bonsai does not expose TaskPath and MissingCalibration"; $failed++ }
+    $yaml = [IO.File]::ReadAllText((Write-FilledTemplate))
+    $E = [Linq.Expressions.Expression]
+    $wait = [System.Reactive.Linq.Observable].GetMethods() | Where-Object { $_.Name -eq 'Wait' -and $_.GetParameters().Count -eq 1 } | Select-Object -First 1
+    function New-RigYamlExpression {
+        $x = $E::Constant([System.Reactive.Linq.Observable]::Return($yaml), [IObservable[string]])
+        $des = New-Object UclOpenCoenDomeNavigation.DeserializeFromYaml
+        $des.Type = [Activator]::CreateInstance([Bonsai.Expressions.TypeMapping`1].MakeGenericType([UclOpenCoenDomeNavigation.DomeRig]))
+        return $des.Build([Linq.Expressions.Expression[]]@($x))
+    }
+    # The experiment's Settings_Rig JSON is rig.yml as parsed, and the manifest keeps only rig.yml's hash,
+    # so every key in rig.yml must reach the JSON.
+    try {
+        $x = New-RigYamlExpression
+        $cb = New-Object Bonsai.Expressions.CombinatorBuilder
+        $ser = New-Object UclOpenCoenDomeNavigation.SerializeToJson; $ser.Formatting = 'Indented'; $cb.Combinator = $ser
+        $x = $cb.Build([Linq.Expressions.Expression[]]@($x))
+        $json = $E::Lambda($E::Call($wait.MakeGenericMethod([string]), $x)).Compile().DynamicInvoke()
+        $jsonKeys = New-Object System.Collections.Generic.List[string]
+        foreach ($t in [Newtonsoft.Json.Linq.JToken]::Parse($json).Descendants()) {
+            if ($t -is [Newtonsoft.Json.Linq.JProperty]) { $jsonKeys.Add(($t.Path -replace '\[\d+\]', '[]')) }
+        }
+        $yamlKeys = New-Object System.Collections.Generic.List[string]
+        function Add-YamlKeys($node, [string]$at) {
+            if ($node -is [System.Collections.IDictionary]) { foreach ($k in $node.Keys) { $p = if ($at) { "$at.$k" } else { "$k" }; $yamlKeys.Add($p); Add-YamlKeys $node[$k] $p } }
+            elseif ($node -is [System.Collections.IList]) { foreach ($i in $node) { Add-YamlKeys $i "$at[]" } }
+        }
+        Add-YamlKeys ((New-Object YamlDotNet.Serialization.Deserializer).Deserialize((New-Object IO.StringReader $yaml))) ''
+        $lost = @($yamlKeys | Where-Object { $jsonKeys -notcontains $_ })
+        if ($yamlKeys.Count -gt 0 -and $lost.Count -eq 0) { "  ok    Settings_Rig JSON keeps all $($yamlKeys.Count) keys of rig-template.yml" }
+        else { "  FAIL  Settings_Rig JSON lost $($lost.Count) of $($yamlKeys.Count) keys of rig-template.yml: $($lost -join ', ')"; $failed++ }
+    } catch { $x = $_.Exception; while ($x.InnerException) { $x = $x.InnerException }; "  FAIL  Settings_Rig JSON: $($x.Message)"; $failed++ }
+    exit $(if ($failed) { 1 } else { 0 })
+}
+
+if (-not (Test-Path (Join-Path $bonsaiDir 'Packages'))) { throw "No .bonsai\Packages in $repo. Run .bonsai\Setup.ps1 first." }
 $failed = 0
 "1. C# 5 compile of src\Extensions"
 $null = New-Item -ItemType Directory -Path $bin -Force
 $out = & dotnet build (Join-Path $repo 'src\Extensions.csproj') -p:LangVersion=5 -o $bin 2>&1
 if ($LASTEXITCODE -ne 0) { $out | Select-String 'error' | Select-Object -First 10 | ForEach-Object { "  $_" }; "  FAIL  Extensions does not compile under C# 5"; exit 1 }
 "  ok    Extensions compiles under C# 5"
-"2. Build main.bonsai against the filled rig template"
+"2. tests\Extensions.Tests"
+$log = & { $ErrorActionPreference = 'Continue'; & dotnet test (Join-Path $repo 'tests\Extensions.Tests') -nologo 2>&1 | ForEach-Object { "$_" } }
+$testExit = $LASTEXITCODE
+$log | Where-Object { $_ -match 'Passed!|Failed|error' } | ForEach-Object { "  $_" }
+if ($testExit -ne 0) { "  FAIL  tests\Extensions.Tests"; $failed++ }
+"3. Build main.bonsai against the filled rig template"
 & powershell -NoProfile -ExecutionPolicy Bypass -File $self -Step Build
+if ($LASTEXITCODE -ne 0) { $failed++ }
+"4. The task files, the launch properties and Settings_Rig"
+& powershell -NoProfile -ExecutionPolicy Bypass -File $self -Step Checks
 if ($LASTEXITCODE -ne 0) { $failed++ }
 if ($failed) { "FAILED"; exit 1 }
 "All checks passed."

@@ -147,6 +147,18 @@ def ours(manifest: Path) -> bool:
     return not repo or "coen-dome-navigation" in repo
 
 
+def _subject_folders(base: Path, subject: str, unread: list[str] | None) -> list[Path]:
+    """The mouse's experiment folders under one root; none, and the root added to `unread`, if it does not answer."""
+    try:
+        if unanswered(base):
+            raise OSError(base)
+        return [*base.glob(f"sub-{subject}/ses-*"), *base.glob(f"*/sub-{subject}/ses-*")]
+    except OSError:
+        if unread is not None:
+            unread.append(f"{base} (No Answer)")
+        return []
+
+
 def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unread: list[str] | None = None) -> list[Experiment]:
     """Every experiment of the mouse in the roots, newest first; a folder seen twice (on the rig and in
     staging) counts once. A share that does not answer is added to `unread`, as is an experiment of
@@ -155,15 +167,7 @@ def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unrea
     manifest_only: list[str] = []
     for reader, bases in ((read_new, roots), (read_legacy, legacy_roots)):
         for base in bases:
-            try:
-                if unanswered(base):
-                    raise OSError(base)
-                folders = [*base.glob(f"sub-{subject}/ses-*"), *base.glob(f"*/sub-{subject}/ses-*")]
-            except OSError:
-                if unread is not None:
-                    unread.append(f"{base} (No Answer)")
-                continue
-            for folder in folders:
+            for folder in _subject_folders(base, subject, unread):
                 if folder.name in found or not folder.is_dir():
                     continue
                 if reader is read_new and (folder / "manifest.json").is_file():

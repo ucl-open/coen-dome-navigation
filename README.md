@@ -8,7 +8,19 @@ Converted on 9 Nov 2026 from `ucl-open/auditory-vr-corridor` (`main` b67a1f6 wit
 
 From rig-control: choose the rig and the mouse (launched by its lab ID, such as `TC001`), then this workflow and `config\task-abstract-av-corridor.yml`. The form shows the task's Modality and Training Stage; the stage is suggested from the mouse's earlier experiments of that modality (`uv run suggest-stage --subject <lab ID> --modality auditory`, Tom's rules from `gen_session.py`, reading this workflow's data on the rig, in staging and in Live-Data, and the old TrialLogs). Launch puts the rig in ready mode (hardware armed, cameras on, spouts homed, nothing recorded); Go reads the task file and starts the trials once the experiment folder exists.
 
-What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided). The Zapit optogenetics port is in `ZAPIT-V2-CHANGES.md`; the rig checks before the first optogenetics experiment are in `docs\zapit-rig-test.md`.
+What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided); the rig checks before the first optogenetics experiment are in `docs\zapit-rig-test.md`.
+
+## Optogenetics
+
+Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `optogenetics.useZapit`:
+
+- Every stimulus is continuous (no `StimDuration` or `StartDelay` is sent): Zapit ignores StopStimulus for a timed one. The laser runs from the trial's start (beep 0) until Bonsai stops it at the outcome, or at `laserMaxSeconds` on the Harp clock (a wall-clock backstop should the board stall).
+- Every trial sends Zapit a condition drawn at random, laser-off trials at 0 mW, so galvo noise and masking light are the same on laser-on and laser-off trials; the first tone pip comes `laserToStimulusSeconds` after beep 0 on every trial of the experiment.
+- On a hardware-triggered rig Zapit is armed after the interval and the trial starts only once Zapit answers that it armed the trial's condition and laser state; any other answer, or any Zapit error reply, stops the workflow.
+- At connect Zapit's loaded condition count must equal the task's conditions file's, and each condition's `offRampDownDuration_ms` must be 100 to 500 ms.
+- A rig without hardware triggering (rig.yml `zapit.hardwareTriggered`) runs optogenetics with the `test` mouse only: software start is tens of ms late, varies and has no onset in the Harp log.
+- The trigger line (and the masking LEDs wired to it) rises at every trial's start and falls `triggerHoldSeconds` after the outcome, optogenetics on or off, so the light masks alike in every experiment.
+- `suggest-stage` keeps an optogenetics experiment's stage, and its laser-on trials never count toward a decision.
 
 ## Layout
 
@@ -35,6 +47,11 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `DeliverReward` | each reward on the left spout, planned from the valve's calibration; `MissingCalibration` is a launch property | `OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai` |
 | `DomeHarpLogs` | the Harp boards' logs | `OpenRigs.Devices:DomeHarpLogs.bonsai` |
 | `HarpDelay` | the trigger line cleared `triggerHoldSeconds` after the outcome, on the Harp clock | `OpenRigs.Core` |
+| `ExperimentControl`, `ExperimentSettings`, `OnCommand`, `OnParameterSet`, `ParameterDefault`, `ParameterValue`, `ReportMetric`, `ReportPhase` | parameters, commands, Go and phases for rig-control; the settings files; the metrics the view shows | `OpenRigs.Control` (`ExperimentControl.bonsai`) |
+| `LogController`, `LogAsync`, `LogTrial`, `LogData`, `LogVideo`, `LogDataSchema`, `CreateAsyncEvent` | the experiment folder and its files: trial rows, async events (Go, commands, `RngSeed`), stimulus state, Zapit replies, video, settings | `OpenRigs.Logging` |
+| `RecordHarpDevices` | each Harp board checked at Start and its device record and register map written into the experiment | `OpenRigs.HarpDevices` |
+| `ExperimentManifest` | `manifest.json`: what ran, the config files by hash, what the experiment must leave | `OpenRigs.Manifest` |
+| `StreamDevices` | the live view (the last node) | `OpenRigs.LiveView` |
 | `StartupWatchdog` | Ready once the clock is set and the spouts are homed, or a stop naming what never came | `OpenRigs.Core` |
 | `ThrowError` | stops the workflow on a Zapit error | `OpenRigs.Core` |
 | `ZapitClient`, `CreateZapitQuery`, `CheckZapitConditionCount`, `ZapitConditionsSnapshot` | Zapit: commands and replies, its loaded conditions checked against the task's file, the file copied into the experiment | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |

@@ -4,14 +4,14 @@ param([switch]$Apply, [string]$ListPath = 'K:\config\data-dictionary.json')
 # workflow, and tags each name this workflow uses with coen-dome-navigation (usedBy; every other
 # repo's tags are kept). Names it no longer writes ($retired) lose its tag, and leave the list when
 # no other repo is tagged on them. Without -Apply it only says what it would change. -Apply saves through
-# rig-setup's own Save-NamesDictionary, which refuses if the file changed since it was read, backs it
+# app-rig-setup's own Save-NamesDictionary, which refuses if the file changed since it was read, backs it
 # up and logs the change. The list is production config: apply only on Pip's word.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\add-names.ps1 [-Apply]
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $me = 'coen-dome-navigation'
-$rigSetup = 'C:\Github\Coen-Lab\rig-setup'
+$rigSetup = 'C:\Github\Coen-Lab\app-rig-setup'
 . "$rigSetup\engine\detect.ps1"
 . "$rigSetup\engine\device-names.ps1"
 $path = $ListPath  # another copy only to try the script

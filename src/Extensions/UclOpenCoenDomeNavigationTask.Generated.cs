@@ -208,11 +208,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out 1 s after the outcome)
+        /// Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out trigger_hold_seconds after the outcome)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("zapitConfigPath")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="zapitConfigPath")]
-        [System.ComponentModel.DescriptionAttribute(@"Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out 1 s after the outcome)")]
+        [System.ComponentModel.DescriptionAttribute(@"Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out trigger_hold_seconds after the outcome)")]
         public string ZapitConfigPath
         {
             get
@@ -280,11 +280,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip
+        /// How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserToStimulusSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserToStimulusSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. At most 0.2 s: licks before the first pip count toward the wrong-lick limits, and a longer lead could end a trial before its first pip")]
+        [System.ComponentModel.DescriptionAttribute(@"How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)")]
         public double LaserToStimulusSeconds
         {
             get
@@ -298,12 +298,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// How long the trigger line, and the masking light on it, stays high after the outcome, in seconds: at least 0.5, the longest ramp-down a conditions file may have
+        /// How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial (optogenetics on or off, so the light masks alike in every experiment): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("triggerHoldSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="triggerHoldSeconds")]
-        [System.ComponentModel.DescriptionAttribute("How long the trigger line, and the masking light on it, stays high after the outc" +
-            "ome, in seconds: at least 0.5, the longest ramp-down a conditions file may have")]
+        [System.ComponentModel.DescriptionAttribute(@"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial (optogenetics on or off, so the light masks alike in every experiment): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it")]
         public double TriggerHoldSeconds
         {
             get
@@ -700,13 +699,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Microlitres each reward gives, on the left spout's valve. The valve's calibration plans the pulses; an uncalibrated valve gives one pulse of rig.yml's width per 2 ul (av-dome's RewardLine)
+        /// Microlitres each reward gives, on the left spout's valve, planned from the valve's calibration (calibration\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
-        [System.ComponentModel.DescriptionAttribute("Microlitres each reward gives, on the left spout\'s valve. The valve\'s calibration" +
-            " plans the pulses; an uncalibrated valve gives one pulse of rig.yml\'s width per " +
-            "2 ul (av-dome\'s RewardLine)")]
+        [System.ComponentModel.DescriptionAttribute("Microlitres each reward gives, on the left spout\'s valve, planned from the valve\'" +
+            "s calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the work" +
+            "flow at Start; the test mouse runs on one with no water (each reward logged as 0" +
+            " ul)")]
         public double RewardSizeUl
         {
             get

@@ -133,6 +133,14 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
     assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {2.0}
 
 
+def test_a_trigger_hold_as_long_as_the_shortest_interval_is_refused():
+    # The line is held triggerHoldSeconds after every outcome; the next trial raises it no sooner than itiMinSeconds later.
+    doc = task()
+    doc["taskParameters"]["optogenetics"]["triggerHoldSeconds"] = 2.0
+    with pytest.raises(pydantic.ValidationError, match="trigger_hold_seconds"):
+        UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
+
+
 def test_the_committed_task_schema_is_the_model_s():
     model = pydantic.RootModel[UclOpenCoenDomeNavigationTaskLogic].model_json_schema(
         by_alias=True, mode="serialization", union_format="primitive_type_array"
