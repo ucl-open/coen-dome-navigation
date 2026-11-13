@@ -127,9 +127,10 @@ namespace UclOpenCoenDomeNavigationTask
     ///logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...).
     ///Every trial of an optogenetics experiment sends Zapit a condition drawn at random: laser-on trials with the laser
     ///on, all others as laser-off trials with the laser off, so galvo noise and masking light are the same on every
-    ///trial. "Stimulus" is the tone and grating; the laser is continuous: it starts at the trial's start (beep 0, the
-    ///trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip, and
-    ///Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. Zapit's host, port and
+    ///trial. "Stimulus" is the tone and grating; the laser is continuous: it starts at the trigger (the trigger line's
+    ///rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip (after it if negative),
+    ///and Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. A trial that ends before
+    ///its trigger has no laser. Zapit is armed during the interval and adds no time. Zapit's host, port and
     ///triggering are rig.yml's zapit block.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
@@ -140,9 +141,10 @@ namespace UclOpenCoenDomeNavigationTask
     logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...).
     Every trial of an optogenetics experiment sends Zapit a condition drawn at random: laser-on trials with the laser
     on, all others as laser-off trials with the laser off, so galvo noise and masking light are the same on every
-    trial. ""Stimulus"" is the tone and grating; the laser is continuous: it starts at the trial's start (beep 0, the
-    trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip, and
-    Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. Zapit's host, port and
+    trial. ""Stimulus"" is the tone and grating; the laser is continuous: it starts at the trigger (the trigger line's
+    rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip (after it if negative),
+    and Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. A trial that ends before
+    its trigger has no laser. Zapit is armed during the interval and adds no time. Zapit's host, port and
     triggering are rig.yml's zapit block.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
@@ -262,11 +264,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome
+        /// Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserMaxSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserMaxSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome")]
+        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome")]
         public double LaserMaxSeconds
         {
             get
@@ -280,11 +282,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)
+        /// Signed, in whole 50 ms beeps: the trigger comes this long before the first tone pip and grating frame (at most 0.2 s); 0 with it; negative after it. Go (beep 0, the trial's start) is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the first pip comes the lead after Go in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger rises at Go with a lead, or this long after the first pip if negative. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin) and further after the first pip than a stage's timeLimitSeconds (2 s on a stage without one). Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserToStimulusSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserToStimulusSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)")]
+        [System.ComponentModel.DescriptionAttribute(@"Signed, in whole 50 ms beeps: the trigger comes this long before the first tone pip and grating frame (at most 0.2 s); 0 with it; negative after it. Go (beep 0, the trial's start) is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the first pip comes the lead after Go in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger rises at Go with a lead, or this long after the first pip if negative. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin) and further after the first pip than a stage's timeLimitSeconds (2 s on a stage without one). Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)")]
         public double LaserToStimulusSeconds
         {
             get
@@ -298,11 +300,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it
+        /// How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("triggerHoldSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="triggerHoldSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it")]
+        [System.ComponentModel.DescriptionAttribute(@"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger")]
         public double TriggerHoldSeconds
         {
             get
@@ -611,7 +613,11 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _punishWrongZone;
     
-        private double? _quietSeconds;
+        private double _lickQuietSeconds;
+    
+        private double _wheelQuietSeconds;
+    
+        private double _wheelQuietCm;
     
         private double? _timeLimitSeconds;
     
@@ -625,6 +631,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         public TrainingStage()
         {
+            _lickQuietSeconds = 0D;
+            _wheelQuietSeconds = 0D;
+            _wheelQuietCm = 0D;
         }
     
         protected TrainingStage(TrainingStage other)
@@ -636,7 +645,9 @@ namespace UclOpenCoenDomeNavigationTask
             _lickToReward = other._lickToReward;
             _wrongLickLimit = other._wrongLickLimit;
             _punishWrongZone = other._punishWrongZone;
-            _quietSeconds = other._quietSeconds;
+            _lickQuietSeconds = other._lickQuietSeconds;
+            _wheelQuietSeconds = other._wheelQuietSeconds;
+            _wheelQuietCm = other._wheelQuietCm;
             _timeLimitSeconds = other._timeLimitSeconds;
             _trackEndEndsTrial = other._trackEndEndsTrial;
             _trackLengthScale = other._trackLengthScale;
@@ -776,22 +787,60 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// After the inter-trial interval, the trial waits until the mouse has gone this long without licking, in seconds (uncapped), so licks for the last reward cannot carry into the next trial; null: no wait
+        /// Quiet wait: Go needs this long without a lick, in seconds, counted from the interval's start and restarted by every lick (uncapped), so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("quietSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="quietSeconds")]
-        [System.ComponentModel.DescriptionAttribute("After the inter-trial interval, the trial waits until the mouse has gone this lon" +
-            "g without licking, in seconds (uncapped), so licks for the last reward cannot ca" +
-            "rry into the next trial; null: no wait")]
-        public double? QuietSeconds
+        [Newtonsoft.Json.JsonPropertyAttribute("lickQuietSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickQuietSeconds")]
+        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: Go needs this long without a lick, in seconds, counted from the interval's start and restarted by every lick (uncapped), so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026")]
+        public double LickQuietSeconds
         {
             get
             {
-                return _quietSeconds;
+                return _lickQuietSeconds;
             }
             set
             {
-                _quietSeconds = value;
+                _lickQuietSeconds = value;
+            }
+        }
+    
+        /// <summary>
+        /// Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start and restarted whenever the wheel's total distance (forward and back added) since the last restart passes wheelQuietCm; 0: off (with wheelQuietCm 0)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("wheelQuietSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelQuietSeconds")]
+        [System.ComponentModel.DescriptionAttribute("Quiet wait: Go needs this long with the wheel still, in seconds, counted from the" +
+            " interval\'s start and restarted whenever the wheel\'s total distance (forward and" +
+            " back added) since the last restart passes wheelQuietCm; 0: off (with wheelQuiet" +
+            "Cm 0)")]
+        public double WheelQuietSeconds
+        {
+            get
+            {
+                return _wheelQuietSeconds;
+            }
+            set
+            {
+                _wheelQuietSeconds = value;
+            }
+        }
+    
+        /// <summary>
+        /// The wheel distance, forward and back added, that restarts the wheel's quiet wait, in cm; 0: off (with wheelQuietSeconds 0)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("wheelQuietCm")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelQuietCm")]
+        [System.ComponentModel.DescriptionAttribute("The wheel distance, forward and back added, that restarts the wheel\'s quiet wait," +
+            " in cm; 0: off (with wheelQuietSeconds 0)")]
+        public double WheelQuietCm
+        {
+            get
+            {
+                return _wheelQuietCm;
+            }
+            set
+            {
+                _wheelQuietCm = value;
             }
         }
     
@@ -905,7 +954,9 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("LickToReward = " + _lickToReward + ", ");
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
             stringBuilder.Append("PunishWrongZone = " + _punishWrongZone + ", ");
-            stringBuilder.Append("QuietSeconds = " + _quietSeconds + ", ");
+            stringBuilder.Append("LickQuietSeconds = " + _lickQuietSeconds + ", ");
+            stringBuilder.Append("WheelQuietSeconds = " + _wheelQuietSeconds + ", ");
+            stringBuilder.Append("WheelQuietCm = " + _wheelQuietCm + ", ");
             stringBuilder.Append("TimeLimitSeconds = " + _timeLimitSeconds + ", ");
             stringBuilder.Append("TrackEndEndsTrial = " + _trackEndEndsTrial + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
@@ -960,11 +1011,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)
+        /// Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any punishment timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("itiMinSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMinSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)")]
+        [System.ComponentModel.DescriptionAttribute(@"Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any punishment timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)")]
         public double ItiMinSeconds
         {
             get

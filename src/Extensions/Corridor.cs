@@ -95,8 +95,10 @@ public class CorridorTrial
 {
     public int trialNumber;
     public string trialType;            // the task's modality in words
-    public double itiSeconds;           // the interval before this trial, from the last outcome (after any timeout); NaN on the first
-    public double quietSeconds;         // the stage's wait without licks after the interval; 0: none
+    public double itiSeconds;           // the interval before this trial: the last outcome (after any timeout; trial 1: the first clock tick) to the first pip, with a quiet mouse
+    public double lickQuietSeconds;     // the stage's quiet waits, from the interval's start (QuietWait); 0: off
+    public double wheelQuietSeconds;
+    public double wheelQuietCm;
     public double trackLengthCm;
     public double truncationFraction;   // 1: not truncated
     public double rewardFloorHz;
@@ -108,9 +110,10 @@ public class CorridorTrial
     public double timeLimitSeconds;     // from the first pip; NaN: none
     public bool trackEndEndsTrial;
     public bool frequencyDrift;
-    public int firstPipBeep;            // 1, or laserToStimulusSeconds in beeps in an optogenetics experiment
+    public int firstPipBeep;            // the lead, max(laserToStimulusSeconds, 0), in beeps after Go (beep 0), in every experiment
+    public int triggerBeep;             // the trigger's beep after Go: firstPipBeep - laserToStimulusSeconds in beeps; optogenetics only
     public bool optogenetics;
-    public bool armZapit;               // hardware-triggered Zapit: armed after the interval, before the trial starts
+    public bool armZapit;               // hardware-triggered Zapit: armed during the interval, before the trigger
     public int laserCondition;          // 0 without optogenetics
     public bool laserOn;
     public double laserPowerMw;         // 0 with the laser off
@@ -124,6 +127,9 @@ public class CorridorSetup
 {
     public const double BeepSeconds = 0.05;       // task.py BEEP_INTERVAL_SEC
     public const double LaserMaxMarginSec = 0.25; // task.py LASER_MAX_MARGIN_SEC
+    public const double ZapitReplyMarginSec = 0.2;   // task.py ZAPIT_REPLY_MARGIN_SEC: Zapit's armed reply must be in this long before the trigger
+    public const double MaxLeadSec = 0.2;            // task.py MAX_LEAD_SEC: the furthest the trigger may come before the first pip
+    public const double NoTimeLimitTriggerAfterSec = 2.0; // task.py NO_TIME_LIMIT_TRIGGER_AFTER_SEC: the furthest after the first pip it may come on a stage without timeLimitSeconds
     public const int DriftBeeps = 500;            // a drift stage's frequency reaches the sweep's end on its own after this many beeps (25 s)
     public const double GratingStartCpd = 0.03;   // the grating's spatial frequency at the track's start
     public const double GratingEndCpd = 0.3;      // and at its end
@@ -151,15 +157,29 @@ public class CorridorSetup
         var problems = new List<string>();
         if (task.TrialStructure.TrackLengthsCm == null || task.TrialStructure.TrackLengthsCm.Count == 0 || task.TrialStructure.TrackLengthsCm.Any(l => !(l > 0))) problems.Add("trialStructure.trackLengthsCm needs at least one length above 0");
         if (task.TrialStructure.ItiMaxSeconds < task.TrialStructure.ItiMinSeconds) problems.Add("trialStructure.itiMaxSeconds is below itiMinSeconds");
-        if (task.Optogenetics.UseZapit && task.Optogenetics.TriggerHoldSeconds >= task.TrialStructure.ItiMinSeconds) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be below trialStructure.itiMinSeconds ({1} s): the trigger line, held that long after every outcome, must fall before the next trial raises it", task.Optogenetics.TriggerHoldSeconds, task.TrialStructure.ItiMinSeconds));
+        if (row.LickQuietSeconds < 0 || row.WheelQuietSeconds < 0 || row.WheelQuietCm < 0) problems.Add("stage '" + row.Label + "' has a negative lickQuietSeconds, wheelQuietSeconds or wheelQuietCm");
+        if ((row.WheelQuietSeconds > 0) != (row.WheelQuietCm > 0)) problems.Add("stage '" + row.Label + "' needs wheelQuietSeconds and wheelQuietCm both above 0 (the wheel's quiet wait) or both 0 (off)");
+        // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after Go in every experiment, the
+        // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
+        // with Zapit's reply margin, and no later after it than the stage's time limit.
+        var lead = task.Optogenetics.LaserToStimulusSeconds;
+        var leadBeeps = lead / BeepSeconds;
+        if (!(Math.Abs(leadBeeps - Math.Round(leadBeeps)) < 1e-6)) problems.Add("optogenetics.laserToStimulusSeconds must be a whole number of 0.05 s beeps");
+        if (lead > MaxLeadSec + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, MaxLeadSec));
+        if (lead + ZapitReplyMarginSec > task.TrialStructure.ItiMinSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) plus Zapit's {1} s reply margin must be at most trialStructure.itiMinSeconds ({2} s), the shortest interval", lead, ZapitReplyMarginSec, task.TrialStructure.ItiMinSeconds));
+        var after = row.TimeLimitSeconds ?? NoTimeLimitTriggerAfterSec;
+        if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage '{2}''s {3}", lead, after, row.Label, row.TimeLimitSeconds.HasValue ? "timeLimitSeconds" : "limit for a stage without timeLimitSeconds"));
+        var hold = task.Optogenetics.TriggerHoldSeconds;
+        var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitReplyMarginSec;
+        if (task.Optogenetics.UseZapit && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitReplyMarginSec));
         if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage '" + row.Label + "' truncates trials but truncation.sweepFractions is empty");
         if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage '{0}''s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", row.Label, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
         var opto = task.Optogenetics;
         if (opto.UseZapit)
         {
             if (!(opto.LaserPowerMw > 0)) problems.Add("optogenetics.laserPowerMw must be a power in mW above 0 with optogenetics on");
-            var beeps = opto.LaserToStimulusSeconds / BeepSeconds;
-            if (!(Math.Abs(beeps - Math.Round(beeps)) < 1e-6 && Math.Round(beeps) >= 1 && Math.Round(beeps) <= 4)) problems.Add("optogenetics.laserToStimulusSeconds must be a multiple of 0.05 s from 0.05 to 0.2");
+            // The laser runs from the trigger (the first pip less laserToStimulusSeconds) to the outcome, at the latest the
+            // first pip plus timeLimitSeconds: timeLimitSeconds + laserToStimulusSeconds.
             var limits = task.TrainingStages.Where(s => s.TimeLimitSeconds.HasValue).Select(s => s.TimeLimitSeconds.Value).ToList();
             if (limits.Count > 0 && opto.LaserMaxSeconds < limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSec - 1e-9)
             {
@@ -201,7 +221,7 @@ public class TrialDraw
         t.rngSeed = setup.Seed;
         t.trialType = task.Modality.ToString().ToLowerInvariant();
         var iti = task.TrialStructure.ItiMinSeconds + (task.TrialStructure.ItiMaxSeconds - task.TrialStructure.ItiMinSeconds) * random.NextDouble();
-        t.itiSeconds = t.trialNumber == 1 ? double.NaN : iti;  // drawn on the first too, so every later draw is as it was
+        t.itiSeconds = iti;  // trial 1 too, from the first clock tick, so Zapit is armed before its trigger
         var lengths = task.TrialStructure.TrackLengthsCm;
         t.trackLengthCm = lengths[random.Next(lengths.Count)] * stage.TrackLengthScale;
         var u = random.NextDouble();
@@ -209,7 +229,9 @@ public class TrialDraw
         t.truncationFraction = stage.TruncatedTrialFraction > 0 && u < stage.TruncatedTrialFraction
             ? fractions[(int)Math.Floor(u / stage.TruncatedTrialFraction * fractions.Count)]
             : 1.0;
-        t.quietSeconds = stage.QuietSeconds ?? 0;
+        t.lickQuietSeconds = stage.LickQuietSeconds;
+        t.wheelQuietSeconds = stage.WheelQuietSeconds;
+        t.wheelQuietCm = stage.WheelQuietCm;
         t.rewardFloorHz = stage.RewardFloorHz;
         t.rewardCeilingHz = stage.RewardCeilingHz;
         t.rewardSizeUl = stage.RewardSizeUl;
@@ -221,13 +243,15 @@ public class TrialDraw
         t.frequencyDrift = stage.FrequencyDrift;
         var opto = task.Optogenetics;
         t.optogenetics = opto.UseZapit;
-        t.firstPipBeep = 1;
+        // The lead applies in every experiment, so timing never reveals Zapit (Pip, 13 Nov 2026).
+        var leadBeeps = (int)Math.Round(opto.LaserToStimulusSeconds / CorridorSetup.BeepSeconds);
+        t.firstPipBeep = Math.Max(leadBeeps, 0);
+        t.triggerBeep = t.firstPipBeep - leadBeeps;
         if (opto.UseZapit)
         {
             // The trigger line (and the masking light on it) rises only in an optogenetics experiment (Pip, 13 Nov 2026).
             t.triggerHoldSeconds = opto.TriggerHoldSeconds;
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
-            t.firstPipBeep = (int)Math.Round(opto.LaserToStimulusSeconds / CorridorSetup.BeepSeconds);
             t.armZapit = setup.HardwareTriggered;
             t.laserCondition = random.Next(setup.ConditionCount) + 1;
             t.laserOn = t.trialNumber > opto.TrialsBeforeLaser && random.NextDouble() < opto.LaserOnProbability;
@@ -240,11 +264,59 @@ public class TrialDraw
 
 public enum CorridorEventKind
 {
-    Arm,        // send the trial's StartStimulus to a hardware-triggered Zapit; the trial waits for its reply
-    Start,      // beep 0: the trial starts (trigger line up, a software-triggered Zapit's StartStimulus)
+    Arm,        // during the interval: send the trial's StartStimulus to a hardware-triggered Zapit
+    Start,      // Go, beep 0: the trial starts
+    Trigger,    // optogenetics: laserToStimulusSeconds before the first pip, the trigger line up (a software-triggered Zapit's StartStimulus)
     Pip,        // a beep with the stimulus on: the tone pip and grating frame
     Outcome,    // the trial ended: its row, the reward or punishment
-    LaserCap    // laserMaxSeconds after the start with no outcome yet: stop the laser
+    LaserCap    // laserMaxSeconds after the trigger with no outcome yet: stop the laser
+}
+
+/// <summary>
+/// A trial's quiet waits (Pip, 13 Nov 2026), on the Harp clock, as coen-dome-decision-making's: from the interval's start,
+/// Go needs lickSeconds with no lick and wheelSeconds in which the wheel's total distance (forward and back added) stays
+/// within wheelCm, each wait restarting on its own; Go is the first moment at or after earliest at which both hold.
+/// </summary>
+public class QuietWait
+{
+    readonly double earliest, lickSeconds, wheelSeconds, wheelCm;
+    double lickSince, wheelSince, wheelMoved, lastWheel;
+
+    public QuietWait(double intervalStart, double earliest, double lickSeconds, double wheelSeconds, double wheelCm, double wheelAtStart)
+    {
+        this.earliest = earliest;
+        this.lickSeconds = lickSeconds;
+        this.wheelSeconds = wheelSeconds;
+        this.wheelCm = wheelCm;
+        lickSince = wheelSince = intervalStart;
+        lastWheel = wheelAtStart;
+    }
+
+    /// <summary>A lick at Harp time now restarts the lick wait.</summary>
+    public void Lick(double now)
+    {
+        if (lickSeconds > 0) lickSince = Math.Max(lickSince, now);
+    }
+
+    /// <summary>The wheel's distance in cm at Harp time now: past wheelCm of travel since the last restart restarts the wait.</summary>
+    public void Wheel(double cm, double now)
+    {
+        if (!double.IsNaN(lastWheel)) wheelMoved += Math.Abs(cm - lastWheel);
+        lastWheel = cm;
+        if (wheelSeconds > 0 && wheelMoved > wheelCm)
+        {
+            wheelSince = Math.Max(wheelSince, now);
+            wheelMoved = 0;
+        }
+    }
+
+    /// <summary>When Go falls if nothing more restarts a wait: exact, not rounded to a clock tick.</summary>
+    public double GoTime
+    {
+        get { return Math.Max(earliest, Math.Max(lickSince + lickSeconds, wheelSince + wheelSeconds)); }
+    }
+
+    public double Earliest { get { return earliest; } }
 }
 
 /// <summary>One thing the task asks the hardware to do, at a Harp time.</summary>
@@ -297,6 +369,7 @@ public class TrialRow
     public double truncationFraction;
     public double itiStartTime;
     public double itiSeconds;
+    public double quietWaitSeconds;
     public double trialStartTime;
     public double stimulusOnsetTime;
     public double rewardSizeUl;
@@ -306,22 +379,26 @@ public class TrialRow
 
 /// <summary>
 /// The task's state from one trial to the next, driven by the Harp clock, the wheel, the left lick detector and
-/// Zapit's replies; every wait is on the Harp clock. A trial: its interval (itiSeconds from the last outcome, after any
-/// timeout), the quiet wait, Zapit's arming, then beeps every 50 ms from beep 0 with pips from firstPipBeep, until the
-/// outcome; then the punishment's timeout, and the next trial's interval.
+/// Zapit's replies; every wait is on the Harp clock. A trial (Pip, 13 Nov 2026): its interval from the last outcome
+/// (after any timeout; trial 1 from the first clock tick), during which a hardware-triggered Zapit is armed (once the
+/// last trial's trigger line has fallen); Go (beep 0) at the interval's end less the lead, max(laserToStimulusSeconds, 0),
+/// or later until the stage's quiet waits hold; the first pip the lead after Go and the trigger laserToStimulusSeconds
+/// before it (a reply not in by then stops the task); beeps every 50 ms until the outcome; then the punishment's timeout.
 /// </summary>
 public class CorridorState
 {
-    enum Phase { Waiting, Interval, Quiet, Arming, Running, Timeout }
+    enum Phase { Waiting, Interval, Running, Timeout }
 
     readonly CorridorSetup setup;
     readonly TrialDraw draw;
     Phase phase = Phase.Waiting;
     CorridorTrial trial;
     VirtualTrack track;
-    double now = double.NaN, wheel, itiStart = double.NaN, waitUntil, lastLick, start, onset;
+    QuietWait wait;
+    bool wheelSeen;
+    double now = double.NaN, wheel, itiStart = double.NaN, waitUntil, start, onset, quietWait, armAt, lastOutcome = double.NaN, laserOnset;
     int nextBeep, wrongLicks;
-    bool capped;
+    bool capped, armSent, armed, triggered;
     StimulusFrame last;
 
     public CorridorState(CorridorSetup setup)
@@ -335,12 +412,14 @@ public class CorridorState
     public void Wheel(double cm)
     {
         wheel = cm;
+        wheelSeen = true;
     }
 
-    /// <summary>The wheel moved: the track's position, and the trial's end at the end of the track.</summary>
+    /// <summary>The wheel moved: the quiet wait in the interval; the track's position, and the trial's end at the end of the track, while it runs.</summary>
     public IEnumerable<CorridorEvent> OnWheel(double cm)
     {
-        wheel = cm;
+        Wheel(cm);
+        if (phase == Phase.Interval && !double.IsNaN(now)) wait.Wheel(cm, now);
         if (phase != Phase.Running) yield break;
         track.Update(cm);
         if (trial.trackEndEndsTrial && track.AtEnd) yield return End("EndOfTrack");
@@ -349,17 +428,17 @@ public class CorridorState
     public IEnumerable<CorridorEvent> OnLick(bool lick)
     {
         if (!lick) yield break;
-        if (phase == Phase.Quiet) lastLick = now;
+        if (phase == Phase.Interval && !double.IsNaN(now)) wait.Lick(now);
         if (phase != Phase.Running || last == null || !trial.lickToReward) yield break;  // licks count from the first pip
         if (OnTarget(last.Row.toneFrequencyHz)) { yield return End("Lick"); yield break; }
         wrongLicks++;
         if (trial.wrongLickLimit > 0 && wrongLicks >= trial.wrongLickLimit) yield return End("WrongLickLimit");
     }
 
-    /// <summary>Zapit's reply while a trial waits to be armed: it must have armed the trial's condition as asked.</summary>
+    /// <summary>Zapit's reply once the trial's StartStimulus is sent: it must have armed the trial's condition as asked.</summary>
     public IEnumerable<CorridorEvent> OnZapitReply(ZapitReply reply)
     {
-        if (phase != Phase.Arming || reply.Command != ZapitCommandType.StartStimulus) yield break;
+        if (trial == null || !armSent || armed || reply.Command != ZapitCommandType.StartStimulus) yield break;
         int laserOn = trial.laserOn ? 1 : 0;
         if (reply.IsError || reply.Value != trial.laserCondition || reply.LaserOn != laserOn)
         {
@@ -367,7 +446,7 @@ public class CorridorState
                 "Zapit answered trial {0}'s StartStimulus (condition {1}, laserOn {2}) with {3}. Is the conditions file the task names loaded, and is Zapit calibrated?",
                 trial.trialNumber, trial.laserCondition, laserOn, reply));
         }
-        foreach (var e in Begin()) yield return e;
+        armed = true;
     }
 
     public IEnumerable<CorridorEvent> OnClock(double seconds)
@@ -375,23 +454,15 @@ public class CorridorState
         if (!double.IsNaN(now) && seconds < now) throw new InvalidOperationException(string.Format("The Harp clock went backwards, from {0} s to {1} s.", now, seconds));
         now = seconds;
         var events = new List<CorridorEvent>();
-        if (phase == Phase.Waiting) { NextTrial(); }
-        if (phase == Phase.Timeout && now >= waitUntil - 1e-9) { itiStart = now; NextTrial(); }
-        if (phase == Phase.Interval && now >= waitUntil - 1e-9)
+        if (phase == Phase.Waiting) { itiStart = now; NextTrial(); }
+        if (phase == Phase.Timeout && now >= waitUntil - 1e-9) { itiStart = waitUntil; NextTrial(); }
+        if (trial != null && trial.armZapit && !armSent && phase != Phase.Timeout && now >= armAt - 1e-9)
         {
-            phase = Phase.Quiet;
-            lastLick = now;
+            armSent = true;
+            events.Add(new CorridorEvent { Kind = CorridorEventKind.Arm, Seconds = now, Trial = trial });
         }
-        if (phase == Phase.Quiet && now >= lastLick + trial.quietSeconds - 1e-9)
-        {
-            if (trial.armZapit)
-            {
-                phase = Phase.Arming;
-                events.Add(new CorridorEvent { Kind = CorridorEventKind.Arm, Seconds = now, Trial = trial });
-            }
-            else events.AddRange(Begin());
-        }
-        if (phase == Phase.Running) events.AddRange(Run());
+        if (phase == Phase.Interval && now >= wait.GoTime - 1e-9) events.AddRange(Begin());
+        else if (phase == Phase.Running) events.AddRange(Run());
         return events;
     }
 
@@ -399,21 +470,28 @@ public class CorridorState
     {
         trial = draw.Next();
         phase = Phase.Interval;
-        waitUntil = double.IsNaN(trial.itiSeconds) ? now : itiStart + trial.itiSeconds;
+        var lead = trial.firstPipBeep * CorridorSetup.BeepSeconds;
+        wait = new QuietWait(itiStart, itiStart + trial.itiSeconds - lead, trial.lickQuietSeconds, trial.wheelQuietSeconds, trial.wheelQuietCm, wheelSeen ? wheel : double.NaN);
+        // Armed once the last trial's trigger line has fallen (its ramp-down done), at the interval's start at the soonest.
+        armAt = double.IsNaN(lastOutcome) ? itiStart : Math.Max(itiStart, lastOutcome + trial.triggerHoldSeconds);
+        armSent = false;
+        armed = false;
     }
 
     IEnumerable<CorridorEvent> Begin()
     {
         phase = Phase.Running;
-        start = now;
+        start = wait.GoTime;
+        quietWait = wait.GoTime - wait.Earliest;
         onset = double.NaN;
         nextBeep = 0;
         wrongLicks = 0;
         capped = false;
+        triggered = false;
         last = null;
         track = new VirtualTrack(trial.trackLengthCm, wheel);
         track.Update(wheel);
-        return new List<CorridorEvent> { new CorridorEvent { Kind = CorridorEventKind.Start, Seconds = now, Trial = trial } }.Concat(Run());
+        return new List<CorridorEvent> { new CorridorEvent { Kind = CorridorEventKind.Start, Seconds = start, Trial = trial } }.Concat(Run());
     }
 
     List<CorridorEvent> Run()
@@ -421,6 +499,18 @@ public class CorridorState
         var events = new List<CorridorEvent>();
         // Only the latest beep due: after a gap in the Harp clock the missed pips are not played at once.
         var due = (int)Math.Floor((now - start + 1e-9) / CorridorSetup.BeepSeconds);
+        if (phase == Phase.Running && trial.optogenetics && !triggered && due >= trial.triggerBeep)
+        {
+            if (trial.armZapit && !armed)
+            {
+                throw new InvalidOperationException(string.Format(
+                    "Zapit had not answered trial {0}'s StartStimulus by its trigger at {1} s on the Harp clock, so the task stopped rather than move the trigger. Is Zapit running and answering quickly?",
+                    trial.trialNumber, now));
+            }
+            triggered = true;
+            laserOnset = now;
+            events.Add(new CorridorEvent { Kind = CorridorEventKind.Trigger, Seconds = now, Trial = trial });
+        }
         if (phase == Phase.Running && due >= nextBeep && due >= trial.firstPipBeep)
         {
             nextBeep = due + 1;
@@ -433,7 +523,7 @@ public class CorridorState
         {
             events.Add(End("Timeout"));
         }
-        if (phase == Phase.Running && trial.optogenetics && !capped && now >= start + trial.laserMaxSeconds - 1e-9)
+        if (phase == Phase.Running && triggered && !capped && now >= laserOnset + trial.laserMaxSeconds - 1e-9)
         {
             capped = true;
             events.Add(new CorridorEvent { Kind = CorridorEventKind.LaserCap, Seconds = now, Trial = trial });
@@ -495,8 +585,9 @@ public class CorridorState
             toneEndFrequencyHz = tone,
             visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             truncationFraction = trial.truncationFraction,
-            itiStartTime = trial.trialNumber == 1 ? double.NaN : itiStart,
+            itiStartTime = itiStart,
             itiSeconds = trial.itiSeconds,
+            quietWaitSeconds = quietWait,
             trialStartTime = start,
             stimulusOnsetTime = onset,
             rewardSizeUl = trial.rewardSizeUl,
@@ -505,6 +596,7 @@ public class CorridorState
         };
         var outcome = new CorridorEvent { Kind = CorridorEventKind.Outcome, Seconds = now, Trial = trial, Row = row, Rewarded = rewarded, ErrorSound = row.punishSound, RewardSide = "left" };
         phase = Phase.Timeout;
+        lastOutcome = now;
         waitUntil = now + timeout;
         if (timeout <= 0)
         {

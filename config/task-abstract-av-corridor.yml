@@ -16,7 +16,7 @@ taskParameters:
   backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
   positionStepCm: 1           # the distance run is rounded to this before it sets the frequency
   trialStructure:
-    itiMinSeconds: 2.0        # from the outcome (after any timeout) to the next trial, drinking included:
+    itiMinSeconds: 2.0        # from the outcome (after any timeout) to the first pip, drinking included:
     itiMaxSeconds: 3.0        # Tom's 2 s then 0 or 1 s, now drawn evenly between (Pip, 9 Nov 2026)
     trackLengthsCm: [80, 100, 120]   # one drawn per trial, times the stage's trackLengthScale
   punishment:
@@ -27,14 +27,14 @@ taskParameters:
       gain: 1.0
   truncation:                 # on a stage's truncated trials
     sweepFractions: [0.4, 0.6]
-  optogenetics:               # Zapit; the laser runs from beep 0 to the outcome (or laserMaxSeconds), laser-off trials laser off
+  optogenetics:               # Zapit; the laser runs from the trigger to the outcome (or laserMaxSeconds), laser-off trials laser off
     useZapit: false
     zapitConfigPath: ''   # the Zapit conditions file loaded in Zapit
     laserPowerMw: null        # mW on laser-on trials, every condition; required with optogenetics on
     laserOnProbability: 0.4   # laser-on trials after trialsBeforeLaser; the rest are 0 mW; each trial's condition drawn at random
-    laserMaxSeconds: 12.5     # s; a cap: at least the longest timeLimitSeconds + laserToStimulusSeconds + 0.25, the laser stops at the outcome
-    laserToStimulusSeconds: 0.1   # s the laser is on before the first tone pip and grating frame (multiple of 0.05)
-    triggerHoldSeconds: 1.0   # s the trigger line and masking light stay on after the outcome (at least 0.5, the longest ramp-down)
+    laserMaxSeconds: 12.5     # s from the trigger; a cap: at least the longest timeLimitSeconds + laserToStimulusSeconds + 0.25, the laser stops at the outcome
+    laserToStimulusSeconds: 0.1   # s, signed, whole 0.05 s beeps, at most 0.2: the trigger before the first pip (negative: after); the first pip comes max(this, 0) after the trial's start in every experiment
+    triggerHoldSeconds: 1.0   # s the trigger line and masking light stay on after the outcome (at least 0.5, the longest ramp-down; the next trial is armed once it falls)
     trialsBeforeLaser: 20     # no laser-on trial among the first this many
   # Rows by the Training Stage setting (a setting past the end stops the workflow at Go). The reward zones are
   # Tom's: centred on 18 kHz in log space, a 6 kHz window from stage 2 (task.py's old derivation).
@@ -46,7 +46,9 @@ taskParameters:
       lickToReward: false
       wrongLickLimit: 0
       punishWrongZone: false
-      quietSeconds: null
+      lickQuietSeconds: 0
+      wheelQuietSeconds: 0
+      wheelQuietCm: 0
       timeLimitSeconds: null
       trackEndEndsTrial: false
       trackLengthScale: 0.125
@@ -59,7 +61,9 @@ taskParameters:
       lickToReward: false
       wrongLickLimit: 0
       punishWrongZone: false
-      quietSeconds: null
+      lickQuietSeconds: 0
+      wheelQuietSeconds: 0
+      wheelQuietCm: 0
       timeLimitSeconds: null
       trackEndEndsTrial: false
       trackLengthScale: 0.125
@@ -72,7 +76,9 @@ taskParameters:
       lickToReward: true
       wrongLickLimit: 0
       punishWrongZone: false
-      quietSeconds: null
+      lickQuietSeconds: 0
+      wheelQuietSeconds: 0
+      wheelQuietCm: 0
       timeLimitSeconds: null
       trackEndEndsTrial: true
       trackLengthScale: 1.0
@@ -85,7 +91,9 @@ taskParameters:
       lickToReward: true
       wrongLickLimit: 8
       punishWrongZone: true
-      quietSeconds: 1.0       # without licks after the interval
+      lickQuietSeconds: 1.0       # s without licks before Go, from the interval's start
+      wheelQuietSeconds: 0
+      wheelQuietCm: 0
       timeLimitSeconds: 12.0  # from the first tone pip
       trackEndEndsTrial: true
       trackLengthScale: 1.0
@@ -98,7 +106,9 @@ taskParameters:
       lickToReward: true
       wrongLickLimit: 5
       punishWrongZone: true
-      quietSeconds: 1.0       # without licks after the interval
+      lickQuietSeconds: 1.0       # s without licks before Go, from the interval's start
+      wheelQuietSeconds: 0
+      wheelQuietCm: 0
       timeLimitSeconds: 12.0  # from the first tone pip
       trackEndEndsTrial: true
       trackLengthScale: 1.0
@@ -111,7 +121,9 @@ taskParameters:
       lickToReward: true
       wrongLickLimit: 5
       punishWrongZone: true
-      quietSeconds: 1.0       # without licks after the interval
+      lickQuietSeconds: 1.0       # s without licks before Go, from the interval's start
+      wheelQuietSeconds: 0
+      wheelQuietCm: 0
       timeLimitSeconds: 12.0  # from the first tone pip
       trackEndEndsTrial: true
       trackLengthScale: 1.0

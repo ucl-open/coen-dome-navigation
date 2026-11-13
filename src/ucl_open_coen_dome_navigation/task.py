@@ -19,7 +19,10 @@ from swc.aeon.schema import BaseSchema
 from ucl_open_coen_dome_navigation import __semver__
 
 BEEP_INTERVAL_SEC = 0.05  # the tone pips are 50 ms apart on the Harp clock (Corridor.cs BeepSeconds)
-LASER_MAX_MARGIN_SEC = 0.25  # how much longer than the longest trial (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
+LASER_MAX_MARGIN_SEC = 0.25  # how much longer than the longest laser (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
+ZAPIT_REPLY_MARGIN_SEC = 0.2  # Zapit's armed reply must be in this long before the trigger (Corridor.cs ZapitReplyMarginSec)
+MAX_LEAD_SEC = 0.2  # the furthest the trigger may come before the first pip, in whole beeps (Corridor.cs MaxLeadSec)
+NO_TIME_LIMIT_TRIGGER_AFTER_SEC = 2.0  # the furthest after the first pip the trigger may come on a stage without timeLimitSeconds (Corridor.cs)
 
 STAGE_COUNT = 6
 SWEEP_FILE = Path(__file__).resolve().parents[1] / "waveforms" / "sweep.json"  # src/waveforms/sweep.json
@@ -36,7 +39,7 @@ class TrialStructure(BaseSchema):
     iti_min_seconds: float = Field(
         default=2.0,
         ge=0,
-        description="Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)",
+        description="Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any punishment timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
     )
     iti_max_seconds: float = Field(default=3.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)")
     track_lengths_cm: list[float] = Field(
@@ -95,9 +98,10 @@ class OptogeneticsConfig(BaseSchema):
     logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...).
     Every trial of an optogenetics experiment sends Zapit a condition drawn at random: laser-on trials with the laser
     on, all others as laser-off trials with the laser off, so galvo noise and masking light are the same on every
-    trial. "Stimulus" is the tone and grating; the laser is continuous: it starts at the trial's start (beep 0, the
-    trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip, and
-    Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. Zapit's host, port and
+    trial. "Stimulus" is the tone and grating; the laser is continuous: it starts at the trigger (the trigger line's
+    rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip (after it if negative),
+    and Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. A trial that ends before
+    its trigger has no laser. Zapit is armed during the interval and adds no time. Zapit's host, port and
     triggering are rig.yml's zapit block.
     """
 
@@ -135,18 +139,16 @@ class OptogeneticsConfig(BaseSchema):
     laser_max_seconds: float = Field(
         default=12.5,
         gt=0,
-        description="Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
+        description="Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
     )
     laser_to_stimulus_seconds: float = Field(
         default=0.1,
-        ge=0.05,
-        le=0.2,
-        description="How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)",
+        description="Signed, in whole 50 ms beeps: the trigger comes this long before the first tone pip and grating frame (at most 0.2 s); 0 with it; negative after it. Go (beep 0, the trial's start) is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the first pip comes the lead after Go in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger rises at Go with a lead, or this long after the first pip if negative. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin) and further after the first pip than a stage's timeLimitSeconds (2 s on a stage without one). Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)",
     )
     trigger_hold_seconds: float = Field(
         default=1.0,
         ge=0.5,
-        description="How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it",
+        description="How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger",
     )
     trials_before_laser: int = Field(
         default=20,
@@ -166,10 +168,12 @@ class OptogeneticsConfig(BaseSchema):
 
     @model_validator(mode="after")
     def validate_lead_time(self):
-        # Bonsai starts the laser on a beep and moves the first tone pip laser_to_stimulus_seconds later, so it is a whole number of beeps
+        # The trigger and the first pip fall on beeps, so the lead is a whole number of beeps, at most MAX_LEAD_SEC
         beeps = self.laser_to_stimulus_seconds / BEEP_INTERVAL_SEC
         if abs(beeps - round(beeps)) > 1e-6:
             raise ValueError(f"laser_to_stimulus_seconds ({self.laser_to_stimulus_seconds}) must be a multiple of the {BEEP_INTERVAL_SEC} s beep interval")
+        if self.laser_to_stimulus_seconds > MAX_LEAD_SEC + 1e-9:
+            raise ValueError(f"laser_to_stimulus_seconds ({self.laser_to_stimulus_seconds}) must be at most {MAX_LEAD_SEC} s")
         return self
 
     @model_validator(mode="after")
@@ -194,11 +198,17 @@ class TrainingStage(BaseSchema):
     punish_wrong_zone: bool = Field(
         description="Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage"
     )
-    quiet_seconds: float | None = Field(
-        default=None,
-        gt=0,
-        description="After the inter-trial interval, the trial waits until the mouse has gone this long without licking, in seconds (uncapped), so licks for the last reward cannot carry into the next trial; null: no wait",
+    lick_quiet_seconds: float = Field(
+        default=0.0,
+        ge=0,
+        description="Quiet wait: Go needs this long without a lick, in seconds, counted from the interval's start and restarted by every lick (uncapped), so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026",
     )
+    wheel_quiet_seconds: float = Field(
+        default=0.0,
+        ge=0,
+        description="Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start and restarted whenever the wheel's total distance (forward and back added) since the last restart passes wheelQuietCm; 0: off (with wheelQuietCm 0)",
+    )
+    wheel_quiet_cm: float = Field(default=0.0, ge=0, description="The wheel distance, forward and back added, that restarts the wheel's quiet wait, in cm; 0: off (with wheelQuietSeconds 0)")
     time_limit_seconds: float | None = Field(
         default=None, gt=0, description="The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit"
     )
@@ -211,6 +221,8 @@ class TrainingStage(BaseSchema):
     def _zone_ordered(self) -> "TrainingStage":
         if self.reward_floor_hz >= self.reward_ceiling_hz:
             raise ValueError("reward_floor_hz must be below reward_ceiling_hz")
+        if (self.wheel_quiet_seconds > 0) != (self.wheel_quiet_cm > 0):
+            raise ValueError("wheel_quiet_seconds and wheel_quiet_cm must both be above 0 (the wheel's quiet wait) or both 0 (off)")
         return self
 
 
@@ -249,12 +261,30 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         return self
 
     @model_validator(mode="after")
-    def _trigger_falls_before_the_next_trial(self):
-        hold, iti = self.optogenetics.trigger_hold_seconds, self.trial_structure.iti_min_seconds
-        if self.optogenetics.use_zapit and hold >= iti:
+    def _the_lead_fits(self):
+        # Corridor.cs CorridorSetup.Create's same rules (Pip, 13 Nov 2026).
+        lead, iti = self.optogenetics.laser_to_stimulus_seconds, self.trial_structure.iti_min_seconds
+        if lead + ZAPIT_REPLY_MARGIN_SEC > iti + 1e-9:
             raise ValueError(
-                f"optogenetics.trigger_hold_seconds ({hold} s) must be below trial_structure.iti_min_seconds ({iti} s): "
-                "the trigger line, held that long after every outcome, must fall before the next trial raises it"
+                f"optogenetics.laser_to_stimulus_seconds ({lead} s) plus Zapit's {ZAPIT_REPLY_MARGIN_SEC} s reply margin must be at most "
+                f"trial_structure.iti_min_seconds ({iti} s), the shortest interval"
+            )
+        # A negative lead puts the trigger after the first pip, at most the stage's timeLimitSeconds (any stage here; Go checks the one chosen).
+        after = max(stage.time_limit_seconds or NO_TIME_LIMIT_TRIGGER_AFTER_SEC for stage in self.training_stages)
+        if -lead > after + 1e-9:
+            raise ValueError(f"optogenetics.laser_to_stimulus_seconds ({lead} s) puts the trigger more than {after:g} s after the first pip, past every stage's limit")
+        return self
+
+    @model_validator(mode="after")
+    def _the_next_trial_is_armed_in_time(self):
+        # The next trial is armed once the trigger line falls, trigger_hold_seconds after the outcome; its trigger comes at the
+        # soonest iti_min_seconds - laser_to_stimulus_seconds after that outcome, and Zapit's reply needs its margin before it.
+        hold, iti, lead = self.optogenetics.trigger_hold_seconds, self.trial_structure.iti_min_seconds, self.optogenetics.laser_to_stimulus_seconds
+        longest = iti - lead - ZAPIT_REPLY_MARGIN_SEC
+        if self.optogenetics.use_zapit and hold > longest + 1e-9:
+            raise ValueError(
+                f"optogenetics.trigger_hold_seconds ({hold} s) must be at most {longest:g} s (trial_structure.iti_min_seconds - laser_to_stimulus_seconds - "
+                f"{ZAPIT_REPLY_MARGIN_SEC} s): the next trial is armed once the line falls"
             )
         return self
 

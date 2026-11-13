@@ -143,6 +143,16 @@ def test_the_trigger_line_rises_and_falls_only_in_an_optogenetics_experiment():
         assert [c.findtext(".//{clr-namespace:Bonsai.Scripting.Expressions;assembly=Bonsai.Scripting.Expressions}Expression") for c in conditions] == ["Trial.optogenetics"]
 
 
+def test_the_trigger_event_raises_the_line_and_starts_a_software_triggered_zapit():
+    # Pip, 13 Nov 2026: the trigger comes laserToStimulusSeconds before the first pip (CorridorTask's Trigger), not at Start.
+    nodes, edges = _scope(group("TaskLogic"))
+    kind = "{clr-namespace:;assembly=Extensions}Kind"
+    for name in ("Optogenetics?", "SoftwareTriggered?"):
+        target = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == name)
+        feeding = [nodes[a].find(W + "Combinator") for a, b in edges if b == target]
+        assert [f.findtext(kind) for f in feeding if f is not None] == ["Trigger"]
+
+
 def test_the_readme_lists_every_open_rigs_block():
     # Every node from an OpenRigs package (any xmlns naming an OpenRigs namespace, and every OpenRigs include) has a row.
     readme = (ROOT / "README.md").read_text(encoding="utf-8")

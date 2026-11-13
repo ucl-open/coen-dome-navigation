@@ -31,15 +31,40 @@ def params(time_limit=None, **opto):
     return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
 
 
-@pytest.mark.parametrize("seconds", [0.05, 0.1, 0.15, 0.2])
-def test_lead_time_in_whole_beeps_up_to_0_2_is_accepted(seconds):
+@pytest.mark.parametrize("seconds", [0.05, 0.1, 0.15, 0.2, 0.0, -0.05, -1.0])
+def test_a_signed_lead_in_whole_beeps_up_to_0_2_is_accepted(seconds):
+    # Pip, 13 Nov 2026: signed; negative puts the trigger after the first pip.
     assert OptogeneticsConfig(laser_to_stimulus_seconds=seconds).laser_to_stimulus_seconds == seconds
 
 
-@pytest.mark.parametrize("seconds", [0.0, 0.07, 0.125, 0.25, 1.0])
+@pytest.mark.parametrize("seconds", [0.07, 0.125, -0.07, 0.25, 1.0])
 def test_other_lead_times_are_refused(seconds):
     with pytest.raises(pydantic.ValidationError, match="laser_to_stimulus_seconds"):
         OptogeneticsConfig(laser_to_stimulus_seconds=seconds)
+
+
+def test_a_trigger_past_every_stage_s_limit_is_refused():
+    # Stages 3-5 limit trials to 12 s from the first pip; the furthest after it is the longest limit.
+    assert params(laserToStimulusSeconds=-12.0).optogenetics.laser_to_stimulus_seconds == -12.0
+    with pytest.raises(pydantic.ValidationError, match="past every stage"):
+        params(laserToStimulusSeconds=-12.05)
+
+
+def test_a_lead_needs_zapit_s_reply_margin_inside_the_shortest_interval():
+    doc = copy.deepcopy(TASK)
+    doc["trialStructure"]["itiMinSeconds"] = 0.35
+    doc["optogenetics"]["laserToStimulusSeconds"] = 0.2
+    with pytest.raises(pydantic.ValidationError, match="reply margin"):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+    doc["optogenetics"]["laserToStimulusSeconds"] = 0.15
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+
+
+def test_the_trigger_line_falls_in_time_to_arm_the_next_trial():
+    # itiMinSeconds 2.0 - laserToStimulusSeconds 0.1 - 0.2 s reply margin = 1.7 s.
+    assert params(triggerHoldSeconds=1.7).optogenetics.trigger_hold_seconds == 1.7
+    with pytest.raises(pydantic.ValidationError, match="trigger_hold_seconds"):
+        params(triggerHoldSeconds=1.75)
 
 
 @pytest.mark.parametrize("limit, lead, cap", [(12, 0.1, 12.35), (12, 0.1, 12.5), (12, 0.2, 12.45), (20, 0.1, 20.35)])
@@ -76,6 +101,10 @@ def test_corridor_cs_uses_the_same_constants():
     # Corridor.cs's own checks of these rules, and the laser-off trials' 0 mW, are tests\Extensions.Tests' (CorridorTests.cs).
     assert float(re.search(r"const double LaserMaxMarginSec = ([\d.]+);", CORRIDOR).group(1)) == LASER_MAX_MARGIN_SEC
     assert float(re.search(r"const double BeepSeconds = ([\d.]+);", CORRIDOR).group(1)) == BEEP_INTERVAL_SEC
+    from ucl_open_coen_dome_navigation import task
+
+    for py, cs in (("ZAPIT_REPLY_MARGIN_SEC", "ZapitReplyMarginSec"), ("MAX_LEAD_SEC", "MaxLeadSec"), ("NO_TIME_LIMIT_TRIGGER_AFTER_SEC", "NoTimeLimitTriggerAfterSec")):
+        assert float(re.search(rf"const double {cs} = ([\d.]+);", CORRIDOR).group(1)) == getattr(task, py)
 
 
 def test_the_laser_cap_s_code_says_laser_not_stimulus():

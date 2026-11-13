@@ -77,22 +77,26 @@ itiStartTime:
   type: double
   unit: s
   formerly: [ITIStartHarp]
-  description: Harp time the inter-trial interval before this trial began (the last trial's outcome, after any punishment timeout), NaN on the first.
+  description: Harp time the inter-trial interval before this trial began - the last trial's outcome, after any punishment timeout; on trial 1 the first Harp clock tick after Go (NaN on trial 1 until 13 Nov 2026).
 itiSeconds:
   type: double
   unit: s
   formerly: [ITIDrawnSec]
-  description: The inter-trial interval drawn before this trial, evenly between trialStructure.itiMinSeconds and itiMaxSeconds, NaN on the first. It ran from the last trial's outcome (after any punishment timeout) and includes the time to drink; on a stage with quietSeconds the trial then also waited that long without licks, and a hardware-triggered Zapit was armed. Until 13 Nov 2026 it was drawn 0 to 1 s and followed a fixed 2 s after the outcome; Tom Childs' workflow drew 0 or 1 s.
+  description: The inter-trial interval drawn for this trial, evenly between trialStructure.itiMinSeconds and itiMaxSeconds, from itiStartTime (the last outcome, after any punishment timeout) to the first tone pip with a quiet mouse, the time to drink included; the stage's quiet waits add quietWaitSeconds, so the first pip came at itiStartTime + itiSeconds + quietWaitSeconds. From 13 Nov 2026 (Pip); before, it ran to the trial's start, NaN on trial 1, and quietSeconds was waited after it; earlier still it was drawn 0 to 1 s after a fixed 2 s; Tom Childs' workflow drew 0 or 1 s.
+quietWaitSeconds:
+  type: double
+  unit: s
+  description: How long the stage's quiet waits (lickQuietSeconds, wheelQuietSeconds and wheelQuietCm) held this trial's start (Go) past the end of its interval less the lead; 0 with the waits off or a quiet mouse. From 13 Nov 2026.
 trialStartTime:
   type: double
   unit: s
   formerly: [TrialStartHarp]
-  description: Harp time the trial started (position zero).
+  description: Harp time the trial started (Go, beep 0, position zero) - the end of its interval less the lead, max(laserToStimulusSeconds, 0), or later by quietWaitSeconds.
 stimulusOnsetTime:
   type: double
   unit: s
   formerly: [CueOnsetHarp]
-  description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame, as Tom Childs' CueOnsetHarp. That is beep 1, 50 ms after the trial's start at beep 0; in an optogenetics experiment it is laserToStimulusSeconds after beep 0, when the laser came on (beep 2 at 0.1 s). The physical onset is in the hardware logs.
+  description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame, as Tom Childs' CueOnsetHarp. From 13 Nov 2026 it is the lead, max(laserToStimulusSeconds, 0) in the task file (in the manifest), after the trial's start in every experiment (beep 2 at 0.1 s); with optogenetics the trigger was laserToStimulusSeconds before it. Until 13 Nov 2026 it was beep 1 without optogenetics and laserToStimulusSeconds after beep 0 with it. The physical onset is in the hardware logs.
 rewardSizeUl:
   type: double
   unit: ul

@@ -37,10 +37,11 @@ def test_the_stage_rows_keep_tom_s_reward_zones():
 
 
 def test_the_time_limit_and_quiet_wait_are_one_optional_field_each_per_stage():
-    # Plan v11: a stage's timeLimitSeconds and quietSeconds, null for none, replace the booleans and the shared values.
+    # Plan v11: a stage's timeLimitSeconds, null for none; the quiet waits (Pip, 13 Nov 2026), 0 for off, Tom's quietSeconds kept as lickQuietSeconds.
     rows = task()["taskParameters"]["trainingStages"]
     assert [r["timeLimitSeconds"] for r in rows] == [None] * 3 + [12.0] * 3
-    assert [r["quietSeconds"] for r in rows] == [None] * 3 + [1.0] * 3
+    assert [r["lickQuietSeconds"] for r in rows] == [0] * 3 + [1.0] * 3
+    assert all(r["wheelQuietSeconds"] == 0 and r["wheelQuietCm"] == 0 and "quietSeconds" not in r for r in rows)
     assert not {"timeLimit", "quiescent"} & set(rows[0])
     assert not {"timeLimitSeconds", "quiescentSeconds"} & set(task()["taskParameters"]["trialStructure"])
 

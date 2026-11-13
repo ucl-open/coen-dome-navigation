@@ -30,8 +30,8 @@ With nobody at the wheel every trial times out 12 s after its first pip (the sta
 ## 3. Hardware-triggered rig
 
 Step 2 on the rig with `hardwareTriggered: true`.
-**Pass:** each trial's StartStimulus reply arrives just after the ITI ends; the Behavior board log has the trigger line going high at
-every trial start and low `triggerHoldSeconds` (1 s) after each outcome (it is held, not pulsed, since 10 Nov 2026); the masking LEDs stay lit for all of
+**Pass:** each trial's StartStimulus reply arrives during the interval, before the trial starts (the trial's start is never later for Zapit); the Behavior board log has the trigger line going high
+`laserToStimulusSeconds` before every first pip (at the trial's start with the default 0.1 s) and low `triggerHoldSeconds` (1 s) after each outcome (it is held, not pulsed, since 10 Nov 2026); the masking LEDs stay lit for all of
 that, on laser-off trials too; Zapit starts every trial (one rising edge each), including the first after a long trial; with the galvos
 visible or a photodiode, the stimulus starts at the trigger, not at the command.
 

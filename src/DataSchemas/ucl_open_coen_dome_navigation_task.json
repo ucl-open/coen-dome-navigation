@@ -1,7 +1,7 @@
 {
   "$defs": {
     "OptogeneticsConfig": {
-      "description": "Zapit optogenetic stimulation.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser\npower is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and\nlogged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...).\nEvery trial of an optogenetics experiment sends Zapit a condition drawn at random: laser-on trials with the laser\non, all others as laser-off trials with the laser off, so galvo noise and masking light are the same on every\ntrial. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the trial's start (beep 0, the\ntrigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip, and\nBonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. Zapit's host, port and\ntriggering are rig.yml's zapit block.",
+      "description": "Zapit optogenetic stimulation.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser\npower is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and\nlogged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...).\nEvery trial of an optogenetics experiment sends Zapit a condition drawn at random: laser-on trials with the laser\non, all others as laser-off trials with the laser off, so galvo noise and masking light are the same on every\ntrial. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the trigger (the trigger line's\nrising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip (after it if negative),\nand Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. A trial that ends before\nits trigger has no laser. Zapit is armed during the interval and adds no time. Zapit's host, port and\ntriggering are rig.yml's zapit block.",
       "if": {
         "additionalProperties": true,
         "properties": {
@@ -50,22 +50,20 @@
         },
         "laserMaxSeconds": {
           "default": 12.5,
-          "description": "Longest the laser stays on in one trial, in seconds from its onset, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s, so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
+          "description": "Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
           "exclusiveMinimum": 0,
           "title": "LaserMaxSeconds",
           "type": "number"
         },
         "laserToStimulusSeconds": {
           "default": 0.1,
-          "description": "How long the laser is on before the stimulus (the first tone pip and grating frame) starts, in seconds: a multiple of the 50 ms beep, from 0.05 to 0.2. The first pip moves to beep laser_to_stimulus_seconds / 50 ms on every trial of an optogenetics experiment, laser-on or laser-off, so trial timing does not reveal laser-on trials. Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)",
-          "maximum": 0.2,
-          "minimum": 0.05,
+          "description": "Signed, in whole 50 ms beeps: the trigger comes this long before the first tone pip and grating frame (at most 0.2 s); 0 with it; negative after it. Go (beep 0, the trial's start) is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the first pip comes the lead after Go in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger rises at Go with a lead, or this long after the first pip if negative. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin) and further after the first pip than a stage's timeLimitSeconds (2 s on a stage without one). Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)",
           "title": "LaserToStimulusSeconds",
           "type": "number"
         },
         "triggerHoldSeconds": {
           "default": 1.0,
-          "description": "How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it",
+          "description": "How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger",
           "minimum": 0.5,
           "title": "TriggerHoldSeconds",
           "type": "number"
@@ -189,19 +187,26 @@
           "title": "PunishWrongZone",
           "type": "boolean"
         },
-        "quietSeconds": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "After the inter-trial interval, the trial waits until the mouse has gone this long without licking, in seconds (uncapped), so licks for the last reward cannot carry into the next trial; null: no wait",
-          "title": "QuietSeconds"
+        "lickQuietSeconds": {
+          "default": 0.0,
+          "description": "Quiet wait: Go needs this long without a lick, in seconds, counted from the interval's start and restarted by every lick (uncapped), so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026",
+          "minimum": 0,
+          "title": "LickQuietSeconds",
+          "type": "number"
+        },
+        "wheelQuietSeconds": {
+          "default": 0.0,
+          "description": "Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start and restarted whenever the wheel's total distance (forward and back added) since the last restart passes wheelQuietCm; 0: off (with wheelQuietCm 0)",
+          "minimum": 0,
+          "title": "WheelQuietSeconds",
+          "type": "number"
+        },
+        "wheelQuietCm": {
+          "default": 0.0,
+          "description": "The wheel distance, forward and back added, that restarts the wheel's quiet wait, in cm; 0: off (with wheelQuietSeconds 0)",
+          "minimum": 0,
+          "title": "WheelQuietCm",
+          "type": "number"
         },
         "timeLimitSeconds": {
           "anyOf": [
@@ -262,7 +267,7 @@
       "properties": {
         "itiMinSeconds": {
           "default": 2.0,
-          "description": "Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)",
+          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any punishment timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
           "minimum": 0,
           "title": "ItiMinSeconds",
           "type": "number"
