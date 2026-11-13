@@ -190,3 +190,12 @@ def test_an_unreadable_experiment_gives_no_stage(tmp_path):
     unread = []
     assert experiments("TC9", [tmp_path], [], unread) == []
     assert unread == ["ses-004D1_2026-11-13T09-00-00 (Unreadable: FileNotFoundError)"]
+
+
+def test_runs_filed_under_the_eartag_are_found_when_it_is_given(tmp_path):
+    rows = [[1.0, i + 1, "auditory", "Correct"] for i in range(60)]
+    head = ("Seconds", "trialNumber", "trialType", "outcome")
+    write_new(tmp_path / "sub-TC9" / "ses-002D1_2026-11-10T09-00-00", 2, rows, head)
+    write_new(tmp_path / "sub-PCO1-01503" / "ses-001D1_2026-11-09T09-00-00", 1, rows, head)
+    assert len(experiments("TC9", [tmp_path], [])) == 1
+    assert len(experiments("TC9", [tmp_path], [], eartag="PCO1-01503")) == 2

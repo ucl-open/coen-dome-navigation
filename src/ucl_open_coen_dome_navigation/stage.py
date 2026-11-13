@@ -147,19 +147,20 @@ def ours(manifest: Path) -> bool:
     return not repo or "coen-dome-navigation" in repo
 
 
-def _subject_folders(base: Path, subject: str, unread: list[str] | None) -> list[Path]:
+def _subject_folders(base: Path, subject: str, unread: list[str] | None, eartag: str = "") -> list[Path]:
     """The mouse's experiment folders under one root; none, and the root added to `unread`, if it does not answer."""
     try:
         if unanswered(base):
             raise OSError(base)
-        return [*base.glob(f"sub-{subject}/ses-*"), *base.glob(f"*/sub-{subject}/ses-*")]
+        names = [n for n in dict.fromkeys((subject, eartag)) if n]  # runs before 13 Nov 2026 were filed under the eartag
+        return [f for n in names for f in (*base.glob(f"sub-{n}/ses-*"), *base.glob(f"*/sub-{n}/ses-*"))]
     except OSError:
         if unread is not None:
             unread.append(f"{base} (No Answer)")
         return []
 
 
-def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unread: list[str] | None = None) -> list[Experiment]:
+def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unread: list[str] | None = None, eartag: str = "") -> list[Experiment]:
     """Every experiment of the mouse in the roots, newest first; a folder seen twice (on the rig and in
     staging) counts once. A share that does not answer is added to `unread`, as is an experiment of
     this workflow with only its manifest left and its data in none of the roots."""
@@ -167,7 +168,7 @@ def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unrea
     manifest_only: list[str] = []
     for reader, bases in ((read_new, roots), (read_legacy, legacy_roots)):
         for base in bases:
-            for folder in _subject_folders(base, subject, unread):
+            for folder in _subject_folders(base, subject, unread, eartag):
                 if folder.name in found or not folder.is_dir():
                     continue
                 if reader is read_new and (folder / "manifest.json").is_file():
@@ -245,12 +246,13 @@ def main() -> None:
     """Print the suggestion for --subject and --modality as one JSON line."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--subject", required=True)
+    parser.add_argument("--eartag", default="", help="also search sub-<eartag>: runs before 13 Nov 2026 were filed under it")
     parser.add_argument("--modality", required=True, choices=["auditory", "visual", "audiovisual"])
     parser.add_argument("--root", action="append", type=Path, help="where this workflow's experiments are (repeatable)")
     parser.add_argument("--legacy-root", action="append", type=Path, help="where the old workflow's Logs are (repeatable)")
     args = parser.parse_args()
     unread: list[str] = []
-    history = experiments(args.subject, args.root or ROOTS, args.legacy_root or LEGACY_ROOTS, unread)
+    history = experiments(args.subject, args.root or ROOTS, args.legacy_root or LEGACY_ROOTS, unread, args.eartag)
     if unread:
         # The mouse's history may be there alone (a rig keeps its copy 72 h): no guess (audit, 9 Nov 2026,
         # a trained mouse was offered Stage 1).
