@@ -150,3 +150,20 @@ def test_the_committed_task_schema_is_the_model_s():
         by_alias=True, mode="serialization", union_format="primitive_type_array"
     )
     assert json.loads(SCHEMA.read_text(encoding="utf-8")) == json.loads(json.dumps(model))
+
+
+def test_a_reward_over_the_cap_is_refused():
+    # Audit round 4: lib-open-rigs' MAX_REWARD_UL, DeliverReward's MaxRewardUl.
+    import copy
+
+    from open_rigs.rigs.dome import MAX_REWARD_UL
+
+    from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskParameters
+
+    params = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_text(encoding="utf-8"))["taskParameters"]
+    ok = copy.deepcopy(params)
+    ok["trainingStages"][0]["rewardSizeUl"] = MAX_REWARD_UL
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
+    ok["trainingStages"][0]["rewardSizeUl"] = MAX_REWARD_UL + 1
+    with pytest.raises(pydantic.ValidationError, match="less than or equal to 20"):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)

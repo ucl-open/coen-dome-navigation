@@ -15,6 +15,23 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - Zapit's connection, its start checks and the refusal of a real mouse on a rig without hardware triggering are lib-open-rigs' `Zapit.ConnectZapit` (Devices coen-lab.8), shared with coen-dome-decision-making; the refusal left `CorridorSetup`. The 0.2 s reply margin is lib-open-rigs' `ZapitTrial.ReplyMarginSeconds` and `ZAPIT_REPLY_MARGIN_SECONDS`.
 - Pip, 13 Nov 2026: every rig.yml speaker needs a filter, or the workflow stops at Start naming it (`RequireSpeakerFilters`, lib-open-rigs `DomeSpeakers.RequireFilters`), as in coen-dome-decision-making. Unit-tested and build-checked only.
 
+## 2026-11-13 Audit round 4: changed
+
+- One cap on a reward, lib-open-rigs' `MAX_REWARD_UL` (20 ul, tied there to `DeliverReward`'s `MaxRewardUl`): each stage's `rewardSizeUl` and `ManualRewardUl`'s `Maximum` (tests).
+- `triggerHoldSeconds`' minimum is lib-open-rigs' `ZAPIT_MAX_RAMP_DOWN_SECONDS` (tied there to `ZapitConditions.MaximumRampDownMs`), not a typed 0.5.
+- On a rig without hardware triggering, Zapit's reply to the StartStimulus sent at the trigger is checked as a hardware-triggered rig's is (`OnZapitReply` returned before, as nothing set `armSent`; test).
+- The `ObserveOn(NewThreadScheduler)` after `CorridorTask` is gone (plan v11 W3): `CorridorTask` emits under its own lock, and nothing after it blocks the clock (`ZapitClient` sends off the thread, `AppendBuffer` queues). Build-checked only.
+- `config\main.layout` is tracked, an empty layout for now, so `Setup.ps1` replaces a stale per-machine one; save the real one (camera windows) on a machine with the Spinnaker SDK. `src\DataSchemas\calibration.json` is gone: no config file used it.
+
+## Audit round 4 (13 Nov 2026): not changed
+
+- coen-qc-calibrate-valve and the domes pace pulses on different Harp-synced devices, about 1 ms apart.
+- `ReadTextFile.cs` is duplicated in both dome workflows; moving it to a lab package costs a package bump.
+- The right valve needs a calibration too (`DeliverReward` loads both lines), though the corridor rewards on the left.
+- No trigger or Go time column; both follow from the trial row's times and the lead.
+- A skipped trial leaves Zapit armed; the next trial disarms it.
+- The 0.5 s wall-clock `rx:Delay` before `TrialsReady` stays: it holds the setup once, before the first trial, and no trial wait depends on it.
+
 ## Audit round 3 (13 Nov 2026): not changed
 
 - coen-dome-decision-making: a laser-off control trial and a laser trial skipped because it was answered first look alike in the row (`laserPowerMw` 0); which one follows from `choiceTime` and the lead.
@@ -42,7 +59,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 ### Zapit on BLUE-OPTO-2: before any optogenetics with a mouse (found 9 Nov 2026; affects av-dome too; for Pip, Tom and Ainiah)
 
-- **The masking light lasts 3 s; the laser up to 12.5 s.** Changed in the workflow, not yet tried on the rig (Tom and Pip, 10 Nov 2026; software timing of the end accepted): the board never pulses the trigger line (DomeHardware), so TaskLogic sets it high at beep 0 and clears it `triggerHoldSeconds` (1 s) after the outcome, on every trial of an optogenetics experiment only (Pip, 13 Nov 2026). The LEDs on it now last from the trial's start until after the laser has ramped down (ramp-downs capped at 500 ms in `ZapitConditions`), and the board log has the falling edge. Zapit must start on the rising edge alone: check on BLUE-OPTO-2 with a `test` mouse (docs\zapit-rig-test.md, step 3) before a real one. Moving the LEDs to Zapit's masking output (NI AO3) remains the hardware-timed alternative.
+- **The masking light lasts 3 s; the laser up to 12.5 s.** Changed in the workflow, not yet tried on the rig (Tom and Pip, 10 Nov 2026; software timing of the end accepted): the board never pulses the trigger line (DomeHardware), so TaskLogic sets it high at the trigger (`laserToStimulusSeconds` before the first pip) and clears it `triggerHoldSeconds` (1 s) after the outcome, on every trial of an optogenetics experiment only (Pip, 13 Nov 2026). The LEDs on it now last from the trigger until after the laser has ramped down (ramp-downs capped at 500 ms in `ZapitConditions`), and the board log has the falling edge. Zapit must start on the rising edge alone: check on BLUE-OPTO-2 with a `test` mouse (docs\zapit-rig-test.md, step 3) before a real one. Moving the LEDs to Zapit's masking output (NI AO3) remains the hardware-timed alternative.
 - **The laser glows on laser-off trials.** Zapit's "off" is 0 V (`sendSamples.m`), but this rig's Zapit settings put 0 mW at -0.04 V, so 0 V gives about 0.4 mW: a faint spot on every 0 mW trial (test-2055). Confirm with a power meter, then fix the laser's zero or Zapit's off voltage (upstream).
 - **Laser offset is not logged.** Onset is the DO3 edge (Behavior board log). The stop is sent at the outcome, but only Zapit's reply, about 1 s later, is logged. Wiring Zapit's laser control output into the Behavior board's spare ADC0 logs it at 1 kHz, with no workflow change.
 - **Zapit itself:** simulated mode is broken in 1.0.4 (`zapit.simulated.DAQ` lacks `stopAndDeleteDOTask`), so testing needs the real hardware and a scanner calibration. Starting Zapit switches the rig camera it opens to Mono12, which Bonsai cannot record until SpinView sets it back to Mono8; `camera.connectionIndex: 2` (Mono8) in Zapit's settings should stop it.

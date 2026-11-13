@@ -521,6 +521,7 @@ public class CorridorState
                     trial.trialNumber, now));
             }
             triggered = true;
+            if (!trial.armZapit) armSent = true;  // a software-triggered Zapit is sent its StartStimulus with the Trigger event
             laserOnset = now;
             events.Add(new CorridorEvent { Kind = CorridorEventKind.Trigger, Seconds = now, Trial = trial });
         }

@@ -710,14 +710,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Microlitres each reward gives, on the left spout's valve, planned from the valve's calibration (calibration\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)
+        /// Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
-        [System.ComponentModel.DescriptionAttribute("Microlitres each reward gives, on the left spout\'s valve, planned from the valve\'" +
-            "s calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the work" +
-            "flow at Start; the test mouse runs on one with no water (each reward logged as 0" +
-            " ul)")]
+        [System.ComponentModel.DescriptionAttribute(@"Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)")]
         public double RewardSizeUl
         {
             get

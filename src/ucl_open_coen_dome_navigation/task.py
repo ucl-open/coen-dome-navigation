@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Literal
 
 from open_rigs.core.task import Task, TaskParameters
-from open_rigs.rigs.dome import ZAPIT_REPLY_MARGIN_SECONDS
+from open_rigs.rigs.dome import MAX_REWARD_UL, ZAPIT_MAX_RAMP_DOWN_SECONDS, ZAPIT_REPLY_MARGIN_SECONDS
 from pydantic import ConfigDict, Field, field_validator, model_validator
 from swc.aeon.schema import BaseSchema
 
@@ -147,8 +147,8 @@ class OptogeneticsConfig(BaseSchema):
     )
     trigger_hold_seconds: float = Field(
         default=1.0,
-        ge=0.5,
-        description="How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger",
+        ge=ZAPIT_MAX_RAMP_DOWN_SECONDS,
+        description=f"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least {ZAPIT_MAX_RAMP_DOWN_SECONDS}, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger",
     )
     trials_before_laser: int = Field(
         default=20,
@@ -191,7 +191,8 @@ class TrainingStage(BaseSchema):
     reward_ceiling_hz: float = Field(ge=1, le=25000, description="Upper frequency of the reward zone, in Hz")
     reward_size_ul: float = Field(
         gt=0,
-        description="Microlitres each reward gives, on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)",
+        le=MAX_REWARD_UL,
+        description=f"Microlitres each reward gives, at most {MAX_REWARD_UL} (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)",
     )
     lick_to_reward: bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")

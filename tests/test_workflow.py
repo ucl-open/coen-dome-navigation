@@ -184,3 +184,24 @@ def test_every_speaker_needs_a_filter_at_start():
     assert [nodes[i].findtext(W + "Name") or nodes[i].findtext(W + "Selector") for i in sorted(_upstream(edges, check))] == ["RigConfigs", "SpeakerArray"]
     template = (ROOT / "config" / "rig-template.yml").read_text(encoding="utf-8")
     assert "unequalised" not in template and "Every speaker needs one" in template
+
+
+def test_the_manual_reward_is_capped_as_every_reward():
+    # Audit round 4: ManualRewardUl's Maximum is lib-open-rigs' MAX_REWARD_UL (DeliverReward's MaxRewardUl).
+    from open_rigs.rigs.dome import MAX_REWARD_UL
+
+    parameter = next(p for p in MAIN.iter(W + "Parameter") if p.findtext(W + "Name") == "ManualRewardUl")
+    assert float(parameter.findtext(W + "Maximum")) == MAX_REWARD_UL
+
+
+def test_the_trial_events_leave_the_clock_s_thread_unswitched():
+    # Plan v11 W3, audit round 4: CorridorTask serialises its inputs, and nothing downstream blocks, so no ObserveOn.
+    assert "rx:ObserveOn" not in combinators(group("TaskLogic"))
+
+
+def test_the_layout_is_tracked_and_the_schemas_are_the_generator_s():
+    # Audit round 4: a tracked layout replaces a stale per-machine one at Setup; calibration.json had no config file.
+    assert (ROOT / "config" / "main.layout").read_text(encoding="utf-8").count("<VisualizerLayout") == 1
+    assert "..\\config\\main.layout" in (ROOT / ".bonsai" / "Setup.ps1").read_text(encoding="utf-8-sig")
+    assert sorted(p.name for p in (ROOT / "src" / "DataSchemas").iterdir()) == [
+        "ucl_open_coen_dome_navigation.json", "ucl_open_coen_dome_navigation_task.json"]

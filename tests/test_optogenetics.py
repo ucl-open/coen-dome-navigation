@@ -114,3 +114,12 @@ def test_the_laser_cap_s_code_says_laser_not_stimulus():
     # "Stimulus" is the tone and grating only (Pip, 9 Nov 2026); Zapit's own StimDuration wire name is exempt.
     for text in ((ROOT / "src" / "ucl_open_coen_dome_navigation" / "task.py").read_text(encoding="utf-8"), CORRIDOR):
         assert not re.search(r"stim_duration|StimDurationMargin|STIM_DURATION", text, re.IGNORECASE)
+
+
+def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
+    # Audit round 4: the longest ramp-down is lib-open-rigs' ZAPIT_MAX_RAMP_DOWN_SECONDS (ZapitConditions.MaximumRampDownMs), not a typed 0.5.
+    from open_rigs.rigs.dome import ZAPIT_MAX_RAMP_DOWN_SECONDS
+
+    assert OptogeneticsConfig.model_fields["trigger_hold_seconds"].metadata[0].ge == ZAPIT_MAX_RAMP_DOWN_SECONDS
+    with pytest.raises(pydantic.ValidationError, match="greater than or equal to 0.5"):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(params(triggerHoldSeconds=ZAPIT_MAX_RAMP_DOWN_SECONDS - 0.1))

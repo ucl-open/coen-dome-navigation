@@ -166,8 +166,9 @@
           "type": "number"
         },
         "rewardSizeUl": {
-          "description": "Microlitres each reward gives, on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)",
+          "description": "Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)",
           "exclusiveMinimum": 0,
+          "maximum": 20,
           "title": "RewardSizeUl",
           "type": "number"
         },

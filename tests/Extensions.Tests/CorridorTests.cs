@@ -499,6 +499,21 @@ public class CorridorStateTests
         Assert.ThrowsException<InvalidOperationException>(() => wrong.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }).ToList());
     }
 
+    // Audit round 4: on a software-triggered rig the Trigger event sends the StartStimulus, so its reply is checked too.
+    [TestMethod]
+    public void ASoftwareTriggeredZapitsWrongReplyStopsTheTask()
+    {
+        var task = Fixture.Task();
+        Fixture.Opto(task);
+        var rig = new Rig(Fixture.Setup(task, 4, false));
+        rig.RunTo(CorridorEventKind.Trigger);
+        Assert.IsFalse(rig.Events.Any(e => e.Kind == CorridorEventKind.Arm));
+        Assert.ThrowsException<InvalidOperationException>(() => rig.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }).ToList());
+        var right = new Rig(Fixture.Setup(task, 4, false));
+        var trigger = right.RunTo(CorridorEventKind.Trigger);
+        right.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trigger.Trial.laserCondition, LaserOn = trigger.Trial.laserOn ? 1 : 0 }).ToList();
+    }
+
     [TestMethod]
     public void TheLaserIsCappedOnTheHarpClockOnAStageWithoutATimeLimit()
     {
