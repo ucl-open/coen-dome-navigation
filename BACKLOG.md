@@ -15,6 +15,19 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - Zapit's connection, its start checks and the refusal of a real mouse on a rig without hardware triggering are lib-open-rigs' `Zapit.ConnectZapit` (Devices coen-lab.8), shared with coen-dome-decision-making; the refusal left `CorridorSetup`. The 0.2 s reply margin is lib-open-rigs' `ZapitTrial.ReplyMarginSeconds` and `ZAPIT_REPLY_MARGIN_SECONDS`.
 - Pip, 13 Nov 2026: every rig.yml speaker needs a filter, or the workflow stops at Start naming it (`RequireSpeakerFilters`, lib-open-rigs `DomeSpeakers.RequireFilters`), as in coen-dome-decision-making. Unit-tested and build-checked only.
 
+## 2026-11-13 Audit round 5: changed
+
+- Nothing in the workflow. The arming rule's gap is a BACKLOG item (Open, Zapit on BLUE-OPTO-2).
+
+## Audit round 5 (13 Nov 2026): not changed
+
+- Removing the `ObserveOn` after `CorridorTask` stays: one lock, and nothing waits inside it.
+- `armSent` is set at a software trigger, which only the `test` mouse runs.
+- `wheelQuietCm` 0 is refused unless the wheel wait is off: any travel would hold Go on encoder jitter.
+- The 20 ul cap is written in three places in lib-open-rigs, tied by tests.
+- A calibration `pulseGapMs` of 0 is allowed; the domes fire at the calibrated gap.
+- Lab IDs are not checked unique over time; the lab never reuses them.
+
 ## 2026-11-13 Audit round 4: changed
 
 - One cap on a reward, lib-open-rigs' `MAX_REWARD_UL` (20 ul, tied there to `DeliverReward`'s `MaxRewardUl`): each stage's `rewardSizeUl` and `ManualRewardUl`'s `Maximum` (tests).
@@ -62,6 +75,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - **The masking light lasts 3 s; the laser up to 12.5 s.** Changed in the workflow, not yet tried on the rig (Tom and Pip, 10 Nov 2026; software timing of the end accepted): the board never pulses the trigger line (DomeHardware), so TaskLogic sets it high at the trigger (`laserToStimulusSeconds` before the first pip) and clears it `triggerHoldSeconds` (1 s) after the outcome, on every trial of an optogenetics experiment only (Pip, 13 Nov 2026). The LEDs on it now last from the trigger until after the laser has ramped down (ramp-downs capped at 500 ms in `ZapitConditions`), and the board log has the falling edge. Zapit must start on the rising edge alone: check on BLUE-OPTO-2 with a `test` mouse (docs\zapit-rig-test.md, step 3) before a real one. Moving the LEDs to Zapit's masking output (NI AO3) remains the hardware-timed alternative.
 - **The laser glows on laser-off trials.** Zapit's "off" is 0 V (`sendSamples.m`), but this rig's Zapit settings put 0 mW at -0.04 V, so 0 V gives about 0.4 mW: a faint spot on every 0 mW trial (test-2055). Confirm with a power meter, then fix the laser's zero or Zapit's off voltage (upstream).
 - **Laser offset is not logged.** Onset is the DO3 edge (Behavior board log). The stop is sent at the outcome, but only Zapit's reply, about 1 s later, is logged. Wiring Zapit's laser control output into the Behavior board's spare ADC0 logs it at 1 kHz, with no workflow change.
+- **The arming rule leaves out Zapit's StopStimulus reply** (audit round 5). `triggerHoldSeconds` may be up to `itiMinSeconds - laserToStimulusSeconds - 0.2 s` (`Corridor.cs` check, task.py `_the_next_trial_is_armed_in_time`), but `ZapitClient` sends one command at a time, so the next arm waits for the StopStimulus reply, about 1 s on 9 Nov (Laser offset, above). Time the stop round trip on BLUE-OPTO-2 in plan v11 Switch step 9's `test` run, then add it to the rule in both the C# and the pydantic model.
 - **Zapit itself:** simulated mode is broken in 1.0.4 (`zapit.simulated.DAQ` lacks `stopAndDeleteDOTask`), so testing needs the real hardware and a scanner calibration. Starting Zapit switches the rig camera it opens to Mono12, which Bonsai cannot record until SpinView sets it back to Mono8; `camera.connectionIndex: 2` (Mono8) in Zapit's settings should stop it.
 
 ### For Pip and Tom to decide
@@ -76,7 +90,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - In rig-setup's Repos since 9 Nov 2026: BLUE-OPTO-1, BLUE-OPTO-2, GREEN-DOME-1 and GREEN-DOME-2 each pull `main` into `C:\Github\Coen-Lab\coen-dome-navigation` within 30 minutes of a push, never while recording, and check its names. A push here deploys to all four.
 - **Tested on BLUE-OPTO-2** (9 Nov 2026, `test` mouse), with optogenetics off and then on: Bonsai and Zapit agree on every trial. The logging bugs found are fixed (Decided); the Zapit rig issues are above. Not yet run: one of Tom's mice, a dome.
 - **Tom's mice move between BLUE-OPTO-1, BLUE-OPTO-2, GREEN-DOME-1 and GREEN-DOME-2**, so each needs a rig.yml, this clone and the calibration folder (above). A mouse without a spout file gets rig.yml's `lickSpoutDefaultPosition` (all 0 on BLUE-OPTO-2), not Tom's In positions (3550, 5500, 4700, 2150, 950): set and Save each mouse's positions in its first experiment (Pip, 10 Nov 2026; the rig.yml default stays).
-- No `config\main.layout` yet: save one with the camera windows on a machine with the Spinnaker SDK, then commit it (`.bonsai\Setup.ps1` copies it).
+- `config\main.layout` is empty (audit round 4): save one with the camera windows on a machine with the Spinnaker SDK, then commit it (`.bonsai\Setup.ps1` copies it).
 - The old workflow's history: `stage.py` reads the old TrialLogs from each rig's `C:\Github\Coen-Lab\auditory-vr-corridor\Logs` and the RDSS share. On BLUE-OPTO-2 the local path does not exist, but the share answers with every TC mouse's history (9 Nov 2026); check the share from each other rig's account, or every suggestion there says it has no history.
 - A Zapit ticked with no `zapitConfigPath` is refused on the form (the task schema). A path that names no file on the rig stops the experiment at Go, before trial 1: the Zapit condition-count check reads the file when Zapit connects (zapit-v2).
 
