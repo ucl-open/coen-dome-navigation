@@ -261,24 +261,17 @@
       "description": "Timing of each trial.",
       "properties": {
         "itiMinSeconds": {
-          "default": 0.0,
-          "description": "Lower bound of the uniformly drawn inter-trial interval, in seconds",
+          "default": 2.0,
+          "description": "Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)",
           "minimum": 0,
           "title": "ItiMinSeconds",
           "type": "number"
         },
         "itiMaxSeconds": {
-          "default": 1.0,
-          "description": "Upper bound of the uniformly drawn inter-trial interval, in seconds",
+          "default": 3.0,
+          "description": "Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)",
           "minimum": 0,
           "title": "ItiMaxSeconds",
-          "type": "number"
-        },
-        "drinkSeconds": {
-          "default": 2.0,
-          "description": "After each outcome, and a punished trial's timeout, before the next trial's inter-trial interval begins, in seconds: time to drink (Tom Childs' fixed 2 s)",
-          "minimum": 0,
-          "title": "DrinkSeconds",
           "type": "number"
         },
         "trackLengthsCm": {
@@ -387,9 +380,8 @@
         "trialStructure": {
           "$ref": "#/$defs/TrialStructure",
           "default": {
-            "itiMinSeconds": 0.0,
-            "itiMaxSeconds": 1.0,
-            "drinkSeconds": 2.0,
+            "itiMinSeconds": 2.0,
+            "itiMaxSeconds": 3.0,
             "trackLengthsCm": [
               80.0,
               100.0,

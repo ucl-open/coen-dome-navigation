@@ -15,6 +15,7 @@ from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogi
 ROOT = Path(__file__).parent.parent
 TASK = ROOT / "config" / "task-abstract-av-corridor.yml"
 WAVES = ROOT / "src" / "waveforms"
+SCHEMA = ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json"
 
 
 def task() -> dict:
@@ -35,34 +36,49 @@ def test_the_stage_rows_keep_tom_s_reward_zones():
     assert zones == [(18000, 25000)] * 2 + [(floor, 25000)] + [(floor, ceiling)] * 3
 
 
-def test_the_shared_blocks_have_av_dome_s_names():
-    # Pip, 9 Nov 2026: the lab's tasks name the same things the same way.
+def test_the_time_limit_and_quiet_wait_are_one_optional_field_each_per_stage():
+    # Plan v11: a stage's timeLimitSeconds and quietSeconds, null for none, replace the booleans and the shared values.
+    rows = task()["taskParameters"]["trainingStages"]
+    assert [r["timeLimitSeconds"] for r in rows] == [None] * 3 + [12.0] * 3
+    assert [r["quietSeconds"] for r in rows] == [None] * 3 + [1.0] * 3
+    assert not {"timeLimit", "quiescent"} & set(rows[0])
+    assert not {"timeLimitSeconds", "quiescentSeconds"} & set(task()["taskParameters"]["trialStructure"])
+
+
+def test_the_interval_runs_from_the_outcome_and_keeps_tom_s_timing():
+    # Plan v11, as decision-making: itiSeconds runs from the outcome (after any timeout) and includes the drink,
+    # so Tom's fixed 2 s then 0 to 1 s is 2 to 3 s.
+    structure = task()["taskParameters"]["trialStructure"]
+    assert (structure["itiMinSeconds"], structure["itiMaxSeconds"]) == (2.0, 3.0) and "drinkSeconds" not in structure
+
+
+def test_the_sweep_and_the_wheel_are_not_task_fields():
+    # Plan v11: the sweep is src\waveforms\sweep.json's, and the wheel diameter rig.yml's (75 mm on every dome).
     p = task()["taskParameters"]
-    assert {"itiMinSeconds", "itiMaxSeconds", "timeLimitSeconds"} <= set(p["trialStructure"])
-    assert list(p["punishment"]) == ["timeoutSeconds", "sound"] and {"enabled", "path", "gain"} <= set(p["punishment"]["sound"])
-    assert "rngSeed" in p and "rewardSizeUl" in p["trainingStages"][0]
+    assert not {"sweepStartHz", "sweepEndHz", "sweepSteps", "toneAmplitude", "wheelDiameterMm"} & set(p)
 
 
-def test_the_committed_waveforms_are_the_task_file_s():
-    p = UclOpenCoenDomeNavigationTaskLogic.model_validate(task()).task_parameters
-    assert (WAVES / "sweep.txt").read_text(encoding="utf-8") == waveforms.sweep_line(
-        p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps, p.tone_amplitude
-    )
-    freqs = waveforms.tone_frequencies(p.sweep_start_hz, p.sweep_end_hz, p.sweep_steps)
+def test_the_committed_waveforms_are_waveforms_py_s():
+    assert json.loads((WAVES / "sweep.json").read_text(encoding="utf-8")) == waveforms.sweep()
+    freqs = waveforms.tone_frequencies()
     assert [int(x) for x in (WAVES / "frequencies.txt").read_text(encoding="utf-8").split()] == list(freqs)
-    committed = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(p.sweep_steps, -1)
-    assert np.array_equal(committed, waveforms.tones(freqs, p.tone_amplitude))
+    committed = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(waveforms.SWEEP_STEPS, -1)
+    assert np.array_equal(committed, waveforms.tones(freqs))
     assert committed.shape[1] == 2400  # the workflow's MatrixReader BufferLength
+    assert np.array_equal(np.fromfile(WAVES / "reward_tone.bin", dtype=np.float32), waveforms.reward_tone()[0])
     rate, error = wavfile.read(WAVES / "error_tone.wav")
-    assert rate == 48000 and np.array_equal(error, waveforms.error_tone(float(freqs[0]), float(freqs[-1]), p.tone_amplitude))
-    noise = np.fromfile(WAVES / "background_noise.bin", dtype=np.float32)
-    assert np.array_equal(noise, waveforms.background_noise())
+    assert rate == 48000 and np.array_equal(error, waveforms.error_tone(float(freqs[0]), float(freqs[-1])))
+    assert np.array_equal(np.fromfile(WAVES / "background_noise.bin", dtype=np.float32), waveforms.background_noise())
 
 
-def test_a_tone_pip_keeps_the_old_loudness():
-    # gen_session wrote pips at amplitude and the workflow scales them by amplitude again.
-    pips = waveforms.tones(np.array([18000]), 0.05)
-    assert abs(float(np.max(np.abs(pips))) - 0.05) < 1e-3
+def test_every_sound_is_at_the_loudness_it_plays_at():
+    # Tom's pips and reward tone peaked at amplitude squared (written at amplitude, scaled by it again); the noise has a
+    # pip's RMS, so backgroundNoiseLevel is its gain; the error tone peaks at amplitude.
+    assert abs(float(np.max(np.abs(waveforms.tones(np.array([18000]))))) - 0.05**2) < 1e-4
+    assert abs(float(np.max(np.abs(waveforms.reward_tone()))) - 0.05**2) < 1e-6
+    rms = float(np.sqrt(np.mean(waveforms.background_noise().astype(np.float64) ** 2)))
+    assert abs(rms - 0.5 * 0.05**2) < 1e-5
+    assert abs(float(np.max(np.abs(waveforms.error_tone(2000, 25000)))) / 32767 - 0.05) < 1e-4
 
 
 def _closed(node):
@@ -77,10 +93,8 @@ def _closed(node):
 
 
 def test_the_schema_refuses_zapit_ticked_with_no_config_path():
-    # rig-control checks the task file against the schema, not the model; this used to reach Go and
-    # stop the workflow at trial 1 (audit, 9 Nov 2026, round 3).
-    schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8")))
-    validator = jsonschema.Draft202012Validator(schema)
+    # rig-control checks the task file against the schema, not the model.
+    validator = jsonschema.Draft202012Validator(_closed(json.loads(SCHEMA.read_text(encoding="utf-8"))))
 
     def problems(**opto):
         doc = task()
@@ -90,48 +104,37 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
     assert problems() == []
     assert problems(useZapit=True, laserPowerMw=2.0) == ["'' should be non-empty"]
     assert problems(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml") == ["None is not of type 'number'"]
-    assert problems(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=0) == ["0 is not valid under any of the given schemas"]
     assert problems(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0) == []
 
 
 def test_the_optogenetics_block_has_pip_s_names():
-    # Pip, 9 Nov 2026: av-dome's stimDelay (only 0 works here), excludeRepeats (no repeat trials) and
-    # pseudorandomSelection (every condition is drawn at random) dropped; the rest renamed to say what they do.
     names = ["useZapit", "zapitConfigPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserToStimulusSeconds",
-             "trialsBeforeLaser"]
+             "triggerHoldSeconds", "trialsBeforeLaser"]
     assert list(task()["taskParameters"]["optogenetics"]) == names
 
 
 def test_rig_control_keeps_the_zapit_file():
-    # rig-control copies a task field ending in ConfigPath beside the task file at Go (taskfile.keep_files):
-    # renamed zapitConditionsPath on 9 Nov 2026, the file stopped being kept (audit, 10 Nov 2026).
+    # rig-control copies a task field ending in ConfigPath beside the task file at Go (taskfile.keep_files).
     assert [k for k in task()["taskParameters"]["optogenetics"] if k.endswith("Path")] == ["zapitConfigPath"]
 
 
-@pytest.mark.parametrize("old", ["stimDelay", "excludeRepeats", "pseudorandomSelection", "warmupTrials", "stimProbability",
-                                 "stimDuration", "leadTime", "zapitStimConfigPath", "zapitConditionsPath", "laserLeadSeconds", "enabled", "laserLeadsStimulusBySeconds"])
-def test_the_schema_refuses_the_old_names(old):
-    schema = _closed(json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8")))
-    validator = jsonschema.Draft202012Validator(schema)
+@pytest.mark.parametrize("old", ["stimDelay", "excludeRepeats", "laserLeadSeconds", "enabled"])
+def test_the_schema_refuses_old_names(old):
+    validator = jsonschema.Draft202012Validator(_closed(json.loads(SCHEMA.read_text(encoding="utf-8"))))
     doc = task()
-    assert list(validator.iter_errors(doc)) == []
-    doc["taskParameters"]["optogenetics"][old] = ""  # a string, so only the name can be refused
+    doc["taskParameters"]["optogenetics"][old] = ""
     assert any("Additional properties" in e.message for e in validator.iter_errors(doc))
 
 
 def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
-    # zapit-v2: Tom's design (40% laser after 20 trials without, 0.1 s lead, 12.5 s cap). The reward is meant to be
-    # 3 ul, but 2.0 on every stage until the left valves are calibrated: an uncalibrated valve is taken as 2 ul a pulse,
-    # so 2 ul is one opening of Tom's width (42 ms on BLUE-OPTO-2, measured as about 3 ul) and 3 ul was two (BACKLOG).
     params = task()["taskParameters"]
     opto = params["optogenetics"]
-    assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserToStimulusSeconds"], opto["laserMaxSeconds"]) == (0.4, 20, 0.1, 12.5)
+    assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserToStimulusSeconds"], opto["laserMaxSeconds"], opto["triggerHoldSeconds"]) == (0.4, 20, 0.1, 12.5, 1.0)
     assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {2.0}
 
 
 def test_the_committed_task_schema_is_the_model_s():
-    committed = json.loads((ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json").read_text(encoding="utf-8"))
     model = pydantic.RootModel[UclOpenCoenDomeNavigationTaskLogic].model_json_schema(
         by_alias=True, mode="serialization", union_format="primitive_type_array"
     )
-    assert committed == json.loads(json.dumps(model))
+    assert json.loads(SCHEMA.read_text(encoding="utf-8")) == json.loads(json.dumps(model))

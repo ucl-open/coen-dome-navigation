@@ -943,15 +943,12 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _itiMaxSeconds;
     
-        private double _drinkSeconds;
-    
         private System.Collections.Generic.List<double> _trackLengthsCm;
     
         public TrialStructure()
         {
-            _itiMinSeconds = 0D;
-            _itiMaxSeconds = 1D;
-            _drinkSeconds = 2D;
+            _itiMinSeconds = 2D;
+            _itiMaxSeconds = 3D;
             _trackLengthsCm = new System.Collections.Generic.List<double>();
         }
     
@@ -959,16 +956,15 @@ namespace UclOpenCoenDomeNavigationTask
         {
             _itiMinSeconds = other._itiMinSeconds;
             _itiMaxSeconds = other._itiMaxSeconds;
-            _drinkSeconds = other._drinkSeconds;
             _trackLengthsCm = other._trackLengthsCm;
         }
     
         /// <summary>
-        /// Lower bound of the uniformly drawn inter-trial interval, in seconds
+        /// Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("itiMinSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMinSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Lower bound of the uniformly drawn inter-trial interval, in seconds")]
+        [System.ComponentModel.DescriptionAttribute(@"Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)")]
         public double ItiMinSeconds
         {
             get
@@ -982,11 +978,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Upper bound of the uniformly drawn inter-trial interval, in seconds
+        /// Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("itiMaxSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMaxSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Upper bound of the uniformly drawn inter-trial interval, in seconds")]
+        [System.ComponentModel.DescriptionAttribute("Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSecond" +
+            "s)")]
         public double ItiMaxSeconds
         {
             get
@@ -996,25 +993,6 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _itiMaxSeconds = value;
-            }
-        }
-    
-        /// <summary>
-        /// After each outcome, and a punished trial's timeout, before the next trial's inter-trial interval begins, in seconds: time to drink (Tom Childs' fixed 2 s)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("drinkSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="drinkSeconds")]
-        [System.ComponentModel.DescriptionAttribute("After each outcome, and a punished trial\'s timeout, before the next trial\'s inter" +
-            "-trial interval begins, in seconds: time to drink (Tom Childs\' fixed 2 s)")]
-        public double DrinkSeconds
-        {
-            get
-            {
-                return _drinkSeconds;
-            }
-            set
-            {
-                _drinkSeconds = value;
             }
         }
     
@@ -1052,7 +1030,6 @@ namespace UclOpenCoenDomeNavigationTask
         {
             stringBuilder.Append("ItiMinSeconds = " + _itiMinSeconds + ", ");
             stringBuilder.Append("ItiMaxSeconds = " + _itiMaxSeconds + ", ");
-            stringBuilder.Append("DrinkSeconds = " + _drinkSeconds + ", ");
             stringBuilder.Append("TrackLengthsCm = " + _trackLengthsCm);
             return true;
         }

@@ -11,9 +11,9 @@ TEMPLATE = ROOT / "config" / "rig-template.yml"
 
 
 def test_the_rig_template_validates():
-    # The template is av-dome's (pip/main-switchover): every rig's rig.yml is read by both workflows.
+    # The dome rig model (open_rigs.rigs.dome): every dome workflow reads the one rig.yml.
     rig = UclOpenCoenDomeNavigationRig.model_validate(yaml.safe_load(TEMPLATE.read_text(encoding="utf-8")))
-    assert rig.reward_valves.left.value == "DO1"
+    assert rig.behavior_board["main"].running_wheel.wheel_diameter_mm == 75  # the measured wheel on every dome
 
 
 def test_the_committed_schema_is_the_model_s():

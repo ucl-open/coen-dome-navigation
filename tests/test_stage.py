@@ -174,3 +174,19 @@ def test_the_opto_columns_are_read(tmp_path):
               header=("trialType", "outcome", "laserPowerMw", "laserCondition"))
     e = read_new(folder)
     assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]
+
+
+def test_the_ingest_destination_is_a_root():
+    # Plan v11: once jacuzzi-ingest clears staging, the experiment is only in Live-Data (<MACHINE>\sub-<lab ID>\ses-...).
+    from ucl_open_coen_dome_navigation.stage import LEGACY_ROOTS, LIVE_DATA, ROOTS
+
+    assert LIVE_DATA in ROOTS and LEGACY_ROOTS[-1].parent == LIVE_DATA
+
+
+def test_an_unreadable_experiment_gives_no_stage(tmp_path):
+    # Plan v11 (fail loudly): an experiment that cannot be read may be the one that decides.
+    folder = tmp_path / "GREEN-DOME-1" / "sub-TC9" / "ses-004D1_2026-11-13T09-00-00"
+    write(folder / "BonsaiData" / "BonsaiData_Trial_x.csv", ["trialType", "outcome"], [["auditory", "Correct"]])
+    unread = []
+    assert experiments("TC9", [tmp_path], [], unread) == []
+    assert unread == ["ses-004D1_2026-11-13T09-00-00 (Unreadable: FileNotFoundError)"]

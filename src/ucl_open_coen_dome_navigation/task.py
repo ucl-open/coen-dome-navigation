@@ -3,7 +3,7 @@ workflow reads at Go (TaskPath). Ported from Tom Childs' auditory-vr-corridor ta
 
 Laid out as av-dome's (Pip, 9 Nov 2026): the stage is the TrainingStage experiment setting, a row of trainingStages
 from 0 (Tom's stages 1 to 6 are rows 0 to 5), and each row says what the stage does, where the workflow used to test
-the stage number; trialStructure holds the ITI, the drink time and the track lengths, punishment the timeout and error
+the stage number; trialStructure holds the ITI and the track lengths, punishment the timeout and error
 sound, and rngSeed seeds every draw. The sweep and its loudness are src/waveforms/sweep.json's, made with the tone files
 (`uv run generate-waveforms`), not the task file's (plan v11)."""
 
@@ -33,13 +33,12 @@ def sweep() -> dict:
 class TrialStructure(BaseSchema):
     """Timing of each trial."""
 
-    iti_min_seconds: float = Field(default=0.0, ge=0, description="Lower bound of the uniformly drawn inter-trial interval, in seconds")
-    iti_max_seconds: float = Field(default=1.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds")
-    drink_seconds: float = Field(
+    iti_min_seconds: float = Field(
         default=2.0,
         ge=0,
-        description="After each outcome, and a punished trial's timeout, before the next trial's inter-trial interval begins, in seconds: time to drink (Tom Childs' fixed 2 s)",
+        description="Lower bound of the uniformly drawn inter-trial interval, in seconds: from the last trial's outcome (after any punishment timeout) to this trial's start, or to the quiet wait on a stage with quietSeconds. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)",
     )
+    iti_max_seconds: float = Field(default=3.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)")
     track_lengths_cm: List[float] = Field(
         default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
     )

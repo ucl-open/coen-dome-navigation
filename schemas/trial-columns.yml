@@ -1,5 +1,5 @@
-# What each BonsaiData_Trial column this workflow writes means (the TrialRow group builds the row
-# when the trial's outcome is known, TrialOutcome). ExperimentManifest (TrialColumns) copies this file into every
+# What each BonsaiData_Trial column this workflow writes means (CreateTrialRow, src\Extensions\Corridor.cs, builds the row
+# when the trial's outcome is known; scripts\check-workflow.ps1 holds the row's fields to this list). ExperimentManifest (TrialColumns) copies this file into every
 # experiment's manifest.json at Start, so each experiment carries the meaning of its own trial log.
 #
 # Each column: type (int, double, bool or string), and where they apply values, unit, formerly
@@ -19,8 +19,8 @@
 Seconds:
   type: double
   unit: s
-  formerly: [HarpTime]
-  description: Harp time the row was built, when the outcome was known - after the reward tone on a reward, after the error tone and timeout on a punishment, at once otherwise. Tom Childs' TrialLog was stamped 2 s later.
+  formerly: [outcomeTime, HarpTime]
+  description: Harp time the outcome was known (the trial's end), when the row was built; outcomeTime until 13 Nov 2026. Tom Childs' TrialLog was stamped 2 s later.
 trialNumber:
   type: int
   formerly: [Trial]
@@ -43,7 +43,7 @@ endReason:
 punishSound:
   type: bool
   formerly: [WasPunished]
-  description: True when the error tone played (the task's punishment.sound enabled). A trial is punished when it runs out of time or track with the end frequency in the reward zone, and on a stage with punishWrongZone when it ends outside the zone (ProcessTrialEnd); the timeout follows.
+  description: True when the error tone played (the task's punishment.sound enabled). A trial is punished when it runs out of time or track with the end frequency in the reward zone, and on a stage with punishWrongZone when it ends outside the zone (Corridor.cs CorridorState.End); the timeout follows.
 punishTimeoutSeconds:
   type: double
   unit: s
@@ -53,12 +53,12 @@ trackLengthCm:
   type: double
   unit: cm
   formerly: [TrackLength]
-  description: The trial's track length, one of trialStructure.trackLengthsCm, drawn per trial, times the stage's trackLengthScale. Distances are at the task file's wheelDiameterMm.
+  description: The trial's track length, one of trialStructure.trackLengthsCm, drawn per trial, times the stage's trackLengthScale. Distances are at rig.yml's wheelDiameterMm (75 mm on every dome).
 endPositionCm:
   type: double
   unit: cm
   formerly: [TrialEndPosCm]
-  description: Distance run in the trial when the row was built (Seconds). Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
+  description: Position along the track at the outcome (Seconds), behind the start never counted and capped at the track's length. Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
 toneEndFrequencyHz:
   type: double
   unit: Hz
@@ -77,12 +77,12 @@ itiStartTime:
   type: double
   unit: s
   formerly: [ITIStartHarp]
-  description: Harp time the inter-trial interval before this trial began.
+  description: Harp time the inter-trial interval before this trial began (the last trial's outcome, after any punishment timeout), NaN on the first.
 itiSeconds:
   type: double
   unit: s
   formerly: [ITIDrawnSec]
-  description: The inter-trial interval drawn before this trial, evenly between trialStructure.itiMinSeconds and itiMaxSeconds (Tom Childs' workflow drew 0 or 1 s until 9 Nov 2026). On a stage with quiescent the trial also waited for quiescentSeconds without licks.
+  description: The inter-trial interval drawn before this trial, evenly between trialStructure.itiMinSeconds and itiMaxSeconds, NaN on the first. It ran from the last trial's outcome (after any punishment timeout) and includes the time to drink; on a stage with quietSeconds the trial then also waited that long without licks, and a hardware-triggered Zapit was armed. Until 13 Nov 2026 it was drawn 0 to 1 s and followed a fixed 2 s after the outcome; Tom Childs' workflow drew 0 or 1 s.
 trialStartTime:
   type: double
   unit: s
@@ -93,11 +93,6 @@ stimulusOnsetTime:
   unit: s
   formerly: [CueOnsetHarp]
   description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame, as Tom Childs' CueOnsetHarp. That is beep 1, 50 ms after the trial's start at beep 0; in an optogenetics experiment it is laserToStimulusSeconds after beep 0, when the laser came on (beep 2 at 0.1 s). The physical onset is in the hardware logs.
-outcomeTime:
-  type: double
-  unit: s
-  formerly: [OutcomeHarp]
-  description: Harp time of the outcome (reward, punishment or end).
 rewardSizeUl:
   type: double
   unit: ul

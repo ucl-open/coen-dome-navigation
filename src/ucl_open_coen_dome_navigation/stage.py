@@ -10,8 +10,8 @@ command:
     uv run suggest-stage --subject TC003 --modality auditory [--root DIR ...] [--legacy-root DIR ...]
 
 prints one JSON line, {"value": 3, "why": "..."}: the contract of rig-control's [task.suggest]. If
-a share among the roots does not answer, or an experiment there has only its manifest left (its data
-ingested elsewhere), value is null and why names it: no stage is guessed, since the mouse's history
+a share among the roots does not answer, an experiment there cannot be read, or one has only its manifest
+left (its data ingested elsewhere), value is null and why names it: no stage is guessed, since the mouse's history
 may be only there (rig-sync deletes a rig's copy after 72 h).
 
 The rules: the latest experiment of the modality with trials decides. Under 50 trials keeps its stage.
@@ -38,12 +38,15 @@ TWO_IN_A_ROW_REWARDED = 50
 REGRESS_RATE = 0.5
 EARLY_ADVANCE_FROM = 2  # Tom's stage 3: stages 2 and 3 also advance on their first 100 or 150 trials
 
-# This workflow's experiments: on the rig until rig-sync copies them, then in the server's staging.
-ROOTS = [Path(r"C:\Coen-Lab-Local\Acquired-Data"), Path(r"\\128.40.51.157\rigs\staging")]
+# This workflow's experiments: on the rig until rig-sync copies them, then in the server's staging, then where
+# jacuzzi-ingest files them (Live-Data, <MACHINE>\sub-<lab ID>\ses-..., the project share's root). Folders are named
+# by the mouse's lab ID (plan v11), the SubjectId rig-control launches with, as the old TrialLogs' were.
+LIVE_DATA = Path(r"\\rdp.arc.ucl.ac.uk\ritd-ag-project-rd01n9-pcoen00")
+ROOTS = [Path(r"C:\Coen-Lab-Local\Acquired-Data"), Path(r"\\128.40.51.157\rigs\staging"), LIVE_DATA]
 # The old workflow's TrialLogs: each rig's clone wrote Logs\, which was pushed to the project share.
 LEGACY_ROOTS = [
     Path(r"C:\Github\Coen-Lab\auditory-vr-corridor\Logs"),
-    Path(r"\\rdp.arc.ucl.ac.uk\ritd-ag-project-rd01n9-pcoen00\AV_VR_Corridor"),
+    LIVE_DATA / "AV_VR_Corridor",
 ]
 
 
@@ -177,7 +180,10 @@ def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unrea
                         continue
                 try:
                     e = reader(folder)
-                except (OSError, ValueError, KeyError):
+                except (OSError, ValueError, KeyError) as error:
+                    # Never passed over unseen: it may be the experiment that decides (plan v11, fail loudly)
+                    if unread is not None:
+                        unread.append(f"{folder.name} (Unreadable: {type(error).__name__})")
                     continue
                 if e is not None:
                     found[folder.name] = e

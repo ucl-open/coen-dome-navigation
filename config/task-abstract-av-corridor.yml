@@ -16,9 +16,8 @@ taskParameters:
   backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
   positionStepCm: 1           # the distance run is rounded to this before it sets the frequency
   trialStructure:
-    itiMinSeconds: 0.0        # Tom's workflow drew 0 or 1 s, now evenly between (Pip, 9 Nov 2026)
-    itiMaxSeconds: 1.0
-    drinkSeconds: 2.0         # after the outcome (and a punished trial's timeout) before the next interval
+    itiMinSeconds: 2.0        # from the outcome (after any timeout) to the next trial, drinking included:
+    itiMaxSeconds: 3.0        # Tom's 2 s then 0 or 1 s, now drawn evenly between (Pip, 9 Nov 2026)
     trackLengthsCm: [80, 100, 120]   # one drawn per trial, times the stage's trackLengthScale
   punishment:
     timeoutSeconds: 2.0       # s after a punished trial
