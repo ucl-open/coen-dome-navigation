@@ -134,9 +134,12 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
 
 
 def test_a_trigger_hold_as_long_as_the_shortest_interval_is_refused():
-    # The line is held triggerHoldSeconds after every outcome; the next trial raises it no sooner than itiMinSeconds later.
+    # In an optogenetics experiment the line is held triggerHoldSeconds after every outcome; the next trial raises it no
+    # sooner than itiMinSeconds later. Without optogenetics the line stays low, so the hold is not checked.
     doc = task()
     doc["taskParameters"]["optogenetics"]["triggerHoldSeconds"] = 2.0
+    UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
+    doc["taskParameters"]["optogenetics"].update(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0)
     with pytest.raises(pydantic.ValidationError, match="trigger_hold_seconds"):
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 

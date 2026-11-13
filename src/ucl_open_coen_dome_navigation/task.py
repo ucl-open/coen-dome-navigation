@@ -146,7 +146,7 @@ class OptogeneticsConfig(BaseSchema):
     trigger_hold_seconds: float = Field(
         default=1.0,
         ge=0.5,
-        description="How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial (optogenetics on or off, so the light masks alike in every experiment): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it",
+        description="How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it",
     )
     trials_before_laser: int = Field(
         default=20,
@@ -251,7 +251,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     @model_validator(mode="after")
     def _trigger_falls_before_the_next_trial(self):
         hold, iti = self.optogenetics.trigger_hold_seconds, self.trial_structure.iti_min_seconds
-        if hold >= iti:
+        if self.optogenetics.use_zapit and hold >= iti:
             raise ValueError(
                 f"optogenetics.trigger_hold_seconds ({hold} s) must be below trial_structure.iti_min_seconds ({iti} s): "
                 "the trigger line, held that long after every outcome, must fall before the next trial raises it"

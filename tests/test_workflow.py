@@ -133,13 +133,14 @@ def test_the_mixer_never_starts_sooner_than_3_s():
     assert "TimeSpan.FromSeconds(Math.Max(3.0, SpeakerArray.Device.BootDelay))" in expressions
 
 
-def test_the_trigger_line_rises_and_falls_on_every_trial():
-    # BACKLOG (Decided): DO3 is held on every trial, optogenetics on or off, so the masking LEDs on it mask alike in every experiment.
+def test_the_trigger_line_rises_and_falls_only_in_an_optogenetics_experiment():
+    # BACKLOG (Decided; Pip, 13 Nov 2026): the trigger line and the masking LEDs on it only in optogenetics experiments.
     nodes, edges = _scope(group("TaskLogic"))
-    lines = [i for i, n in enumerate(nodes) if (n.find(W + "Combinator") is not None and n.find(W + "Combinator").get(XSI) == "ext:LineMessage")]
+    lines = [i for i, n in enumerate(nodes) if (n.find(W + "Combinator") is not None and n.find(W + "Combinator").get(XSI) == "zap:ZapitLineMessage")]
     assert len(lines) == 2
     for line in lines:
-        assert not [a for a in _upstream(edges, line) if nodes[a].get(XSI) == "rx:Condition"]
+        conditions = [nodes[a] for a in _upstream(edges, line) if nodes[a].get(XSI) == "rx:Condition"]
+        assert [c.findtext(".//{clr-namespace:Bonsai.Scripting.Expressions;assembly=Bonsai.Scripting.Expressions}Expression") for c in conditions] == ["Trial.optogenetics"]
 
 
 def test_the_readme_lists_every_open_rigs_block():

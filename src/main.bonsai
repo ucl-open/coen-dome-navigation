@@ -1308,7 +1308,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\Corridor.cs, tests\Extensions.Tests): CorridorTask draws each trial (TrialDraw), waits its interval and the stage's quiet period, has a hardware-triggered Zapit armed, then runs it along the virtual track (VirtualTrack) with a pip every 50 ms, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm and Start send Zapit the trial's condition (laser-off trials at 0 mW), Start raises the ZapitTrigger line on every trial, optogenetics on or off, so the masking light on it is alike in every experiment, Pip plays the pip and sets the grating, Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the error tone, and clears the trigger line triggerHoldSeconds later (HarpDelay), on every trial.</Description>
+        <Description>The task in tested C# (src\Extensions\Corridor.cs, tests\Extensions.Tests): CorridorTask draws each trial (TrialDraw), waits its interval and the stage's quiet period, has a hardware-triggered Zapit armed, then runs it along the virtual track (VirtualTrack) with a pip every 50 ms, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm and Start send Zapit the trial's condition (laser-off trials at 0 mW), Start raises the ZapitTrigger line in an optogenetics experiment only (Optogenetics?), Pip plays the pip and sets the grating, Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the error tone, and in an optogenetics experiment clears the trigger line triggerHoldSeconds later (HarpDelay).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -1413,8 +1413,8 @@
               <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:LineMessage">
-                <ext:Set>true</ext:Set>
+              <Combinator xsi:type="zap:ZapitLineMessage">
+                <zap:Set>true</zap:Set>
               </Combinator>
             </Expression>
             <Expression xsi:type="MulticastSubject">
@@ -1648,6 +1648,25 @@
             <Expression xsi:type="MulticastSubject">
               <Name>ErrorBuffer</Name>
             </Expression>
+            <Expression xsi:type="rx:Condition">
+              <Name>OptogeneticsOutcome?</Name>
+              <Description>Only an optogenetics experiment clears the trigger line, as only one raises it (Pip, 13 Nov 2026).</Description>
+              <Workflow>
+                <Nodes>
+                  <Expression xsi:type="WorkflowInput">
+                    <Name>Source1</Name>
+                  </Expression>
+                  <Expression xsi:type="scr:ExpressionTransform">
+                    <scr:Expression>Trial.optogenetics</scr:Expression>
+                  </Expression>
+                  <Expression xsi:type="WorkflowOutput" />
+                </Nodes>
+                <Edges>
+                  <Edge From="0" To="1" Label="Source1" />
+                  <Edge From="1" To="2" Label="Source1" />
+                </Edges>
+              </Workflow>
+            </Expression>
             <Expression xsi:type="InputMapping">
               <PropertyMappings>
                 <Property Name="DueSeconds" Selector="Trial.triggerHoldSeconds" />
@@ -1672,8 +1691,8 @@
               <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:LineMessage">
-                <ext:Set>false</ext:Set>
+              <Combinator xsi:type="zap:ZapitLineMessage">
+                <zap:Set>false</zap:Set>
               </Combinator>
             </Expression>
             <Expression xsi:type="MulticastSubject">
@@ -1699,7 +1718,7 @@
             <Edge From="13" To="18" Label="Source1" />
             <Edge From="18" To="19" Label="Source1" />
             <Edge From="13" To="20" Label="Source1" />
-            <Edge From="13" To="22" Label="Source1" />
+            <Edge From="20" To="22" Label="Source1" />
             <Edge From="21" To="22" Label="Source2" />
             <Edge From="22" To="23" Label="Source1" />
             <Edge From="23" To="24" Label="Source1" />
@@ -1737,13 +1756,14 @@
             <Edge From="57" To="58" Label="Source1" />
             <Edge From="58" To="59" Label="Source1" />
             <Edge From="43" To="60" Label="Source1" />
-            <Edge From="60" To="62" Label="Source1" />
-            <Edge From="61" To="62" Label="Source2" />
-            <Edge From="62" To="64" Label="Source1" />
-            <Edge From="63" To="64" Label="Source2" />
-            <Edge From="64" To="65" Label="Source1" />
+            <Edge From="60" To="61" Label="Source1" />
+            <Edge From="61" To="63" Label="Source1" />
+            <Edge From="62" To="63" Label="Source2" />
+            <Edge From="63" To="65" Label="Source1" />
+            <Edge From="64" To="65" Label="Source2" />
             <Edge From="65" To="66" Label="Source1" />
             <Edge From="66" To="67" Label="Source1" />
+            <Edge From="67" To="68" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

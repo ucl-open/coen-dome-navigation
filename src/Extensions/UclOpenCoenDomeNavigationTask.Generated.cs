@@ -298,11 +298,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial (optogenetics on or off, so the light masks alike in every experiment): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it
+        /// How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("triggerHoldSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="triggerHoldSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial (optogenetics on or off, so the light masks alike in every experiment): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it")]
+        [System.ComponentModel.DescriptionAttribute(@"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and below trialStructure.itiMinSeconds, so the line falls before the next trial raises it")]
         public double TriggerHoldSeconds
         {
             get

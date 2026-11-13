@@ -115,7 +115,7 @@ public class CorridorTrial
     public bool laserOn;
     public double laserPowerMw;         // 0 with the laser off
     public double laserMaxSeconds;
-    public double triggerHoldSeconds;   // the trigger line stays high this long after the outcome, on every trial
+    public double triggerHoldSeconds;   // the trigger line stays high this long after the outcome; optogenetics only
     public int rngSeed;                 // the experiment's seed, for the RngSeed event
 }
 
@@ -151,7 +151,7 @@ public class CorridorSetup
         var problems = new List<string>();
         if (task.TrialStructure.TrackLengthsCm == null || task.TrialStructure.TrackLengthsCm.Count == 0 || task.TrialStructure.TrackLengthsCm.Any(l => !(l > 0))) problems.Add("trialStructure.trackLengthsCm needs at least one length above 0");
         if (task.TrialStructure.ItiMaxSeconds < task.TrialStructure.ItiMinSeconds) problems.Add("trialStructure.itiMaxSeconds is below itiMinSeconds");
-        if (task.Optogenetics.TriggerHoldSeconds >= task.TrialStructure.ItiMinSeconds) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be below trialStructure.itiMinSeconds ({1} s): the trigger line, held that long after every outcome, must fall before the next trial raises it", task.Optogenetics.TriggerHoldSeconds, task.TrialStructure.ItiMinSeconds));
+        if (task.Optogenetics.UseZapit && task.Optogenetics.TriggerHoldSeconds >= task.TrialStructure.ItiMinSeconds) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be below trialStructure.itiMinSeconds ({1} s): the trigger line, held that long after every outcome, must fall before the next trial raises it", task.Optogenetics.TriggerHoldSeconds, task.TrialStructure.ItiMinSeconds));
         if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage '" + row.Label + "' truncates trials but truncation.sweepFractions is empty");
         if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage '{0}''s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", row.Label, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
         var opto = task.Optogenetics;
@@ -222,9 +222,10 @@ public class TrialDraw
         var opto = task.Optogenetics;
         t.optogenetics = opto.UseZapit;
         t.firstPipBeep = 1;
-        t.triggerHoldSeconds = opto.TriggerHoldSeconds;  // the trigger line (and the masking light on it) rises on every trial
         if (opto.UseZapit)
         {
+            // The trigger line (and the masking light on it) rises only in an optogenetics experiment (Pip, 13 Nov 2026).
+            t.triggerHoldSeconds = opto.TriggerHoldSeconds;
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
             t.firstPipBeep = (int)Math.Round(opto.LaserToStimulusSeconds / CorridorSetup.BeepSeconds);
             t.armZapit = setup.HardwareTriggered;
@@ -615,35 +616,7 @@ public class ZapitTrialCommand
 
     public static ZapitCommand Build(CorridorTrial trial, bool hardwareTriggered)
     {
-        if (trial.laserCondition < 1) throw new InvalidOperationException("Trial " + trial.trialNumber + " has no Zapit condition.");
-        return new ZapitCommand
-        {
-            Command = ZapitCommandType.StartStimulus,
-            ConditionNumber = trial.laserCondition,
-            LaserOn = trial.laserOn,
-            HardwareTriggered = hardwareTriggered,
-            Logging = true,
-            StimDuration = 0,
-            LaserPower = (float)trial.laserPowerMw,
-            StartDelay = 0
-        };
-    }
-}
-
-[Combinator]
-[Description("A Behavior board write that sets (Set true) or clears the input line, such as ZapitTriggerLine.")]
-[WorkflowElementCategory(ElementCategory.Transform)]
-public class LineMessage
-{
-    [Description("True sets the line high, false clears it.")]
-    public bool Set { get; set; }
-
-    public IObservable<HarpMessage> Process(IObservable<Harp.Behavior.DigitalOutputs> source)
-    {
-        var set = Set;
-        return source.Select(line => set
-            ? Harp.Behavior.OutputSet.FromPayload(MessageType.Write, line)
-            : Harp.Behavior.OutputClear.FromPayload(MessageType.Write, line));
+        return ZapitTrial.Command(trial.trialNumber, trial.laserCondition, trial.laserOn, trial.laserPowerMw, hardwareTriggered, 0);
     }
 }
 

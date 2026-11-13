@@ -15,8 +15,7 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
 
 rig-control, `test` mouse, Training Stage 4 (Tom's 5), optogenetics unticked; ~20 trials.
 **Pass:** task as before; nothing in Zapit's window; no `BonsaiData\BonsaiData_ZapitReplies_*.csv` and no `Settings_ZapitConditions` file; trial rows
-`laserPowerMw` 0, `laserCondition` 0; the trigger line (and the masking LEDs) still high from each trial's start to `triggerHoldSeconds`
-after its outcome, as with optogenetics on.
+`laserPowerMw` 0, `laserCondition` 0; the trigger line (and the masking LEDs) low throughout: no DO3 edges in the Behavior board log.
 
 ## 2. Optogenetics on
 

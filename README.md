@@ -19,7 +19,7 @@ Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `
 - On a hardware-triggered rig Zapit is armed after the interval and the trial starts only once Zapit answers that it armed the trial's condition and laser state; any other answer, or any Zapit error reply, stops the workflow.
 - At connect Zapit's loaded condition count must equal the task's conditions file's, and each condition's `offRampDownDuration_ms` must be 100 to 500 ms.
 - A rig without hardware triggering (rig.yml `zapit.hardwareTriggered`) runs optogenetics with the `test` mouse only: software start is tens of ms late, varies and has no onset in the Harp log.
-- The trigger line (and the masking LEDs wired to it) rises at every trial's start and falls `triggerHoldSeconds` after the outcome, optogenetics on or off, so the light masks alike in every experiment.
+- In an optogenetics experiment only, the trigger line (and the masking LEDs wired to it) rises at every trial's start and falls `triggerHoldSeconds` after the outcome; without optogenetics it stays low (Pip, 13 Nov 2026).
 - `suggest-stage` keeps an optogenetics experiment's stage, and its laser-on trials never count toward a decision.
 
 ## Layout
@@ -46,7 +46,7 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `DomeDisplay` | the dome's window, where the grating draws | `OpenRigs.Vision:DomeDisplay.bonsai` |
 | `DeliverReward` | each reward on the left spout, planned from the valve's calibration; `MissingCalibration` is a launch property | `OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai` |
 | `DomeHarpLogs` | the Harp boards' logs | `OpenRigs.Devices:DomeHarpLogs.bonsai` |
-| `HarpDelay` | the trigger line cleared `triggerHoldSeconds` after the outcome, on the Harp clock | `OpenRigs.Core` |
+| `HarpDelay` | the trigger line cleared `triggerHoldSeconds` after the outcome, on the Harp clock, in an optogenetics experiment | `OpenRigs.Core` |
 | `ExperimentControl`, `ExperimentSettings`, `OnCommand`, `OnParameterSet`, `ParameterDefault`, `ParameterValue`, `ReportMetric`, `ReportPhase` | parameters, commands, Go and phases for rig-control; the settings files; the metrics the view shows | `OpenRigs.Control` (`ExperimentControl.bonsai`) |
 | `LogController`, `LogAsync`, `LogTrial`, `LogData`, `LogVideo`, `LogDataSchema`, `CreateAsyncEvent` | the experiment folder and its files: trial rows, async events (Go, commands, `RngSeed`), stimulus state, Zapit replies, video, settings | `OpenRigs.Logging` |
 | `RecordHarpDevices` | each Harp board checked at Start and its device record and register map written into the experiment | `OpenRigs.HarpDevices` |
@@ -54,7 +54,7 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `StreamDevices` | the live view (the last node) | `OpenRigs.LiveView` |
 | `StartupWatchdog` | Ready once the clock is set and the spouts are homed, or a stop naming what never came | `OpenRigs.Core` |
 | `ThrowError` | stops the workflow on a Zapit error | `OpenRigs.Core` |
-| `ZapitClient`, `CreateZapitQuery`, `CheckZapitConditionCount`, `ZapitConditionsSnapshot` | Zapit: commands and replies, its loaded conditions checked against the task's file, the file copied into the experiment | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |
+| `ZapitClient`, `CreateZapitQuery`, `CheckZapitConditionCount`, `ZapitConditionsSnapshot`, `ZapitLineMessage` | Zapit: commands and replies, the trigger line's set and clear, its loaded conditions checked against the task's file, the file copied into the experiment | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |
 
 ## Checks
 

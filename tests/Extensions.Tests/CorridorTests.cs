@@ -439,11 +439,16 @@ public class CorridorStateTests
     }
 
     [TestMethod]
-    public void TheTriggerLineIsHeldOnEveryTrialWithOptogeneticsOff()
+    public void TheTriggerLineIsHeldOnlyInAnOptogeneticsExperiment()
     {
-        var trial = new TrialDraw(Fixture.Setup(Fixture.Task(), 3)).Next();
-        Assert.IsFalse(trial.optogenetics);
-        Assert.AreEqual(1.0, trial.triggerHoldSeconds);
+        var off = new TrialDraw(Fixture.Setup(Fixture.Task(), 3)).Next();
+        Assert.IsFalse(off.optogenetics);
+        Assert.AreEqual(0.0, off.triggerHoldSeconds);
+        var task = Fixture.Task();
+        Fixture.Opto(task);
+        var on = new TrialDraw(Fixture.Setup(task, 3)).Next();
+        Assert.IsTrue(on.optogenetics);
+        Assert.AreEqual(1.0, on.triggerHoldSeconds);
     }
 
     [TestMethod]
@@ -451,6 +456,8 @@ public class CorridorStateTests
     {
         var task = Fixture.Task();
         task.Optogenetics.TriggerHoldSeconds = 2.0;
+        Fixture.Setup(task, 0);   // without optogenetics the line stays low, so the hold is not read
+        Fixture.Opto(task);
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 0)).Message, "triggerHoldSeconds");
     }
 }
