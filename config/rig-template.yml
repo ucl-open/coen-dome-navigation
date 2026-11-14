@@ -27,7 +27,7 @@ behaviorBoard:
     portName: COM1
     usbSerial: CHANGE-ME
     pulseController:
-      outputPulseEnable: "DO1, DO2, DO3"
+      outputPulseEnable: "DO1, DO2"   # never DO3: the ZapitTrigger line is held, not pulsed (dome rig model refuses it)
       # Each reward valve is a CalibratedPulse: its curve, in calibration\ beside this file, plans every
       # reward's pulses at the gap it was calibrated at. The ZapitTrigger line is held high, never pulsed.
       outputs:

@@ -2,6 +2,11 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-14 Pip's Zapit line decision
+
+- **Pip, 14 Nov 2026: the ZapitTrigger line (DO3) is a held level, never a board-timed pulse.** It goes high at the trigger and stays high until the workflow clears it `triggerHoldSeconds` after the outcome, so the masking light on it lasts as long as the laser. lib-open-rigs `DomeRig` (954353d) refuses a rig.yml whose `outputPulseEnable` lists the Zapit line (the board would end it after its `PulseDO3` width: 5 ms, or 3000 ms on BLUE-OPTO-2); `config\rig-template.yml` has `"DO1, DO2"`. DomeHardware's `WithoutPulseLine` already dropped the line at run time. Every dome's rig.yml needs `outputPulseEnable: "DO1, DO2"`.
+- **Open: check on the first test run** (BLUE-OPTO-2, `test` mouse, docs\zapit-rig-test.md step 3): on the scope, or in Zapit's log and the Behavior board log, DO3 rises `laserToStimulusSeconds` before the first pip and falls `triggerHoldSeconds` after the outcome, with the masking light lit for all of it and Zapit started on the rising edge.
+
 ## 2026-11-13 Pip's timing decisions
 
 - **Pip, 13 Nov 2026: Zapit adds no time; laserToStimulusSeconds is signed (before/after the stimulus).** A hardware-triggered Zapit is armed during the interval (once the last trigger line has fallen, `triggerHoldSeconds` after the outcome, now at most `itiMinSeconds - laserToStimulusSeconds - 0.2 s`); the trigger rises `laserToStimulusSeconds` before the first pip (after it if negative, at most the stage's `timeLimitSeconds` or 2 s on a stage without one), and a Zapit reply not in by then stops the task. A trial that ends before its trigger has no laser.
