@@ -36,6 +36,7 @@ dev = [
 regenerate-schemas = "ucl_open_coen_dome_navigation.regenerate:main"
 generate-waveforms = "ucl_open_coen_dome_navigation.waveforms:main"
 suggest-stage = "ucl_open_coen_dome_navigation.stage:main"
+summarise-experiment = "ucl_open_coen_dome_navigation.summary:main"
 
 [tool.ruff]
 line-length = 120
