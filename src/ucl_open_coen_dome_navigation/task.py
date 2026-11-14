@@ -54,11 +54,10 @@ class TrialStructure(BaseSchema):
 
 
 class PunishmentSound(BaseSchema):
-    """The error sound played on a punished trial."""
+    """The error sound on a punished trial: the lab's (OpenRigs.Audio), from rig.yml's errorSoundChannel alone."""
 
     enabled: bool = Field(default=True, description="Whether the error sound plays on a punished trial")
-    path: str = Field(default="waveforms\\error_tone.wav", description="Wav file of the error sound, relative to src")
-    gain: float = Field(default=1.0, ge=0, description="Playback gain of the error sound")
+    gain: float = Field(default=1.0, ge=0, description="Gain on the lab's error sound, 1 for the lab's level")
 
 
 class Punishment(BaseSchema):

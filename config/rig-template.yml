@@ -116,8 +116,9 @@ speakerArray:
   # Speakers currently wired on this rig. Position is relative to the subject:
   # azimuth 0 = straight ahead, positive to the right; elevation 0 = horizontal.
   # filter: the speaker's SpeakerFilter artefact (FIR taps for the device's sample rate), relative
-  # to this directory. Every speaker needs one: the workflow stops at Start naming a speaker without
-  # (RequireSpeakerFilters). The stimuli are src\waveforms, not rig calibration files.
+  # to this directory, measured on this machine. Every speaker needs one: the workflow stops at Start
+  # naming a speaker without (OpenRigs.Audio LoadSpeakers). The stimuli are src\waveforms, not rig
+  # calibration files; the error sound is the lab's, on errorSoundChannel alone.
   speakers:
     left:
       position: { azimuth: -90, elevation: 15 }

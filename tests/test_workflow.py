@@ -177,13 +177,79 @@ def test_zapit_is_the_shared_include_given_the_conditions_file():
         assert local not in TEXT
 
 
+AUD = "{clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio}"
+
+
+def _audio_chain(subject: str) -> tuple[list[ET.Element], set[int]]:
+    """The Audio group's nodes and the ones upstream of the AsyncSubject or AppendBuffer named by subject."""
+    nodes, edges = _scope(group("Audio"))
+    end = next(i for i, n in enumerate(nodes) if n.get(XSI) in ("rx:AsyncSubject", "rx:BehaviorSubject") and n.findtext(W + "Name") == subject)
+    return nodes, _upstream(edges, end)
+
+
+def _labels(nodes: list[ET.Element], indices: set[int]) -> list[str]:
+    return [combinators(nodes[i])[0] if combinators(nodes[i]) else (nodes[i].findtext(W + "Name") or nodes[i].findtext(W + "Selector")) for i in sorted(indices)]
+
+
 def test_every_speaker_needs_a_filter_at_start():
     # Pip, 13 Nov 2026: as coen-dome-decision-making, a speaker without a filter stops the workflow at Start, naming it.
-    nodes, edges = _scope(group("Audio"))
-    check = next(i for i, n in enumerate(nodes) if "ext:RequireSpeakerFilters" in combinators(n))
-    assert [nodes[i].findtext(W + "Name") or nodes[i].findtext(W + "Selector") for i in sorted(_upstream(edges, check))] == ["RigConfigs", "SpeakerArray"]
+    # From 14 Nov 2026 OpenRigs.Audio's LoadSpeakers checks it as it loads rig.yml's speakers, once, into Speakers.
+    nodes, upstream = _audio_chain("Speakers")
+    assert _labels(nodes, upstream) == ["RigFile", "aud:LoadSpeakers"]
+    assert nodes[min(upstream)].get(XSI) == "SubscribeSubject"
+    assert "RequireSpeakerFilters" not in TEXT and "RequireSpeakerFilters" not in (ROOT / "src" / "Extensions" / "Corridor.cs").read_text(encoding="utf-8")
     template = (ROOT / "config" / "rig-template.yml").read_text(encoding="utf-8")
-    assert "unequalised" not in template and "Every speaker needs one" in template
+    assert "unequalised" not in template and "Every speaker needs one" in template and "RequireSpeakerFilters" not in template
+
+
+def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
+    found = [c for i in upstream for c in nodes[i].iter(W + "Combinator") if c.get(XSI) == "aud:SpeakerBuffer"]
+    assert len(found) == 1
+    return found[0]
+
+
+def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
+    # Audit, 14 Nov 2026: each sound is one row laid out by OpenRigs.Audio's SpeakerBuffer on rig.yml's channels
+    # (no Tile 32), equalised for each speaker; no Channels is every rig.yml speaker.
+    for subject, reader in (("PipBuffers", "all_waveforms.bin"), ("RewardTone", "reward_tone.bin")):
+        nodes, upstream = _audio_chain(subject)
+        labels = _labels(nodes, upstream)
+        assert "Speakers" in labels and "rx:Zip" in labels and "dsp:Tile" not in labels, labels
+        assert any(reader in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
+        buffer = _speaker_buffer(nodes, upstream)
+        assert buffer.findtext(AUD + "Equalise") == "true" and buffer.findtext(AUD + "Gain") == "1"
+        assert not (buffer.findtext(AUD + "Channels") or "").strip()
+    nodes, upstream = _audio_chain("PipBuffers")
+    assert _labels(nodes, upstream)[-2:] == ["rx:Zip", "aud:SpeakerBuffer"] and "rx:ToList" in _labels(nodes, upstream)
+
+
+def test_the_background_noise_plays_unequalised_on_every_speaker():
+    nodes, edges = _scope(group("Audio"))
+    append = next(i for i, n in enumerate(nodes) if "mix:AppendBuffer" in combinators(n) and any(
+        nodes[a].findtext(W + "Name") == "BackgroundSource" for a in _upstream(edges, i)))
+    upstream = _upstream(edges, append)
+    assert "Speakers" in _labels(nodes, upstream)
+    buffer = _speaker_buffer(nodes, upstream)
+    assert buffer.findtext(AUD + "Equalise") == "false" and not (buffer.findtext(AUD + "Channels") or "").strip()
+
+
+def test_the_error_sound_is_the_lab_s_at_the_task_s_gain():
+    # Audit, 14 Nov 2026: OpenRigs.Audio's ErrorSoundBuffer (rig.yml's errorSoundChannel, equalised), its Gain set from
+    # the task's punishment.sound.gain before each buffer (InputMapping), so the speakers arriving first cannot use 1.
+    nodes, upstream = _audio_chain("ErrorTone")
+    assert _labels(nodes, upstream) == ["TaskConfig", "TaskParameters.Punishment.Sound.Gain", "Speakers", "rx:Zip", "Item2", "aud:ErrorSoundBuffer"]
+    mapping = next(nodes[i] for i in upstream if nodes[i].get(XSI) == "InputMapping")
+    assert [(p.get("Name"), p.get("Selector")) for p in mapping.iter(W + "Property")] == [("Gain", "Item1")]
+    assert "error_tone.wav" not in TEXT and "al:AudioReader" not in TEXT and "Sound.Path" not in TEXT
+    assert 'xmlns:aud="clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio"' in TEXT
+
+
+def test_the_speakers_are_declared_before_every_user():
+    # A GroupWorkflow does not scope subjects; keep the declaration ahead of its subscribers.
+    nodes, _ = _scope(group("Audio"))
+    declared = next(i for i, n in enumerate(nodes) if n.get(XSI) == "rx:AsyncSubject" and n.findtext(W + "Name") == "Speakers")
+    users = [i for i, n in enumerate(nodes) if n.get(XSI) == "SubscribeSubject" and n.findtext(W + "Name") == "Speakers"]
+    assert len(users) == 4 and min(users) > declared
 
 
 def test_the_manual_reward_is_capped_as_every_reward():

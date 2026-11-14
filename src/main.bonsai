@@ -11,12 +11,12 @@
                  xmlns:mf="clr-namespace:OpenRigs.Manifest;assembly=OpenRigs.Manifest"
                  xmlns:lv="clr-namespace:OpenRigs.LiveView;assembly=OpenRigs.LiveView"
                  xmlns:orl="clr-namespace:OpenRigs.Logging;assembly=OpenRigs.Logging"
+                 xmlns:aud="clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio"
                  xmlns:rx="clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core"
                  xmlns:sys="clr-namespace:System;assembly=mscorlib"
                  xmlns:scr="clr-namespace:Bonsai.Scripting.Expressions;assembly=Bonsai.Scripting.Expressions"
                  xmlns:harp="clr-namespace:Bonsai.Harp;assembly=Bonsai.Harp"
                  xmlns:gl="clr-namespace:Bonsai.Shaders;assembly=Bonsai.Shaders"
-                 xmlns:al="clr-namespace:Bonsai.Audio;assembly=Bonsai.Audio"
                  xmlns:dsp="clr-namespace:Bonsai.Dsp;assembly=Bonsai.Dsp"
                  xmlns:mix="clr-namespace:Bonsai.Mixer;assembly=Bonsai.Mixer"
                  xmlns:cvn="clr-namespace:OpenCV.Net;assembly=OpenCV.Net"
@@ -799,7 +799,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay (at least 3 s) after Start: one mixer source each for the pips (Buffer), the reward tone and the error tone, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. Every file in src\waveforms is one channel, at the loudness it plays at. Every rig.yml speaker needs a filter or the workflow stops at Start naming it (RequireSpeakerFilters, the rule every dome holds).</Description>
+        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay (at least 3 s) after Start: one mixer source each for the pips (Buffer), the reward tone and the error tone, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. rig.yml's speakers and their filters are loaded once at Start (OpenRigs.Audio LoadSpeakers, into Speakers), which stops the workflow naming any speaker without a usable filter (the rule every dome holds). Every file in src\waveforms is one channel at the loudness it plays at, laid out on rig.yml's channelCount channels by SpeakerBuffer: the pips (PipBuffers) and the reward tone (RewardTone) on every rig.yml speaker, each equalised with its filter, and the background noise on every speaker as it is. The error tone (ErrorTone) is the lab's (ErrorSoundBuffer), on rig.yml's errorSoundChannel alone, at the task's punishment.sound.gain.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="GroupWorkflow">
@@ -924,6 +924,20 @@
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="mix:AppendBuffer" />
             </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>RigFile</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="aud:LoadSpeakers">
+                <aud:MachineName />
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="rx:AsyncSubject">
+              <Name>Speakers</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>Speakers</Name>
+            </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="dsp:MatrixReader">
                 <dsp:Path>./waveforms/all_waveforms.bin</dsp:Path>
@@ -936,16 +950,22 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="dsp:Tile">
-                <dsp:RowTiles>32</dsp:RowTiles>
-                <dsp:ColumnTiles>1</dsp:ColumnTiles>
-              </Combinator>
+              <Combinator xsi:type="rx:ToList" />
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:ToList" />
+              <Combinator xsi:type="rx:Zip" />
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="aud:SpeakerBuffer">
+                <aud:Gain>1</aud:Gain>
+                <aud:Equalise>true</aud:Equalise>
+              </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>PipBuffers</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>Speakers</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="dsp:MatrixReader">
@@ -964,9 +984,12 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="dsp:Tile">
-                <dsp:RowTiles>32</dsp:RowTiles>
-                <dsp:ColumnTiles>1</dsp:ColumnTiles>
+              <Combinator xsi:type="rx:Zip" />
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="aud:SpeakerBuffer">
+                <aud:Gain>1</aud:Gain>
+                <aud:Equalise>true</aud:Equalise>
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
@@ -976,49 +999,23 @@
               <Name>TaskConfig</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.Punishment.Sound.Path</Selector>
-            </Expression>
-            <Expression xsi:type="PropertyMapping">
-              <PropertyMappings>
-                <Property Name="FileName" />
-              </PropertyMappings>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="al:AudioReader">
-                <al:FileName>waveforms\error_tone.wav</al:FileName>
-                <al:BufferLength>0</al:BufferLength>
-                <al:SampleRate>0</al:SampleRate>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
+              <Selector>TaskParameters.Punishment.Sound.Gain</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>TaskConfig</Name>
+              <Name>Speakers</Name>
             </Expression>
-            <Expression xsi:type="scr:ExpressionTransform">
-              <scr:Name>ErrorGain</scr:Name>
-              <scr:Description>The file is 16-bit at the error tone's loudness; the task's punishment.sound.gain scales it.</scr:Description>
-              <scr:Expression>it.TaskParameters.Punishment.Sound.Gain / 32767.0</scr:Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Zip" />
             </Expression>
-            <Expression xsi:type="PropertyMapping">
+            <Expression xsi:type="InputMapping">
               <PropertyMappings>
-                <Property Name="Scale" />
+                <Property Name="Gain" Selector="Item1" />
               </PropertyMappings>
+              <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="dsp:ConvertScale">
-                <dsp:Depth>F32</dsp:Depth>
-                <dsp:Scale>3.051850947599719e-05</dsp:Scale>
-                <dsp:Shift>0</dsp:Shift>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="dsp:Tile">
-                <dsp:RowTiles>32</dsp:RowTiles>
-                <dsp:ColumnTiles>1</dsp:ColumnTiles>
+              <Combinator xsi:type="aud:ErrorSoundBuffer">
+                <aud:Gain>1</aud:Gain>
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
@@ -1037,6 +1034,9 @@
             <Expression xsi:type="rx:BehaviorSubject">
               <Name>BackgroundSource</Name>
             </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>Speakers</Name>
+            </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="dsp:MatrixReader">
                 <dsp:Path>./waveforms/background_noise.bin</dsp:Path>
@@ -1051,6 +1051,15 @@
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:Take">
                 <rx:Count>1</rx:Count>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Zip" />
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="aud:SpeakerBuffer">
+                <aud:Gain>1</aud:Gain>
+                <aud:Equalise>false</aud:Equalise>
               </Combinator>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
@@ -1085,15 +1094,6 @@
                 <mix:Duration>2</mix:Duration>
               </Combinator>
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RigConfigs</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>SpeakerArray</Selector>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:RequireSpeakerFilters" />
-            </Expression>
           </Nodes>
           <Edges>
             <Edge From="2" To="3" Label="Source1" />
@@ -1107,32 +1107,35 @@
             <Edge From="11" To="12" Label="Source2" />
             <Edge From="13" To="14" Label="Source1" />
             <Edge From="14" To="15" Label="Source1" />
-            <Edge From="15" To="16" Label="Source1" />
             <Edge From="17" To="18" Label="Source1" />
-            <Edge From="18" To="19" Label="Source1" />
+            <Edge From="16" To="19" Label="Source1" />
+            <Edge From="18" To="19" Label="Source2" />
             <Edge From="19" To="20" Label="Source1" />
-            <Edge From="21" To="22" Label="Source1" />
-            <Edge From="22" To="23" Label="Source1" />
+            <Edge From="20" To="21" Label="Source1" />
             <Edge From="23" To="24" Label="Source1" />
-            <Edge From="24" To="25" Label="Source1" />
-            <Edge From="25" To="29" Label="Source1" />
+            <Edge From="22" To="25" Label="Source1" />
+            <Edge From="24" To="25" Label="Source2" />
+            <Edge From="25" To="26" Label="Source1" />
             <Edge From="26" To="27" Label="Source1" />
-            <Edge From="27" To="28" Label="Source1" />
-            <Edge From="28" To="29" Label="Source2" />
-            <Edge From="29" To="30" Label="Source1" />
-            <Edge From="30" To="31" Label="Source1" />
+            <Edge From="28" To="29" Label="Source1" />
+            <Edge From="29" To="31" Label="Source1" />
+            <Edge From="30" To="31" Label="Source2" />
+            <Edge From="31" To="32" Label="Source1" />
             <Edge From="32" To="33" Label="Source1" />
             <Edge From="33" To="34" Label="Source1" />
             <Edge From="35" To="36" Label="Source1" />
-            <Edge From="36" To="38" Label="Source1" />
-            <Edge From="37" To="38" Label="Source2" />
+            <Edge From="36" To="37" Label="Source1" />
             <Edge From="39" To="40" Label="Source1" />
-            <Edge From="40" To="42" Label="Source1" />
-            <Edge From="41" To="42" Label="Source2" />
-            <Edge From="42" To="43" Label="Source1" />
-            <Edge From="43" To="44" Label="Source1" />
+            <Edge From="38" To="41" Label="Source1" />
+            <Edge From="40" To="41" Label="Source2" />
+            <Edge From="41" To="42" Label="Source1" />
+            <Edge From="42" To="44" Label="Source1" />
+            <Edge From="43" To="44" Label="Source2" />
             <Edge From="45" To="46" Label="Source1" />
-            <Edge From="46" To="47" Label="Source1" />
+            <Edge From="46" To="48" Label="Source1" />
+            <Edge From="47" To="48" Label="Source2" />
+            <Edge From="48" To="49" Label="Source1" />
+            <Edge From="49" To="50" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

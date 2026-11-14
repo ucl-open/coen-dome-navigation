@@ -8,7 +8,7 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
   calibrated; the conditions file named in the task file loaded. Every condition's `offRampDownDuration_ms` 100 to 500 ms (250 is usual).
 - rig.yml `zapit:` block: host, port, `hardwareTriggered`; the trigger line is the Behavior board line `behaviorBoard.main.wiring` gives
   `ZapitTrigger` (DO3). With `hardwareTriggered: true`, it must be cabled to the Zapit DAQ trigger input. Also check rig.yml's lick thresholds and the left valve's calibration (BACKLOG).
-- If rig-control refuses to launch over names not on the lab's names list, add them on rig-setup's Repos page (Save Names),
+- If rig-control refuses to launch over names not on the lab's names list, add them on Lab Names, in Rig Control's Settings menu,
   with Pip's OK (the list is production config).
 
 ## 1. Optogenetics off

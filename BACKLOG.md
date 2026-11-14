@@ -2,6 +2,24 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-14 Sounds from OpenRigs.Audio (for Tom)
+
+- **Tom: the error sound is now the lab's**, the same in every dome task (OpenRigs.Audio `ErrorSoundBuffer`), not this repo's `error_tone.wav`. It is quieter by about 5 dB and plays from rig.yml's `errorSoundChannel` (the centre speaker) alone, equalised for that speaker, where the old one played on every channel. `punishment.sound.gain` still scales it (1 is the lab's level); `punishment.sound.path` is gone from the task file.
+- **Tom: the pips and the reward tone now play only on rig.yml's speakers, each equalised with its filter** (OpenRigs.Audio `SpeakerBuffer`), where before they went to all 32 mixer channels as they were. The background noise plays on every rig.yml speaker as it is (not equalised). Loudness at the mouse will differ from before by each speaker's filter; check it on the rig.
+- The speakers are loaded once at Start from rig.yml (`LoadSpeakers`, into `Speakers`), which stops the workflow naming any speaker without a filter, or with one missing, not symmetric, for another rate or measured on another machine (it replaces `RequireSpeakerFilters`). Unit-tested and build-checked only: needs a rig run.
+- The trial row gains `laserTriggerTime` after `laserPowerMw` (the dome tasks' shared block, now 16 columns): the trigger's Harp time, NaN without optogenetics or on a trial answered before its trigger. `BonsaiData_StimulusState`'s `stimulusActive` is True/False, not 1/0. Zapit's armed reply is checked by lib-open-rigs' `ZapitTrial.CheckArmed`, as in coen-dome-decision-making.
+
+## Dome-task alignment audit (14 Nov 2026): not changed
+
+- `outcomeTime` duplicates `harpTime` by choice, so every moment of a trial is named.
+- This task's `audiovisual` and coen-dome-decision-making's `audiovisualCoherent` are different tasks' trial types, so their names stay.
+- The rig C# generated in both dome tasks is identical; generating it once in a lab package is a larger change than it saves.
+- `rngSeed` is both in the task file and an `RngSeed` event: the file's is what was asked (null draws one), the event's what ran.
+- A trial cut by Stop gets no row; its Go is in `BonsaiData_Async`.
+- Trial 1 starts about 2.3 s after Go here and 1.2 s in coen-dome-decision-making: each task's own start-up, neither a bug.
+- `formerly` and `history` stay in trial-columns.yml until the old data's refactor.
+- `ReadTextFile.cs` is duplicated in both dome workflows.
+
 ## 2026-11-14 First runs on hardware (BLUE-OPTO-2, test mouse, unattended)
 
 The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2's is beside it.
@@ -59,13 +77,12 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 - coen-qc-calibrate-valve and the domes pace pulses on different Harp-synced devices, about 1 ms apart.
 - `ReadTextFile.cs` is duplicated in both dome workflows; moving it to a lab package costs a package bump.
 - The right valve needs a calibration too (`DeliverReward` loads both lines), though the corridor rewards on the left.
-- No trigger or Go time column; both follow from the trial row's times and the lead.
+- No Go time column but `trialStartTime`; the trigger is `laserTriggerTime` from 14 Nov 2026 (NaN without optogenetics or when the mouse answered first).
 - A skipped trial leaves Zapit armed; the next trial disarms it.
 - The 0.5 s wall-clock `rx:Delay` before `TrialsReady` stays: it holds the setup once, before the first trial, and no trial wait depends on it.
 
 ## Audit round 3 (13 Nov 2026): not changed
 
-- coen-dome-decision-making: a laser-off control trial and a laser trial skipped because it was answered first look alike in the row (`laserPowerMw` 0); which one follows from `choiceTime` and the lead.
 - coen-dome-decision-making: discrimination's minimum interval equals its `drinkSeconds`; both are Gerion's measured values.
 - jsonschema accepts K:'s old rig.yml keys, but the generated deserializer and app-rig-control's key walk refuse them.
 - `usedBy` stays incomplete until `add-names.ps1` runs at switch step 8.

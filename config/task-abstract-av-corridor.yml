@@ -21,10 +21,9 @@ taskParameters:
     trackLengthsCm: [80, 100, 120]   # one drawn per trial, times the stage's trackLengthScale
   punishment:
     timeoutSeconds: 2.0       # s after a punished trial
-    sound:                    # the error tone, on a punished trial
+    sound:                    # the lab's error sound (OpenRigs.Audio), on a punished trial
       enabled: true
-      path: waveforms\error_tone.wav
-      gain: 1.0
+      gain: 1.0               # 1: the lab's level, from rig.yml's errorSoundChannel alone
   truncation:                 # on a stage's truncated trials
     sweepFractions: [0.4, 0.6]
   optogenetics:               # Zapit; the laser runs from the trigger to the outcome (or laserMaxSeconds), laser-off trials laser off

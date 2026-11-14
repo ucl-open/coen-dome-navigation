@@ -442,6 +442,54 @@ public class CorridorStateTests
         Assert.IsTrue(arm.Trial.laserOn);
         Assert.AreEqual(0, outcome.Row.laserPowerMw, "no laser came, so none is logged");
         Assert.IsFalse(rig.Events.Any(e => e.Kind == CorridorEventKind.Trigger));
+        Assert.IsTrue(double.IsNaN(outcome.Row.laserTriggerTime), "answered before the trigger: laserTriggerTime NaN");
+    }
+
+    // Audit, 14 Nov 2026: laserTriggerTime (the shared block's 16th column) is the trigger's Harp time when it came.
+    [TestMethod]
+    public void LaserTriggerTimeIsTheTriggersTimeLaserOnOrOff()
+    {
+        foreach (var probability in new[] { 1.0, 0.0 })
+        {
+            var task = Fixture.Task();
+            Fixture.Opto(task);
+            task.Optogenetics.TrialsBeforeLaser = 0;
+            task.Optogenetics.LaserOnProbability = probability;
+            var rig = new Rig(Fixture.Setup(task, 4));
+            var arm = rig.RunTo(CorridorEventKind.Arm);
+            rig.Events.AddRange(rig.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 }));
+            var trigger = rig.RunTo(CorridorEventKind.Trigger);
+            rig.Until(rig.Now + 0.2);
+            rig.Wheel(1000);                                // the end of the track ends the trial after the trigger
+            var outcome = rig.Events.Single(e => e.Kind == CorridorEventKind.Outcome);
+            Assert.AreEqual(trigger.Seconds, outcome.Row.laserTriggerTime, 1e-12);
+            Assert.AreEqual(probability > 0 ? 2.0 : 0.0, outcome.Row.laserPowerMw, "laser off: a trigger time, 0 mW");
+        }
+    }
+
+    [TestMethod]
+    public void LaserTriggerTimeIsNaNWithoutOptogenetics()
+    {
+        var rig = new Rig(Fixture.Setup(Fixture.Task(), 1));
+        rig.RunTo(CorridorEventKind.Start);
+        rig.Wheel(1000);
+        var outcome = rig.RunTo(CorridorEventKind.Outcome);
+        Assert.IsTrue(double.IsNaN(outcome.Row.laserTriggerTime));
+        Assert.AreEqual(0, outcome.Row.laserCondition);
+    }
+
+    [TestMethod]
+    public void TheTrialRowsFieldsAreTheTrialColumnsInOrder()
+    {
+        // schemas\trial-columns.yml's names, harpTime aside (the row's timestamp), are TrialRow's fields in order:
+        // LogTrial writes the fields in declaration order.
+        var yaml = new DeserializerBuilder().Build().Deserialize<Dictionary<string, object>>(
+            File.ReadAllText(Path.Combine(Fixture.Repo(), "schemas", "trial-columns.yml")));
+        var fields = typeof(TrialRow).GetFields().Select(f => f.Name).ToList();
+        CollectionAssert.AreEqual(yaml.Keys.Skip(1).ToList(), fields);
+        var laser = fields.IndexOf("laserTriggerTime");
+        Assert.AreEqual(fields.IndexOf("laserPowerMw") + 1, laser);
+        Assert.AreEqual(typeof(double), typeof(TrialRow).GetField("laserTriggerTime").FieldType);
     }
 
     [TestMethod]
@@ -478,12 +526,16 @@ public class CorridorStateTests
         start.Trial.truncationFraction = 0.5;
         rig.Wheel(start.Trial.trackLengthCm * 0.3);
         rig.Until(rig.Now + 0.1);
-        Assert.AreEqual(1.0, rig.Events.Last(e => e.Kind == CorridorEventKind.Pip).Frame.ToneGain);
+        var before = rig.Events.Last(e => e.Kind == CorridorEventKind.Pip).Frame;
+        Assert.AreEqual(1.0, before.ToneGain);
+        Assert.IsTrue(before.Row.stimulusActive);
         rig.Wheel(start.Trial.trackLengthCm * 0.7);
         rig.Until(rig.Now + 0.1);
         var pip = rig.Events.Last(e => e.Kind == CorridorEventKind.Pip).Frame;
         Assert.AreEqual(0.0, pip.ToneGain);
-        Assert.AreEqual(0, pip.Row.stimulusActive);
+        Assert.IsFalse(pip.Row.stimulusActive);
+        // Audit, 14 Nov 2026: a bool, so BonsaiData_StimulusState says True or False, as the lab's other bool columns.
+        Assert.AreEqual(typeof(bool), typeof(StimulusStateRow).GetField("stimulusActive").FieldType);
     }
 
     [TestMethod]
@@ -498,6 +550,36 @@ public class CorridorStateTests
         var wrong = new Rig(Fixture.Setup(task, 4));
         wrong.RunTo(CorridorEventKind.Arm);
         Assert.ThrowsException<InvalidOperationException>(() => wrong.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }).ToList());
+    }
+
+    // Audit, 14 Nov 2026: the armed reply is checked by OpenRigs.Devices' ZapitTrial.CheckArmed, the dome tasks' one check:
+    // its words, and a refusal for an error reply, another condition or another laser state.
+    [TestMethod]
+    public void TheArmedReplyIsZapitTrialsCheckArmed()
+    {
+        var task = Fixture.Task();
+        Fixture.Opto(task);
+        task.Optogenetics.TrialsBeforeLaser = 0;
+        task.Optogenetics.LaserOnProbability = 1;
+        Func<Rig> armed = () => { var r = new Rig(Fixture.Setup(task, 4)); r.RunTo(CorridorEventKind.Arm); return r; };
+        var rig = armed();
+        var trial = rig.State.Trial;
+        Assert.IsTrue(trial.laserOn);
+        var replies = new[]
+        {
+            new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trial.laserCondition, LaserOn = 0 },
+            new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trial.laserCondition + 1, LaserOn = 1 },
+            new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trial.laserCondition, LaserOn = 1, IsError = true },
+        };
+        foreach (var reply in replies)
+        {
+            var mine = Assert.ThrowsException<InvalidOperationException>(() => armed().State.OnZapitReply(reply).ToList()).Message;
+            var lib = Assert.ThrowsException<InvalidOperationException>(() => ZapitTrial.CheckArmed(reply, trial.trialNumber, trial.laserCondition, true)).Message;
+            Assert.AreEqual(lib, mine);
+            StringAssert.Contains(mine, "is the DAQ working?");
+        }
+        rig.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trial.laserCondition, LaserOn = 1 }).ToList();
+        rig.RunTo(CorridorEventKind.Trigger);   // armed: the trigger comes
     }
 
     // Audit round 4: on a software-triggered rig the Trigger event sends the StartStimulus, so its reply is checked too.

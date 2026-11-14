@@ -472,10 +472,11 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// The error sound played on a punished trial.
+    /// The error sound on a punished trial: the lab's (OpenRigs.Audio), from rig.yml's errorSoundChannel alone.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("The error sound played on a punished trial.")]
+    [System.ComponentModel.DescriptionAttribute("The error sound on a punished trial: the lab\'s (OpenRigs.Audio), from rig.yml\'s e" +
+        "rrorSoundChannel alone.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class PunishmentSound
@@ -483,21 +484,17 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _enabled;
     
-        private string _path;
-    
         private double _gain;
     
         public PunishmentSound()
         {
             _enabled = true;
-            _path = "waveforms\\error_tone.wav";
             _gain = 1D;
         }
     
         protected PunishmentSound(PunishmentSound other)
         {
             _enabled = other._enabled;
-            _path = other._path;
             _gain = other._gain;
         }
     
@@ -520,29 +517,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Wav file of the error sound, relative to src
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("path")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="path")]
-        [System.ComponentModel.DescriptionAttribute("Wav file of the error sound, relative to src")]
-        public string Path
-        {
-            get
-            {
-                return _path;
-            }
-            set
-            {
-                _path = value;
-            }
-        }
-    
-        /// <summary>
-        /// Playback gain of the error sound
+        /// Gain on the lab's error sound, 1 for the lab's level
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("gain")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="gain")]
-        [System.ComponentModel.DescriptionAttribute("Playback gain of the error sound")]
+        [System.ComponentModel.DescriptionAttribute("Gain on the lab\'s error sound, 1 for the lab\'s level")]
         public double Gain
         {
             get
@@ -568,7 +547,6 @@ namespace UclOpenCoenDomeNavigationTask
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
             stringBuilder.Append("Enabled = " + _enabled + ", ");
-            stringBuilder.Append("Path = " + _path + ", ");
             stringBuilder.Append("Gain = " + _gain);
             return true;
         }

@@ -20,6 +20,7 @@ Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `
 - At connect Zapit's loaded condition count must equal the task's conditions file's, and each condition's `offRampDownDuration_ms` must be 100 to 500 ms.
 - A rig without hardware triggering (rig.yml `zapit.hardwareTriggered`) runs optogenetics with the `test` mouse only: software start is tens of ms late, varies and has no onset in the Harp log.
 - In an optogenetics experiment only, the trigger line (and the masking LEDs wired to it) rises at every trial's trigger (`laserToStimulusSeconds` before the first pip) and falls `triggerHoldSeconds` after the outcome; without optogenetics it stays low (Pip, 13 Nov 2026).
+- Each trial row's `laserTriggerTime` is the trigger's Harp time, NaN without optogenetics or on a trial answered before its trigger, so a laser-off trial (a time, `laserPowerMw` 0) and one answered first (NaN) differ (14 Nov 2026).
 - `suggest-stage` keeps an optogenetics experiment's stage, and its laser-on trials never count toward a decision.
 
 ## Layout
@@ -31,7 +32,7 @@ Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `
 | `config\task-abstract-av-corridor.yml` | The task file rig-control copies at Go with the form's edits |
 | `config\rig-template.yml` | The dome rig model's template (`open_rigs.rigs.dome`): every dome workflow reads the same `C:\Coen-Lab-Local\RigConfigs\<MACHINE>\rig.yml` |
 | `schemas\trial-columns.yml` | What each `BonsaiData_Trial` column means |
-| `src\waveforms` | The tone pips, reward tone, error tone and background noise, each at the loudness it plays at, and `sweep.json`, the sweep they were made for; made by `uv run generate-waveforms` and committed |
+| `src\waveforms` | The tone pips, reward tone and background noise, each one channel at the loudness it plays at (the error sound is the lab's, from `OpenRigs.Audio`), and `sweep.json`, the sweep they were made for; made by `uv run generate-waveforms` and committed |
 | `src\ucl_open_coen_dome_navigation` | Rig and task models (`regenerate-schemas` makes `src\DataSchemas` and the C#), waveforms, stage suggestion |
 | `local_packages` | The lab's OpenRigs packages from `Coen-Lab/lib-open-rigs`; never edited here |
 
@@ -54,8 +55,8 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `StreamDevices` | the live view (the last node) | `OpenRigs.LiveView` |
 | `StartupWatchdog` | Ready once the clock is set and the spouts are homed, or a stop naming what never came | `OpenRigs.Core` |
 | `ConnectZapit` | Zapit's commands and replies once the task uses it, and the stops at start: an error reply, no conditions file loaded, a conditions count other than the task's file, a real mouse on a rig without hardware triggering | `OpenRigs.Devices:Zapit.ConnectZapit.bonsai` |
-| `ZapitConditionsSnapshot`, `ZapitLineMessage`, `ZapitTrial.ReplyMarginSeconds` | the conditions file copied into the experiment, the trigger line's set and clear, the 0.2 s Zapit reply margin the task's checks use | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |
-| `DomeSpeakers.RequireFilters` | every rig.yml speaker needs a filter, or the workflow stops at Start naming it (`RequireSpeakerFilters`) | `OpenRigs.Devices` |
+| `ZapitConditionsSnapshot`, `ZapitLineMessage`, `ZapitTrial.ReplyMarginSeconds`, `ZapitTrial.CheckArmed` | the conditions file copied into the experiment, the trigger line's set and clear, the 0.2 s Zapit reply margin the task's checks use, the check of Zapit's armed reply (`CorridorState.OnZapitReply`) | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |
+| `LoadSpeakers`, `SpeakerBuffer`, `ErrorSoundBuffer` | rig.yml's speakers and their filters, loaded once at Start (`Speakers`), stopping the workflow naming any speaker without a usable filter; each sound laid out on rig.yml's `channelCount` channels, the pips and reward tone equalised on every rig.yml speaker and the background noise as it is on every speaker; the error sound the lab's, on `errorSoundChannel` alone at the task's `punishment.sound.gain` | `OpenRigs.Audio` |
 
 ## Checks
 
@@ -69,6 +70,6 @@ powershell -NoProfile -File scripts\check-workflow.ps1
 
 ## Data
 
-Each experiment is `C:\Coen-Lab-Local\Acquired-Data\sub-<lab ID>\ses-<session>_<UTC>`: the Harp boards' raw logs, the cameras, `BonsaiData\BonsaiData_Trial_*.csv` (one row per trial, columns in `schemas\trial-columns.yml`), `BonsaiData\BonsaiData_Async_*.csv` (rewards, commands, Go), `BonsaiData\BonsaiData_StimulusState_*.csv` (one row per 50 ms pip while a trial runs: `harpTime`, `trialNumber`, `positionCm`, `toneFrequencyHz`, `stimulusActive` (tone and grating on), `visualSpatialFrequencyCpd`), `BonsaiData\BonsaiData_ZapitReplies_*.csv` (each Zapit reply) when optogenetics is on, the settings files, each calibrated valve's file (`ValveCalibrationDO<n>`) and `manifest.json`.
+Each experiment is `C:\Coen-Lab-Local\Acquired-Data\sub-<lab ID>\ses-<session>_<UTC>`: the Harp boards' raw logs, the cameras, `BonsaiData\BonsaiData_Trial_*.csv` (one row per trial, columns in `schemas\trial-columns.yml`), `BonsaiData\BonsaiData_Async_*.csv` (rewards, commands, Go), `BonsaiData\BonsaiData_StimulusState_*.csv` (one row per 50 ms pip while a trial runs: `harpTime`, `trialNumber`, `positionCm`, `toneFrequencyHz`, `stimulusActive` (True while the tone and grating are on, False past a truncated trial's fraction), `visualSpatialFrequencyCpd`), `BonsaiData\BonsaiData_ZapitReplies_*.csv` (each Zapit reply) when optogenetics is on, the settings files, each calibrated valve's file (`ValveCalibrationDO<n>`) and `manifest.json`.
 
-`uv run summarise-experiment <experiment folder>` reads one experiment from these files alone (lib-open-rigs' `open_rigs.rigs.dome_trials`, tested there, the same for every dome task): how the run ended (the manifest), trials, performance, each response time and outcome-to-next-stimulus interval, and the water the task asked for against the water delivered. It also checks the rows against each other and names each problem, exiting 1: trial numbers with a gap, a stimulus more than 2 ms from `itiStartTime + itiSeconds + quietWaitSeconds`, an interval not starting at the last outcome plus its `punishTimeoutSeconds`, a rewarded trial with no `RewardDelivered`.
+`uv run summarise-experiment <experiment folder>` reads one experiment from these files alone (lib-open-rigs' `open_rigs.rigs.dome_trials`, tested there, the same for every dome task): how the run ended (the manifest), trials, performance, each response time and outcome-to-next-stimulus interval, and the water the task asked for against the water delivered. It also checks the rows against each other and names each problem, exiting 1: trial numbers with a gap, an outcome not `Correct`, `Incorrect` or `NoResponse`, a Go or a stimulus more than 2 ms from where the task file puts it (`itiStartTime + itiSeconds + quietWaitSeconds`), a laser trigger more than 2 ms from `laserToStimulusSeconds` before the stimulus, an interval not starting at the last outcome plus its `punishTimeoutSeconds`, a timeout without the error sound (or the sound without one) when the task has it on, a rewarded trial with no `RewardDelivered`.

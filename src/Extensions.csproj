@@ -13,7 +13,8 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OpenCV.Net" Version="3.4.2" />
     <PackageReference Include="OpenRigs.Core" Version="0.1.1-coen-lab.8" />
-    <PackageReference Include="OpenRigs.Devices" Version="0.1.1-coen-lab.8" />
+    <PackageReference Include="OpenRigs.Audio" Version="0.1.1-coen-lab.1" />
+    <PackageReference Include="OpenRigs.Devices" Version="0.1.1-coen-lab.9" />
   </ItemGroup>
 
 </Project>

@@ -107,7 +107,6 @@
           "$ref": "#/$defs/PunishmentSound",
           "default": {
             "enabled": true,
-            "path": "waveforms\\error_tone.wav",
             "gain": 1.0
           },
           "description": "The error sound on a punished trial",
@@ -118,7 +117,7 @@
       "type": "object"
     },
     "PunishmentSound": {
-      "description": "The error sound played on a punished trial.",
+      "description": "The error sound on a punished trial: the lab's (OpenRigs.Audio), from rig.yml's errorSoundChannel alone.",
       "properties": {
         "enabled": {
           "default": true,
@@ -126,15 +125,9 @@
           "title": "Enabled",
           "type": "boolean"
         },
-        "path": {
-          "default": "waveforms\\error_tone.wav",
-          "description": "Wav file of the error sound, relative to src",
-          "title": "Path",
-          "type": "string"
-        },
         "gain": {
           "default": 1.0,
-          "description": "Playback gain of the error sound",
+          "description": "Gain on the lab's error sound, 1 for the lab's level",
           "minimum": 0,
           "title": "Gain",
           "type": "number"
@@ -402,8 +395,7 @@
             "timeoutSeconds": 2.0,
             "sound": {
               "enabled": true,
-              "gain": 1.0,
-              "path": "waveforms\\error_tone.wav"
+              "gain": 1.0
             }
           },
           "description": "The timeout and error sound a punished trial gets"

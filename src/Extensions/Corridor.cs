@@ -298,13 +298,14 @@ public class StimulusStateRow
     public int trialNumber;
     public double positionCm;
     public double toneFrequencyHz;
-    public int stimulusActive;
+    public bool stimulusActive;
     public double visualSpatialFrequencyCpd;
 }
 
 /// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
-/// outcome). The fields up to laserPowerMw are the dome tasks' shared block, in coen-dome-decision-making's order and words
-/// too (Pip, 14 Nov 2026); this task's own follow.</summary>
+/// outcome). The fields up to laserTriggerTime are the dome tasks' shared block (lib-open-rigs
+/// open_rigs.rigs.dome_trials.SHARED_COLUMNS), in coen-dome-decision-making's order and words too (Pip, 14 Nov 2026);
+/// this task's own follow.</summary>
 public class TrialRow
 {
     public int trialNumber;
@@ -321,6 +322,7 @@ public class TrialRow
     public double punishTimeoutSeconds;
     public int laserCondition;
     public double laserPowerMw;
+    public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
     public string endReason;
     public double trackLengthCm;
     public double endPositionCm;
@@ -389,17 +391,12 @@ public class CorridorState
         if (trial.wrongLickLimit > 0 && wrongLicks >= trial.wrongLickLimit) yield return End("WrongLickLimit");
     }
 
-    /// <summary>Zapit's reply once the trial's StartStimulus is sent: it must have armed the trial's condition as asked.</summary>
+    /// <summary>Zapit's reply once the trial's StartStimulus is sent: it must have armed the trial's condition as asked
+    /// (OpenRigs.Devices ZapitTrial.CheckArmed, the dome tasks' one check).</summary>
     public IEnumerable<CorridorEvent> OnZapitReply(ZapitReply reply)
     {
         if (trial == null || !armSent || armed || reply.Command != ZapitCommandType.StartStimulus) yield break;
-        int laserOn = trial.laserOn ? 1 : 0;
-        if (reply.IsError || reply.Value != trial.laserCondition || reply.LaserOn != laserOn)
-        {
-            throw new InvalidOperationException(string.Format(
-                "Zapit answered trial {0}'s StartStimulus (condition {1}, laserOn {2}) with {3}. Is the conditions file the task names loaded, and is Zapit calibrated?",
-                trial.trialNumber, trial.laserCondition, laserOn, reply));
-        }
+        ZapitTrial.CheckArmed(reply, trial.trialNumber, trial.laserCondition, trial.laserOn);
         armed = true;
     }
 
@@ -503,7 +500,7 @@ public class CorridorState
         var active = trial.truncationFraction >= 1 || Math.Round(sweep.FractionOf(tone), 3) < trial.truncationFraction;
         return new StimulusFrame
         {
-            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, toneFrequencyHz = tone, stimulusActive = active ? 1 : 0, visualSpatialFrequencyCpd = grating },
+            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, toneFrequencyHz = tone, stimulusActive = active, visualSpatialFrequencyCpd = grating },
             Bin = sweep.BinOf(tone),
             ToneGain = active && setup.Audio ? 1 : 0,
             GratingOpacity = active && setup.Visual ? 1 : 0
@@ -543,6 +540,7 @@ public class CorridorState
             punishTimeoutSeconds = timeout,
             laserCondition = trial.laserCondition,
             laserPowerMw = triggered ? trial.laserPowerMw : 0,  // a trial ended before its trigger had no laser
+            laserTriggerTime = triggered ? laserOnset : double.NaN,
             endReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
             endPositionCm = track.Position,
@@ -645,22 +643,6 @@ public class CreateStimulusRow
     public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<CorridorEvent> source)
     {
         return source.Where(e => e.Kind == CorridorEventKind.Pip).Select(e => Timestamped.Create(e.Frame.Row, e.Seconds));
-    }
-}
-
-[Combinator]
-[Description("Stops the workflow at Start, naming each, if any rig.yml speaker has no filter (OpenRigs.Devices DomeSpeakers.RequireFilters, Pip 13 Nov 2026): a dome plays every speaker equalised. Input: rig.yml's speakerArray.")]
-[WorkflowElementCategory(ElementCategory.Sink)]
-public class RequireSpeakerFilters
-{
-    public IObservable<DomeSpeakerArray> Process(IObservable<DomeSpeakerArray> source)
-    {
-        return source.Do(Check);
-    }
-
-    public static void Check(DomeSpeakerArray speakerArray)
-    {
-        OpenRigs.Devices.DomeSpeakers.RequireFilters(speakerArray.Speakers.Select(entry => new KeyValuePair<string, string>(entry.Key, entry.Value.Filter)));
     }
 }
 

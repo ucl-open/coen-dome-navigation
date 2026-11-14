@@ -6,7 +6,6 @@ import numpy as np
 import pydantic
 import pytest
 import yaml
-from scipy.io import wavfile
 
 from ucl_open_coen_dome_navigation import waveforms
 from ucl_open_coen_dome_navigation.helpers import calc_log_window
@@ -67,19 +66,31 @@ def test_the_committed_waveforms_are_waveforms_py_s():
     assert np.array_equal(committed, waveforms.tones(freqs))
     assert committed.shape[1] == 2400  # the workflow's MatrixReader BufferLength
     assert np.array_equal(np.fromfile(WAVES / "reward_tone.bin", dtype=np.float32), waveforms.reward_tone()[0])
-    rate, error = wavfile.read(WAVES / "error_tone.wav")
-    assert rate == 48000 and np.array_equal(error, waveforms.error_tone(float(freqs[0]), float(freqs[-1])))
     assert np.array_equal(np.fromfile(WAVES / "background_noise.bin", dtype=np.float32), waveforms.background_noise())
+
+
+def test_the_error_sound_is_the_lab_s():
+    # Audit, 14 Nov 2026: the error sound is OpenRigs.Audio's (ErrorSoundBuffer), so the task file names no file and
+    # waveforms.py makes none.
+    assert not (WAVES / "error_tone.wav").exists()
+    assert not hasattr(waveforms, "error_tone")
+    assert set(task()["taskParameters"]["punishment"]["sound"]) == {"enabled", "gain"}
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+    assert set(schema["$defs"]["PunishmentSound"]["properties"]) == {"enabled", "gain"}
+    # rig-control checks the task file against the closed schema, so an old file still naming a path is refused.
+    doc = task()
+    doc["taskParameters"]["punishment"]["sound"]["path"] = "waveforms\\error_tone.wav"
+    errors = [e.message for e in jsonschema.Draft202012Validator(_closed(schema)).iter_errors(doc)]
+    assert len(errors) == 1 and "'path'" in errors[0]
 
 
 def test_every_sound_is_at_the_loudness_it_plays_at():
     # Tom's pips and reward tone peaked at amplitude squared (written at amplitude, scaled by it again); the noise has a
-    # pip's RMS, so backgroundNoiseLevel is its gain; the error tone peaks at amplitude.
+    # pip's RMS, so backgroundNoiseLevel is its gain.
     assert abs(float(np.max(np.abs(waveforms.tones(np.array([18000]))))) - 0.05**2) < 1e-4
     assert abs(float(np.max(np.abs(waveforms.reward_tone()))) - 0.05**2) < 1e-6
     rms = float(np.sqrt(np.mean(waveforms.background_noise().astype(np.float64) ** 2)))
     assert abs(rms - 0.5 * 0.05**2) < 1e-5
-    assert abs(float(np.max(np.abs(waveforms.error_tone(2000, 25000)))) / 32767 - 0.05) < 1e-4
 
 
 def _closed(node):
