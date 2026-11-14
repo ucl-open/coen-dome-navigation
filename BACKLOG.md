@@ -19,6 +19,14 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - Trial 1 starts about 2.3 s after Go here and 1.2 s in coen-dome-decision-making: each task's own start-up, neither a bug.
 - `formerly` and `history` stay in trial-columns.yml until the old data's refactor.
 - `ReadTextFile.cs` is duplicated in both dome workflows.
+## 2026-11-14 Camera video on GREEN-DOME-2 (test mouse, open)
+
+The log is `K:\config\machines\GREEN-DOME-2\switch\iterate-log.md` (round 3).
+
+- **The last video file of a run loses the frames still queued at Stop.** LogVideo (lib-open-rigs OpenRigs.Logging) uses Bonsai.Vision's `VideoWriter` with `Buffered` true: frames wait on Rx's EventLoopScheduler, whose thread is a background thread, and headless Bonsai exits within 1 s of the workflow ending, so the queue and the file's closing are cut off. The last AVI's final RIFF AVIX and LIST movi declare size 0 and the OpenDML total is 0; readers that trust the index see only up to the last 1 GB boundary. Measured: 7 to 1,231 Pupil frames lost per run (1,231 with 1,067 queued at Stop, reproduced on demand under CPU load); files closed by the hourly roll-over are complete; the camera CSVs list the lost frames, so they do not show the loss. Being replaced by the ffmpeg recording (another session, 14 Nov 2026); whatever writes video must finish its queue and close its file before Bonsai exits, with a bounded wait that fails loudly (a test writer whose thread kept Bonsai alive hung at Stop until the agent killed it at 30 s, leaving every file unfinished).
+- **Add a check that each video holds every frame its CSV lists** (count the frames in the file, not the index), after every run.
+- **The Pupil camera's noise makes its video expensive.** rig.yml `cameras.pupil.gain: 20` (Body and Face 0): frame-to-frame noise 3.7 grey levels, 139 KB a frame (Body 11, Face 6), about 6.4 GB per 15 min, and its writer thread near a full core; when it falls behind, queued 1440x1080 frames hold 1 to 4 GB of memory until written. Proven by a gain-0 copy: 2 KB a frame, noise 0.01, but the image 6.5 times darker. Pip, 14 Nov 2026: camera settings stay as they are until a better lens arrives; re-measure frame size and writer load then.
+- `CreateCorridorSetup` reads `SweepFile` (`waveforms\sweep.json`, relative) at Go: once in 11 launches on GREEN-DOME-2 (test-0946, the first after a package update) Bonsai's working folder was `.bonsai` and the run ended at Go (DirectoryNotFoundException). Not reproduced since. Read it at Start, or resolve it against the workflow's folder, so a wrong folder fails before Go.
 
 ## 2026-11-14 First runs on hardware (BLUE-OPTO-2, test mouse, unattended)
 
