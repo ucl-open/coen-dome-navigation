@@ -14,7 +14,7 @@
 #      to keep editor validation working.
 #
 rootPath: C:\Coen-Lab-Local\Acquired-Data   # the acquisition folder itself: experiments go to <rootPath>\sub-<mouse>\ses-...
-rigId: XX                 # two capitals or a capital and a digit, such as D1: rig-control's session numbering
+rigId: XX                 # two capitals or a capital and a digit, such as G1: rig-control's session numbering
 
 # Each kind of device is a group of named entries: behaviorBoard: main: is BehaviorBoard-Main in the
 # data and in live view. The workflow takes each device it drives by that name and stops at startup,
@@ -95,6 +95,11 @@ camera:
     exposureTime: 19000    # microseconds
     gain: 0
     binning: 1
+
+# Every camera's video is encoded on the rig's NVIDIA GPU (RTX 5060 on every dome); libx264, the
+# CPU encoder, when this section is left out.
+videoEncoder:
+  codec: h264_nvenc
 
 # Full paths into this rig's calibration folder; the placeholder is the machine name.
 projectionCalibration:
