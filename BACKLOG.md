@@ -2,6 +2,19 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-14 First runs on hardware (BLUE-OPTO-2, test mouse, unattended)
+
+The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2's is beside it.
+
+- **Ready never came** (GREEN-DOME-2): the Ready group took `rx:Last` of a branch with StartupWatchdog in it, which never completes. Ready is now a Zip of `HarpClockSet` and `LickSpoutStage.Homed`, with StartupWatchdog on a branch of its own; two tests. GREEN-DOME-2's change (e4645ed); on BLUE-OPTO-2 every run reached Ready with it.
+- **ZapitCommands would close on the first laser trial**: `LaserOnUntilOutcome` multicasts it per laser trial, and in Bonsai 2.9 a MulticastSubject in a per-element nested graph passes that graph's completion to a PublishSubject (found in coen-dome-decision-making, where it emptied every trial after the first). It is a BehaviorSubject now, which ignores the completion; the same test as decision-making's.
+- Measured on the rig with both fixes, through the agent as the Setup page launches: stages 0-2 Ready in 17-29 s and idle 2 s after Stop (stage 0's drift ends 5 trials with the wheel still; stages 1 and 2 hold trial 1, having no time limit); stages 3, 4 and 5 at 99 trials each, first pip 0.49-0.51 ms after its scheduled time (max 1.02), drift under 0.25 ms an hour, every trial ending by Timeout 12.000 s after the first pip, the 2.000 s punishment timeout after each, stage 5 truncating 16 of 99 at 0.4 and 0.6, `BonsaiData_StimulusState` every 50 ms, no dictionary problems, no dropped camera frame, Stop to idle 1-2 s.
+
+### Still untried
+
+- Zapit (no Zapit run on this rig: the real one would emit light at 0 mW, see Open; the simulated one makes the rig's presence ask for an Override, which an unattended session does not give).
+- Licks, the wheel, choices and rewards need a mouse; the valves need a calibration.
+
 ## 2026-11-14 Pip's Zapit line decision
 
 - **Pip, 14 Nov 2026: the ZapitTrigger line (DO3) is a held level, never a board-timed pulse.** It goes high at the trigger and stays high until the workflow clears it `triggerHoldSeconds` after the outcome, so the masking light on it lasts as long as the laser. lib-open-rigs `DomeRig` (954353d) refuses a rig.yml whose `outputPulseEnable` lists the Zapit line (the board would end it after its `PulseDO3` width: 5 ms, or 3000 ms on BLUE-OPTO-2); `config\rig-template.yml` has `"DO1, DO2"`. DomeHardware's `WithoutPulseLine` already dropped the line at run time. Every dome's rig.yml needs `outputPulseEnable: "DO1, DO2"`.

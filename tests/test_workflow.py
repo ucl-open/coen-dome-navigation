@@ -207,6 +207,52 @@ def test_the_layout_is_tracked_and_the_schemas_are_the_generator_s():
         "ucl_open_coen_dome_navigation.json", "ucl_open_coen_dome_navigation_task.json"]
 
 
+PER_ELEMENT = {"rx:SelectMany", "rx:CreateObservable", "rx:Concat", "rx:Switch"}
+
+
+def _subjects_closed_by_a_nested_multicast(top):
+    """Each MulticastSubject inside a per-element nested graph whose subject is not a BehaviorSubject declared in this
+    workflow or inside that graph. Bonsai 2.9 passes a multicast source's completion to a PublishSubject or
+    ReplaySubject, so the first trial's graph closes it for good; a declared BehaviorSubject ignores it."""
+    declared = {}
+
+    def declare(wf):
+        for n in wf.find(f"{W}Nodes"):
+            if (n.get(XSI) or "").startswith("rx:") and (n.get(XSI) or "").endswith("Subject"):
+                declared[n.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Name")] = n.get(XSI)
+            inner = n.find(f"{W}Workflow")
+            if inner is not None:
+                declare(inner)
+
+    declare(top)
+    found = []
+
+    def walk(wf, nested, local):
+        local = local | {n.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Name") for n in wf.find(f"{W}Nodes")
+                         if (n.get(XSI) or "").endswith("Subject") and (n.get(XSI) or "").startswith("rx:")}
+        for n in wf.find(f"{W}Nodes"):
+            if n.get(XSI) == "MulticastSubject" and nested:
+                name = n.findtext(f"{W}Name")
+                if name not in local and declared.get(name) != "rx:BehaviorSubject":
+                    found.append(name)
+            inner = n.find(f"{W}Workflow")
+            if inner is not None:
+                per = n.get(XSI) in PER_ELEMENT
+                walk(inner, nested or per, local if not per else set())
+
+    walk(top, False, set())
+    return found
+
+
+def test_no_trial_graph_closes_a_shared_subject():
+    """Bonsai 2.9 passes a multicast source's completion to a PublishSubject (BLUE-OPTO-2, 14 Nov 2026): the first laser
+    trial's LaserOnUntilOutcome closed ZapitCommands, so ZapitClient sent StopStimulus and disconnected, and every
+    later trial's arm went nowhere. ZapitCommands is a BehaviorSubject, which ignores it (ConnectZapit subscribes once)."""
+    # AsyncEvents (OpenRigs.Logging's) is multicast in ExperimentLogs, run once per experiment, from Trial, which never
+    # completes, so nothing closes it before the workflow ends.
+    assert _subjects_closed_by_a_nested_multicast(MAIN.find(f"{W}Workflow")) == ["AsyncEvents"]
+
+
 def test_nothing_reads_a_startup_watchdog_s_output():
     # StartupWatchdog (OpenRigs.Core) completes once every stage has come and never emits, so a node fed by
     # it never sees a value: rx:Last after it raised "Sequence contains no elements" at every start and Ready

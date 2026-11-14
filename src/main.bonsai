@@ -496,7 +496,7 @@
         <Description>Subjects several groups share: Zapit's commands and replies, reward requests (side, microlitres) for DeliverReward, the mixer's buffers, and the task's events and rows.</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="zap:ZapitCommand">
+            <Expression xsi:type="rx:BehaviorSubject" TypeArguments="zap:ZapitCommand">
               <rx:Name>ZapitCommands</rx:Name>
             </Expression>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="zap:ZapitReply">
