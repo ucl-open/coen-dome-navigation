@@ -1713,7 +1713,7 @@
             </Expression>
             <Expression xsi:type="rx:SelectMany">
               <Name>ExperimentLogs</Name>
-              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix: BonsaiData_Trial (LogTrial; one row per trial, built by CreateTrialRow when the outcome is known; columns in schemas\trial-columns.yml), BonsaiData_StimulusState (one row per pip), the three cameras (LogVideo, after PathPrefix: an include cannot subscribe to the experiment folder early), the settings files (Settings_Rig, Settings_Task, Settings_Experiment, Settings_ZapitConditions in an optogenetics experiment), the RngSeed event and Zapit's replies.</Description>
+              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix: BonsaiData_Trial (LogTrial; one row per trial, built by CreateTrialRow when the outcome is known; columns in schemas\trial-columns.yml), BonsaiData_StimulusState (one row per pip), the three cameras (LogVideoFfmpeg, after PathPrefix: an include cannot subscribe to the experiment folder early), the settings files (Settings_Rig, Settings_Task, Settings_Experiment, Settings_ZapitConditions in an optogenetics experiment), the RngSeed event and Zapit's replies.</Description>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="SubscribeSubject">
@@ -1748,7 +1748,7 @@
                                   <rx:Count>1</rx:Count>
                                 </Combinator>
                               </Expression>
-                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideo.bonsai">
+                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideoFfmpeg.bonsai">
                                 <LogName>Camera-Face</LogName>
                                 <FrameRate>50</FrameRate>
                               </Expression>
@@ -1760,7 +1760,7 @@
                                   <rx:Count>1</rx:Count>
                                 </Combinator>
                               </Expression>
-                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideo.bonsai">
+                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideoFfmpeg.bonsai">
                                 <LogName>Camera-Pupil</LogName>
                                 <FrameRate>50</FrameRate>
                               </Expression>
@@ -1772,7 +1772,7 @@
                                   <rx:Count>1</rx:Count>
                                 </Combinator>
                               </Expression>
-                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideo.bonsai">
+                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideoFfmpeg.bonsai">
                                 <LogName>Camera-Body</LogName>
                                 <FrameRate>50</FrameRate>
                               </Expression>

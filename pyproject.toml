@@ -12,8 +12,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Operating System :: Microsoft :: Windows",
 ]
-# Kept equal to av-dome's: the rig model's version field is this package's version, and every
-# rig.yml is read by both workflows.
+# The rig model's version field is this package's version, and coen-dome-decision-making
+# has the same one, so both workflows read the same rig.yml.
 version = "0.0.0-rc1"
 readme = {file = "README.md", content-type = "text/markdown"}
 
@@ -55,7 +55,7 @@ ignore-words-list = 'nd'
 required-version = '>=0.8.4'
 
 [tool.uv.sources]
-# The lab's fork, at av-dome's commit: both workflows read the same rig.yml, so their rig models
-# must come from the same open-rigs. lib-open-rigs' update-workflows moves this pin.
+# The lab's fork, at the same commit as coen-dome-decision-making: both workflows read the same
+# rig.yml, so their rig models must come from the same open-rigs. lib-open-rigs' update-workflows moves this pin.
 open-rigs = {git = "https://github.com/Coen-Lab/lib-open-rigs", rev = "391087baa2bca7935adc812bf156405cfedba3c6"}
 swc-aeon = { git = "https://github.com/SainsburyWellcomeCentre/aeon_api.git", branch = "main" }
