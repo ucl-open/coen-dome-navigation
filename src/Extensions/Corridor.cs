@@ -2,6 +2,7 @@ using Bonsai;
 using Bonsai.Harp;
 using Newtonsoft.Json.Linq;
 using OpenCV.Net;
+using OpenRigs.Core;
 using OpenRigs.Devices.Zapit;
 using System;
 using System.Collections.Generic;
@@ -267,69 +268,6 @@ public enum CorridorEventKind
     LaserCap    // laserMaxSeconds after the trigger with no outcome yet: stop the laser
 }
 
-/// <summary>
-/// A trial's quiet waits (Pip, 13 Nov 2026), on the Harp clock, counted from the interval's start: Go needs every
-/// spout released for lickSeconds (a held contact blocks Go), and the wheel's distance (forward and back added)
-/// within wheelCm over the last wheelSeconds; Go is the first moment at or after earliest at which both hold. With both
-/// off Go is earliest. coen-dome-decision-making's TrialLogic.cs has the same class: change both together.
-/// </summary>
-public class QuietWait
-{
-    readonly double earliest, lickSeconds, wheelSeconds, wheelCm;
-    readonly Queue<KeyValuePair<double, double>> moves = new Queue<KeyValuePair<double, double>>();  // (Harp time, cm) in the window
-    double lickSince, wheelSince, lastWheel, recentCm;
-    bool held;
-
-    public QuietWait(double intervalStart, double earliest, double lickSeconds, double wheelSeconds, double wheelCm, double wheelAtStart, bool lickHeld)
-    {
-        this.earliest = earliest;
-        this.lickSeconds = lickSeconds;
-        this.wheelSeconds = wheelSeconds;
-        this.wheelCm = wheelCm;
-        lickSince = wheelSince = intervalStart;
-        lastWheel = wheelAtStart;
-        held = lickHeld;
-    }
-
-    /// <summary>A spout touched or released at Harp time now (held: any spout still touched) restarts the lick wait.</summary>
-    public void Lick(bool anyHeld, double now)
-    {
-        held = anyHeld;
-        lickSince = Math.Max(lickSince, now);
-    }
-
-    /// <summary>The wheel's distance in cm at Harp time now: once the travel within the last wheelSeconds passes wheelCm,
-    /// the wait restarts at the latest move that still takes it past.</summary>
-    public void Wheel(double cm, double now)
-    {
-        var moved = double.IsNaN(lastWheel) ? 0 : Math.Abs(cm - lastWheel);
-        lastWheel = cm;
-        if (!(wheelSeconds > 0)) return;
-        while (moves.Count > 0 && moves.Peek().Key <= now - wheelSeconds) recentCm -= moves.Dequeue().Value;
-        if (moved == 0) return;
-        moves.Enqueue(new KeyValuePair<double, double>(now, moved));
-        recentCm += moved;
-        while (recentCm > wheelCm)
-        {
-            var oldest = moves.Dequeue();
-            recentCm -= oldest.Value;
-            wheelSince = Math.Max(wheelSince, oldest.Key);
-        }
-    }
-
-    /// <summary>When Go falls if nothing more restarts a wait (infinity while a spout is held): exact, not rounded to a clock tick.</summary>
-    public double GoTime
-    {
-        get
-        {
-            if (lickSeconds > 0 && held) return double.PositiveInfinity;
-            return Math.Max(earliest, Math.Max(lickSeconds > 0 ? lickSince + lickSeconds : 0, wheelSince + wheelSeconds));
-        }
-    }
-
-    public double Earliest { get { return earliest; } }
-}
-
 /// <summary>One thing the task asks the hardware to do, at a Harp time.</summary>
 public class CorridorEvent
 {
@@ -364,28 +302,31 @@ public class StimulusStateRow
     public double visualSpatialFrequencyCpd;
 }
 
-/// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after Seconds.</summary>
+/// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
+/// outcome). The fields up to laserPowerMw are the dome tasks' shared block, in coen-dome-decision-making's order and words
+/// too (Pip, 14 Nov 2026); this task's own follow.</summary>
 public class TrialRow
 {
     public int trialNumber;
     public string trialType;
     public string outcome;
-    public string endReason;
-    public bool punishSound;
-    public double punishTimeoutSeconds;
-    public double trackLengthCm;
-    public double endPositionCm;
-    public double toneEndFrequencyHz;
-    public double visualEndSpatialFrequencyCpd;
-    public double truncationFraction;
     public double itiStartTime;
     public double itiSeconds;
     public double quietWaitSeconds;
     public double trialStartTime;
     public double stimulusOnsetTime;
+    public double outcomeTime;
     public double rewardSizeUl;
-    public double laserPowerMw;
+    public bool punishSound;
+    public double punishTimeoutSeconds;
     public int laserCondition;
+    public double laserPowerMw;
+    public string endReason;
+    public double trackLengthCm;
+    public double endPositionCm;
+    public double toneEndFrequencyHz;
+    public double visualEndSpatialFrequencyCpd;
+    public double truncationFraction;
 }
 
 /// <summary>
@@ -591,22 +532,23 @@ public class CorridorState
             trialNumber = trial.trialNumber,
             trialType = trial.trialType,
             outcome = rewarded ? "Correct" : timedOut || !trial.lickToReward ? "NoResponse" : "Incorrect",
-            endReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
-            punishSound = punished && setup.Task.Punishment.Sound.Enabled,
-            punishTimeoutSeconds = timeout,
-            trackLengthCm = trial.trackLengthCm,
-            endPositionCm = track.Position,
-            toneEndFrequencyHz = tone,
-            visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
-            truncationFraction = trial.truncationFraction,
             itiStartTime = itiStart,
             itiSeconds = trial.itiSeconds,
             quietWaitSeconds = quietWait,
             trialStartTime = start,
             stimulusOnsetTime = onset,
+            outcomeTime = now,
             rewardSizeUl = trial.rewardSizeUl,
+            punishSound = punished && setup.Task.Punishment.Sound.Enabled,
+            punishTimeoutSeconds = timeout,
+            laserCondition = trial.laserCondition,
             laserPowerMw = triggered ? trial.laserPowerMw : 0,  // a trial ended before its trigger had no laser
-            laserCondition = trial.laserCondition
+            endReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
+            trackLengthCm = trial.trackLengthCm,
+            endPositionCm = track.Position,
+            toneEndFrequencyHz = tone,
+            visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
+            truncationFraction = trial.truncationFraction
         };
         var outcome = new CorridorEvent { Kind = CorridorEventKind.Outcome, Seconds = now, Trial = trial, Row = row, Rewarded = rewarded, ErrorSound = row.punishSound, RewardSide = "left" };
         phase = Phase.Timeout;

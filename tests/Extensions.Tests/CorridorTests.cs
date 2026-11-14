@@ -298,6 +298,7 @@ public class CorridorStateTests
         Assert.AreEqual("FreqReached", outcome.Row.endReason);
         Assert.IsTrue(outcome.Row.toneEndFrequencyHz >= 18000);
         Assert.IsTrue(outcome.Seconds - outcome.Row.trialStartTime > 10 && outcome.Seconds - outcome.Row.trialStartTime < 25);
+        Assert.AreEqual(outcome.Seconds, outcome.Row.outcomeTime, "outcomeTime is the row's own time, harpTime");
     }
 
     [TestMethod]

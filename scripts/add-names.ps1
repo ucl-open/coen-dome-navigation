@@ -46,8 +46,9 @@ $streams = @($prev.streams)
 $ownStreams = @('BonsaiData_StimulusState', 'BonsaiData_ZapitReplies', 'Settings_ZapitConditions')
 # Names this workflow wrote once and no longer does (Pip, 9 Nov 2026): optoStimulated became laserPowerMw and
 # optoCondition laserCondition; StimulusState and Zapit moved into BonsaiData; Settings_ZapitStimConfig is
-# Settings_ZapitConditions; audioEndFrequencyHz is toneEndFrequencyHz; outcomeTime is the row's Seconds (plan v11, 13 Nov 2026).
-$retired = @{ trialColumns = @('optoStimulated', 'optoCondition', 'audioEndFrequencyHz', 'outcomeTime'); streams = @('StimulusState', 'Zapit', 'Settings_ZapitStimConfig') }
+# Settings_ZapitConditions; audioEndFrequencyHz is toneEndFrequencyHz. outcomeTime, retired on 13 Nov 2026 as the row's Seconds, is a column again
+# from 14 Nov 2026 (the dome tasks' shared block names every moment of a trial; the row's time is harpTime).
+$retired = @{ trialColumns = @('optoStimulated', 'optoCondition', 'audioEndFrequencyHz', 'Seconds'); streams = @('StimulusState', 'Zapit', 'Settings_ZapitStimConfig') }
 foreach ($s in $ownStreams) { if ($streams -notcontains $s) { $streams += $s; $added += "stream $s" } }
 $es = [ordered]@{}; foreach ($p in $prev.experimentSettings.PSObject.Properties) { $es[$p.Name] = $p.Value }
 # usedBy as it was, with this repo on each of its names (its streams: StimulusState and the lab's

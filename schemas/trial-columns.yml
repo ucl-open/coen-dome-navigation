@@ -1,26 +1,33 @@
-# What each BonsaiData_Trial column this workflow writes means (CreateTrialRow, src\Extensions\Corridor.cs, builds the row
-# when the trial's outcome is known; scripts\check-workflow.ps1 holds the row's fields to this list). ExperimentManifest (TrialColumns) copies this file into every
-# experiment's manifest.json at Start, so each experiment carries the meaning of its own trial log.
+# What each BonsaiData_Trial column this workflow writes means. ExperimentManifest (TrialColumns) copies
+# this file into every experiment's manifest.json at Start, so each experiment carries the meaning of its
+# own trial log; open_rigs.trials reads it from there.
 #
-# Each column: type (int, double, bool or string), and where they apply values, unit, formerly
-# (names it was recorded under before, newest first, Tom Childs' auditory-vr-corridor TrialLog
-# names among them) and description. The names and types must
-# also be on the lab's list (K:\config\data-dictionary.json, edited from rig-setup's Repos page):
-# rig-control checks both before it launches the workflow.
+# Each column: type (int, double, bool or string), and where they apply values (the strings it may hold),
+# unit, formerly (names it was recorded under before, newest first), description (what it is), note (this
+# task's detail) and history (what it was before, dated). The names and types must also be on the lab's
+# list (K:\config\data-dictionary.json, edited from rig-setup's Repos page): rig-control checks both
+# before it launches the workflow.
 #
-# Naming: camelCase; a Harp time ends in Time and is in seconds; a quantity ends in its unit.
+# Naming: camelCase; a Harp time ends in Time and is in seconds; a duration or other quantity ends in its
+# unit (itiSeconds, rewardSizeUl); never a stored latency.
+#
+# The first 15 columns, harpTime to laserPowerMw, are the dome tasks' shared block (Pip, 14 Nov 2026):
+# coen-dome-decision-making and coen-dome-navigation list them in this order with these types, units and
+# descriptions, word for word (tests/test_trial_columns.py holds both), so one analysis reads both tasks.
+# trialType, outcome, rewardSizeUl and punishSound are described per task. This task's own columns follow.
 #
 # Only what changes from trial to trial (Pip, 9 Nov 2026): the task file's values fixed for the
 # experiment (the stage's row, toneAmplitude) are in Settings\Settings_Task_*.json and the stage itself
-# is TrainingStage in Settings\Settings_Experiment_*.json; no column repeats another or sums the Harp logs (lickCount, trialStartWheelCm until 9 Nov 2026).
-# With laser-off trials (zapit-v2) every trial of an optogenetics experiment has a condition, so laser on is
-# laserPowerMw > 0, not laserCondition > 0 (laserPowerMw replaced optoStimulated, Pip, 9 Nov 2026).
+# is TrainingStage in Settings\Settings_Experiment_*.json; no column sums the Harp logs (lickCount,
+# trialStartWheelCm until 9 Nov 2026), and none repeats another but outcomeTime, which names harpTime's
+# moment so that the shared block names every moment of a trial (Pip, 14 Nov 2026).
 
-Seconds:
+harpTime:
   type: double
   unit: s
-  formerly: [outcomeTime, HarpTime]
-  description: Harp time the outcome was known (the trial's end), when the row was built; outcomeTime until 13 Nov 2026. Tom Childs' TrialLog was stamped 2 s later.
+  formerly: [Seconds, HarpTime]
+  description: Harp time the row was complete, when the outcome was known (outcomeTime). The lab's time column, first in every log (lib-open-rigs specs/logging.md, section 4); a trial's moments are read from their own columns.
+  history: Seconds until 14 Nov 2026. Tom Childs' TrialLog was stamped 2 s after the outcome (HarpTime).
 trialNumber:
   type: int
   formerly: [Trial]
@@ -35,11 +42,47 @@ outcome:
   values: [Correct, Incorrect, NoResponse]
   formerly: [WasRewarded]
   description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the time limit or the end of the track (endReason says which), or unrewarded on a stage without lickToReward. rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
-endReason:
-  type: string
-  values: [FreqReached, CorrectLick, WrongLickLimit, Timeout, EndOfTrack]
-  formerly: [EndReason]
-  description: Why the trial ended - the reward frequency reached (on a stage without lickToReward, rows 0 and 1 of the task file, Tom Childs' stages 1 and 2), a lick in the reward zone, too many wrong licks, the trial's time limit, or the end of the track.
+itiStartTime:
+  type: double
+  unit: s
+  formerly: [ITIStartHarp]
+  description: "Harp time the inter-trial interval before this trial began: the last trial's outcomeTime plus its punishTimeoutSeconds, exactly; on trial 1 the first Harp clock tick once the trials started."
+  note: Trials start 0.5 s after the experiment folder exists and the tones are loaded.
+  history: NaN on trial 1 until 13 Nov 2026.
+itiSeconds:
+  type: double
+  unit: s
+  formerly: [ITIDrawnSec]
+  description: "The inter-trial interval drawn for this trial (every trial draws its own), uniformly between trialStructure.itiMinSeconds and itiMaxSeconds: from itiStartTime to this trial's stimulus with a quiet mouse, the time to drink included. The stage's quiet waits add quietWaitSeconds, so the stimulus was commanded at itiStartTime + itiSeconds + quietWaitSeconds."
+  history: From 13 Nov 2026 (Pip); before, it ran to the trial's start, NaN on trial 1, and quietSeconds was waited after it; earlier still it was drawn 0 to 1 s after a fixed 2 s; Tom Childs' workflow drew 0 or 1 s.
+quietWaitSeconds:
+  type: double
+  unit: s
+  description: How long the stage's quiet waits (lickQuietSeconds, wheelQuietSeconds and wheelQuietCm; OpenRigs.Core QuietWait) held this trial's Go past the end of its interval less the lead; 0 with the waits off or a quiet mouse.
+  history: From 13 Nov 2026.
+trialStartTime:
+  type: double
+  unit: s
+  formerly: [TrialStartHarp]
+  description: "Harp time the trial started (Go): the end of its interval less the lead, max(laserToStimulusSeconds, 0) in the task file (in the manifest), or later by quietWaitSeconds."
+  note: Beep 0, the track's position zero.
+stimulusOnsetTime:
+  type: double
+  unit: s
+  formerly: [CueOnsetHarp]
+  description: "Harp time the workflow commanded the stimulus on, NaN if it never was: trialStartTime plus the lead in every experiment; with optogenetics the laser trigger was laserToStimulusSeconds before it. The physical onset is in the hardware logs."
+  note: The trial's first tone pip and grating frame, as Tom Childs' CueOnsetHarp.
+  history: From 13 Nov 2026 the lead after the trial's start in every experiment; until then beep 1 without optogenetics and laserToStimulusSeconds after beep 0 with it.
+outcomeTime:
+  type: double
+  unit: s
+  description: Harp time the outcome was known, the same time as harpTime, as its own column so that every moment of a trial is named.
+  note: Why the trial ended is endReason - a lick in the reward zone, the wrong-lick limit, the time limit, the end of the track or the reward frequency reached.
+  history: A column of this name held the same until 13 Nov 2026; from then to 14 Nov 2026 only the row's Seconds did.
+rewardSizeUl:
+  type: double
+  unit: ul
+  description: Microlitres a reward on this trial gives (the stage's rewardSizeUl in trainingStages). What was delivered is RewardDelivered in BonsaiData_Async.
 punishSound:
   type: bool
   formerly: [WasPunished]
@@ -48,7 +91,22 @@ punishTimeoutSeconds:
   type: double
   unit: s
   formerly: [WasPunished]
-  description: The timeout after a punished trial (the task's punishment.timeoutSeconds), 0 when not punished.
+  description: "The timeout after this trial: the task's punishment.timeoutSeconds when the trial was punished, else 0. The next interval starts after it (itiStartTime)."
+  note: Punished - see punishSound.
+laserCondition:
+  type: int
+  formerly: [optoCondition]
+  description: "The Zapit condition sent to Zapit this trial (its conditions file's number, from 1), laser on or off: every trial of an optogenetics experiment has one, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics."
+laserPowerMw:
+  type: double
+  unit: mW
+  description: Laser power sent to Zapit for this trial (the task's optogenetics.laserPowerMw), as commanded, not measured. 0 on laser-off trials, without optogenetics, and on a trial answered before its trigger.
+  history: No laser after an answer from 13 Nov 2026.
+endReason:
+  type: string
+  values: [FreqReached, CorrectLick, WrongLickLimit, Timeout, EndOfTrack]
+  formerly: [EndReason]
+  description: Why the trial ended - the reward frequency reached (on a stage without lickToReward, rows 0 and 1 of the task file, Tom Childs' stages 1 and 2), a lick in the reward zone, too many wrong licks, the trial's time limit, or the end of the track.
 trackLengthCm:
   type: double
   unit: cm
@@ -58,7 +116,7 @@ endPositionCm:
   type: double
   unit: cm
   formerly: [TrialEndPosCm]
-  description: Position along the track at the outcome (Seconds), behind the start never counted and capped at the track's length. Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
+  description: Position along the track at the outcome (outcomeTime), behind the start never counted and capped at the track's length. Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
 toneEndFrequencyHz:
   type: double
   unit: Hz
@@ -73,39 +131,3 @@ truncationFraction:
   type: double
   formerly: [TruncationPoint]
   description: Where the stimulus switched off, as a fraction of the sweep (one of truncation.sweepFractions, on the stage's truncatedTrialFraction of trials); 1 on an untruncated trial.
-itiStartTime:
-  type: double
-  unit: s
-  formerly: [ITIStartHarp]
-  description: Harp time the inter-trial interval before this trial began - the last trial's outcome, after any punishment timeout; on trial 1 the first Harp clock tick after Go (NaN on trial 1 until 13 Nov 2026).
-itiSeconds:
-  type: double
-  unit: s
-  formerly: [ITIDrawnSec]
-  description: The inter-trial interval drawn for this trial, evenly between trialStructure.itiMinSeconds and itiMaxSeconds, from itiStartTime (the last outcome, after any punishment timeout) to the first tone pip with a quiet mouse, the time to drink included; the stage's quiet waits add quietWaitSeconds, so the first pip came at itiStartTime + itiSeconds + quietWaitSeconds. From 13 Nov 2026 (Pip); before, it ran to the trial's start, NaN on trial 1, and quietSeconds was waited after it; earlier still it was drawn 0 to 1 s after a fixed 2 s; Tom Childs' workflow drew 0 or 1 s.
-quietWaitSeconds:
-  type: double
-  unit: s
-  description: How long the stage's quiet waits (lickQuietSeconds, wheelQuietSeconds and wheelQuietCm) held this trial's start (Go) past the end of its interval less the lead; 0 with the waits off or a quiet mouse. From 13 Nov 2026.
-trialStartTime:
-  type: double
-  unit: s
-  formerly: [TrialStartHarp]
-  description: Harp time the trial started (Go, beep 0, position zero) - the end of its interval less the lead, max(laserToStimulusSeconds, 0), or later by quietWaitSeconds.
-stimulusOnsetTime:
-  type: double
-  unit: s
-  formerly: [CueOnsetHarp]
-  description: Harp time the workflow commanded the stimulus on - the trial's first tone pip and grating frame, as Tom Childs' CueOnsetHarp. From 13 Nov 2026 it is the lead, max(laserToStimulusSeconds, 0) in the task file (in the manifest), after the trial's start in every experiment (beep 2 at 0.1 s); with optogenetics the trigger was laserToStimulusSeconds before it. Until 13 Nov 2026 it was beep 1 without optogenetics and laserToStimulusSeconds after beep 0 with it. The physical onset is in the hardware logs.
-rewardSizeUl:
-  type: double
-  unit: ul
-  description: Microlitres a reward on this trial gives (the stage's rewardSizeUl in trainingStages). What was delivered is RewardDelivered in BonsaiData_Async.
-laserPowerMw:
-  type: double
-  unit: mW
-  description: Laser power sent to Zapit for this trial (the task's optogenetics.laserPowerMw), as commanded, not measured. 0 on laser-off trials, without optogenetics, and on a trial answered before its trigger (no laser after an answer, from 13 Nov 2026).
-laserCondition:
-  type: int
-  formerly: [optoCondition]
-  description: The Zapit condition (stimLocations number, from 1) sent to Zapit this trial, laser on or off - every trial of an optogenetics experiment has one here, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics.
