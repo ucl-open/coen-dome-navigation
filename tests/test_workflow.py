@@ -205,3 +205,23 @@ def test_the_layout_is_tracked_and_the_schemas_are_the_generator_s():
     assert "..\\config\\main.layout" in (ROOT / ".bonsai" / "Setup.ps1").read_text(encoding="utf-8-sig")
     assert sorted(p.name for p in (ROOT / "src" / "DataSchemas").iterdir()) == [
         "ucl_open_coen_dome_navigation.json", "ucl_open_coen_dome_navigation_task.json"]
+
+
+def test_nothing_reads_a_startup_watchdog_s_output():
+    # StartupWatchdog (OpenRigs.Core) completes once every stage has come and never emits, so a node fed by
+    # it never sees a value: rx:Last after it raised "Sequence contains no elements" at every start and Ready
+    # never came (GREEN-DOME-2, 14 Nov 2026). Ready is the stages zipped; the watchdog is a branch of its own.
+    for workflow in MAIN.iter(W + "Workflow"):
+        nodes = list(workflow.find(W + "Nodes"))
+        edges = [(int(e.get("From")), int(e.get("To"))) for e in workflow.find(W + "Edges")]
+        for i, node in enumerate(nodes):
+            if (node.find(W + "Combinator") is not None and node.find(W + "Combinator").get(XSI, "").endswith(":StartupWatchdog")):
+                assert not [b for a, b in edges if a == i], "a node reads StartupWatchdog's output, which never comes"
+
+
+def test_ready_comes_from_the_clock_and_the_homed_spouts():
+    nodes, edges = _scope(group("Ready"))
+    report = next(i for i, n in enumerate(nodes) if n.find(W + "Combinator") is not None and n.find(W + "Combinator").get(XSI) == "orcl:ReportPhase")
+    names = {nodes[a].findtext(W + "Name") for a in _upstream(edges, report)}
+    assert {"HarpClockSet", "LickSpoutStage.Homed"} <= names
+    assert not any(n.find(W + "Combinator") is not None and n.find(W + "Combinator").get(XSI, "").endswith(":StartupWatchdog") for n in (nodes[a] for a in _upstream(edges, report)))

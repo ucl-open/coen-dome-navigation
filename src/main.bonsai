@@ -529,7 +529,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Ready</Name>
-        <Description>Reports Ready once the Harp clock is set and the spouts are homed; stops the workflow, naming what never came, if that takes longer than 400 s (the stage homes each motor within 60 s).</Description>
+        <Description>Reports Ready once the Harp clock is set and the spouts are homed (the two zipped). Beside it, StartupWatchdog stops the workflow, naming what never came, if that takes longer than 400 s (the stage homes each motor within 60 s); it completes without a value, so nothing reads its output.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -569,7 +569,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Last" />
+              <Combinator xsi:type="rx:Zip" />
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="orcl:ReportPhase">
@@ -585,7 +585,8 @@
             <Edge From="2" To="6" Label="Source1" />
             <Edge From="5" To="6" Label="Source2" />
             <Edge From="6" To="7" Label="Source1" />
-            <Edge From="7" To="8" Label="Source1" />
+            <Edge From="1" To="8" Label="Source1" />
+            <Edge From="4" To="8" Label="Source2" />
             <Edge From="8" To="9" Label="Source1" />
           </Edges>
         </Workflow>
