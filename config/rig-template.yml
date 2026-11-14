@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_dome_navigation.json
 #
-# coen-dome-navigation rig configuration TEMPLATE: the dome rig model (open_rigs.rigs.dome), as every dome workflow's
+# coen-dome-navigation rig configuration TEMPLATE: the lab rig model (open_rigs.rigs.lab_rig), as every lab workflow's
 #
 # Per-rig configuration files are NOT committed to this repo. To deploy a rig:
 #   1. Copy this file to <ConfigRoot>\<MACHINE-NAME>\rig.yml, where ConfigRoot is
@@ -27,14 +27,14 @@ behaviorBoard:
     portName: COM1
     usbSerial: CHANGE-ME
     pulseController:
-      outputPulseEnable: "DO1, DO2"   # never DO3: the ZapitTrigger line is held, not pulsed (dome rig model refuses it)
+      outputPulseEnable: "DO1, DO2"   # never DO3: the ZapitTrigger line is held, not pulsed (lab rig model refuses it)
       # Each reward valve is a CalibratedPulse: its curve, in calibration\ beside this file, plans every
       # reward's pulses at the gap it was calibrated at. The ZapitTrigger line is held high, never pulsed.
       outputs:
         DO1: { discriminatorType: CalibratedPulse, artefact: calibration/valve-DO1.json }
         DO2: { discriminatorType: CalibratedPulse, artefact: calibration/valve-DO2.json }
         DO3: { discriminatorType: FixedPulse, pulseWidthMs: 0 }
-    # What each line drives (dome rig model, open_rigs.rigs.dome): one RewardValve per side and one
+    # What each line drives (lab rig model, open_rigs.rigs.lab_rig): one RewardValve per side and one
     # ZapitTrigger. The workflow reads the reward and Zapit lines from here.
     wiring:
       DO0: { device: CameraTrigger, targets: [Camera-Face, Camera-Pupil, Camera-Body] }
@@ -78,7 +78,7 @@ licketySplit:
     channel0TriggerThreshold: 0
     channel0UntriggerThreshold: 0
 
-# Exactly three cameras, on the board's trigger 0 (DomeHardware).
+# Exactly three cameras, on the board's trigger 0 (RigHardware).
 camera:
   face:
     serialNumber: "00000000"

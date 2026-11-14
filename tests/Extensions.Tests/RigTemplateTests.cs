@@ -14,10 +14,10 @@ using UclOpenCoenDomeNavigation;
 [TestClass]
 public class RigTemplateTests
 {
-    static DomeRig Deserialize(string text)
+    static LabRig Deserialize(string text)
     {
-        var process = typeof(DeserializeFromYaml).GetMethod("Process", BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(typeof(DomeRig));
-        var rigs = (IObservable<DomeRig>)process.Invoke(null, new object[] { Observable.Return(text) });
+        var process = typeof(DeserializeFromYaml).GetMethod("Process", BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(typeof(LabRig));
+        var rigs = (IObservable<LabRig>)process.Invoke(null, new object[] { Observable.Return(text) });
         return rigs.Wait();
     }
 

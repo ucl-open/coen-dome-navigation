@@ -118,7 +118,7 @@ def test_the_laser_cap_s_code_says_laser_not_stimulus():
 
 def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
     # Audit round 4: the longest ramp-down is lib-open-rigs' ZAPIT_MAX_RAMP_DOWN_SECONDS (ZapitConditions.MaximumRampDownMs), not a typed 0.5.
-    from open_rigs.rigs.dome import ZAPIT_MAX_RAMP_DOWN_SECONDS
+    from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
 
     assert OptogeneticsConfig.model_fields["trigger_hold_seconds"].metadata[0].ge == ZAPIT_MAX_RAMP_DOWN_SECONDS
     with pytest.raises(pydantic.ValidationError, match="greater than or equal to 0.5"):

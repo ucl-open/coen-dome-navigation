@@ -24,11 +24,11 @@
   <Workflow>
     <Nodes>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="DisplayDevice" Description="The display the dome projector is on (DomeDisplay); a launch property." />
+        <Property Name="DisplayDevice" Description="The display the dome projector is on (ProjectorDisplay); a launch property." />
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>RigSetup</Name>
-        <Description>Reads this machine's rig.yml (ReadRigConfig) into the dome rig model (open_rigs.rigs.dome), opens every device with DomeHardware, starts the cameras 2 s later and opens the dome's display (DomeDisplay).</Description>
+        <Description>Reads this machine's rig.yml (ReadRigConfig) into the lab rig model (open_rigs.rigs.lab_rig), opens every device with RigHardware, starts the cameras 2 s later and opens the dome's display (ProjectorDisplay).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="GroupWorkflow">
@@ -57,7 +57,7 @@
               </Workflow>
             </Expression>
             <Expression xsi:type="rig:DeserializeFromYaml">
-              <rig:Type xsi:type="TypeMapping" TypeArguments="rig:DomeRig" />
+              <rig:Type xsi:type="TypeMapping" TypeArguments="rig:LabRig" />
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:Take">
@@ -75,8 +75,8 @@
                 <Property Name="SpoutStepSize" />
               </PropertyMappings>
             </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
-              <Description>Every dome device, named as in the data, behind its subjects (Dome Building Blocks): the Behavior board (wheel distance, pulses, the ZapitTrigger line cleared however the workflow stops), the timestamp generator (Timestamp, HarpClockSet), both Lickety Splits, the three cameras and the lick spout stage, which homes, goes in and handles the spout commands.</Description>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:RigHardware.bonsai">
+              <Description>Every dome device, named as in the data, behind its subjects (Building Blocks): the Behavior board (wheel distance, pulses, the ZapitTrigger line cleared however the workflow stops), the timestamp generator (Timestamp, HarpClockSet), both Lickety Splits, the three cameras and the lick spout stage, which homes, goes in and handles the spout commands.</Description>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="BooleanProperty">
@@ -100,7 +100,7 @@
             <Expression xsi:type="ExternalizedMapping">
               <Property Name="DisplayDevice" />
             </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Vision:DomeDisplay.bonsai">
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Vision:ProjectorDisplay.bonsai">
               <Description>The dome's BonVision window, mesh mapping and gamma correction from rig.yml's projectionCalibration; stimuli draw on DrawStimuli.</Description>
               <DisplayDevice>First</DisplayDevice>
               <WindowState>Fullscreen</WindowState>
@@ -129,7 +129,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, ManualRewardUl and SpoutStepSize settable live (each a subject of its name, its one default there, shown to the controller by ParameterDefault a second after Start), the spout commands (handled by HarpLickSpoutStage in DomeHardware) at any time; at Go RunSettings (subject, session), TaskFilePath (TaskPath, the task file rig-control wrote) and TrainingStage are published.</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, ManualRewardUl and SpoutStepSize settable live (each a subject of its name, its one default there, shown to the controller by ParameterDefault a second after Start), the spout commands (handled by HarpLickSpoutStage in RigHardware) at any time; at Go RunSettings (subject, session), TaskFilePath (TaskPath, the task file rig-control wrote) and TrainingStage are published.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -687,7 +687,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Commands</Name>
-        <Description>RewardLeft and RewardRight give ManualRewardUl on that side (DeliverReward). The spout commands are DomeHardware's (HarpLickSpoutStage).</Description>
+        <Description>RewardLeft and RewardRight give ManualRewardUl on that side (DeliverReward). The spout commands are RigHardware's (HarpLickSpoutStage).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -1647,7 +1647,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything written to the experiment folder: LogControllerLogic makes the folder at Go and publishes PathPrefix; ExperimentLogs holds every log that waits for it; DomeHarpLogs records the Harp boards; DeliverReward delivers and logs rewards; BonsaiData_Async takes the controller's events; RecordHarpDevices, ExperimentManifest and the Recording phase follow PathPrefix.</Description>
+        <Description>Everything written to the experiment folder: LogControllerLogic makes the folder at Go and publishes PathPrefix; ExperimentLogs holds every log that waits for it; HarpLogs records the Harp boards; DeliverReward delivers and logs rewards; BonsaiData_Async takes the controller's events; RecordHarpDevices, ExperimentManifest and the Recording phase follow PathPrefix.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="GroupWorkflow">
@@ -1973,7 +1973,7 @@
                 </Edges>
               </Workflow>
             </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHarpLogs.bonsai">
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:HarpLogs.bonsai">
               <Description>One LogHarpDevice per dome Harp device, from the experiment folder and the Harp clock being set.</Description>
             </Expression>
             <Expression xsi:type="SubscribeSubject">

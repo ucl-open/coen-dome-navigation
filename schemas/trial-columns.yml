@@ -11,8 +11,8 @@
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a duration or other quantity ends in its
 # unit (itiSeconds, rewardSizeUl); never a stored latency.
 #
-# The first 16 columns, harpTime to laserTriggerTime, are the dome tasks' shared block (Pip, 14 Nov 2026),
-# defined once in lib-open-rigs open_rigs.rigs.dome_trials.SHARED_COLUMNS: coen-dome-decision-making and
+# The first 16 columns, harpTime to laserTriggerTime, are the lab's shared block, its core with the opto and quietWait blocks (Pip, 14 Nov 2026),
+# defined once in lib-open-rigs open_rigs.rigs.trials: coen-dome-decision-making and
 # coen-dome-navigation list them in this order with these types, units and descriptions, word for word
 # (tests/test_trial_columns.py holds both), so one analysis reads both tasks.
 # trialType, outcome, rewardSizeUl and punishSound are described per task. This task's own columns follow.
@@ -54,7 +54,7 @@ itiSeconds:
   type: double
   unit: s
   formerly: [ITIDrawnSec]
-  description: "The inter-trial interval drawn for this trial (every trial draws its own), uniformly between trialStructure.itiMinSeconds and itiMaxSeconds: from itiStartTime to this trial's stimulus with a quiet mouse, the time to drink included. The stage's quiet waits add quietWaitSeconds, so the stimulus was due at itiStartTime + itiSeconds + quietWaitSeconds (stimulusOnsetTime)."
+  description: "The inter-trial interval drawn for this trial (every trial draws its own), uniformly between trialStructure.itiMinSeconds and itiMaxSeconds: from itiStartTime to this trial's stimulus with a quiet mouse, the time to drink included. A task's quiet waits add quietWaitSeconds, so the stimulus was due at itiStartTime + itiSeconds + quietWaitSeconds (stimulusOnsetTime)."
   history: From 13 Nov 2026 (Pip); before, it ran to the trial's start, NaN on trial 1, and quietSeconds was waited after it; earlier still it was drawn 0 to 1 s after a fixed 2 s; Tom Childs' workflow drew 0 or 1 s.
 quietWaitSeconds:
   type: double
@@ -65,7 +65,7 @@ trialStartTime:
   type: double
   unit: s
   formerly: [TrialStartHarp]
-  description: "Harp time the trial started (Go): the end of its interval less the lead, max(laserToStimulusSeconds, 0) in the task file (Settings_Task), plus quietWaitSeconds."
+  description: "Harp time the trial started (Go): the end of its interval less the lead, max(laserToStimulusSeconds, 0) in the task file (Settings_Task) and 0 without optogenetics, plus quietWaitSeconds where the task has quiet waits."
   note: Beep 0, the track's position zero.
 stimulusOnsetTime:
   type: double

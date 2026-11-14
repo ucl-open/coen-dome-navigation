@@ -11,7 +11,7 @@ TEMPLATE = ROOT / "config" / "rig-template.yml"
 
 
 def test_the_rig_template_validates():
-    # The dome rig model (open_rigs.rigs.dome): every dome workflow reads the one rig.yml.
+    # The lab rig model (open_rigs.rigs.lab_rig): every lab workflow reads the one rig.yml.
     rig = UclOpenCoenDomeNavigationRig.model_validate(yaml.safe_load(TEMPLATE.read_text(encoding="utf-8")))
     assert rig.behavior_board["main"].running_wheel.wheel_diameter_mm == 75  # the measured wheel on every dome
 

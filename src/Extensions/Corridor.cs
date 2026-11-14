@@ -303,8 +303,8 @@ public class StimulusStateRow
 }
 
 /// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
-/// outcome). The fields up to laserTriggerTime are the dome tasks' shared block (lib-open-rigs
-/// open_rigs.rigs.dome_trials.SHARED_COLUMNS), in coen-dome-decision-making's order and words too (Pip, 14 Nov 2026);
+/// outcome). The fields up to laserTriggerTime are the lab's shared block, its core with the opto and quietWait blocks (lib-open-rigs
+/// open_rigs.rigs.trials), in coen-dome-decision-making's order and words too (Pip, 14 Nov 2026);
 /// this task's own follow.</summary>
 public class TrialRow
 {
@@ -574,7 +574,7 @@ public class CreateCorridorSetup
     [Description("sweep.json, relative to the workflow's folder (src).")]
     public string SweepFile { get; set; }
 
-    public IObservable<CorridorSetup> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, DomeRig>> source)
+    public IObservable<CorridorSetup> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, LabRig>> source)
     {
         return source.Select(x => CorridorSetup.Create(x.Item1.TaskParameters, x.Item2, Sweep.Load(SweepFile), x.Item3.Zapit.HardwareTriggered, null));
     }

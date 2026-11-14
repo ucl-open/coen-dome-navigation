@@ -33,8 +33,8 @@ def test_every_task_wait_is_on_the_harp_clock():
 
 def test_the_shared_blocks_replace_the_local_copies():
     includes = {e.get("Path") for e in MAIN.iter(W + "Expression") if e.get(XSI) == "IncludeWorkflow"}
-    assert {"OpenRigs.Devices:DomeHardware.bonsai", "OpenRigs.Devices:DomeHarpLogs.bonsai",
-            "OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai", "OpenRigs.Vision:DomeDisplay.bonsai"} <= includes
+    assert {"OpenRigs.Devices:RigHardware.bonsai", "OpenRigs.Devices:HarpLogs.bonsai",
+            "OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai", "OpenRigs.Vision:ProjectorDisplay.bonsai"} <= includes
     assert not [p for p in includes if p.startswith("Extensions")]
     assert sorted(p.name for p in (ROOT / "src" / "Extensions").iterdir()) == [
         "Corridor.cs", "ReadTextFile.cs", "UclOpenCoenDomeNavigation.Generated.cs", "UclOpenCoenDomeNavigationTask.Generated.cs"]
@@ -42,7 +42,7 @@ def test_the_shared_blocks_replace_the_local_copies():
 
 
 def test_video_is_logged_after_the_experiment_folder():
-    # Dome Building Blocks: LogVideoFfmpeg stays in the workflow, after PathPrefix.
+    # Building Blocks: LogVideoFfmpeg stays in the workflow, after PathPrefix.
     logs = ET.tostring(group("ExperimentLogs"), encoding="unicode")
     assert logs.count("OpenRigs.Logging:LogVideoFfmpeg.bonsai") == 3
     assert "OpenRigs.Logging:LogVideo.bonsai" not in logs
@@ -164,7 +164,7 @@ def test_the_readme_lists_every_open_rigs_block():
     used |= {p.split(":")[1].replace(".bonsai", "").split(".")[-1] for p in re.findall(r'Path="(OpenRigs\.[^"]+)"', TEXT)}
     missing = sorted(b for b in used if f"`{b}`" not in table)
     assert not missing, missing
-    assert "dome-building-blocks" in table
+    assert "building-blocks" in table
 
 def test_zapit_is_the_shared_include_given_the_conditions_file():
     # Audit round 3: the connect, check and refusal chain is lib-open-rigs' Zapit.ConnectZapit (its stops are tested C#
@@ -255,7 +255,7 @@ def test_the_speakers_are_declared_before_every_user():
 
 def test_the_manual_reward_is_capped_as_every_reward():
     # Audit round 4: ManualRewardUl's Maximum is lib-open-rigs' MAX_REWARD_UL (DeliverReward's MaxRewardUl).
-    from open_rigs.rigs.dome import MAX_REWARD_UL
+    from open_rigs.rigs.lab_rig import MAX_REWARD_UL
 
     parameter = next(p for p in MAIN.iter(W + "Parameter") if p.findtext(W + "Name") == "ManualRewardUl")
     assert float(parameter.findtext(W + "Maximum")) == MAX_REWARD_UL

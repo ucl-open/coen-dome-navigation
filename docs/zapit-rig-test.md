@@ -51,4 +51,4 @@ is what prevents rebound); a Training Stage 1-2 (no time limit) `test` trial wit
 
 Nothing tells Zapit, and a continuous stimulus keeps playing: stop it in Zapit straight away (Stop in the GUI, or `hZP.stopOptoStim`)
 or close the shutter. Stopping the workflow, or an error, is fine: Bonsai sends StopStimulus itself. Stopped mid-trial, the trigger line
-(and the masking LEDs) is cleared as the workflow stops (DomeHardware); a Bonsai killed outright cannot clear it.
+(and the masking LEDs) is cleared as the workflow stops (RigHardware); a Bonsai killed outright cannot clear it.

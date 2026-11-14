@@ -162,7 +162,7 @@ if ($Step -eq 'Checks') {
     function New-RigYamlExpression {
         $x = $E::Constant([System.Reactive.Linq.Observable]::Return($yaml), [IObservable[string]])
         $des = New-Object UclOpenCoenDomeNavigation.DeserializeFromYaml
-        $des.Type = [Activator]::CreateInstance([Bonsai.Expressions.TypeMapping`1].MakeGenericType([UclOpenCoenDomeNavigation.DomeRig]))
+        $des.Type = [Activator]::CreateInstance([Bonsai.Expressions.TypeMapping`1].MakeGenericType([UclOpenCoenDomeNavigation.LabRig]))
         return $des.Build([Linq.Expressions.Expression[]]@($x))
     }
     # The experiment's Settings_Rig JSON is rig.yml as parsed, and the manifest keeps only rig.yml's hash,

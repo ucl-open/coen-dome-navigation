@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Literal
 
 from open_rigs.core.task import Task, TaskParameters
-from open_rigs.rigs.dome import MAX_REWARD_UL, ZAPIT_MAX_RAMP_DOWN_SECONDS, ZAPIT_REPLY_MARGIN_SECONDS
+from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS, ZAPIT_REPLY_MARGIN_SECONDS
+from open_rigs.rigs.lab_rig import MAX_REWARD_UL
 from pydantic import ConfigDict, Field, field_validator, model_validator
 from swc.aeon.schema import BaseSchema
 

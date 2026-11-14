@@ -166,7 +166,7 @@ def test_a_reward_over_the_cap_is_refused():
     # Audit round 4: lib-open-rigs' MAX_REWARD_UL, DeliverReward's MaxRewardUl.
     import copy
 
-    from open_rigs.rigs.dome import MAX_REWARD_UL
+    from open_rigs.rigs.lab_rig import MAX_REWARD_UL
 
     from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskParameters
 
