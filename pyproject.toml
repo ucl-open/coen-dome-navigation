@@ -22,7 +22,6 @@ dependencies = [
   "open-rigs",
   "pydantic-settings",
   "numpy",
-  "scipy",
   "pyyaml",
 ]
 
