@@ -1376,11 +1376,7 @@
         "codec": {
           "default": "libx264",
           "description": "The FFmpeg H.264 encoder: h264_nvenc on an NVIDIA GPU, h264_qsv on Intel Quick Sync, libx264 (software, the default) on any machine with the cores for it.",
-          "enum": [
-            "libx264",
-            "h264_nvenc",
-            "h264_qsv"
-          ],
+          "pattern": "^(libx264|h264_nvenc|h264_qsv)$",
           "title": "Codec",
           "type": "string"
         },
