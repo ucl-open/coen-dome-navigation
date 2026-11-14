@@ -8,7 +8,6 @@ import pytest
 import yaml
 
 from ucl_open_coen_dome_navigation import waveforms
-from ucl_open_coen_dome_navigation.helpers import calc_log_window
 from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic
 
 ROOT = Path(__file__).parent.parent
@@ -28,7 +27,7 @@ def test_the_task_file_validates():
 def test_the_stage_rows_keep_tom_s_reward_zones():
     # Tom Childs' zones: from 18 kHz to the sweep's end at his stages 1-2, then a window centred on 18 kHz in
     # log space (6 kHz wide), its floor from stage 3 and its ceiling from stage 4 (rows 0-5 are his 1-6).
-    floor, ceiling = calc_log_window(center_freq=18000, window_size=6000)
+    floor, ceiling = 15248, 21248  # the 6 kHz log window centred on 18 kHz
     rows = task()["taskParameters"]["trainingStages"]
     assert len(rows) == 6
     zones = [(r["rewardFloorHz"], r["rewardCeilingHz"]) for r in rows]
