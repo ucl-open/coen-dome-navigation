@@ -35,6 +35,16 @@ public class RigTemplateTests
     }
 
     [TestMethod]
+    public void EachVideoEncoderCodecIsReadByItsFFmpegName()
+    {
+        // A C# enum here took only its C# names (H264Nvenc), so rig.yml's h264_nvenc stopped the workflow at Start.
+        foreach (var codec in new[] { "libx264", "h264_nvenc", "h264_qsv" })
+        {
+            Assert.AreEqual(codec, Deserialize(Template() + "\nvideoEncoder: { codec: " + codec + " }\n").VideoEncoder.Codec);
+        }
+    }
+
+    [TestMethod]
     public void AKeyTheCSharpLacksIsRefused()
     {
         Assert.ThrowsException<YamlDotNet.Core.YamlException>(() => Deserialize(Template() + "\nrewardValves: { left: DO1, right: DO2 }\n"));
