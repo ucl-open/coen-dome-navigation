@@ -159,6 +159,21 @@ def test_another_workflow_s_summary_never_decides_but_is_accounted_for(tmp_path)
     assert [e.name for e in read(tmp_path, "r10", "r11")[0]] == ["ses-011D1_2026-11-13T09-00-00"]
 
 
+@pytest.mark.parametrize("repo", ["https://github.com/Coen-Lab/coen-dome-navigation", "https://github.com/someone/Coen-Dome-Navigation.git/",
+                                  "https://github.com/ucl-open/coen-av-corridor.git"])
+def test_the_repo_name_alone_decides_whatever_the_owner_fork_or_former_name(tmp_path, repo):
+    # Pip, 15 Nov 2026: the newest session that matches, not identically; branches and forks count the same.
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS, repo=repo))
+    assert [e.name for e in read(tmp_path, "r2")[0]] == ["ses-002D1_2026-11-10T09-00-00"]
+
+
+def test_a_name_that_only_contains_ours_is_another_workflow_and_no_repo_gives_no_stage(tmp_path):
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS, repo="https://github.com/x/coen-dome-navigation-2p"))
+    assert read(tmp_path, "r2") == ([], [])
+    put(tmp_path, summary("ses-003D1_2026-11-11T09-00-00", "r3", 2, ROWS, repo=None))
+    assert read(tmp_path, "r2", "r3")[1] == ["ses-003D1_2026-11-11T09-00-00.json (Unreadable: KeyError)"]
+
+
 def test_a_summary_with_no_trials_or_no_trial_type_is_not_an_experiment(tmp_path):
     put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, []))
     put(tmp_path, summary("ses-003D1_2026-11-11T09-00-00", "r3", 2, [[1]], columns=("trialNumber",)))

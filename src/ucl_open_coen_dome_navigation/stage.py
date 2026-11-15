@@ -85,11 +85,16 @@ def read_new(summary: dict) -> Experiment | None:
                       any(int(float(r.get("laserCondition") or 0)) > 0 for r in rows))
 
 
+OURS = ("coen-dome-navigation", "coen-av-corridor")  # this repo's names, now and before the 9 Nov 2026 rename
+
+
 def ours(summary: dict) -> bool:
-    """Whether a summary is this workflow's (source.repo); one without a repo counts as ours, so no history is
-    passed over unseen."""
-    repo = (summary.get("source") or {}).get("repo") or ""
-    return not repo or "coen-dome-navigation" in repo
+    """Whether a summary is this workflow's, by the repo's name alone: any owner, fork or branch counts the same.
+    A summary without source.repo raises KeyError, so it is reported as unreadable."""
+    repo = summary["source"]["repo"]
+    if not repo:
+        raise KeyError("source.repo")
+    return repo.rstrip("/").rsplit("/", 1)[-1].lower().removesuffix(".git") in OURS
 
 
 def summaries_of(subject: str, folder: Path, expected: Path, unread: list[str]) -> list[dict]:
