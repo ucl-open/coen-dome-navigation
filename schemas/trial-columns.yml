@@ -57,7 +57,7 @@ quietWaitSeconds:
 trialStartTime:
   type: double
   unit: s
-  description: "Harp time the trial started (Go): the end of its interval less the lead, max(laserToStimulusSeconds, 0) in the task file (Settings_Task) and 0 without optogenetics, plus quietWaitSeconds where the task has quiet waits."
+  description: "Harp time the trial started (Go): the end of its interval less the lead, max(laserToStimulusSeconds, 0) in the task file (Settings_Task) and 0 for a task file with no optogenetics block, plus quietWaitSeconds where the task has quiet waits."
   note: Beep 0, the track's position zero.
 stimulusOnsetTime:
   type: double

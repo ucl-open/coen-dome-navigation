@@ -152,7 +152,7 @@ def experiments(subject: str, roots: list[Path], unread: list[str] | None = None
                     continue
             try:
                 e = read_new(folder)
-            except (OSError, ValueError, KeyError) as error:
+            except (OSError, ValueError, KeyError, TypeError, csv.Error) as error:
                 # Never passed over unseen: it may be the experiment that decides (plan v11, fail loudly)
                 if unread is not None:
                     unread.append(f"{folder.name} (Unreadable: {type(error).__name__})")

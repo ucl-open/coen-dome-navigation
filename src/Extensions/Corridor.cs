@@ -31,10 +31,11 @@ public class Sweep
         var json = JObject.Parse(File.ReadAllText(path));
         var sweep = new Sweep
         {
-            StartHz = (double)json["sweepStartHz"],
-            EndHz = (double)json["sweepEndHz"],
-            Steps = (int)json["sweepSteps"],
-            PipPeak = (double)json["pipPeak"]
+            // A missing key reads as NaN or 0, so the check below names the file rather than a bare null.
+            StartHz = json.Value<double?>("sweepStartHz") ?? double.NaN,
+            EndHz = json.Value<double?>("sweepEndHz") ?? double.NaN,
+            Steps = json.Value<int?>("sweepSteps") ?? 0,
+            PipPeak = json.Value<double?>("pipPeak") ?? double.NaN
         };
         if (!(sweep.StartHz > 0 && sweep.EndHz > sweep.StartHz && sweep.Steps > 1))
         {
@@ -155,9 +156,21 @@ public class CorridorSetup
         var setup = new CorridorSetup { Task = task, TrainingStage = stage, Stage = task.TrainingStages[stage], Sweep = sweep, HardwareTriggered = hardwareTriggered };
         var row = setup.Stage;
         var problems = new List<string>();
-        if (task.TrialStructure.TrackLengthsCm == null || task.TrialStructure.TrackLengthsCm.Count == 0 || task.TrialStructure.TrackLengthsCm.Any(l => !(l > 0))) problems.Add("trialStructure.trackLengthsCm needs at least one length above 0");
+        // A NaN or infinite value (YAML's .nan or .inf) would hold Go or a penalty timeout for ever, with no error.
+        Action<string, double, bool> number = (name, value, aboveZero) =>
+        {
+            if (!(aboveZero ? value > 0 : value >= 0) || double.IsInfinity(value)) problems.Add(name + (aboveZero ? " must be a finite number above 0" : " must be a finite number, 0 or more"));
+        };
+        if (task.TrialStructure.TrackLengthsCm == null || task.TrialStructure.TrackLengthsCm.Count == 0 || task.TrialStructure.TrackLengthsCm.Any(l => !(l > 0) || double.IsInfinity(l))) problems.Add("trialStructure.trackLengthsCm needs at least one length, each a finite number above 0");
+        number("trialStructure.itiMinSeconds", task.TrialStructure.ItiMinSeconds, false);
+        number("trialStructure.itiMaxSeconds", task.TrialStructure.ItiMaxSeconds, false);
         if (task.TrialStructure.ItiMaxSeconds < task.TrialStructure.ItiMinSeconds) problems.Add("trialStructure.itiMaxSeconds is below itiMinSeconds");
-        if (row.LickQuietSeconds < 0 || row.WheelQuietSeconds < 0 || row.WheelQuietCm < 0) problems.Add("stage '" + row.Label + "' has a negative lickQuietSeconds, wheelQuietSeconds or wheelQuietCm");
+        number("penalty.timeoutSeconds", task.Penalty.TimeoutSeconds, false);
+        number("stage '" + row.Label + "''s lickQuietSeconds", row.LickQuietSeconds, false);
+        number("stage '" + row.Label + "''s wheelQuietSeconds", row.WheelQuietSeconds, false);
+        number("stage '" + row.Label + "''s wheelQuietCm", row.WheelQuietCm, false);
+        number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
+        if (row.TimeLimitSeconds.HasValue) number("stage '" + row.Label + "''s timeLimitSeconds", row.TimeLimitSeconds.Value, true);
         if ((row.WheelQuietSeconds > 0) != (row.WheelQuietCm > 0)) problems.Add("stage '" + row.Label + "' needs wheelQuietSeconds and wheelQuietCm both above 0 (the wheel's quiet wait) or both 0 (off)");
         // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after Go in every experiment, the
         // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
@@ -179,6 +192,8 @@ public class CorridorSetup
         if (opto.UseZapit)
         {
             if (!(opto.LaserPowerMw > 0)) problems.Add("optogenetics.laserPowerMw must be a power in mW above 0 with optogenetics on");
+            number("optogenetics.laserMaxSeconds", opto.LaserMaxSeconds, true);
+            number("optogenetics.triggerHoldSeconds", opto.TriggerHoldSeconds, false);
             // The laser runs from the trigger (the first pip less laserToStimulusSeconds) to the outcome, at the latest the
             // first pip plus timeLimitSeconds: timeLimitSeconds + laserToStimulusSeconds.
             var limits = task.TrainingStages.Where(s => s.TimeLimitSeconds.HasValue).Select(s => s.TimeLimitSeconds.Value).ToList();

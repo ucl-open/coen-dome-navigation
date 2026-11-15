@@ -90,6 +90,18 @@ public class SweepTests
         Assert.AreEqual(99, sweep.BinOf(25000));
         Assert.AreEqual(99, sweep.BinOf(40000));
     }
+
+    [TestMethod]
+    public void ASweepFileMissingAKeyIsRefusedNamingIt()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "{\"sweepStartHz\": 2000, \"sweepSteps\": 100, \"pipPeak\": 0.0025}");
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => global::Sweep.Load(path)).Message, "sweepEndHz");
+        }
+        finally { File.Delete(path); }
+    }
 }
 
 [TestClass]
@@ -224,7 +236,31 @@ public class TrialDrawTests
         task.TrainingStages[1].WheelQuietCm = 2;
         Fixture.Setup(task, 1);
         task.TrainingStages[1].LickQuietSeconds = -1;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "negative");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "lickQuietSeconds must be a finite number, 0 or more");
+    }
+
+    [TestMethod]
+    public void ANaNOrInfiniteTimeIsRefusedAtGo()
+    {
+        // YAML's .nan or .inf: an interval, quiet wait or timeout of NaN or infinity would hold the task for ever, with no error.
+        var cases = new Dictionary<string, Action<UclOpenCoenDomeNavigationTaskParameters>>
+        {
+            { "itiMaxSeconds", t => t.TrialStructure.ItiMaxSeconds = double.PositiveInfinity },
+            { "itiMinSeconds", t => t.TrialStructure.ItiMinSeconds = double.NaN },
+            { "timeoutSeconds", t => t.Penalty.TimeoutSeconds = double.NaN },
+            { "lickQuietSeconds", t => t.TrainingStages[4].LickQuietSeconds = double.NaN },
+            { "wheelQuietSeconds", t => t.TrainingStages[4].WheelQuietSeconds = double.PositiveInfinity },
+            { "trackLengthScale", t => t.TrainingStages[4].TrackLengthScale = 0 },
+            { "timeLimitSeconds", t => t.TrainingStages[4].TimeLimitSeconds = double.NaN },
+            { "trackLengthsCm", t => t.TrialStructure.TrackLengthsCm[0] = double.PositiveInfinity },
+            { "laserMaxSeconds", t => { Fixture.Opto(t); t.Optogenetics.LaserMaxSeconds = double.PositiveInfinity; } },
+        };
+        foreach (var c in cases)
+        {
+            var task = Fixture.Task();
+            c.Value(task);
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4), c.Key).Message, c.Key);
+        }
     }
 
     [TestMethod]

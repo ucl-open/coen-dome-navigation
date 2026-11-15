@@ -189,3 +189,13 @@ def test_an_unreadable_experiment_gives_no_stage(tmp_path):
     assert experiments("TC9", [tmp_path], unread) == []
     assert unread == ["ses-004D1_2026-11-13T09-00-00 (Unreadable: FileNotFoundError)"]
 
+
+def test_a_settings_file_without_a_stage_gives_no_stage(tmp_path):
+    # A null TrainingStage raised TypeError, which ended suggest-stage with a traceback and no JSON line (audit cycle 2).
+    folder = tmp_path / "sub-TC9" / "ses-005D1_2026-11-13T09-00-00"
+    write_new(folder, 1, [["auditory", "Correct"]])
+    (folder / "Settings" / "Settings_Experiment_x.json").write_text(json.dumps({"parameters": {"TrainingStage": None}}), encoding="utf-8")
+    unread = []
+    assert experiments("TC9", [tmp_path], unread) == []
+    assert unread == ["ses-005D1_2026-11-13T09-00-00 (Unreadable: TypeError)"]
+

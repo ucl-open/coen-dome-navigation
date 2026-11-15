@@ -6,6 +6,12 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 - Names and descriptions only, nothing the mice see or hear: the penalty sound's buffer subject is `PenaltySoundBuffer` (was `PenaltyTone`), as in coen-dome-decision-making; the Python and C# constants end in `Seconds` (`BEEP_SECONDS`, `MAX_LEAD_SECONDS`, `MaxLeadSeconds` and the rest; were `_SEC`, `Sec`); RigSetup's, Declarations' and RewardLeft/RewardRight's descriptions, the task file's header, `task.py`'s docstring, trial-columns.yml's header and `.gitignore` say what the code does now; the README lists the lib blocks `Corridor.cs` uses; `docs\zapit-rig-test.md` is one paragraph per line.
 
+## Audit cycle 2 (15 Nov 2026)
+
+- Go refuses a NaN or infinite time (YAML `.nan`, `.inf`), which held Go or a penalty timeout for ever with no error: `itiMinSeconds`, `itiMaxSeconds`, `penalty.timeoutSeconds`, the stage's quiet waits, `timeLimitSeconds`, `trackLengthScale` (above 0), each track length and, with optogenetics, `laserMaxSeconds` and `triggerHoldSeconds` (`CorridorSetup.Create`, test). A `sweep.json` missing a key is refused naming the file, not with a bare null error (test).
+- `suggest-stage` says an experiment is unreadable, as for any other unreadable one, when its Settings_Experiment has a null `TrainingStage` or its trial log cannot be parsed as CSV; before, it ended with a traceback and no JSON line (test).
+- `trialStartTime`'s description is the shared block's again (lib-open-rigs e0ba7c0): the lead is 0 only for a task file with no optogenetics block, not "without optogenetics"; this task's lead applies with `useZapit` off too.
+
 ## 2026-11-15 The background noise from Ready (Pip)
 
 - **Changed for the mice:** the background noise starts at Ready, not Go, faded in over 2 s. Ready waits for the mixer (RigHardware's `ReadyWaitsFor`: `HarpClockSet, SpoutsHomed, MixerStarted`), so the noise never reaches the mixer before it starts. Its level is the task file's as rig-control wrote it at launch, read at Start (`LaunchTaskConfig`) and checked then to peak under -1 dBFS; the stimuli and penalty sound still take theirs at Go.
@@ -49,7 +55,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - A trial cut by Stop gets no row; its Go is in `BonsaiData_Async`.
 - Trial 1 starts about 2.3 s after Go here and 1.2 s in coen-dome-decision-making: each task's own start-up, neither a bug.
 - `history` stays in trial-columns.yml until the old data's refactor.
-- `ReadTextFile.cs` is duplicated in both dome workflows.
+- `ReadTextFile.cs` is duplicated in both dome workflows (since 15 Nov 2026: it is not; both use OpenRigs.Core's `core:ReadTextFile`).
 ## 2026-11-14 Camera video on GREEN-DOME-2 (test mouse, open)
 
 The log is `K:\config\machines\GREEN-DOME-2\switch\iterate-log.md` (round 3).
@@ -114,7 +120,7 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 ## Audit round 4 (13 Nov 2026): not changed
 
 - coen-qc-calibrate-valve and the domes pace pulses on different Harp-synced devices, about 1 ms apart.
-- `ReadTextFile.cs` is duplicated in both dome workflows; moving it to a lab package costs a package bump.
+- `ReadTextFile.cs` is duplicated in both dome workflows; moving it to a lab package costs a package bump (since 15 Nov 2026: moved; both use OpenRigs.Core's `core:ReadTextFile`).
 - The right valve needs a calibration too (`DeliverReward` loads both lines), though the corridor rewards on the left.
 - No Go time column but `trialStartTime`; the trigger is `laserTriggerTime` from 14 Nov 2026 (NaN without optogenetics or when the mouse answered first).
 - A skipped trial leaves Zapit armed; the next trial disarms it.
@@ -131,7 +137,7 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 
 ## Audit round 2 (13 Nov 2026): not changed
 
-- `QuietWait` is the same class here and in coen-dome-decision-making's `TrialLogic.cs`: moving it into the fork needs a package bump pushed into every in-use workflow, and each copy is tested where it runs. Change both copies together; move it if a third workflow needs it.
+- `QuietWait` is the same class here and in coen-dome-decision-making's `TrialLogic.cs`: moving it into the fork needs a package bump pushed into every in-use workflow, and each copy is tested where it runs. Change both copies together; move it if a third workflow needs it. (Since 14 Nov 2026: moved; both use OpenRigs.Core's `QuietWait.cs`.)
 
 ## Open
 
@@ -176,7 +182,7 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 
 ## Decided
 
-- **Rebuilt on the shared dome blocks** (plan v11, 13 Nov 2026): RigHardware, HarpLogs, DeliverReward, ProjectorDisplay and the fork's Zapit replace the local copies; the task is `src\Extensions\Corridor.cs`, tested in `tests\Extensions.Tests`, every task wait on the Harp clock. Each stage's `timeLimitSeconds` and `quietSeconds` (null for none) replace the booleans; `itiSeconds` runs from the outcome, after any timeout, and includes the 2 s to drink (2 to 3 s, Tom's 2 s then 0 to 1 s); the row's `Seconds` is when the outcome was known (`outcomeTime` gone); a stage past the table stops the workflow at Go. Mice are launched and filed by lab ID.
+- **Rebuilt on the shared dome blocks** (plan v11, 13 Nov 2026): RigHardware, HarpLogs, DeliverReward, ProjectorDisplay and the fork's Zapit replace the local copies; the task is `src\Extensions\Corridor.cs`, tested in `tests\Extensions.Tests`, every task wait on the Harp clock. Each stage's `timeLimitSeconds` and `quietSeconds` (null for none) replace the booleans (since 13 Nov 2026: `quietSeconds` is `lickQuietSeconds`, 0 for none); `itiSeconds` runs from the outcome, after any timeout, and includes the 2 s to drink (2 to 3 s, Tom's 2 s then 0 to 1 s); the row's `Seconds` is when the outcome was known (`outcomeTime` gone; since 14 Nov 2026: `outcomeTime` is a column again, equal to `harpTime`); a stage past the table stops the workflow at Go. Mice are launched and filed by lab ID.
 
 - **Wheel: 75 mm** (measured, 9 Nov 2026), as Tom's workflow converted it (75 mm, 4096 counts a turn): rig.yml's `wheelDiameterMm`, 75 on every dome since 9 Nov 2026; the task file's override went with the rebuild (plan v11), so RigHardware's wheel distance is the track's.
 - **Reward 3 ul** (Pip, 15 Nov 2026): `rewardSizeUl` 3.0 on every stage. The 2 ul of 10 Nov 2026 sat below BLUE-OPTO-2's left valve curve (fitted 25 to 125 ms; 2 ul needs 24.4 ms), so every task reward there was clamped to 25 ms, 2.04 ul (`clamped=True` in RewardDelivered; rig test, 15 Nov 2026); 3 ul is about 39 ms there, inside the curve. Was: **Reward stays 2 ul** (Pip, 10 Nov 2026), not Tom's 3: `rewardSizeUl` 2.0, planned from the left valve's calibration (`calibration\valve-DO1.json`; plan v11: calibrated reward in every case, an uncalibrated valve stops the workflow at Start, the `test` mouse runs on one with no water). Tom's mice got 3 ul as one fixed opening (42 ms on BLUE-OPTO-2, 45 ms on BLUE-OPTO-1, 65 ms on the GREEN-DOMEs), measured as about 3 ul.
