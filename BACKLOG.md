@@ -2,6 +2,16 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## Audit round 3 of 3 (15 Nov 2026)
+
+- The reward tone's and background noise's `SpeakerBuffer` `LevelDbfs` in `src\main.bonsai` are lib-open-rigs' defaults (-36 and -50 dBFS RMS, `SoundLevel`), not -30; the task file's `levelDbfs` sets each at Go, as before. The README says what `scripts\deploy.ps1` and `.bonsai\Setup.ps1` do.
+
+## Audit round 3 of 3 (15 Nov 2026): items not changed
+
+- `stage.py`'s search of a mouse's experiments (`unanswered`, `ours`, the subject folders, `experiments`) stays a copy of lib-open-rigs' `open_rigs.rigs.experiments` (`unanswered`, `written_by`, `subject_folders`, `find`): app-rig-control runs `stage.py` with its own Python, `-I`, outside this project (`[task.suggest]`, standard library only), where `open_rigs` cannot be imported.
+- `regenerate.py` is the same in coen-dome-navigation and coen-dome-decision-making but for the package name: it is tiny, and each repo owns its schemas.
+- `.bonsai\Setup.ps1` is the same 15 lines in five task repos (coen-dome-navigation, coen-dome-decision-making, coen-behaviour-box, coen-qc-calibrate-valve, coen-qc-preflight-rig): each repo needs its own bootstrap.
+
 ## Audit round 2 of 3 (15 Nov 2026, stage C)
 
 - Nothing changed beyond the fixes: `scripts\deploy.ps1` uses `uv sync --locked` and exits 1 naming a failing uv step.

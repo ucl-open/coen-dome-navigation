@@ -729,7 +729,7 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="aud:SpeakerBuffer">
-                <aud:LevelDbfs>-30</aud:LevelDbfs>
+                <aud:LevelDbfs>-36</aud:LevelDbfs>
                 <aud:Equalise>true</aud:Equalise>
                 <aud:SyncCopy>false</aud:SyncCopy>
               </Combinator>
@@ -820,7 +820,7 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="aud:SpeakerBuffer">
-                <aud:LevelDbfs>-30</aud:LevelDbfs>
+                <aud:LevelDbfs>-50</aud:LevelDbfs>
                 <aud:Equalise>false</aud:Equalise>
                 <aud:SyncCopy>false</aud:SyncCopy>
               </Combinator>

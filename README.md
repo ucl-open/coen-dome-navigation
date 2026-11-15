@@ -59,6 +59,10 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `SpeakerMixer` | rig.yml's speakers and their filters, loaded once at Start (`Speakers`), stopping the workflow naming any speaker without a usable filter; the mixer, started no sooner than 3 s after Start; the pips, reward tone, penalty sound and background noise played over each other | `OpenRigs.Audio:SpeakerMixer.bonsai` |
 | `SpeakerBuffer`, `PenaltySoundBuffer` | each sound laid out on rig.yml's `channelCount` channels at the task file's level in dBFS RMS (`tonePips`, `rewardTone`, `backgroundNoise`, `penalty.sound` `levelDbfs`), checked at Go to peak under -1 dBFS after equalisation: the pips and reward tone equalised on every rig.yml speaker, the background noise as it is on every speaker, the penalty sound the lab's, on `penaltySoundChannel` alone | `OpenRigs.Audio` |
 
+## Setup
+
+`scripts\deploy.ps1` makes the Python environment (`uv sync --locked`); Bonsai and its packages come from `.bonsai\Setup.ps1`, which app-rig-setup runs when packages are missing.
+
 ## Checks
 
 ```
