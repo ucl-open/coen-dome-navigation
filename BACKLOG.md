@@ -100,7 +100,7 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 
 - coen-dome-decision-making: discrimination's minimum interval equals its `drinkSeconds`; both are Gerion's measured values.
 - jsonschema accepts K:'s old rig.yml keys, but the generated deserializer and app-rig-control's key walk refuse them.
-- `usedBy` stays incomplete until `add-names.ps1` runs at switch step 8.
+- `usedBy` is filled by app-rig-control's `python -m app_rig_control.names add <clone> --apply` at switch step 8.
 - A skipped trial leaves Zapit armed; app-zapit disarms it.
 - coen-dome-navigation arms the next trial during the last one's ramp-down; the trigger hold is at least the longest ramp-down.
 - coen-dome-decision-making has no `goTime` column; it is `itiStartTime + itiSeconds - lead + quietWaitSeconds`.
@@ -155,7 +155,7 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 - **Wheel: 75 mm** (measured, 9 Nov 2026), as Tom's workflow converted it (75 mm, 4096 counts a turn): rig.yml's `wheelDiameterMm`, 75 on every dome since 9 Nov 2026; the task file's override went with the rebuild (plan v11), so RigHardware's wheel distance is the track's.
 - **Reward stays 2 ul** (Pip, 10 Nov 2026), not Tom's 3: `rewardSizeUl` 2.0, planned from the left valve's calibration (`calibration\valve-DO1.json`; plan v11: calibrated reward in every case, an uncalibrated valve stops the workflow at Start, the `test` mouse runs on one with no water). Tom's mice got 3 ul as one fixed opening (42 ms on BLUE-OPTO-2, 45 ms on BLUE-OPTO-1, 65 ms on the GREEN-DOMEs), measured as about 3 ul.
 - **IntervalLog stays dropped** (Pip, 10 Nov 2026): Tom's IntervalLog (wheel, licks, tone and grating on the PC clock at every change) is replaced by the Harp logs (wheel, licks) and `BonsaiData_StimulusState` (tone, grating, position every 50 ms on the Harp clock).
-- **Data-dictionary names**: this workflow's trial columns and streams are on `K:\config\data-dictionary.json`; `scripts\add-names.ps1` adds new ones.
+- **Data-dictionary names**: this workflow's trial columns and streams are on `K:\config\data-dictionary.json`; app-rig-control's `python -m app_rig_control.names add <clone> --apply` adds new ones.
 - **Base.** av-dome `pip/main-switchover` for everything that is not the task (rig.yml, devices, ExperimentControl, spout commands, reward lines, logging, manifest, live view), because every corridor rig is one of its rigs; Tom's task groups were kept node for node until the rebuild of 13 Nov 2026 moved the task into `src\Extensions\Corridor.cs` (above).
 - **Task file.** Read at Go from `TaskPath` (YAML) instead of `session-schemas\...json` at start; laid out as av-dome's since 9 Nov 2026 (Pip): `trainingStages` rows from 0 (Tom's stages 1 to 6 are rows 0 to 5) say what each stage does, where the workflow tested the stage number (reward zone and size, lick or zone entry, wrong-lick limit, penaliseing a wrong-zone ending, the quiescent wait, time limit, end of track, track scale, frequency drift, truncation); the stage is the TrainingStage setting, which `suggest-stage` fills; `trialStructure` holds the ITI (now drawn evenly between itiMinSeconds and itiMaxSeconds, where Tom's drew 0 or 1 s), the 12 s time limit and the track lengths, `penalty` the timeout and penalty sound, and `rngSeed` seeds every draw. centerFreq, rewardWindowSize and engagement are gone (the zones are written in the rows). Subject and session come from rig-control (`LogConfig` dropped).
 - **Waveforms** made once and committed, each at the loudness it plays at (plan v11): pips and reward tone at Tom's amplitude squared, the noise at a pip's RMS; each plays at the task file's `levelDbfs` (15 Nov 2026). The sweep is `src\waveforms\sweep.json`'s, read by the workflow and task.py, no longer task fields.
@@ -214,7 +214,7 @@ Fixed the same night: `stimulusOnsetTime`'s description said beep 1 always; with
 - Pip, 13 Nov 2026: the trigger line and masking LEDs only in optogenetics experiments.
 - rig.yml's `PulseDO3` width still written to the board: unused while DO3 is not pulse-enabled; the mapping keeps the board's settings as av-dome's.
 - `InitialiseOptoTrial` has only text tests: probed this round over 2000 trials (the seed reproduces them; no laser-on in the first 20; every trial has a condition; 0.424 laser-on after them at p 0.4; conditions 671/650/679; the same condition as the trial before 0.325, independent being 1/3; a missing file throws). A C# test harness here is more than its rules need now.
-- Two `add-names.ps1` copies, and the Zapit C# (`ZapitCommand`, `ZapitClient`, `CreateStartStimulus`) in both repos: one shared script or a lab package is a platform decision for Pip, worth it once a third workflow uses Zapit.
+- The Zapit C# (`ZapitCommand`, `ZapitClient`, `CreateStartStimulus`) in both repos: one shared script or a lab package is a platform decision for Pip, worth it once a third workflow uses Zapit.
 
 ### Not changed on audit (10 Nov 2026, round 2 of 5)
 
