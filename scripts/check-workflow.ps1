@@ -191,14 +191,26 @@ if ($Step -eq 'Checks') {
 }
 
 if (-not (Test-Path (Join-Path $bonsaiDir 'Packages'))) { throw "No .bonsai\Packages in $repo. Run .bonsai\Setup.ps1 first." }
+# NuGet sources: nuget.org, local_packages and every local folder .bonsai\NuGet.config lists, so a lab
+# package new to this machine's NuGet cache is found (as coen-dome-decision-making's check-workflow does).
+$sources = @('https://api.nuget.org/v3/index.json', (Join-Path $repo 'local_packages'))
+$nugetConfig = Join-Path $bonsaiDir 'NuGet.config'
+if (Test-Path $nugetConfig) {
+    foreach ($a in ([xml](Get-Content $nugetConfig -Raw)).configuration.packageSources.add) {
+        $v = $a.value; if ($v -notmatch '^https?:') { $sources += $(if ([IO.Path]::IsPathRooted($v)) { $v } else { [IO.Path]::GetFullPath((Join-Path $bonsaiDir $v)) }) }
+    }
+}
+$sourceArgs = @($sources | Select-Object -Unique | ForEach-Object { '--source'; $_ })
 $failed = 0
 "1. C# 5 compile of src\Extensions"
 $null = New-Item -ItemType Directory -Path $bin -Force
-$out = & dotnet build (Join-Path $repo 'src\Extensions.csproj') -p:LangVersion=5 -o $bin 2>&1
+$out = & dotnet build (Join-Path $repo 'src\Extensions.csproj') -p:LangVersion=5 -o $bin @sourceArgs 2>&1
 if ($LASTEXITCODE -ne 0) { $out | Select-String 'error' | Select-Object -First 10 | ForEach-Object { "  $_" }; "  FAIL  Extensions does not compile under C# 5"; exit 1 }
 "  ok    Extensions compiles under C# 5"
 "2. tests\Extensions.Tests"
-$log = & { $ErrorActionPreference = 'Continue'; & dotnet test (Join-Path $repo 'tests\Extensions.Tests') -nologo 2>&1 | ForEach-Object { "$_" } }
+$tests = Join-Path $repo 'tests\Extensions.Tests'
+& { $ErrorActionPreference = 'Continue'; & dotnet restore $tests -v q @sourceArgs 2>&1 | Out-Null }
+$log = & { $ErrorActionPreference = 'Continue'; & dotnet test $tests --no-restore -nologo 2>&1 | ForEach-Object { "$_" } }
 $testExit = $LASTEXITCODE
 $log | Where-Object { $_ -match 'Passed!|Failed|error' } | ForEach-Object { "  $_" }
 if ($testExit -ne 0) { "  FAIL  tests\Extensions.Tests"; $failed++ }
