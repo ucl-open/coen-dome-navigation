@@ -160,7 +160,7 @@ def test_another_workflow_s_summary_never_decides_but_is_accounted_for(tmp_path)
 
 
 @pytest.mark.parametrize("repo", ["https://github.com/Coen-Lab/coen-dome-navigation", "https://github.com/someone/Coen-Dome-Navigation.git/",
-                                  "https://github.com/ucl-open/coen-av-corridor.git"])
+                                  "https://github.com/ucl-open/coen-av-corridor.git", "https://github.com/ucl-open/auditory-vr-corridor"])
 def test_the_repo_name_alone_decides_whatever_the_owner_fork_or_former_name(tmp_path, repo):
     # Pip, 15 Nov 2026: the newest session that matches, not identically; branches and forks count the same.
     put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS, repo=repo))

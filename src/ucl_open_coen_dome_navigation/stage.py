@@ -85,7 +85,8 @@ def read_new(summary: dict) -> Experiment | None:
                       any(int(float(r.get("laserCondition") or 0)) > 0 for r in rows))
 
 
-OURS = ("coen-dome-navigation", "coen-av-corridor")  # this repo's names, now and before the 9 Nov 2026 rename
+# This repo's names, now and before the 9 Nov 2026 rename, and Tom Childs' original task (Pip, 15 Nov 2026).
+OURS = ("coen-dome-navigation", "coen-av-corridor", "auditory-vr-corridor")
 
 
 def ours(summary: dict) -> bool:
