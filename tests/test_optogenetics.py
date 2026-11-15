@@ -9,8 +9,8 @@ import pytest
 import yaml
 
 from ucl_open_coen_dome_navigation.task import (
-    BEEP_INTERVAL_SEC,
-    LASER_MAX_MARGIN_SEC,
+    BEEP_SECONDS,
+    LASER_MAX_MARGIN_SECONDS,
     OptogeneticsConfig,
     UclOpenCoenDomeNavigationTaskParameters,
 )
@@ -105,11 +105,11 @@ def test_the_trigger_hold_outlasts_the_longest_ramp_down():
 
 def test_corridor_cs_uses_the_same_constants():
     # Corridor.cs's own checks of these rules, and the laser-off trials' 0 mW, are tests\Extensions.Tests' (CorridorTests.cs).
-    assert float(re.search(r"const double LaserMaxMarginSec = ([\d.]+);", CORRIDOR).group(1)) == LASER_MAX_MARGIN_SEC
-    assert float(re.search(r"const double BeepSeconds = ([\d.]+);", CORRIDOR).group(1)) == BEEP_INTERVAL_SEC
+    assert float(re.search(r"const double LaserMaxMarginSeconds = ([\d.]+);", CORRIDOR).group(1)) == LASER_MAX_MARGIN_SECONDS
+    assert float(re.search(r"const double BeepSeconds = ([\d.]+);", CORRIDOR).group(1)) == BEEP_SECONDS
     from ucl_open_coen_dome_navigation import task
 
-    for py, cs in (("MAX_LEAD_SEC", "MaxLeadSec"), ("NO_TIME_LIMIT_TRIGGER_AFTER_SEC", "NoTimeLimitTriggerAfterSec")):
+    for py, cs in (("MAX_LEAD_SECONDS", "MaxLeadSeconds"), ("NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS", "NoTimeLimitTriggerAfterSeconds")):
         assert float(re.search(rf"const double {cs} = ([\d.]+);", CORRIDOR).group(1)) == getattr(task, py)
     # Zapit's reply margin is lib-open-rigs' alone (ZapitTrial.ReplyMarginSeconds, ZAPIT_REPLY_MARGIN_SECONDS; audit round 3).
     assert "ZapitTrial.ReplyMarginSeconds" in CORRIDOR and "ZapitReplyMarginSec " not in CORRIDOR

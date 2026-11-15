@@ -26,7 +26,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>RigSetup</Name>
-        <Description>Reads this machine's rig.yml (ReadRigConfig) into the lab rig model (open_rigs.rigs.lab_rig), opens every device with RigHardware (which starts the cameras 2 s after Start and reports Ready once the Harp clock is set and the spouts are homed) and opens the dome's display (ProjectorDisplay).</Description>
+        <Description>Reads this machine's rig.yml (ReadRigConfig) into the lab rig model (open_rigs.rigs.lab_rig), opens every device with RigHardware (which starts the cameras 2 s after Start and reports Ready once the Harp clock is set, the spouts are homed and the mixer has started: ReadyWaitsFor) and opens the dome's display (ProjectorDisplay).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="GroupWorkflow">
@@ -167,11 +167,11 @@
               <Commands>
                 <Command>
                   <Name>RewardLeft</Name>
-                  <Description>Deliver one reward on the left spout (flush).</Description>
+                  <Description>Give ManualRewardDropUl (2.5 ul) on the left spout, through its valve's calibration.</Description>
                 </Command>
                 <Command>
                   <Name>RewardRight</Name>
-                  <Description>Deliver one reward on the right spout (flush).</Description>
+                  <Description>Give ManualRewardDropUl (2.5 ul) on the right spout, through its valve's calibration.</Description>
                 </Command>
                 <Command>
                   <Name>SpoutsHome</Name>
@@ -407,7 +407,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Declarations</Name>
-        <Description>Subjects several groups share: Zapit's replies (ConnectZapit declares its commands), reward requests (side, microlitres) for DeliverReward, the mixer's buffers, and the task's events and rows.</Description>
+        <Description>Subjects several groups share: Zapit's replies (ConnectZapit declares its commands), reward requests (side, microlitres) for DeliverReward, and the task's events (TrialEvents), trial rows (TrialRow) and stimulus rows (StimulusRows).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="zap:ZapitReply">
@@ -723,7 +723,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome speakers and their mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, tonePips.levelDbfs) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound (PenaltyTone, PenaltySoundBuffer) on rig.yml's penaltySoundChannel alone at penalty.sound.levelDbfs. The background noise is on every speaker as it is, at the launch's task file's backgroundNoise.levelDbfs (LaunchTaskConfig), laid out at Start and sent to the mixer at Ready, which loops it and fades it in over 2 s. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome speakers and their mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, tonePips.levelDbfs) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound (PenaltySoundBuffer) on rig.yml's penaltySoundChannel alone at penalty.sound.levelDbfs. The background noise is on every speaker as it is, at the launch's task file's backgroundNoise.levelDbfs (LaunchTaskConfig), laid out at Start and sent to the mixer at Ready, which loops it and fades it in over 2 s. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:SpeakerMixer.bonsai" />
@@ -843,7 +843,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
-              <Name>PenaltyTone</Name>
+              <Name>PenaltySoundBuffer</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>LaunchTaskConfig</Name>
@@ -1368,7 +1368,7 @@
               </Workflow>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>PenaltyTone</Name>
+              <Name>PenaltySoundBuffer</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />

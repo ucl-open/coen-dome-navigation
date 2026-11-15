@@ -126,10 +126,10 @@ public class CorridorTrial
 /// <summary>Everything fixed for the experiment that the trials are drawn from and run on.</summary>
 public class CorridorSetup
 {
-    public const double BeepSeconds = 0.05;       // task.py BEEP_INTERVAL_SEC
-    public const double LaserMaxMarginSec = 0.25; // task.py LASER_MAX_MARGIN_SEC
-    public const double MaxLeadSec = 0.2;            // task.py MAX_LEAD_SEC: the furthest the trigger may come before the first pip
-    public const double NoTimeLimitTriggerAfterSec = 2.0; // task.py NO_TIME_LIMIT_TRIGGER_AFTER_SEC: the furthest after the first pip it may come on a stage without timeLimitSeconds
+    public const double BeepSeconds = 0.05;       // task.py BEEP_SECONDS
+    public const double LaserMaxMarginSeconds = 0.25; // task.py LASER_MAX_MARGIN_SECONDS
+    public const double MaxLeadSeconds = 0.2;            // task.py MAX_LEAD_SECONDS: the furthest the trigger may come before the first pip
+    public const double NoTimeLimitTriggerAfterSeconds = 2.0; // task.py NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS: the furthest after the first pip it may come on a stage without timeLimitSeconds
     public const int DriftBeeps = 500;            // a drift stage's frequency reaches the sweep's end on its own after this many beeps (25 s)
     public const double GratingStartCpd = 0.03;   // the grating's spatial frequency at the track's start
     public const double GratingEndCpd = 0.3;      // and at its end
@@ -165,10 +165,10 @@ public class CorridorSetup
         var lead = task.Optogenetics.LaserToStimulusSeconds;
         var leadBeeps = lead / BeepSeconds;
         if (!(Math.Abs(leadBeeps - Math.Round(leadBeeps)) < 1e-6)) problems.Add("optogenetics.laserToStimulusSeconds must be a whole number of 0.05 s beeps");
-        if (lead > MaxLeadSec + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, MaxLeadSec));
+        if (lead > MaxLeadSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, MaxLeadSeconds));
         var leadProblem = ZapitTrial.LeadProblem(lead, task.TrialStructure.ItiMinSeconds);
         if (leadProblem != null) problems.Add(leadProblem);
-        var after = row.TimeLimitSeconds ?? NoTimeLimitTriggerAfterSec;
+        var after = row.TimeLimitSeconds ?? NoTimeLimitTriggerAfterSeconds;
         if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage '{2}''s {3}", lead, after, row.Label, row.TimeLimitSeconds.HasValue ? "timeLimitSeconds" : "limit for a stage without timeLimitSeconds"));
         var hold = task.Optogenetics.TriggerHoldSeconds;
         var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;
@@ -182,9 +182,9 @@ public class CorridorSetup
             // The laser runs from the trigger (the first pip less laserToStimulusSeconds) to the outcome, at the latest the
             // first pip plus timeLimitSeconds: timeLimitSeconds + laserToStimulusSeconds.
             var limits = task.TrainingStages.Where(s => s.TimeLimitSeconds.HasValue).Select(s => s.TimeLimitSeconds.Value).ToList();
-            if (limits.Count > 0 && opto.LaserMaxSeconds < limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSec - 1e-9)
+            if (limits.Count > 0 && opto.LaserMaxSeconds < limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSeconds - 1e-9)
             {
-                problems.Add(string.Format("optogenetics.laserMaxSeconds must be at least {0} s (the longest timeLimitSeconds plus laserToStimulusSeconds plus {1} s)", limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSec, LaserMaxMarginSec));
+                problems.Add(string.Format("optogenetics.laserMaxSeconds must be at least {0} s (the longest timeLimitSeconds plus laserToStimulusSeconds plus {1} s)", limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSeconds, LaserMaxMarginSeconds));
             }
         }
         if (problems.Count > 0) throw new InvalidOperationException("The task cannot be run: " + string.Join("; ", problems) + ".");

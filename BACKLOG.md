@@ -2,6 +2,10 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## Audit cycle 1 (15 Nov 2026)
+
+- Names and descriptions only, nothing the mice see or hear: the penalty sound's buffer subject is `PenaltySoundBuffer` (was `PenaltyTone`), as in coen-dome-decision-making; the Python and C# constants end in `Seconds` (`BEEP_SECONDS`, `MAX_LEAD_SECONDS`, `MaxLeadSeconds` and the rest; were `_SEC`, `Sec`); RigSetup's, Declarations' and RewardLeft/RewardRight's descriptions, the task file's header, `task.py`'s docstring, trial-columns.yml's header and `.gitignore` say what the code does now; the README lists the lib blocks `Corridor.cs` uses; `docs\zapit-rig-test.md` is one paragraph per line.
+
 ## 2026-11-15 The background noise from Ready (Pip)
 
 - **Changed for the mice:** the background noise starts at Ready, not Go, faded in over 2 s. Ready waits for the mixer (RigHardware's `ReadyWaitsFor`: `HarpClockSet, SpoutsHomed, MixerStarted`), so the noise never reaches the mixer before it starts. Its level is the task file's as rig-control wrote it at launch, read at Start (`LaunchTaskConfig`) and checked then to peak under -1 dBFS; the stimuli and penalty sound still take theirs at Go.
