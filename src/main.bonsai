@@ -25,7 +25,7 @@
         <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="DisplayDevice" Description="The display the dome projector is on (ProjectorDisplay); a launch property." />
+        <Property Name="DisplayDevice" Description="The display the dome projector is on (DomeHardware's ProjectorDisplay); a launch property." />
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
         <Property Name="SubjectId" Description="The mouse's lab ID; the launch's own, from rig-control." />
@@ -322,7 +322,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Hardware</Name>
-        <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, and Ready once the Harp clock is set, the spouts are homed, every camera has sent a frame and the mixer has started: ReadyWaitsFor) and its display (ProjectorDisplay).</Description>
+        <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, the speakers and their mixer and the projector included, and Ready once the Harp clock is set, the spouts are homed, every camera has sent a frame and the mixer has started).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -334,32 +334,16 @@
               </PropertyMappings>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
-              <Description>Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage and the three cameras, which start triggering once all three acquire.</Description>
-              <ReadyWaitsFor>HarpClockSet, SpoutsHomed, Camera-Face, Camera-Pupil, Camera-Body, MixerStarted</ReadyWaitsFor>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RigConfigs</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>ProjectionCalibration</Selector>
+              <Description>Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage, the three cameras, which start triggering once all three acquire, the speakers (SpeakerMixer) and the projector (ProjectorDisplay, stimuli on DrawStimuli).</Description>
             </Expression>
             <Expression xsi:type="ExternalizedMapping">
               <Property Name="DisplayDevice" />
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Vision:ProjectorDisplay.bonsai">
-              <Description>The dome's BonVision window, mesh mapping and gamma correction from rig.yml's projectionCalibration; stimuli draw on DrawStimuli.</Description>
-              <DisplayDevice>First</DisplayDevice>
-              <WindowState>Fullscreen</WindowState>
-              <Width>1920</Width>
-              <Height>1080</Height>
             </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
             <Edge From="1" To="2" Label="Source1" />
-            <Edge From="3" To="4" Label="Source1" />
-            <Edge From="4" To="6" Label="Source1" />
-            <Edge From="5" To="6" Label="Source2" />
+            <Edge From="3" To="2" Label="Source2" />
           </Edges>
         </Workflow>
       </Expression>
@@ -598,10 +582,9 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome speakers and their mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, tonePips.levelDbfs; read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound (PenaltySoundBuffer) on rig.yml's penaltySoundChannel alone at penalty.sound.levelDbfs. The background noise is on every speaker as it is, at the launch's task file's backgroundNoise.levelDbfs (LaunchTaskConfig), laid out at Start and sent to the mixer at Ready, which loops it and fades it in over 2 s. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, tonePips.levelDbfs; read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound (PenaltySoundBuffer) on rig.yml's penaltySoundChannel alone at penalty.sound.levelDbfs. The background noise is on every speaker as it is, at the launch's task file's backgroundNoise.levelDbfs (LaunchTaskConfig), laid out at Start and sent to the mixer at Ready, which loops it and fades it in over 2 s. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:SpeakerMixer.bonsai" />
             <Expression xsi:type="SubscribeSubject">
               <Name>TaskConfig</Name>
             </Expression>
@@ -805,45 +788,45 @@
             </Expression>
           </Nodes>
           <Edges>
+            <Edge From="3" To="4" Label="Source1" />
             <Edge From="4" To="5" Label="Source1" />
+            <Edge From="0" To="1" Label="Source1" />
             <Edge From="5" To="6" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="6" To="7" Label="Source1" />
-            <Edge From="3" To="8" Label="Source1" />
+            <Edge From="2" To="7" Label="Source1" />
+            <Edge From="6" To="7" Label="Source2" />
+            <Edge From="1" To="8" Label="Source1" />
             <Edge From="7" To="8" Label="Source2" />
-            <Edge From="2" To="9" Label="Source1" />
-            <Edge From="8" To="9" Label="Source2" />
+            <Edge From="8" To="9" Label="Source1" />
             <Edge From="9" To="10" Label="Source1" />
             <Edge From="10" To="11" Label="Source1" />
-            <Edge From="11" To="12" Label="Source1" />
-            <Edge From="13" To="14" Label="Source1" />
-            <Edge From="16" To="17" Label="Source1" />
-            <Edge From="15" To="18" Label="Source1" />
+            <Edge From="12" To="13" Label="Source1" />
+            <Edge From="15" To="16" Label="Source1" />
+            <Edge From="14" To="17" Label="Source1" />
+            <Edge From="16" To="17" Label="Source2" />
+            <Edge From="13" To="18" Label="Source1" />
             <Edge From="17" To="18" Label="Source2" />
-            <Edge From="14" To="19" Label="Source1" />
-            <Edge From="18" To="19" Label="Source2" />
+            <Edge From="18" To="19" Label="Source1" />
             <Edge From="19" To="20" Label="Source1" />
             <Edge From="20" To="21" Label="Source1" />
-            <Edge From="21" To="22" Label="Source1" />
-            <Edge From="23" To="24" Label="Source1" />
-            <Edge From="24" To="26" Label="Source1" />
-            <Edge From="25" To="26" Label="Source2" />
+            <Edge From="22" To="23" Label="Source1" />
+            <Edge From="23" To="25" Label="Source1" />
+            <Edge From="24" To="25" Label="Source2" />
+            <Edge From="25" To="26" Label="Source1" />
             <Edge From="26" To="27" Label="Source1" />
             <Edge From="27" To="28" Label="Source1" />
-            <Edge From="28" To="29" Label="Source1" />
+            <Edge From="29" To="30" Label="Source1" />
             <Edge From="30" To="31" Label="Source1" />
-            <Edge From="31" To="32" Label="Source1" />
-            <Edge From="34" To="35" Label="Source1" />
-            <Edge From="33" To="36" Label="Source1" />
+            <Edge From="33" To="34" Label="Source1" />
+            <Edge From="32" To="35" Label="Source1" />
+            <Edge From="34" To="35" Label="Source2" />
+            <Edge From="31" To="36" Label="Source1" />
             <Edge From="35" To="36" Label="Source2" />
-            <Edge From="32" To="37" Label="Source1" />
-            <Edge From="36" To="37" Label="Source2" />
+            <Edge From="36" To="37" Label="Source1" />
             <Edge From="37" To="38" Label="Source1" />
-            <Edge From="38" To="39" Label="Source1" />
-            <Edge From="39" To="42" Label="Source1" />
-            <Edge From="41" To="42" Label="Source2" />
-            <Edge From="42" To="43" Label="Source1" />
-            <Edge From="43" To="40" Label="Source1" />
+            <Edge From="38" To="41" Label="Source1" />
+            <Edge From="40" To="41" Label="Source2" />
+            <Edge From="41" To="42" Label="Source1" />
+            <Edge From="42" To="39" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

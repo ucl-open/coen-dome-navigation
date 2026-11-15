@@ -40,8 +40,9 @@ def test_the_shared_blocks_replace_the_local_copies():
     includes = {e.get("Path") for e in MAIN.iter(W + "Expression") if e.get(XSI) == "IncludeWorkflow"}
     assert {"OpenRigs.Devices:DomeHardware.bonsai", "OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai",
             "OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai", "OpenRigs.Devices:Zapit.ConnectForTask.bonsai",
-            "OpenRigs.Logging:LogLabExperiment.bonsai", "OpenRigs.Logging:LogControlEvents.bonsai",
-            "OpenRigs.Vision:ProjectorDisplay.bonsai"} <= includes
+            "OpenRigs.Logging:LogLabExperiment.bonsai", "OpenRigs.Logging:LogControlEvents.bonsai"} <= includes
+    # The speakers and the projector are DomeHardware's (Pip, 15 Nov 2026: every task has background noise and a screen).
+    assert not includes & {lint.SPEAKER_MIXER, lint.PROJECTOR_DISPLAY}
     assert not [p for p in includes if p.startswith("Extensions")]
     assert sorted(p.name for p in (ROOT / "src" / "Extensions").iterdir()) == [
         "Corridor.cs", "UclOpenCoenDomeNavigationTask.Generated.cs"]
@@ -186,10 +187,11 @@ def test_go_stops_on_a_background_noise_changed_after_launch():
 
 
 def test_the_speakers_are_declared_before_every_user():
-    # A GroupWorkflow does not scope subjects; keep the declaration ahead of its subscribers.
-    nodes, _ = _scope(group("Audio"))
-    declared = next(i for i, n in enumerate(nodes) if n.get("Path") == lint.SPEAKER_MIXER)
-    users = [i for i, n in enumerate(nodes) if n.get(XSI) == "SubscribeSubject" and n.findtext(W + "Name") == "Speakers"]
+    # A GroupWorkflow does not scope subjects; keep the declaration (DomeHardware's SpeakerMixer) ahead of its subscribers.
+    top, _ = _scope(MAIN)
+    declared = next(i for i, n in enumerate(top) if n.findtext(W + "Name") == "Hardware")
+    users = [i for i, n in enumerate(top) for s in n.iter(W + "Expression")
+             if s.get(XSI) == "SubscribeSubject" and s.findtext(W + "Name") == "Speakers"]
     assert len(users) == 4 and min(users) > declared
 
 
