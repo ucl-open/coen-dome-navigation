@@ -38,8 +38,10 @@ def test_every_task_wait_is_on_the_harp_clock():
 
 def test_the_shared_blocks_replace_the_local_copies():
     includes = {e.get("Path") for e in MAIN.iter(W + "Expression") if e.get(XSI) == "IncludeWorkflow"}
-    assert {"OpenRigs.Devices:RigHardware.bonsai", "OpenRigs.Devices:HarpLogs.bonsai",
-            "OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai", "OpenRigs.Vision:ProjectorDisplay.bonsai"} <= includes
+    assert {"OpenRigs.Devices:DomeHardware.bonsai", "OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai",
+            "OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai", "OpenRigs.Devices:Zapit.ConnectForTask.bonsai",
+            "OpenRigs.Logging:LogLabExperiment.bonsai", "OpenRigs.Logging:LogControlEvents.bonsai",
+            "OpenRigs.Vision:ProjectorDisplay.bonsai"} <= includes
     assert not [p for p in includes if p.startswith("Extensions")]
     assert sorted(p.name for p in (ROOT / "src" / "Extensions").iterdir()) == [
         "Corridor.cs", "UclOpenCoenDomeNavigationTask.Generated.cs"]
@@ -51,10 +53,10 @@ def test_every_config_root_is_the_lab_s():
     assert set(re.findall(r"<(?:\w+:)?ConfigRoot>([^<]*)</", TEXT)) == {r"C:\Coen-Lab-Local\RigConfigs"}
 
 
-def test_the_manifest_records_the_speaker_filters():
-    # The pips, reward tone and penalty sound are equalised with rig.yml's speaker filters, so the manifest hashes them, as coen-dome-decision-making's does.
-    files = re.search(r"<mf:ConfigFiles>([^<]*)<", TEXT).group(1).split(";")
-    assert {rf"C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\speaker-{side}.json" for side in ("left", "right", "centre")} <= set(files)
+def test_the_manifest_records_rig_yml_and_every_file_it_names():
+    # The pips, reward tone and penalty sound are equalised with rig.yml's speaker filters, so the manifest hashes them:
+    # ExperimentManifest's default ConfigFiles, {RigFiles}, is rig.yml, every file it names and the mouse's spout positions.
+    assert "<mf:ConfigFiles>" not in TEXT
 
 
 def test_the_launch_properties():
@@ -66,7 +68,8 @@ def test_the_launch_properties():
 
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
-    assert names == {"trialNumber", "trainingStage", "rewardSizeUl", "laserCondition", "path"}
+    # path is LogLabExperiment's.
+    assert names == {"trialNumber", "trainingStage", "rewardSizeUl", "laserCondition"}
 
 
 def test_stimulus_state_reaches_disk_row_by_row():
@@ -164,19 +167,13 @@ def test_the_background_noise_plays_unequalised_on_every_speaker():
 
 def test_the_background_noise_starts_at_ready_at_the_launch_s_level():
     # Pip, 15 Nov 2026: the noise starts at Ready, not Go, at the level of the task file as launched (LaunchTaskConfig);
-    # its Ready is RigHardware's, the stages its ReadyWaitsFor names.
+    # its Ready is ReadyGate's (DomeHardware), the stages its ReadyWaitsFor names (hardware_problems).
     nodes, edges = _scope(group("Audio"))
     sent = next(i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "BackgroundNoise")
     upstream = _upstream(edges, sent)
     names = {nodes[i].findtext(W + "Name") for i in upstream}
     assert {"LaunchTaskConfig", "Ready"} <= names and "TaskConfig" not in names
-    # Ready's stages: HarpClockSet, SpoutsHomed (LickSpoutStage.Homed) and MixerStarted (SpeakerMixer's on ReadyStages).
-    ready_nodes, ready_edges = _scope(group("Ready"))
-    zip_ = next(i for i, n in enumerate(ready_nodes) if combinators(n) == ["rx:Zip"])
-    subjects = {ready_nodes[i].findtext(W + "Name") for i in _upstream(ready_edges, zip_) if ready_nodes[i].get(XSI) == "SubscribeSubject"}
-    assert subjects == {"HarpClockSet", "LickSpoutStage.Homed", "ReadyStages"}
-    hardware = next(e for e in MAIN.iter(W + "Expression") if e.get("Path") == "OpenRigs.Devices:RigHardware.bonsai")
-    assert hardware.findtext(W + "ReadyWaitsFor") == ", ".join(lint.READY_STAGES_WITH_MIXER) == "HarpClockSet, SpoutsHomed, MixerStarted"
+    assert [n for n in names if n in ("HarpClockSet", "LickSpoutStage.Homed", "ReadyStages")] == []
 
 
 def test_go_stops_on_a_background_noise_changed_after_launch():
@@ -201,8 +198,9 @@ def test_the_trial_events_leave_the_clock_s_thread_unswitched():
     assert "rx:ObserveOn" not in combinators(group("TaskLogic"))
 
 
-def test_ready_the_cameras_and_the_watchdog_are_rig_hardware_s():
-    assert lint.rig_hardware_problems(WORKFLOW) == []
+def test_the_hardware_is_the_lab_s_pieces():
+    # DomeHardware's pieces, one clock, Ready waiting for every stage they announce, MixerStarted included.
+    assert lint.hardware_problems(WORKFLOW) == []
 
 # The lab's rules for every workflow (open_rigs.rigs.workflow_lint, one copy in lib-open-rigs).
 WORKFLOW = lint.Workflow(ROOT)
@@ -215,7 +213,7 @@ def test_every_harp_delay_runs_on_the_timestamp_clock():
 
 def test_no_async_event_sender_completes_async_events():
     senders, finite = lint.finite_async_event_senders(WORKFLOW)
-    assert senders == 2 and finite == []  # RngSeed and Control; DeliverReward sends RewardDelivered itself
+    assert senders == 1 and finite == []  # RngSeed; LogControlEvents sends Control and DeliverReward RewardDelivered
 
 
 def test_no_trial_graph_closes_a_shared_subject():
@@ -250,8 +248,8 @@ def test_the_layout_is_tracked():
     assert lint.layout_problems(WORKFLOW) == []
 
 
-def test_the_cameras_are_logged_by_log_cameras():
-    assert lint.camera_log_problems(WORKFLOW) == []
+def test_the_experiment_logs_are_the_lab_s():
+    assert lint.experiment_log_problems(WORKFLOW) == []
 
 
 def test_every_file_the_workflow_writes_is_in_the_manifest_s_expected_files():

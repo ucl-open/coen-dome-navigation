@@ -154,8 +154,6 @@ public class CorridorSetup
     public const double LaserMaxMarginSeconds = 0.25; // task.py LASER_MAX_MARGIN_SECONDS
     public const double MaxLeadSeconds = 0.2;            // task.py MAX_LEAD_SECONDS: the furthest the trigger may come before the first pip
     public const double NoTimeLimitTriggerAfterSeconds = 2.0; // task.py NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS: the furthest after the first pip it may come on a stage without timeLimitSeconds
-    public const double MaxQuietSeconds = 10.0;          // task.py MAX_QUIET_SECONDS: the longest lickQuietSeconds or wheelQuietSeconds
-    public const double MaxWheelQuietCm = 20.0;          // task.py MAX_WHEEL_QUIET_CM: under one turn of the 75 mm wheel
     public const int DriftBeeps = 500;           // a drift stage's frequency reaches the sweep's end on its own after this many beeps (25 s)
     public const double GratingStartCpd = 0.03;   // the grating's spatial frequency at the track's start
     public const double GratingEndCpd = 0.3;      // and at its end
@@ -191,20 +189,11 @@ public class CorridorSetup
         number("trialStructure.itiMaxSeconds", task.TrialStructure.ItiMaxSeconds, false);
         if (task.TrialStructure.ItiMaxSeconds < task.TrialStructure.ItiMinSeconds) problems.Add("trialStructure.itiMaxSeconds is below itiMinSeconds");
         number("penalty.timeoutSeconds", task.Penalty.TimeoutSeconds, false);
-        number("stage '" + row.Label + "''s lickQuietSeconds", row.LickQuietSeconds, false);
-        number("stage '" + row.Label + "''s wheelQuietSeconds", row.WheelQuietSeconds, false);
-        number("stage '" + row.Label + "''s wheelQuietCm", row.WheelQuietCm, false);
-        // A long quiet wait and a licking mouse would hold the trial start with no message (Pip, 15 Nov 2026).
-        Action<string, double, double, string> atMost = (name, value, max, unit) =>
-        {
-            if (value > max) problems.Add(string.Format("stage '{0}''s {1} ({2} {3}) must be at most {4} {3}", row.Label, name, value, unit, max));
-        };
-        atMost("lickQuietSeconds", row.LickQuietSeconds, MaxQuietSeconds, "s");
-        atMost("wheelQuietSeconds", row.WheelQuietSeconds, MaxQuietSeconds, "s");
-        atMost("wheelQuietCm", row.WheelQuietCm, MaxWheelQuietCm, "cm");
+        // The quiet waits, the lab's one check (OpenRigs.Core QuietWait: finite, 0 or more, at most 10 s and 20 cm, the
+        // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
+        foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage '" + row.Label + "': " + p);
         number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
         if (row.TimeLimitSeconds.HasValue) number("stage '" + row.Label + "''s timeLimitSeconds", row.TimeLimitSeconds.Value, true);
-        if ((row.WheelQuietSeconds > 0) != (row.WheelQuietCm > 0)) problems.Add("stage '" + row.Label + "' needs wheelQuietSeconds and wheelQuietCm both above 0 (the wheel's quiet wait) or both 0 (off)");
         // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
         // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
         // with Zapit's reply margin, and no later after it than the stage's time limit.

@@ -197,24 +197,24 @@
       "properties": {
         "lickQuietSeconds": {
           "default": 0.0,
-          "description": "Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
-          "maximum": 10.0,
+          "description": "Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
+          "maximum": 10,
           "minimum": 0,
           "title": "LickQuietSeconds",
           "type": "number"
         },
         "wheelQuietSeconds": {
           "default": 0.0,
-          "description": "Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)",
-          "maximum": 10.0,
+          "description": "Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0); at most 10 s",
+          "maximum": 10,
           "minimum": 0,
           "title": "WheelQuietSeconds",
           "type": "number"
         },
         "wheelQuietCm": {
           "default": 0.0,
-          "description": "The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0)",
-          "maximum": 20.0,
+          "description": "The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0); at most 20 cm",
+          "maximum": 20,
           "minimum": 0,
           "title": "WheelQuietCm",
           "type": "number"

@@ -869,11 +869,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)
+        /// Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("lickQuietSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickQuietSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)")]
+        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)")]
         public double LickQuietSeconds
         {
             get
@@ -887,14 +887,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)
+        /// Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0); at most 10 s
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("wheelQuietSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelQuietSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Quiet wait: a trial\'s start needs this long with the wheel still, in seconds, cou" +
-            "nted from the interval\'s start: the wheel\'s distance (forward and back added) ov" +
-            "er the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQ" +
-            "uietCm 0)")]
+        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0); at most 10 s")]
         public double WheelQuietSeconds
         {
             get
@@ -908,12 +905,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0)
+        /// The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0); at most 20 cm
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("wheelQuietCm")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelQuietCm")]
         [System.ComponentModel.DescriptionAttribute("The most the wheel may move, forward and back added, within the last wheelQuietSe" +
-            "conds before the trial\'s start, in cm; 0: off (with wheelQuietSeconds 0)")]
+            "conds before the trial\'s start, in cm; 0: off (with wheelQuietSeconds 0); at mos" +
+            "t 20 cm")]
         public double WheelQuietCm
         {
             get

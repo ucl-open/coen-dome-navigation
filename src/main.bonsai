@@ -20,54 +20,12 @@
                  xmlns="https://bonsai-rx.org/2018/workflow">
   <Workflow>
     <Nodes>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ReadLabRig.bonsai">
+        <Description>This machine's rig.yml (ConfigRoot\MACHINE\rig.yml) read once into the lab rig model: RigConfigs, RigFile, RigConfigDirectory and ConfigRoot, which every device piece reads. First, before anything that reads them.</Description>
+        <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
+      </Expression>
       <Expression xsi:type="ExternalizedMapping">
         <Property Name="DisplayDevice" Description="The display the dome projector is on (ProjectorDisplay); a launch property." />
-      </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>RigSetup</Name>
-        <Description>Reads this machine's rig.yml (ReadLabRig, which publishes RigConfigDirectory and RigConfigs) into the lab rig model (open_rigs.rigs.lab_rig), opens every device with RigHardware (which starts the cameras 2 s after Start and reports Ready once the Harp clock is set, the spouts are homed and the mixer has started: ReadyWaitsFor) and opens the dome's display (ProjectorDisplay).</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ReadLabRig.bonsai">
-              <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>SpoutStepSize</Name>
-            </Expression>
-            <Expression xsi:type="PropertyMapping">
-              <PropertyMappings>
-                <Property Name="SpoutStepSize" />
-              </PropertyMappings>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:RigHardware.bonsai">
-              <Description>Every dome device, named as in the data, behind its subjects (Building Blocks): the Behavior board (wheel distance, pulses, the ZapitTrigger line cleared however the workflow stops), the timestamp generator (Timestamp, HarpClockSet), both Lickety Splits, the three cameras and the lick spout stage, which homes, goes in and handles the spout commands.</Description>
-              <ReadyWaitsFor>HarpClockSet, SpoutsHomed, MixerStarted</ReadyWaitsFor>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RigConfigs</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>ProjectionCalibration</Selector>
-            </Expression>
-            <Expression xsi:type="ExternalizedMapping">
-              <Property Name="DisplayDevice" />
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Vision:ProjectorDisplay.bonsai">
-              <Description>The dome's BonVision window, mesh mapping and gamma correction from rig.yml's projectionCalibration; stimuli draw on DrawStimuli.</Description>
-              <DisplayDevice>First</DisplayDevice>
-              <WindowState>Fullscreen</WindowState>
-              <Width>1920</Width>
-              <Height>1080</Height>
-            </Expression>
-          </Nodes>
-          <Edges>
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="2" To="3" Label="Source1" />
-            <Edge From="4" To="5" Label="Source1" />
-            <Edge From="5" To="7" Label="Source1" />
-            <Edge From="6" To="7" Label="Source2" />
-          </Edges>
-        </Workflow>
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
         <Property Name="SubjectId" Description="The mouse's lab ID; the launch's own, from rig-control." />
@@ -76,7 +34,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, SpoutStepSize settable live (its subject's one default, shown to the controller by ParameterDefault a second after Start), ManualRewardDropUl, the 2.5 ul every RewardLeft and RewardRight gives before and during a run through the valve's calibration (Pip's fixed manual drop, 15 Nov 2026), the spout commands (handled by HarpLickSpoutStage in RigHardware) at any time; at Start TaskFilePath (TaskPath, the task file rig-control wrote at launch and writes again at Go with the form's edits), and at Go RunSettings (subject, session) and TrainingStage are published.</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, SpoutStepSize settable live (its subject's one default, shown to the controller by ParameterDefault a second after Start), RewardLeft and RewardRight (2.5 ul through the valve's calibration before and during a run, BehaviorBoard.ManualRewards: Pip's fixed manual drop, 15 Nov 2026), the spout commands (handled by DomeHardware's LickSpoutStage) at any time; at Start TaskFilePath (TaskPath, the task file rig-control wrote at launch and writes again at Go with the form's edits), and at Go RunSettings (subject, session) and TrainingStage are published.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -130,11 +88,11 @@
               <Commands>
                 <Command>
                   <Name>RewardLeft</Name>
-                  <Description>Give ManualRewardDropUl (2.5 ul) on the left spout, through its valve's calibration.</Description>
+                  <Description>Give 2.5 ul on the left spout, through its valve's calibration (BehaviorBoard.ManualRewards).</Description>
                 </Command>
                 <Command>
                   <Name>RewardRight</Name>
-                  <Description>Give ManualRewardDropUl (2.5 ul) on the right spout, through its valve's calibration.</Description>
+                  <Description>Give 2.5 ul on the right spout, through its valve's calibration (BehaviorBoard.ManualRewards).</Description>
                 </Command>
                 <Command>
                   <Name>SpoutsHome</Name>
@@ -306,14 +264,6 @@
             <Expression xsi:type="MulticastSubject">
               <Name>SpoutStepSize</Name>
             </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="DoubleProperty">
-                <Value>2.5</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:BehaviorSubject">
-              <Name>ManualRewardDropUl</Name>
-            </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>SpoutStepSize</Name>
             </Expression>
@@ -362,9 +312,54 @@
             <Edge From="32" To="33" Label="Source1" />
             <Edge From="33" To="34" Label="Source1" />
             <Edge From="35" To="36" Label="Source1" />
+            <Edge From="36" To="37" Label="Source1" />
             <Edge From="37" To="38" Label="Source1" />
-            <Edge From="38" To="39" Label="Source1" />
-            <Edge From="39" To="40" Label="Source1" />
+          </Edges>
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogLabExperiment.bonsai">
+        <Description>The experiment folder at Go (PathPrefix), BonsaiData_Async, Settings_Rig, Settings_Experiment and the Recording phase. Before Hardware: every device's log waits for PathPrefix, so its definition must read nothing the devices define.</Description>
+      </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Hardware</Name>
+        <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, and Ready once the Harp clock is set, the spouts are homed, every camera has sent a frame and the mixer has started: ReadyWaitsFor) and its display (ProjectorDisplay).</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>SpoutStepSize</Name>
+            </Expression>
+            <Expression xsi:type="PropertyMapping">
+              <PropertyMappings>
+                <Property Name="SpoutStepSize" />
+              </PropertyMappings>
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
+              <Description>Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage and the three cameras, which start triggering once all three acquire.</Description>
+              <ReadyWaitsFor>HarpClockSet, SpoutsHomed, Camera-Face, Camera-Pupil, Camera-Body, MixerStarted</ReadyWaitsFor>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>RigConfigs</Name>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>ProjectionCalibration</Selector>
+            </Expression>
+            <Expression xsi:type="ExternalizedMapping">
+              <Property Name="DisplayDevice" />
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Vision:ProjectorDisplay.bonsai">
+              <Description>The dome's BonVision window, mesh mapping and gamma correction from rig.yml's projectionCalibration; stimuli draw on DrawStimuli.</Description>
+              <DisplayDevice>First</DisplayDevice>
+              <WindowState>Fullscreen</WindowState>
+              <Width>1920</Width>
+              <Height>1080</Height>
+            </Expression>
+          </Nodes>
+          <Edges>
+            <Edge From="0" To="1" Label="Source1" />
+            <Edge From="1" To="2" Label="Source1" />
+            <Edge From="3" To="4" Label="Source1" />
+            <Edge From="4" To="6" Label="Source1" />
+            <Edge From="5" To="6" Label="Source2" />
           </Edges>
         </Workflow>
       </Expression>
@@ -548,111 +543,8 @@
           </Edges>
         </Workflow>
       </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Zapit</Name>
-        <Description>Zapit, only in an optogenetics experiment: OpenRigs.Devices Zapit.ConnectZapit, given the task's conditions file, connects to rig.yml's Zapit, carries ZapitCommands and ZapitReplies, and stops the workflow on an error reply, no conditions file loaded, a conditions count other than the file's, or a real mouse on a rig without hardware triggering.</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>OptogeneticsExperiment?</Name>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="MemberSelector">
-                    <Selector>TaskParameters.Optogenetics.UseZapit</Selector>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.Optogenetics.ZapitConfigPath</Selector>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ConnectZapit.bonsai" />
-          </Nodes>
-          <Edges>
-            <Edge From="0" To="1" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="2" To="3" Label="Source1" />
-            <Edge From="3" To="4" Label="Source1" />
-          </Edges>
-        </Workflow>
-      </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Commands</Name>
-        <Description>RewardLeft and RewardRight give ManualRewardDropUl (2.5 ul, Initialization) on that side (DeliverReward). The spout commands are RigHardware's (HarpLickSpoutStage).</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ControlEvents</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:OnCommand">
-                <orcl:Name>RewardLeft</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="StringProperty">
-                <Value>left</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ManualRewardDropUl</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:WithLatestFrom" />
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>RewardRequests</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:OnCommand">
-                <orcl:Name>RewardRight</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="StringProperty">
-                <Value>right</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ManualRewardDropUl</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:WithLatestFrom" />
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>RewardRequests</Name>
-            </Expression>
-          </Nodes>
-          <Edges>
-            <Edge From="0" To="1" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="2" To="4" Label="Source1" />
-            <Edge From="4" To="5" Label="Source1" />
-            <Edge From="3" To="4" Label="Source2" />
-            <Edge From="0" To="6" Label="Source1" />
-            <Edge From="6" To="7" Label="Source1" />
-            <Edge From="7" To="9" Label="Source1" />
-            <Edge From="9" To="10" Label="Source1" />
-            <Edge From="8" To="9" Label="Source2" />
-          </Edges>
-        </Workflow>
-      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ConnectForTask.bonsai" />
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>Grating</Name>
         <Description>The grating (BonVision DrawGratings) on the dome: each pip sets its spatial frequency and opacity (TaskLogic); off between trials.</Description>
@@ -902,50 +794,8 @@
             <Expression xsi:type="MulticastSubject">
               <Name>BackgroundNoise</Name>
             </Expression>
-            <Expression xsi:type="GroupWorkflow">
+            <Expression xsi:type="SubscribeSubject">
               <Name>Ready</Name>
-              <Description>Passes on once every stage RigHardware's ReadyWaitsFor names has come, the moment RigHardware reports Ready: HarpClockSet, the spouts homed (LickSpoutStage.Homed) and the mixer started (MixerStarted, SpeakerMixer's one stage on ReadyStages), so the background noise starts at Ready.</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>HarpClockSet</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Take">
-                      <rx:Count>1</rx:Count>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>LickSpoutStage.Homed</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Take">
-                      <rx:Count>1</rx:Count>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>ReadyStages</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Take">
-                      <rx:Count>1</rx:Count>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Zip" />
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="2" To="3" Label="Source1" />
-                  <Edge From="4" To="5" Label="Source1" />
-                  <Edge From="1" To="6" Label="Source1" />
-                  <Edge From="3" To="6" Label="Source2" />
-                  <Edge From="5" To="6" Label="Source3" />
-                  <Edge From="6" To="7" Label="Source1" />
-                </Edges>
-              </Workflow>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:Zip" />
@@ -1537,67 +1387,9 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything written to the experiment folder: LogControllerLogic makes the folder at Go and publishes PathPrefix; ExperimentLogs holds every log that waits for it; HarpLogs records the Harp boards; DeliverReward delivers and logs rewards; BonsaiData_Async takes the controller's events; RecordHarpDevices, ExperimentManifest and the Recording phase follow PathPrefix.</Description>
+        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): ExperimentLogs holds the task's own logs; each device logs itself; DeliverReward delivers and logs rewards; LogControlEvents takes the controller's events; RecordHarpDevices and ExperimentManifest come last.</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="GroupWorkflow">
-              <Name>LogControllerLogic</Name>
-              <Description>Waits for Go (RunSettings: the controller's SubjectId and SessionId), then LogController creates the experiment folder RootPath\sub-&lt;SubjectId&gt;\ses-&lt;SessionId&gt;_&lt;DateTime&gt; and publishes it as PathPrefix, which every log waits for. RootPath is rig.yml's, the rig's acquisition folder itself (C:\Coen-Lab-Local\Acquired-Data): experiments have no project folder.</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>RunSettings</Name>
-                  </Expression>
-                  <Expression xsi:type="PropertyMapping">
-                    <PropertyMappings>
-                      <Property Name="SubjectId" Selector="Item1" />
-                      <Property Name="SessionId" Selector="Item2" />
-                    </PropertyMappings>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>RigConfigs</Name>
-                  </Expression>
-                  <Expression xsi:type="MemberSelector">
-                    <Selector>RootPath</Selector>
-                  </Expression>
-                  <Expression xsi:type="PropertyMapping">
-                    <PropertyMappings>
-                      <Property Name="Path" />
-                    </PropertyMappings>
-                  </Expression>
-                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogController.bonsai">
-                    <SubjectId>UNMAPPED</SubjectId>
-                    <SessionId>UNMAPPED</SessionId>
-                    <Path>C:\Coen-Lab-Local\Acquired-Data</Path>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:DelaySubscription">
-                      <rx:DueTime>PT1S</rx:DueTime>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>RunSettings</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:SubscribeWhen" />
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="2" To="3" Label="Source1" />
-                  <Edge From="3" To="4" Label="Source1" />
-                  <Edge From="1" To="5" Label="Source1" />
-                  <Edge From="4" To="5" Label="Source2" />
-                  <Edge From="5" To="6" Label="Source1" />
-                  <Edge From="6" To="8" Label="Source1" />
-                  <Edge From="7" To="8" Label="Source2" />
-                  <Edge From="8" To="9" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogAsync.bonsai">
-            </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>PathPrefix</Name>
             </Expression>
@@ -1621,18 +1413,6 @@
                     <Extension>csv</Extension>
                   </Expression>
                   <Expression xsi:type="SubscribeSubject">
-                    <Name>RigConfigs</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rig:SerializeToJson">
-                      <rig:Formatting>Indented</rig:Formatting>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogDataSchema.bonsai">
-                    <Name>Settings_Rig</Name>
-                    <Extension>json</Extension>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
                     <Name>TaskConfig</Name>
                   </Expression>
                   <Expression xsi:type="Combinator">
@@ -1644,17 +1424,6 @@
                     <Name>Settings_Task</Name>
                     <Extension>json</Extension>
                   </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>ExperimentGo</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="orcl:ExperimentSettings" />
-                  </Expression>
-                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogDataSchema.bonsai">
-                    <Name>Settings_Experiment</Name>
-                    <Extension>json</Extension>
-                  </Expression>
-                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogCameras.bonsai" />
                   <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ZapitLogs.bonsai" />
                 </Nodes>
                 <Edges>
@@ -1662,15 +1431,8 @@
                   <Edge From="2" To="3" Label="Source1" />
                   <Edge From="4" To="5" Label="Source1" />
                   <Edge From="5" To="6" Label="Source1" />
-                  <Edge From="7" To="8" Label="Source1" />
-                  <Edge From="8" To="9" Label="Source1" />
-                  <Edge From="10" To="11" Label="Source1" />
-                  <Edge From="11" To="12" Label="Source1" />
                 </Edges>
               </Workflow>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:HarpLogs.bonsai">
-              <Description>One LogHarpDevice per dome Harp device, from the experiment folder and the Harp clock being set.</Description>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>RewardRequests</Name>
@@ -1688,19 +1450,7 @@
               <RigFile>UNMAPPED</RigFile>
               <CalibrationDirectory />
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>PathPrefix</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ReportMetric">
-                <orcl:Name>path</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ReportPhase">
-                <orcl:Phase>Recording</orcl:Phase>
-              </Combinator>
-            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogControlEvents.bonsai" />
             <Expression xsi:type="hd:RecordHarpDevices">
               <Name>RecordHarpDevices</Name>
               <Description>Checks every Harp device in rig.yml at Start and records it into each experiment (OpenRigs.HarpDevices): the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits (each a rig.yml entry with a portName whose data the workflow publishes as &lt;Name&gt;.Data) must be on their portName with their usbSerial, or the workflow stops saying which board is where; 0.5 s after the experiment folder appears it asks each for a register dump on &lt;Name&gt;.Commands, which its log records; and it writes &lt;Name&gt;\&lt;Name&gt;_device.json and the register map &lt;Name&gt;\&lt;Name&gt;.yml, which ExperimentManifest expects (harp).</Description>
@@ -1708,41 +1458,17 @@
             </Expression>
             <Expression xsi:type="mf:ExperimentManifest">
               <Name>ExperimentManifest</Name>
-              <Description>Writes manifest.json into the experiment folder (OpenRigs.Manifest), as av-dome's: the machine, this repo's commit, who launched it and sent Go, rig.yml and the calibration files the workflow reads (MeshMap.csv, gammalut.bmp, the three speakers' filters, this mouse's spout positions) by hash, what each BonsaiData_Trial column means (schemas\trial-columns.yml), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState); DeliverReward copies each calibrated valve's file in as ValveCalibrationDO&lt;n&gt;.</Description>
+              <Description>Writes manifest.json into the experiment folder (OpenRigs.Manifest), as av-dome's: the machine, this repo's commit, who launched it and sent Go, rig.yml and every file it names (MeshMap.csv, gammalut.bmp, the speakers' filters, the valve calibrations) and this mouse's spout positions by hash ({RigFiles}), what each BonsaiData_Trial column means (schemas\trial-columns.yml), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState); DeliverReward copies each calibrated valve's file in as ValveCalibrationDO&lt;n&gt;.</Description>
               <mf:IngestScript>coen-dome-navigation</mf:IngestScript>
-              <mf:ConfigFiles>C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\rig.yml;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\MeshMap.csv;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\gammalut.bmp;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\speaker-left.json;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\speaker-right.json;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\speaker-centre.json;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\LickSpoutPositions\{SubjectId}.csv</mf:ConfigFiles>
               <mf:ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/BonsaiData_Trial_;BonsaiData/BonsaiData_Async_;BonsaiData/BonsaiData_StimulusState_;BonsaiData/BonsaiData_ZapitReplies_?Optogenetics;Settings/Settings_ZapitConditions_?Optogenetics</mf:ExpectedFiles>
               <mf:TrialColumns>schemas\trial-columns.yml</mf:TrialColumns>
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ControlEvents</Name>
-            </Expression>
-            <Expression xsi:type="scr:ExpressionTransform">
-              <scr:Expression>new((it.Kind.ToString() == &quot;Command&quot; ? it.Name : it.Kind.ToString()) as Event, it.ToString() as Detail)</scr:Expression>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orl:CreateAsyncEvent">
-                <orl:Event>Control</orl:Event>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="Bonsai.Harp:WithLatestTimestamp.bonsai">
-              <Name>Timestamp</Name>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>AsyncEvents</Name>
-            </Expression>
           </Nodes>
           <Edges>
-            <Edge From="2" To="3" Label="Source1" />
-            <Edge From="6" To="7" Label="Source1" />
-            <Edge From="5" To="8" Label="Source1" />
-            <Edge From="7" To="8" Label="Source2" />
-            <Edge From="9" To="10" Label="Source1" />
-            <Edge From="10" To="11" Label="Source1" />
-            <Edge From="14" To="15" Label="Source1" />
-            <Edge From="15" To="16" Label="Source1" />
-            <Edge From="16" To="17" Label="Source1" />
-            <Edge From="17" To="18" Label="Source1" />
+            <Edge From="0" To="1" Label="Source1" />
+            <Edge From="3" To="4" Label="Source1" />
+            <Edge From="2" To="5" Label="Source1" />
+            <Edge From="4" To="5" Label="Source2" />
           </Edges>
         </Workflow>
       </Expression>
@@ -1755,8 +1481,8 @@
       </Expression>
     </Nodes>
     <Edges>
-      <Edge From="0" To="1" Label="Source1" />
       <Edge From="2" To="3" Label="Source1" />
+      <Edge From="1" To="5" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>

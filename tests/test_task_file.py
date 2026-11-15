@@ -9,7 +9,6 @@ import pydantic
 import pytest
 import yaml
 
-from ucl_open_coen_dome_navigation import task as task_module
 from ucl_open_coen_dome_navigation import waveforms
 from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskLogic
 
@@ -180,7 +179,8 @@ def test_the_task_s_own_blocks_refuse_inf_and_nan(block, key, value):
 
 @pytest.mark.parametrize("key, value, pair", [("lickQuietSeconds", 10.5, None), ("wheelQuietSeconds", 10.5, ("wheelQuietCm", 1)), ("wheelQuietCm", 20.5, ("wheelQuietSeconds", 1))])
 def test_a_quiet_wait_above_its_maximum_is_refused(key, value, pair):
-    # Pip, 15 Nov 2026: a long wait and a licking mouse would hold the trial start with no message. Corridor.cs refuses it at Go too.
+    # Pip, 15 Nov 2026: a long wait and a licking mouse would hold the trial start with no message. The caps are the lab's
+    # (open_rigs.core.task QuietWait); Corridor.cs refuses them at Go too, through OpenRigs.Core QuietWait.SettingsProblems.
     doc = task()
     row = doc["taskParameters"]["trainingStages"][4]
     row[key] = value
@@ -188,9 +188,7 @@ def test_a_quiet_wait_above_its_maximum_is_refused(key, value, pair):
         row[pair[0]] = pair[1]
     with pytest.raises(pydantic.ValidationError, match="less than or equal to"):
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
-    corridor = (ROOT / "src" / "Extensions" / "Corridor.cs").read_text(encoding="utf-8-sig")
-    for py, cs in (("MAX_QUIET_SECONDS", "MaxQuietSeconds"), ("MAX_WHEEL_QUIET_CM", "MaxWheelQuietCm")):
-        assert float(re.search(rf"const double {cs} = ([\d.]+);", corridor).group(1)) == getattr(task_module, py)
+    assert "QuietWait.SettingsProblems" in (ROOT / "src" / "Extensions" / "Corridor.cs").read_text(encoding="utf-8-sig")
 
 
 def test_the_committed_task_schema_is_the_model_s():

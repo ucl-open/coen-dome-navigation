@@ -272,11 +272,11 @@ public class TrialDrawTests
     {
         var task = Fixture.Task();
         task.TrainingStages[1].WheelQuietSeconds = 1;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "both above 0");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "are both above 0 (the wheel's quiet wait) or both 0 (off)");
         task.TrainingStages[1].WheelQuietCm = 2;
         Fixture.Setup(task, 1);
         task.TrainingStages[1].LickQuietSeconds = -1;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "lickQuietSeconds must be a finite number, 0 or more");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "lickQuietSeconds is -1, not from 0 to 10 s");
     }
 
     [TestMethod]
@@ -284,9 +284,9 @@ public class TrialDrawTests
     {
         var cases = new Dictionary<string, Action<TrainingStage>>
         {
-            { "lickQuietSeconds (10.5 s) must be at most 10 s", s => s.LickQuietSeconds = 10.5 },
-            { "wheelQuietSeconds (11 s) must be at most 10 s", s => { s.WheelQuietSeconds = 11; s.WheelQuietCm = 1; } },
-            { "wheelQuietCm (21 cm) must be at most 20 cm", s => { s.WheelQuietSeconds = 1; s.WheelQuietCm = 21; } },
+            { "lickQuietSeconds is 10.5, not from 0 to 10 s", s => s.LickQuietSeconds = 10.5 },
+            { "wheelQuietSeconds is 11, not from 0 to 10 s", s => { s.WheelQuietSeconds = 11; s.WheelQuietCm = 1; } },
+            { "wheelQuietCm is 21, not from 0 to 20 cm", s => { s.WheelQuietSeconds = 1; s.WheelQuietCm = 21; } },
         };
         foreach (var c in cases)
         {
