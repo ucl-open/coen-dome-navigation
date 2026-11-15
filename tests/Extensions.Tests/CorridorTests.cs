@@ -282,7 +282,7 @@ public class CorridorStateTests
         Assert.IsTrue(outcome.Rewarded);
         Assert.AreEqual("Correct", outcome.Row.outcome);
         Assert.AreEqual("FreqReached", outcome.Row.endReason);
-        Assert.AreEqual(Tuple.Create("left", 2.0), outcome.Reward);
+        Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Reward);   // the task file's rewardSizeUl (3 ul since 15 Nov 2026)
         var next = rig.RunTo(CorridorEventKind.Start);
         Assert.AreEqual(outcome.Seconds + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
         rig.Until(rig.Now + 0.2);
