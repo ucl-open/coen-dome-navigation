@@ -89,12 +89,14 @@ def _dbfs_rms(sound: np.ndarray) -> float:
 def test_the_task_file_states_the_levels_played_until_15_nov_2026():
     # Until 15 Nov 2026 every file played as stored (Tom's pips and reward tone peaking at 0.05 squared, written at the
     # amplitude and scaled by it again) and the noise at backgroundNoiseLevel 0.5 as its gain. Each level is now the task
-    # file's levelDbfs, in dBFS RMS of the sound as stored (OpenRigs.Audio SoundLevel), so it states those, within 0.05 dB.
+    # file's levelDbfs, in dBFS RMS of the sound as stored (OpenRigs.Audio SoundLevel), so it states those, within 0.05 dB,
+    # measured on the committed files the workflow plays.
     p = task()["taskParameters"]
-    assert abs(p["tonePips"]["levelDbfs"] - max(_dbfs_rms(row) for row in waveforms.tones(waveforms.tone_frequencies()))) < 0.05
-    assert abs(p["tonePips"]["levelDbfs"] - min(_dbfs_rms(row) for row in waveforms.tones(waveforms.tone_frequencies()))) < 0.05
-    assert abs(p["rewardTone"]["levelDbfs"] - _dbfs_rms(waveforms.reward_tone())) < 0.05
-    assert abs(p["backgroundNoise"]["levelDbfs"] - (_dbfs_rms(waveforms.background_noise()) + 20 * math.log10(0.5))) < 0.05
+    pips = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(waveforms.SWEEP_STEPS, -1)
+    assert all(abs(p["tonePips"]["levelDbfs"] - _dbfs_rms(row)) < 0.05 for row in pips)
+    assert abs(p["rewardTone"]["levelDbfs"] - _dbfs_rms(np.fromfile(WAVES / "reward_tone.bin", dtype=np.float32))) < 0.05
+    noise = np.fromfile(WAVES / "background_noise.bin", dtype=np.float32)
+    assert abs(p["backgroundNoise"]["levelDbfs"] - (_dbfs_rms(noise) + 20 * math.log10(0.5))) < 0.05
     assert p["backgroundNoise"]["enabled"] and p["penalty"]["sound"]["levelDbfs"] == -44.6
     assert "backgroundNoiseLevel" not in p
 
