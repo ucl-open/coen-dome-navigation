@@ -16,7 +16,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "src" / "waveforms"
-SAMPLE_RATE = 48000  # the mixer's
+SAMPLE_RATE = 48000  # every waveform's, recorded in sweep.json: the workflow stops at Start unless rig.yml's speakerArray.device.sampleRate is the same
 TONE_MS = 50  # one tone pip; the pips are 50 ms apart
 NOISE_SECONDS = 60
 NOISE_SEED = 0  # as Tom's gen-background-noise.ipynb
@@ -57,8 +57,8 @@ def background_noise(peak: float = PIP_PEAK) -> np.ndarray:
 
 
 def sweep() -> dict:
-    """sweep.json: what the workflow and task.py read."""
-    return {"sweepStartHz": SWEEP_START_HZ, "sweepEndHz": SWEEP_END_HZ, "sweepSteps": SWEEP_STEPS, "pipPeak": PIP_PEAK}
+    """sweep.json: what the workflow and task.py read, with the rate every waveform was made at."""
+    return {"sweepStartHz": SWEEP_START_HZ, "sweepEndHz": SWEEP_END_HZ, "sweepSteps": SWEEP_STEPS, "pipPeak": PIP_PEAK, "sampleRate": SAMPLE_RATE}
 
 
 def write(out_dir: Path = OUT_DIR) -> None:

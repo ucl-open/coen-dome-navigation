@@ -30,7 +30,7 @@ SWEEP_FILE = Path(__file__).resolve().parents[1] / "waveforms" / "sweep.json"  #
 
 
 def sweep() -> dict:
-    """The sweep the committed tone files were made for: sweepStartHz, sweepEndHz, sweepSteps and pipPeak."""
+    """The sweep the committed tone files were made for: sweepStartHz, sweepEndHz, sweepSteps, pipPeak and the waveforms' sampleRate."""
     return json.loads(SWEEP_FILE.read_text(encoding="utf-8"))
 
 

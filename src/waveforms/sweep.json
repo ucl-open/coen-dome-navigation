@@ -2,5 +2,6 @@
   "sweepStartHz": 2000,
   "sweepEndHz": 25000,
   "sweepSteps": 100,
-  "pipPeak": 0.0025000000000000005
+  "pipPeak": 0.0025000000000000005,
+  "sampleRate": 48000
 }

@@ -1,6 +1,7 @@
 """src\\main.bonsai's rules: shared blocks, every task wait on the Harp clock, the logs' completion rules and the names
 the stage and README depend on."""
 
+import json
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -276,3 +277,29 @@ def test_the_pips_carry_their_sync_copy():
     # rig.yml's syncChannel at syncGain for each pip (OpenRigs.Audio SpeakerBuffer.SyncCopy), as coen-dome-decision-making's stimulus.
     nodes, upstream = _audio_chain("PipBuffers")
     assert _speaker_buffer(nodes, upstream).findtext("{clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio}SyncCopy") == "true"
+
+
+def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
+    # Pip, 15 Nov 2026: sweep.json is read at Start (LoadSweep, from rig.yml's speakerArray.device.sampleRate), so a wrong
+    # working folder or a waveform rate other than the audio device's stops the run at Start, not at Go.
+    nodes, edges = _scope(group("Task"))
+    (sweep,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "rx:AsyncSubject" and n.findtext(W + "Name") == "Sweep"]
+    labels = _labels(nodes, _upstream(edges, sweep))
+    assert labels == ["RigConfigs", "SpeakerArray.Device.SampleRate", "ext:LoadSweep"]
+    assert "ExperimentGo" not in labels
+    (setup,) = [i for i, n in enumerate(nodes) if "ext:CreateCorridorSetup" in combinators(n)]
+    zip_ = next(a for a, b in edges if b == setup)
+    assert [nodes[a].findtext(W + "Name") for a, b in sorted(edges, key=lambda e: e[0]) if b == zip_] == ["TaskConfig", "TrainingStage", "RigConfigs", "Sweep"]
+    assert "SweepFile" not in ET.tostring(nodes[setup], encoding="unicode")
+    # The pips' reader takes its rate and its 50 ms pip's length from the sweep, not typed values.
+    nodes, upstream = _audio_chain("PipBuffers")
+    (mapping,) = [nodes[i] for i in upstream if nodes[i].get(XSI) == "PropertyMapping"]
+    assert {p.get("Name"): p.get("Selector") for p in mapping.iter(W + "Property")} == {"SampleRate": "SampleRate", "BufferLength": "PipSamples"}
+    assert "Sweep" in _labels(nodes, upstream)
+
+
+def test_the_waveforms_are_at_the_lab_rig_s_rate():
+    # The committed waveforms' rate (sweep.json) is the rig template's audio device's, as every dome's rig.yml.
+    rig = LabRig.model_validate(yaml.safe_load((Path(open_rigs.rigs.__file__).parent / "rig-template.yml").read_text(encoding="utf-8")))
+    sweep = json.loads((ROOT / "src" / "waveforms" / "sweep.json").read_text(encoding="utf-8"))
+    assert sweep["sampleRate"] == rig.speaker_array.device.sample_rate == 48000

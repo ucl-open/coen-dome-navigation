@@ -18,16 +18,26 @@ using UclOpenCoenDomeNavigationTask;
 // the Harp clock and its row. main.bonsai drives the hardware from the events CorridorTask gives; tests\Extensions.Tests
 // runs the same classes on stand-in clocks.
 
-/// <summary>The sweep the committed tone files were made for (src\waveforms\sweep.json, ucl_open_coen_dome_navigation.waveforms).</summary>
+/// <summary>The sweep the committed tone files were made for, and the rate every waveform was made at
+/// (src\waveforms\sweep.json, ucl_open_coen_dome_navigation.waveforms).</summary>
 public class Sweep
 {
     public double StartHz;
     public double EndHz;
     public int Steps;
     public double PipPeak;
+    public int SampleRate;
+
+    /// <summary>One pip's samples, a row of all_waveforms.bin: a beep at SampleRate.</summary>
+    public int PipSamples { get { return (int)Math.Round(SampleRate * CorridorSetup.BeepSeconds); } }
 
     public static Sweep Load(string path)
     {
+        path = Path.GetFullPath(path);
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("There is no sweep file at " + path + ": Bonsai's working folder must be the workflow's (src), or run `uv run generate-waveforms`.", path);
+        }
         var json = JObject.Parse(File.ReadAllText(path));
         var sweep = new Sweep
         {
@@ -35,11 +45,24 @@ public class Sweep
             StartHz = json.Value<double?>("sweepStartHz") ?? double.NaN,
             EndHz = json.Value<double?>("sweepEndHz") ?? double.NaN,
             Steps = json.Value<int?>("sweepSteps") ?? 0,
-            PipPeak = json.Value<double?>("pipPeak") ?? double.NaN
+            PipPeak = json.Value<double?>("pipPeak") ?? double.NaN,
+            SampleRate = json.Value<int?>("sampleRate") ?? 0
         };
-        if (!(sweep.StartHz > 0 && sweep.EndHz > sweep.StartHz && sweep.Steps > 1))
+        if (!(sweep.StartHz > 0 && sweep.EndHz > sweep.StartHz && sweep.Steps > 1 && sweep.SampleRate > 0))
         {
-            throw new InvalidOperationException(path + " holds no usable sweep: it needs 0 < sweepStartHz < sweepEndHz and sweepSteps above 1. Run `uv run generate-waveforms`.");
+            throw new InvalidOperationException(path + " holds no usable sweep: it needs 0 < sweepStartHz < sweepEndHz, sweepSteps above 1 and sampleRate above 0. Run `uv run generate-waveforms`.");
+        }
+        return sweep;
+    }
+
+    /// <summary>Loads the sweep and throws unless its waveforms were made at the audio device's rate: nothing converts them,
+    /// so they would play at the wrong pitch and speed (as OpenRigs.Audio's CheckWaveRate for a WAV).</summary>
+    public static Sweep Load(string path, int deviceRate)
+    {
+        var sweep = Load(path);
+        if (sweep.SampleRate != deviceRate)
+        {
+            throw new InvalidOperationException(Path.GetFullPath(path) + " is " + sweep.SampleRate + " Hz, but the audio device runs at " + deviceRate + " Hz: make the waveforms again at " + deviceRate + " Hz (waveforms.py SAMPLE_RATE, `uv run generate-waveforms`).");
         }
         return sweep;
     }
@@ -585,11 +608,11 @@ public class CorridorState
 }
 
 [Combinator]
-[Description("Checks the task at Go and makes what the trials are drawn from. Input: (task file, TrainingStage, rig.yml). Stops the workflow on a stage past the table, a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
+[Description("Reads sweep.json at Start: the sweep the tone files were made for and the rate every waveform was made at. Input: the audio device's rate (rig.yml's speakerArray.device.sampleRate). Stops the workflow naming the file when it is missing, and naming both rates when they differ.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
-public class CreateCorridorSetup
+public class LoadSweep
 {
-    public CreateCorridorSetup()
+    public LoadSweep()
     {
         SweepFile = @"waveforms\sweep.json";
     }
@@ -597,9 +620,20 @@ public class CreateCorridorSetup
     [Description("sweep.json, relative to the workflow's folder (src).")]
     public string SweepFile { get; set; }
 
-    public IObservable<CorridorSetup> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, LabRig>> source)
+    public IObservable<Sweep> Process(IObservable<int> source)
     {
-        return source.Select(x => CorridorSetup.Create(x.Item1.TaskParameters, x.Item2, Sweep.Load(SweepFile), x.Item3.Zapit.HardwareTriggered, null));
+        return source.Select(rate => Sweep.Load(SweepFile, rate));
+    }
+}
+
+[Combinator]
+[Description("Checks the task at Go and makes what the trials are drawn from. Input: (task file, TrainingStage, rig.yml, sweep). Stops the workflow on a stage past the table, a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
+[WorkflowElementCategory(ElementCategory.Transform)]
+public class CreateCorridorSetup
+{
+    public IObservable<CorridorSetup> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, LabRig, Sweep>> source)
+    {
+        return source.Select(x => CorridorSetup.Create(x.Item1.TaskParameters, x.Item2, x.Item4, x.Item3.Zapit.HardwareTriggered, null));
     }
 }
 

@@ -31,7 +31,7 @@ Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `
 | `src\Extensions\Corridor.cs` | The task: each trial's draw (`TrialDraw`), its interval, quiet wait and run along the virtual track (`VirtualTrack`, `CorridorState`) on the Harp clock, its outcome and row (`CreateTrialRow`), all tested in `tests\Extensions.Tests` |
 | `config\task-abstract-av-corridor.yml` | The task file rig-control copies at launch (read at Start for the background noise) and again at Go with the form's edits |
 | `schemas\trial-columns.yml` | What each `BonsaiData_Trial` column means |
-| `src\waveforms` | The tone pips, reward tone and background noise, each one channel at the loudness it plays at (the penalty sound is the lab's, from `OpenRigs.Audio`), and `sweep.json`, the sweep they were made for; made by `uv run generate-waveforms` and committed |
+| `src\waveforms` | The tone pips, reward tone and background noise, each one channel at the loudness it plays at (the penalty sound is the lab's, from `OpenRigs.Audio`), and `sweep.json`, the sweep they were made for and their rate (48 kHz), which must be rig.yml's `speakerArray.device.sampleRate` (the workflow stops at Start, naming both, if not); made by `uv run generate-waveforms` and committed |
 | `src\ucl_open_coen_dome_navigation` | The task model (`regenerate-schemas` makes `src\DataSchemas` and its C#; the rig model is lib-open-rigs' `open_rigs.rigs.lab_rig`, its C# OpenRigs.Devices' and its template open-rigs' `rigs\rig-template.yml`), waveforms, stage suggestion |
 | `local_packages` | The lab's OpenRigs packages from `Coen-Lab/lib-open-rigs`; never edited here |
 
