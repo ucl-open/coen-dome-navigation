@@ -1,10 +1,10 @@
 # Third-party notices
 
-`local_packages/` carries packages that are not on nuget.org. Each is redistributed under its own licence, given below.
+`local_packages/` carries packages that are not on nuget.org, redistributed under the licence below.
 
-## OpenRigs.Core, OpenRigs.Devices, OpenRigs.Logging, OpenRigs.Streaming, OpenRigs.Video
+## OpenRigs packages
 
-`local_packages/OpenRigs.*.0.1.0-bbox.1.nupkg` are built from [open-rigs](https://github.com/open-rigs/open-rigs) at `3788bfbb0946bd5a8e5ade321da9815cc1ff1c07` with the two camera fixes that are commits on the lab's fork, [lib-open-rigs](https://github.com/Coen-Lab/lib-open-rigs) (see its `patches/README.md`). They are redistributed under the open-rigs BSD 3-Clause License:
+Every `local_packages/OpenRigs.*.nupkg` is built from the Coen Lab's [lib-open-rigs](https://github.com/Coen-Lab/lib-open-rigs), the lab's fork of [open-rigs](https://github.com/open-rigs/open-rigs): patched builds of open-rigs' packages (its `patches/README.md`) and the lab's own. Each package carries lib-open-rigs' `LICENSE`, the open-rigs BSD 3-Clause License, under which they are redistributed:
 
 ```
 BSD 3-Clause License
@@ -35,32 +35,4 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
-
-## OpenRigs.Control, OpenRigs.LiveView
-
-`local_packages/OpenRigs.Control.0.1.0-local.3.nupkg` and `local_packages/OpenRigs.LiveView.0.1.0-local.2.nupkg` are built from the Coen Lab's [lib-open-rigs](https://github.com/Coen-Lab/lib-open-rigs) with its `scripts\build-package.ps1`. They are redistributed under its MIT License:
-
-```
-MIT License
-
-Copyright (c) 2026 Coen Lab, University College London
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 ```
