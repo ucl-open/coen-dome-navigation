@@ -10,6 +10,10 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 - Deleted what nothing used: the `pydantic-settings` dependency (`pyyaml` is a dev one, for the tests), `MAX_STAGE`, `STAGE_COUNT`, the unused `gl` xmlns, the CI's `--with` packages the dev group already has, and stale BACKLOG lines. `TrialStructure` and `Truncation` are lib-open-rigs `TaskBlock`s, so the task file refuses inf and NaN in them as in every lab block (the schema is unchanged; test), and `laserMaxSeconds`' own finite check went, as `Optogenetics` already refuses it. A test runs lib-open-rigs' `fixed_width_pulses_on_reward_valves` against the lab's rig template.
 
+## Audit cycle 5 (15 Nov 2026)
+
+- Tests now fail when a task field is not regenerated into the C# (`Generated.cs` names every schema field) and when a `trainingStages` row is added without raising TrainingStage's `Maximum`. check-workflow sees ReadLabRig's `ConfigRoot` again (lib-open-rigs bb1b388, 4 nodes), so the test of it holds only the root's value to the lab's.
+
 ## 2026-11-15 The background noise from Ready (Pip)
 
 - **Changed for the mice:** the background noise starts at Ready, not Go, faded in over 2 s. Ready waits for the mixer (RigHardware's `ReadyWaitsFor`: `HarpClockSet, SpoutsHomed, MixerStarted`), so the noise never reaches the mixer before it starts. Its level is the task file's as rig-control wrote it at launch, read at Start (`LaunchTaskConfig`) and checked then to peak under -1 dBFS; the stimuli and penalty sound still take theirs at Go.

@@ -1,5 +1,6 @@
 import json
 import math
+import re
 from pathlib import Path
 
 import jsonschema
@@ -181,6 +182,25 @@ def test_the_committed_task_schema_is_the_model_s():
         by_alias=True, mode="serialization", union_format="primitive_type_array"
     )
     assert json.loads(SCHEMA.read_text(encoding="utf-8")) == json.loads(json.dumps(model))
+
+
+def _property_names(node) -> set[str]:
+    if isinstance(node, dict):
+        return set(node.get("properties", {})) | {n for v in node.values() for n in _property_names(v)}
+    return {n for v in node for n in _property_names(v)} if isinstance(node, list) else set()
+
+
+def test_the_generated_csharp_has_every_schema_field():
+    # A field added to the model and schema but not regenerated into C# stops the workflow at Go: run regenerate-schemas.
+    generated = (ROOT / "src" / "Extensions" / "UclOpenCoenDomeNavigationTask.Generated.cs").read_text(encoding="utf-8")
+    names = set(re.findall(r'JsonPropertyAttribute\("([^"]+)"', generated))
+    assert names == _property_names(json.loads(SCHEMA.read_text(encoding="utf-8")))
+
+
+def test_training_stage_s_maximum_is_the_task_file_s_last_row():
+    # A row added to trainingStages is reachable only once ExperimentControl's TrainingStage Maximum (main.bonsai) says so.
+    declared = re.search(r"<Name>TrainingStage</Name>.*?<Maximum>(\d+)</Maximum>", (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig"), re.S)
+    assert int(declared.group(1)) == len(task()["taskParameters"]["trainingStages"]) - 1
 
 
 def test_a_reward_over_the_cap_is_refused():
