@@ -15,6 +15,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 ## Audit cycle 3 (15 Nov 2026)
 
 - RigSetup reads rig.yml with lib-open-rigs' `ReadLabRig` include (OpenRigs.Devices), the same steps the hand-built `ReadRigConfig` group, `DeserializeFromYaml`, `Take` and `RigConfigs` ran (proved headless: `RigConfigDirectory` and `RigConfigs` reach a sibling group, and a wrong `ConfigRoot` stops at Start naming it); a test holds its `ConfigRoot` to the other nodes', as check-workflow does not look inside an include.
+- The manifest hashes the three speakers' filters (`calibration\speaker-left.json`, `-right`, `-centre`), which the pips, reward tone and penalty sound are equalised with, as coen-dome-decision-making's already did (test); a missing one is a note, not a stop.
 
 ## 2026-11-15 The background noise from Ready (Pip)
 

@@ -48,6 +48,12 @@ def test_rig_yml_is_read_once_by_read_lab_rig_under_the_lab_s_root():
     assert set(re.findall(r"<(?:\w+:)?ConfigRoot>([^<]*)</", TEXT)) == {r"C:\Coen-Lab-Local\RigConfigs"}
 
 
+def test_the_manifest_records_the_speaker_filters():
+    # The pips, reward tone and penalty sound are equalised with rig.yml's speaker filters, so the manifest hashes them, as coen-dome-decision-making's does.
+    files = re.search(r"<mf:ConfigFiles>([^<]*)<", TEXT).group(1).split(";")
+    assert {rf"C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\speaker-{side}.json" for side in ("left", "right", "centre")} <= set(files)
+
+
 def test_the_launch_properties():
     # No MissingCalibration: a reward valve without a calibration always stops the workflow (Pip, 15 Nov 2026).
     top = MAIN.find(W + "Workflow").find(W + "Nodes")
