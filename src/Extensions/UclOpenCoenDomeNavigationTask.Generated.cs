@@ -167,11 +167,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The background noise's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -50. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation
+        /// The background noise's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -50. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute(@"The background noise's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -50. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation")]
+        [System.ComponentModel.DescriptionAttribute(@"The background noise's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -50. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
         public double LevelDbfs
         {
             get
@@ -608,11 +608,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The penalty sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation
+        /// The penalty sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute(@"The penalty sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation")]
+        [System.ComponentModel.DescriptionAttribute(@"The penalty sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
         public double LevelDbfs
         {
             get
@@ -680,11 +680,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The reward tone's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -36. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation
+        /// The reward tone's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -36. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute(@"The reward tone's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -36. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation")]
+        [System.ComponentModel.DescriptionAttribute(@"The reward tone's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -36. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
         public double LevelDbfs
         {
             get
@@ -752,11 +752,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Each stimulus sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation
+        /// Each stimulus sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute(@"Each stimulus sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation")]
+        [System.ComponentModel.DescriptionAttribute(@"Each stimulus sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
         public double LevelDbfs
         {
             get
