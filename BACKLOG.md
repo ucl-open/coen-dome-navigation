@@ -131,7 +131,7 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 
 ## Open
 
-- Migrate mice's stage history from the old av-dome / auditory-vr-corridor logs into current-format files once, then delete stage.py's old readers, the eartag-folder fallback, taskType's 'localization' fallback and the view's older_logs (Pip, 15 Nov 2026).
+- Old log readers deleted 15 Nov 2026 (Pip); migrating every mouse's past sessions into the current format is planned in its own session.
 
 ### To fix later (Tom, 10 Nov 2026)
 

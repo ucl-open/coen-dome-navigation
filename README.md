@@ -6,7 +6,7 @@ Converted on 9 Nov 2026 from `ucl-open/auditory-vr-corridor` (`main` b67a1f6 wit
 
 ## Running it
 
-From rig-control: choose the rig and the mouse (launched by its lab ID, such as `TC001`), then this workflow and `config\task-abstract-av-corridor.yml`. The form shows the task's Modality and Training Stage; the stage is suggested from the mouse's earlier experiments of that modality (`uv run suggest-stage --subject <lab ID> --modality auditory`, Tom's rules from `gen_session.py`, reading this workflow's data on the rig, in staging and in Live-Data, and the old TrialLogs). Launch puts the rig in ready mode (hardware armed, cameras on, spouts homed, the background noise on from Ready at the launched task file's level, nothing recorded); Go reads the task file and starts the trials once the experiment folder exists.
+From rig-control: choose the rig and the mouse (launched by its lab ID, such as `TC001`), then this workflow and `config\task-abstract-av-corridor.yml`. The form shows the task's Modality and Training Stage; the stage is suggested from the mouse's earlier experiments of that modality (`uv run suggest-stage --subject <lab ID> --modality auditory`, Tom's rules from `gen_session.py`, reading this workflow's data on the rig, in staging and in Live-Data; the old TrialLogs are not read since 15 Nov 2026). Launch puts the rig in ready mode (hardware armed, cameras on, spouts homed, the background noise on from Ready at the launched task file's level, nothing recorded); Go reads the task file and starts the trials once the experiment folder exists.
 
 What changed from Tom's workflow, and why, is in `BACKLOG.md` (Decided); the rig checks before the first optogenetics experiment are in `docs\zapit-rig-test.md`.
 

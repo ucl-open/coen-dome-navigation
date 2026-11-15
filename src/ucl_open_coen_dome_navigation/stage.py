@@ -1,13 +1,15 @@
 """The training stage to suggest for a mouse's next experiment, from its earlier ones of the same
 modality: Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
-unchanged, reading both this workflow's BonsaiData_Trial and the old workflow's TrialLog files.
+unchanged, reading this workflow's BonsaiData_Trial files, filed under sub-<lab ID>. The old workflow's
+TrialLog files (ShapingStage, WasRewarded) and folders named by eartag are not read: their readers were
+deleted on 15 Nov 2026 (Pip).
 
 Stages are the task file's trainingStages rows, from 0 (Pip, 9 Nov 2026: as av-dome's): Tom's stages 1
-to 6 are 0 to 5, and his old logs are read one lower. rig-control asks for it when a mouse and modality
+to 6 are 0 to 5. rig-control asks for it when a mouse and modality
 are chosen and fills the TrainingStage setting with it; the experimenter can change it before Go. As a
 command:
 
-    uv run suggest-stage --subject TC003 --modality auditory [--root DIR ...] [--legacy-root DIR ...]
+    uv run suggest-stage --subject TC003 --modality auditory [--root DIR ...]
 
 prints one JSON line, {"value": 3, "why": "..."}: the contract of rig-control's [task.suggest]. If
 a share among the roots does not answer, an experiment there cannot be read, or one has only its manifest
@@ -40,14 +42,9 @@ EARLY_ADVANCE_FROM = 2  # Tom's stage 3: stages 2 and 3 also advance on their fi
 
 # This workflow's experiments: on the rig until rig-sync copies them, then in the server's staging, then where
 # jacuzzi-ingest files them (Live-Data, <MACHINE>\sub-<lab ID>\ses-..., the project share's root). Folders are named
-# by the mouse's lab ID (plan v11), the SubjectId rig-control launches with, as the old TrialLogs' were.
+# by the mouse's lab ID (plan v11), the SubjectId rig-control launches with.
 LIVE_DATA = Path(r"\\rdp.arc.ucl.ac.uk\ritd-ag-project-rd01n9-pcoen00")
 ROOTS = [Path(r"C:\Coen-Lab-Local\Acquired-Data"), Path(r"\\128.40.51.157\rigs\staging"), LIVE_DATA]
-# The old workflow's TrialLogs: each rig's clone wrote Logs\, which was pushed to the project share.
-LEGACY_ROOTS = [
-    Path(r"C:\Github\Coen-Lab\auditory-vr-corridor\Logs"),
-    LIVE_DATA / "AV_VR_Corridor",
-]
 
 
 @dataclass
@@ -67,12 +64,8 @@ def _laser(e: "Experiment") -> list[bool]:
     return e.laser or [False] * len(e.rewarded)
 
 
-def _bool(text: str) -> bool:
-    return text.strip().lower() in ("true", "1")
-
-
 def _when(folder: str) -> str:
-    """ses-005D1_2026-11-04T10-00-00 and the old ses-A6_date-2026-08-05T10-00-00 both sort by their date."""
+    """ses-005D1_2026-11-04T10-00-00 sorts by its date."""
     m = re.search(r"(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})", folder)
     return m.group(1) if m else ""
 
@@ -80,10 +73,6 @@ def _when(folder: str) -> str:
 def _read(csv_file: Path) -> list[dict]:
     with open(csv_file, newline="", encoding="utf-8-sig") as f:
         return list(csv.DictReader(f))
-
-
-# Tom Childs' TrialLog wrote the modality as a code; the trial log and the task file now say it in words.
-LEGACY_MODALITY = {"A": "auditory", "V": "visual", "AV": "audiovisual"}
 
 
 def read_new(folder: Path) -> Experiment | None:
@@ -104,26 +93,6 @@ def read_new(folder: Path) -> Experiment | None:
                       [r["outcome"] == "Correct" for r in rows],
                       [float(r.get("laserPowerMw") or 0) > 0 for r in rows],
                       any(int(float(r.get("laserCondition") or 0)) > 0 for r in rows))
-
-
-def read_legacy(folder: Path) -> Experiment | None:
-    """An experiment of the old workflow: its latest TrialLog_*.csv (columns Modality, ShapingStage, WasRewarded),
-    the modality in words and the stage one lower (Tom's 1 to 6 are 0 to 5)."""
-    logs = list(folder.glob("**/TrialLog_*.csv"))
-    if not logs:
-        return None
-    rows = _read(max(logs, key=lambda p: p.stat().st_mtime))
-    if not rows or "Modality" not in rows[0]:
-        return None
-    return Experiment(
-        folder.name,
-        _when(folder.name),
-        [LEGACY_MODALITY[r["Modality"]] for r in rows],
-        [int(r["ShapingStage"]) - 1 for r in rows],
-        [_bool(r["WasRewarded"]) for r in rows],
-        [_bool(r.get("OptogeneticEnabled") or "") for r in rows],  # auditory-vr-corridor's zapit-integration-v2 TrialLog
-        any(int(float(r.get("OptogeneticCondition") or 0)) > 0 for r in rows),
-    )
 
 
 def unanswered(root: Path) -> bool:
@@ -147,51 +116,49 @@ def ours(manifest: Path) -> bool:
     return not repo or "coen-dome-navigation" in repo
 
 
-def _subject_folders(base: Path, subject: str, unread: list[str] | None, eartag: str = "") -> list[Path]:
+def _subject_folders(base: Path, subject: str, unread: list[str] | None) -> list[Path]:
     """The mouse's experiment folders under one root; none, and the root added to `unread`, if it does not answer."""
     try:
         if unanswered(base):
             raise OSError(base)
-        names = [n for n in dict.fromkeys((subject, eartag)) if n]  # runs before 13 Nov 2026 were filed under the eartag
-        return [f for n in names for f in (*base.glob(f"sub-{n}/ses-*"), *base.glob(f"*/sub-{n}/ses-*"))]
+        return [*base.glob(f"sub-{subject}/ses-*"), *base.glob(f"*/sub-{subject}/ses-*")]
     except OSError:
         if unread is not None:
             unread.append(f"{base} (No Answer)")
         return []
 
 
-def experiments(subject: str, roots: list[Path], legacy_roots: list[Path], unread: list[str] | None = None, eartag: str = "") -> list[Experiment]:
+def experiments(subject: str, roots: list[Path], unread: list[str] | None = None) -> list[Experiment]:
     """Every experiment of the mouse in the roots, newest first; a folder seen twice (on the rig and in
     staging) counts once. A share that does not answer is added to `unread`, as is an experiment of
     this workflow with only its manifest left and its data in none of the roots."""
     found: dict[str, Experiment] = {}
     manifest_only: list[str] = []
-    for reader, bases in ((read_new, roots), (read_legacy, legacy_roots)):
-        for base in bases:
-            for folder in _subject_folders(base, subject, unread, eartag):
-                if folder.name in found or not folder.is_dir():
+    for base in roots:
+        for folder in _subject_folders(base, subject, unread):
+            if folder.name in found or not folder.is_dir():
+                continue
+            if (folder / "manifest.json").is_file():
+                if not ours(folder / "manifest.json"):
+                    # Another workflow's experiment never decides: av-dome's trial log has trialType
+                    # (visual, auditory) and outcome too, so it read as this task's (audit, 10 Nov 2026, round 5).
                     continue
-                if reader is read_new and (folder / "manifest.json").is_file():
-                    if not ours(folder / "manifest.json"):
-                        # Another workflow's experiment never decides: av-dome's trial log has trialType
-                        # (visual, auditory) and outcome too, so it read as this task's (audit, 10 Nov 2026, round 5).
-                        continue
-                    if not (folder / "BonsaiData").is_dir():
-                        # Ingested: staging keeps only the manifest, so an older experiment would decide
-                        # (audit round 2, 9 Nov 2026). Every experiment writes BonsaiData (Go is logged).
-                        # Said only once every root is read, if its data is in none (an ingest
-                        # destination among the roots, in any order) (audit round 3).
-                        manifest_only.append(folder.name)
-                        continue
-                try:
-                    e = reader(folder)
-                except (OSError, ValueError, KeyError) as error:
-                    # Never passed over unseen: it may be the experiment that decides (plan v11, fail loudly)
-                    if unread is not None:
-                        unread.append(f"{folder.name} (Unreadable: {type(error).__name__})")
+                if not (folder / "BonsaiData").is_dir():
+                    # Ingested: staging keeps only the manifest, so an older experiment would decide
+                    # (audit round 2, 9 Nov 2026). Every experiment writes BonsaiData (Go is logged).
+                    # Said only once every root is read, if its data is in none (an ingest
+                    # destination among the roots, in any order) (audit round 3).
+                    manifest_only.append(folder.name)
                     continue
-                if e is not None:
-                    found[folder.name] = e
+            try:
+                e = read_new(folder)
+            except (OSError, ValueError, KeyError) as error:
+                # Never passed over unseen: it may be the experiment that decides (plan v11, fail loudly)
+                if unread is not None:
+                    unread.append(f"{folder.name} (Unreadable: {type(error).__name__})")
+                continue
+            if e is not None:
+                found[folder.name] = e
     if unread is not None:
         unread.extend(f"{name} (Only Its Manifest Is Left)" for name in dict.fromkeys(manifest_only) if name not in found)
     return sorted(found.values(), key=lambda e: e.when, reverse=True)
@@ -246,13 +213,11 @@ def main() -> None:
     """Print the suggestion for --subject and --modality as one JSON line."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--subject", required=True)
-    parser.add_argument("--eartag", default="", help="also search sub-<eartag>: runs before 13 Nov 2026 were filed under it")
     parser.add_argument("--modality", required=True, choices=["auditory", "visual", "audiovisual"])
     parser.add_argument("--root", action="append", type=Path, help="where this workflow's experiments are (repeatable)")
-    parser.add_argument("--legacy-root", action="append", type=Path, help="where the old workflow's Logs are (repeatable)")
     args = parser.parse_args()
     unread: list[str] = []
-    history = experiments(args.subject, args.root or ROOTS, args.legacy_root or LEGACY_ROOTS, unread, args.eartag)
+    history = experiments(args.subject, args.root or ROOTS, unread)
     if unread:
         # The mouse's history may be there alone (a rig keeps its copy 72 h): no guess (audit, 9 Nov 2026,
         # a trained mouse was offered Stage 1).

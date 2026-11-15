@@ -65,19 +65,17 @@ def write_new(folder: Path, stage: int, rows: list[list], header=("trialType", "
     (folder / "Settings" / "Settings_Experiment_x.json").write_text(json.dumps(settings), encoding="utf-8")
 
 
-def test_new_and_old_experiments_are_read_newest_first(tmp_path):
-    new, old = tmp_path / "data", tmp_path / "Logs"
-    write_new(new / "sub-TC9" / "ses-002D1_2026-11-10T09-00-00", 2,
-              [[1.0, i + 1, "auditory", "Correct"] for i in range(60)], ("Seconds", "trialNumber", "trialType", "outcome"))
-    write(
-        old / "sub-TC9" / "ses-A6_date-2026-10-01T09-00-00" / "TrialLog_A6_TC9" / "TrialLog_A6_TC9_x.csv",
-        ["Modality", "ShapingStage", "WasRewarded"],
-        [["A", 2, "True"] for _ in range(60)],
-    )
-    found = experiments("TC9", [new], [old])
-    assert [e.name for e in found] == ["ses-002D1_2026-11-10T09-00-00", "ses-A6_date-2026-10-01T09-00-00"]
-    assert found[1].stage[0] == 1 and found[1].modality[0] == "auditory"  # Tom's stage 2, his A, read as row 1
-    assert suggest(found, "auditory")[0] == 3
+def test_an_old_format_experiment_is_not_read(tmp_path):
+    # Pip, 15 Nov 2026: the old readers are deleted. auditory-vr-corridor's TrialLog (ShapingStage, WasRewarded) and a
+    # folder named by eartag are not read; this workflow's experiment under the lab ID is.
+    write(tmp_path / "sub-TC9" / "ses-A6_date-2026-10-01T09-00-00" / "TrialLog_A6_TC9" / "TrialLog_A6_TC9_x.csv",
+          ["Modality", "ShapingStage", "WasRewarded"], [["A", 2, "True"] for _ in range(60)])
+    rows, head = [[1.0, i + 1, "auditory", "Correct"] for i in range(60)], ("Seconds", "trialNumber", "trialType", "outcome")
+    write_new(tmp_path / "sub-PCO1-01503" / "ses-001D1_2026-11-09T09-00-00", 1, rows, head)
+    unread = []
+    assert experiments("TC9", [tmp_path], unread) == [] and unread == []
+    write_new(tmp_path / "sub-TC9" / "ses-002D1_2026-11-10T09-00-00", 2, rows, head)
+    assert [e.name for e in experiments("TC9", [tmp_path])] == ["ses-002D1_2026-11-10T09-00-00"]
 
 
 def test_a_share_that_does_not_answer_gives_no_stage(tmp_path, monkeypatch, capsys):
@@ -87,7 +85,7 @@ def test_a_share_that_does_not_answer_gives_no_stage(tmp_path, monkeypatch, caps
     share = Path(r"\\server\rigs\staging")
     monkeypatch.setattr(stage, "unanswered", lambda root: root == share)
     monkeypatch.setattr("sys.argv", ["suggest-stage", "--subject", "TC9", "--modality", "auditory",
-                                     "--root", str(tmp_path), "--root", str(share), "--legacy-root", str(tmp_path)])
+                                     "--root", str(tmp_path), "--root", str(share)])
     stage.main()
     answer = json.loads(capsys.readouterr().out)
     assert answer["value"] is None and str(share) in answer["why"]
@@ -99,7 +97,7 @@ def test_an_experiment_with_only_its_manifest_left_gives_no_stage(tmp_path):
     folder.mkdir(parents=True)
     (folder / "manifest.json").write_text("{}", encoding="utf-8")
     unread = []
-    assert experiments("TC9", [tmp_path], [], unread) == []
+    assert experiments("TC9", [tmp_path], unread) == []
     assert unread == ["ses-003D1_2026-11-12T09-00-00 (Only Its Manifest Is Left)"]
 
 
@@ -114,7 +112,7 @@ def test_an_ingested_experiment_whose_data_is_in_another_root_is_read_in_any_ord
     write_new(destination / "sub-TC9" / name, 3, [["auditory", "Correct"]] * 100)
     unread = []
     roots = [destination, staging] if destination_first else [staging, destination]
-    found = experiments("TC9", roots, [], unread)
+    found = experiments("TC9", roots, unread)
     assert unread == [] and [e.name for e in found] == [name]
 
 
@@ -124,7 +122,7 @@ def test_another_workflow_s_ingested_experiment_never_decides(tmp_path):
     folder.mkdir(parents=True)
     (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/av-dome.git"}}), encoding="utf-8")
     unread = []
-    assert experiments("TC9", [tmp_path], [], unread) == [] and unread == []
+    assert experiments("TC9", [tmp_path], unread) == [] and unread == []
 
 
 def test_another_workflow_s_experiment_never_decides(tmp_path):
@@ -133,9 +131,9 @@ def test_another_workflow_s_experiment_never_decides(tmp_path):
     folder = tmp_path / "sub-TC9" / "ses-010_2026-11-12T09-00-00"
     write_new(folder, 3, [["visual", "Correct"]] * 80)
     (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/av-dome.git"}}), encoding="utf-8")
-    assert experiments("TC9", [tmp_path], []) == []
+    assert experiments("TC9", [tmp_path]) == []
     (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/coen-dome-navigation.git"}}), encoding="utf-8")
-    assert [e.name for e in experiments("TC9", [tmp_path], [])] == [folder.name]
+    assert [e.name for e in experiments("TC9", [tmp_path])] == [folder.name]
 
 
 def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
@@ -146,7 +144,7 @@ def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
 
 def test_a_rig_folder_under_staging_is_read(tmp_path):
     write_new(tmp_path / "BLUE-OPTO-2" / "sub-TC9" / "ses-001O2_2026-11-10T09-00-00", 1, [["visual", "Incorrect"]] * 50)
-    found = experiments("TC9", [tmp_path], [])
+    found = experiments("TC9", [tmp_path])
     assert len(found) == 1 and found[0].modality[0] == "visual" and not any(found[0].rewarded)
     assert found[0].stage == [1] * 50
 
@@ -178,9 +176,9 @@ def test_the_opto_columns_are_read(tmp_path):
 
 def test_the_ingest_destination_is_a_root():
     # Plan v11: once jacuzzi-ingest clears staging, the experiment is only in Live-Data (<MACHINE>\sub-<lab ID>\ses-...).
-    from ucl_open_coen_dome_navigation.stage import LEGACY_ROOTS, LIVE_DATA, ROOTS
+    from ucl_open_coen_dome_navigation.stage import LIVE_DATA, ROOTS
 
-    assert LIVE_DATA in ROOTS and LEGACY_ROOTS[-1].parent == LIVE_DATA
+    assert LIVE_DATA in ROOTS
 
 
 def test_an_unreadable_experiment_gives_no_stage(tmp_path):
@@ -188,14 +186,6 @@ def test_an_unreadable_experiment_gives_no_stage(tmp_path):
     folder = tmp_path / "GREEN-DOME-1" / "sub-TC9" / "ses-004D1_2026-11-13T09-00-00"
     write(folder / "BonsaiData" / "BonsaiData_Trial_x.csv", ["trialType", "outcome"], [["auditory", "Correct"]])
     unread = []
-    assert experiments("TC9", [tmp_path], [], unread) == []
+    assert experiments("TC9", [tmp_path], unread) == []
     assert unread == ["ses-004D1_2026-11-13T09-00-00 (Unreadable: FileNotFoundError)"]
 
-
-def test_runs_filed_under_the_eartag_are_found_when_it_is_given(tmp_path):
-    rows = [[1.0, i + 1, "auditory", "Correct"] for i in range(60)]
-    head = ("Seconds", "trialNumber", "trialType", "outcome")
-    write_new(tmp_path / "sub-TC9" / "ses-002D1_2026-11-10T09-00-00", 2, rows, head)
-    write_new(tmp_path / "sub-PCO1-01503" / "ses-001D1_2026-11-09T09-00-00", 1, rows, head)
-    assert len(experiments("TC9", [tmp_path], [])) == 1
-    assert len(experiments("TC9", [tmp_path], [], eartag="PCO1-01503")) == 2
