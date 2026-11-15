@@ -135,8 +135,8 @@ public class CorridorTrial
     public double timeLimitSeconds;     // from the first pip; NaN: none
     public bool trackEndEndsTrial;
     public bool frequencyDrift;
-    public int firstPipBeep;            // the lead, max(laserToStimulusSeconds, 0), in beeps after Go (beep 0), in every experiment
-    public int triggerBeep;             // the trigger's beep after Go: firstPipBeep - laserToStimulusSeconds in beeps; optogenetics only
+    public int firstPipBeep;            // the lead, max(laserToStimulusSeconds, 0), in beeps after the trial start (beep 0), in every experiment
+    public int triggerBeep;             // the trigger's beep after the trial start: firstPipBeep - laserToStimulusSeconds in beeps; optogenetics only
     public bool optogenetics;
     public bool armZapit;               // hardware-triggered Zapit: armed during the interval, before the trigger
     public int laserCondition;          // 0 without optogenetics
@@ -181,7 +181,7 @@ public class CorridorSetup
         var setup = new CorridorSetup { Task = task, TrainingStage = stage, Stage = task.TrainingStages[stage], Sweep = sweep, HardwareTriggered = hardwareTriggered };
         var row = setup.Stage;
         var problems = new List<string>();
-        // A NaN or infinite value (YAML's .nan or .inf) would hold Go or a penalty timeout for ever, with no error.
+        // A NaN or infinite value (YAML's .nan or .inf) would hold the trial start or a penalty timeout for ever, with no error.
         Action<string, double, bool> number = (name, value, aboveZero) =>
         {
             if (!(aboveZero ? value > 0 : value >= 0) || double.IsInfinity(value)) problems.Add(name + (aboveZero ? " must be a finite number above 0" : " must be a finite number, 0 or more"));
@@ -194,7 +194,7 @@ public class CorridorSetup
         number("stage '" + row.Label + "''s lickQuietSeconds", row.LickQuietSeconds, false);
         number("stage '" + row.Label + "''s wheelQuietSeconds", row.WheelQuietSeconds, false);
         number("stage '" + row.Label + "''s wheelQuietCm", row.WheelQuietCm, false);
-        // A long quiet wait and a licking mouse would hold Go with no message (Pip, 15 Nov 2026).
+        // A long quiet wait and a licking mouse would hold the trial start with no message (Pip, 15 Nov 2026).
         Action<string, double, double, string> atMost = (name, value, max, unit) =>
         {
             if (value > max) problems.Add(string.Format("stage '{0}''s {1} ({2} {3}) must be at most {4} {3}", row.Label, name, value, unit, max));
@@ -205,7 +205,7 @@ public class CorridorSetup
         number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
         if (row.TimeLimitSeconds.HasValue) number("stage '" + row.Label + "''s timeLimitSeconds", row.TimeLimitSeconds.Value, true);
         if ((row.WheelQuietSeconds > 0) != (row.WheelQuietCm > 0)) problems.Add("stage '" + row.Label + "' needs wheelQuietSeconds and wheelQuietCm both above 0 (the wheel's quiet wait) or both 0 (off)");
-        // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after Go in every experiment, the
+        // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
         // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
         // with Zapit's reply margin, and no later after it than the stage's time limit.
         var lead = task.Optogenetics.LaserToStimulusSeconds;
@@ -309,7 +309,7 @@ public class TrialDraw
 public enum CorridorEventKind
 {
     Arm,        // during the interval: send the trial's StartStimulus to a hardware-triggered Zapit
-    Start,      // Go, beep 0: the trial starts
+    Start,      // beep 0: the trial starts
     Trigger,    // optogenetics: laserToStimulusSeconds before the first pip, the trigger line up (a software-triggered Zapit's StartStimulus)
     Pip,        // a beep with the stimulus on: the tone pip and grating frame
     Outcome,    // the trial ended: its row, the reward or penalty
@@ -383,8 +383,8 @@ public class TrialRow
 /// The task's state from one trial to the next, driven by the Harp clock, the wheel, the left lick detector and
 /// Zapit's replies; every wait is on the Harp clock. A trial (Pip, 13 Nov 2026): its interval from the last outcome
 /// (after any timeout; trial 1 from the first clock tick), during which a hardware-triggered Zapit is armed (once the
-/// last trial's trigger line has fallen); Go (beep 0) at the interval's end less the lead, max(laserToStimulusSeconds, 0),
-/// or later until the stage's quiet waits hold; the first pip the lead after Go and the trigger laserToStimulusSeconds
+/// last trial's trigger line has fallen); the trial start (beep 0) at the interval's end less the lead, max(laserToStimulusSeconds, 0),
+/// or later until the stage's quiet waits hold; the first pip the lead after the trial start and the trigger laserToStimulusSeconds
 /// before it (a reply not in by then stops the task); beeps every 50 ms until the outcome; then the penalty timeout.
 /// </summary>
 public class CorridorState

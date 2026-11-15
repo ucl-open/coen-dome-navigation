@@ -254,7 +254,7 @@ public class TrialDrawTests
         Fixture.Opto(ok);
         ok.Optogenetics.LaserToStimulusSeconds = 0.2;
         Assert.AreEqual(4, new TrialDraw(Fixture.Setup(ok, 4)).Next().firstPipBeep);
-        ok.Optogenetics.LaserToStimulusSeconds = -0.5;   // after the first pip: the first pip at Go, the trigger 10 beeps later
+        ok.Optogenetics.LaserToStimulusSeconds = -0.5;   // after the first pip: the first pip at the trial start, the trigger 10 beeps later
         var late = new TrialDraw(Fixture.Setup(ok, 4)).Next();
         Assert.IsTrue(late.firstPipBeep == 0 && late.triggerBeep == 10);
         ok.Optogenetics.LaserToStimulusSeconds = -12.05;  // past stage 4's 12 s limit
@@ -361,7 +361,7 @@ public class CorridorStateTests
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 1));
         rig.Now = 100;
         var start = rig.RunTo(CorridorEventKind.Start);
-        Assert.AreEqual(100.001 + start.Trial.itiSeconds - 0.1, start.Seconds, 1e-9);   // Go: the interval's end less the 0.1 s lead
+        Assert.AreEqual(100.001 + start.Trial.itiSeconds - 0.1, start.Seconds, 1e-9);   // the trial start: the interval's end less the 0.1 s lead
         rig.Until(rig.Now + 1.0);
         var pips = rig.Events.Where(e => e.Kind == CorridorEventKind.Pip).Select(e => e.Seconds).ToList();
         Assert.AreEqual(100.001 + start.Trial.itiSeconds, pips[0], 0.0011);   // the first pip: exactly the interval after its start
@@ -433,25 +433,25 @@ public class CorridorStateTests
     public void TheQuietWaitRestartsWithEachLick()
     {
         var quiet = new Rig(Fixture.Setup(Fixture.Task(), 4));
-        var start = quiet.RunTo(CorridorEventKind.Start);   // a quiet mouse: Go at the interval's end less the lead
+        var start = quiet.RunTo(CorridorEventKind.Start);   // a quiet mouse: the start at the interval's end less the lead
         var iti = start.Trial.itiSeconds;
         Assert.AreEqual(0.001 + iti - 0.1, start.Seconds, 1e-9);
         var r = new Rig(Fixture.Setup(Fixture.Task(), 4));
         r.Until(Math.Round(0.001 + iti - 0.5, 3));
-        r.Lick();                                           // licked late in the interval: Go a quiet second later
+        r.Lick();                                           // licked late in the interval: the start a quiet second later
         r.Until(Math.Round(r.Now + 0.3, 3));
         r.Lick();                                           // and again
-        var go = r.RunTo(CorridorEventKind.Start);
-        Assert.AreEqual(Math.Round(0.001 + iti - 0.5, 3) + 0.3 + 1.0, go.Seconds, 1e-9);
-        rig_quiet_wait(r, go);
+        var started = r.RunTo(CorridorEventKind.Start);
+        Assert.AreEqual(Math.Round(0.001 + iti - 0.5, 3) + 0.3 + 1.0, started.Seconds, 1e-9);
+        rig_quiet_wait(r, started);
     }
 
-    static void rig_quiet_wait(Rig r, CorridorEvent go)
+    static void rig_quiet_wait(Rig r, CorridorEvent started)
     {
         r.Wheel(1000);   // the end of the track ends the trial
         var outcome = r.Events.Single(e => e.Kind == CorridorEventKind.Outcome);
-        Assert.AreEqual(go.Seconds - (go.Trial.itiSeconds - 0.1 + 0.001), outcome.Row.quietWaitSeconds, 1e-9);
-        Assert.AreEqual(go.Seconds, outcome.Row.trialStartTime, 1e-12);
+        Assert.AreEqual(started.Seconds - (started.Trial.itiSeconds - 0.1 + 0.001), outcome.Row.quietWaitSeconds, 1e-9);
+        Assert.AreEqual(started.Seconds, outcome.Row.trialStartTime, 1e-12);
     }
 
     [TestMethod]
@@ -470,11 +470,11 @@ public class CorridorStateTests
         rock.Until(Math.Round(iti - 0.5, 3));
         rock.Wheel(50.6);                                   // 0.6 cm forward: within 1 cm
         rock.Until(Math.Round(iti - 0.3, 3));
-        rock.Wheel(50.0);                                   // and back: net 0, 1.2 cm within a second, so Go a second after the first swing
-        var go = rock.RunTo(CorridorEventKind.Start);
-        Assert.AreEqual(Math.Round(iti - 0.5, 3) + 1.0, go.Seconds, 1e-9);
+        rock.Wheel(50.0);                                   // and back: net 0, 1.2 cm within a second, so the start a second after the first swing
+        var started = rock.RunTo(CorridorEventKind.Start);
+        Assert.AreEqual(Math.Round(iti - 0.5, 3) + 1.0, started.Seconds, 1e-9);
 
-        // 0.3 cm every 0.4 s up to Go: past 1 cm in all, never more than 0.9 cm within a second, so no delay.
+        // 0.3 cm every 0.4 s up to the start: past 1 cm in all, never more than 0.9 cm within a second, so no delay.
         var fidget = new Rig(Fixture.Setup(task, 1));
         fidget.Wheel(50);
         for (int i = 1; i <= 4; i++)
@@ -486,14 +486,14 @@ public class CorridorStateTests
     }
 
     [TestMethod]
-    public void AHeldContactHoldsGoUntilReleased()
+    public void AHeldContactHoldsTheTrialStartUntilReleased()
     {
         var r = new Rig(Fixture.Setup(Fixture.Task(), 4));  // lickQuietSeconds 1
         var iti = new Rig(Fixture.Setup(Fixture.Task(), 4)).RunTo(CorridorEventKind.Start).Trial.itiSeconds;
         r.Until(0.5);
         r.Events.AddRange(r.State.OnLick(true));            // a paw on the spout, held past the interval's end
         r.Until(Math.Round(iti + 2, 3));
-        Assert.IsFalse(r.Events.Any(e => e.Kind == CorridorEventKind.Start), "no Go while the spout is held");
+        Assert.IsFalse(r.Events.Any(e => e.Kind == CorridorEventKind.Start), "no trial start while the spout is held");
         r.Events.AddRange(r.State.OnLick(false));
         Assert.AreEqual(Math.Round(iti + 2, 3) + 1.0, r.RunTo(CorridorEventKind.Start).Seconds, 1e-9);
     }
@@ -703,7 +703,7 @@ public class CorridorStateTests
         var rig = new Rig(Fixture.Setup(task, 2, false));
         var start = rig.RunTo(CorridorEventKind.Start);
         var cap = rig.RunTo(CorridorEventKind.LaserCap);
-        Assert.AreEqual(start.Seconds + 12.5, cap.Seconds, 0.0011);   // from the trigger, at Go with the 0.1 s lead
+        Assert.AreEqual(start.Seconds + 12.5, cap.Seconds, 0.0011);   // from the trigger, at the trial start with the 0.1 s lead
     }
 
     [TestMethod]

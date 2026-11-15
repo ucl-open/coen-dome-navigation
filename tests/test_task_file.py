@@ -180,7 +180,7 @@ def test_the_task_s_own_blocks_refuse_inf_and_nan(block, key, value):
 
 @pytest.mark.parametrize("key, value, pair", [("lickQuietSeconds", 10.5, None), ("wheelQuietSeconds", 10.5, ("wheelQuietCm", 1)), ("wheelQuietCm", 20.5, ("wheelQuietSeconds", 1))])
 def test_a_quiet_wait_above_its_maximum_is_refused(key, value, pair):
-    # Pip, 15 Nov 2026: a long wait and a licking mouse would hold Go with no message. Corridor.cs refuses it at Go too.
+    # Pip, 15 Nov 2026: a long wait and a licking mouse would hold the trial start with no message. Corridor.cs refuses it at Go too.
     doc = task()
     row = doc["taskParameters"]["trainingStages"][4]
     row[key] = value

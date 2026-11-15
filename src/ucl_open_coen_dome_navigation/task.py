@@ -23,7 +23,7 @@ BEEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (Corridor
 LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
 MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole beeps (Corridor.cs MaxLeadSeconds)
 NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without timeLimitSeconds (Corridor.cs)
-MAX_QUIET_SECONDS = 10.0  # the longest quiet wait (Pip, 15 Nov 2026): a longer one and a licking mouse would hold Go with no message (Corridor.cs MaxQuietSeconds)
+MAX_QUIET_SECONDS = 10.0  # the longest quiet wait (Pip, 15 Nov 2026): a longer one and a licking mouse would hold the trial start with no message (Corridor.cs MaxQuietSeconds)
 MAX_WHEEL_QUIET_CM = 20.0  # under one turn of the 75 mm wheel (23.6 cm): a full turn within the wait is running, not stillness (Corridor.cs MaxWheelQuietCm)
 
 SWEEP_FILE = Path(__file__).resolve().parents[1] / "waveforms" / "sweep.json"  # src/waveforms/sweep.json

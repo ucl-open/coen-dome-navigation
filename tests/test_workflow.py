@@ -264,8 +264,8 @@ def test_no_fixed_width_pulse_reaches_a_reward_valve():
     assert rig.reward_valve_lines() and lint.fixed_width_pulses_on_reward_valves(WORKFLOW, rig.reward_valve_lines()) == []
 
 
-def test_the_rng_seed_is_logged_at_trial_1s_go():
-    # Once, at TaskLogic's top level from the first trial's Start (its Go), as coen-dome-decision-making; the Take after the multicast.
+def test_the_rng_seed_is_logged_at_trial_1s_start():
+    # Once, at TaskLogic's top level from the first trial's Start, as coen-dome-decision-making; the Take after the multicast.
     nodes, edges = lint.scope(WORKFLOW.named("TaskLogic"))
     (seed,) = [i for i, n in enumerate(nodes) if n.findtext(lint.W + "Name") == "RngSeed"]
     (start,) = [a for a, b, _ in edges if b == seed]

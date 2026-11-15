@@ -1038,7 +1038,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\Corridor.cs, tests\Extensions.Tests): CorridorTask draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it at Go (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after Go, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), raises the ZapitTrigger line (and on a software-triggered rig sends the StartStimulus) in an optogenetics experiment only, and CorridorTask stops the task if Zapit has not answered by then; Pip plays the pip and sets the grating; Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the penalty sound, and in an optogenetics experiment clears the trigger line triggerHoldSeconds later (HarpDelay). Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\Corridor.cs, tests\Extensions.Tests): CorridorTask draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), raises the ZapitTrigger line (and on a software-triggered rig sends the StartStimulus) in an optogenetics experiment only, and CorridorTask stops the task if Zapit has not answered by then; Pip plays the pip and sets the grating; Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the penalty sound, and in an optogenetics experiment clears the trigger line triggerHoldSeconds later (HarpDelay). Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -1441,7 +1441,7 @@
             </Expression>
             <Expression xsi:type="MemberSelector">
               <Name>RngSeed</Name>
-              <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once at trial 1's Go: the Take(1) is after the multicast, so the shared AsyncEvents subject never completes.</Description>
+              <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once at trial 1's start: the Take(1) is after the multicast, so the shared AsyncEvents subject never completes.</Description>
               <Selector>Trial.rngSeed</Selector>
             </Expression>
             <Expression xsi:type="Combinator">
@@ -1603,7 +1603,7 @@
             </Expression>
             <Expression xsi:type="rx:SelectMany">
               <Name>ExperimentLogs</Name>
-              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix: BonsaiData_Trial (LogTrial; one row per trial, built by CreateTrialRow when the outcome is known; columns in schemas\trial-columns.yml), BonsaiData_StimulusState (one row per pip), the cameras (OpenRigs.Logging LogCameras), the settings files (Settings_Rig, Settings_Task, Settings_Experiment) and Zapit's logs (OpenRigs.Devices Zapit.ZapitLogs: its replies, and Settings_ZapitConditions in an optogenetics experiment). The RngSeed event is TaskLogic's, at trial 1's Go.</Description>
+              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix: BonsaiData_Trial (LogTrial; one row per trial, built by CreateTrialRow when the outcome is known; columns in schemas\trial-columns.yml), BonsaiData_StimulusState (one row per pip), the cameras (OpenRigs.Logging LogCameras), the settings files (Settings_Rig, Settings_Task, Settings_Experiment) and Zapit's logs (OpenRigs.Devices Zapit.ZapitLogs: its replies, and Settings_ZapitConditions in an optogenetics experiment). The RngSeed event is TaskLogic's, at trial 1's start.</Description>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="SubscribeSubject">
