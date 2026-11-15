@@ -510,7 +510,7 @@ wheels = [
 [[package]]
 name = "swc-aeon"
 version = "0.2.1.dev7+g7cd561d38"
-source = { git = "https://github.com/SainsburyWellcomeCentre/aeon_api.git?branch=main#7cd561d382011b9fbdcafe827cd92a2804b6799f" }
+source = { git = "https://github.com/SainsburyWellcomeCentre/aeon_api.git?rev=7cd561d382011b9fbdcafe827cd92a2804b6799f#7cd561d382011b9fbdcafe827cd92a2804b6799f" }
 dependencies = [
     { name = "dotmap" },
     { name = "harp-python" },
@@ -573,7 +573,7 @@ dev = [
 requires-dist = [
     { name = "numpy" },
     { name = "open-rigs", git = "https://github.com/Coen-Lab/lib-open-rigs?rev=46efcc3892b36edcc321f39c05b9f488fbf5b239" },
-    { name = "swc-aeon", git = "https://github.com/SainsburyWellcomeCentre/aeon_api.git?branch=main" },
+    { name = "swc-aeon", git = "https://github.com/SainsburyWellcomeCentre/aeon_api.git?rev=7cd561d382011b9fbdcafe827cd92a2804b6799f" },
 ]
 
 [package.metadata.requires-dev]
