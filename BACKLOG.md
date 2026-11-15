@@ -2,6 +2,10 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## Audit round 2 of 3 (15 Nov 2026, stage C)
+
+- Nothing changed beyond the fixes: `scripts\deploy.ps1` uses `uv sync --locked` and exits 1 naming a failing uv step.
+
 ## 2026-11-15 One speaker mixer and sound levels (lib-open-rigs OpenRigs.Audio)
 
 - The mixer, its 3 s boot delay and the speakers (`Speakers`) are lib-open-rigs' `SpeakerMixer`, shared with coen-dome-decision-making; Ready, its 180 s `StartupWatchdog` and the cameras' start 2 s after Start are `RigHardware`'s. This repo keeps none of them.

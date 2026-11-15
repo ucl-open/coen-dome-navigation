@@ -15,9 +15,11 @@ if (Test-Path -Path ./.venv) {
     Remove-Item ./.venv -Recurse -Force
 }
 &uv venv
+if ($LASTEXITCODE -ne 0) { Write-Error "uv venv failed (exit code $LASTEXITCODE)."; exit 1 }
 .\.venv\Scripts\Activate.ps1
 Write-Output "Synchronizing environment..."
-&uv sync 
+&uv sync --locked
+if ($LASTEXITCODE -ne 0) { Write-Error "uv sync --locked failed (exit code $LASTEXITCODE)."; exit 1 }
 
 if (-not (Test-Path -Path src\Extensions)) {
     Write-Output "Creating bonsai extensions folder..."
