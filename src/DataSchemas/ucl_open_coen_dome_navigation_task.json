@@ -438,7 +438,7 @@
             "enabled": true,
             "levelDbfs": -50.0
           },
-          "description": "The background white noise (src/waveforms/background_noise.bin) on every speaker, from Go (open_rigs.core.task BackgroundNoise)"
+          "description": "The background white noise (src/waveforms/background_noise.bin) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)"
         },
         "positionStepCm": {
           "default": 1,

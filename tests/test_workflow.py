@@ -147,6 +147,32 @@ def test_the_background_noise_plays_unequalised_on_every_speaker():
     assert buffer.findtext(AUD + "Equalise") == "false" and not (buffer.findtext(AUD + "Channels") or "").strip()
 
 
+def test_the_background_noise_starts_at_ready_at_the_launch_s_level():
+    # Pip, 15 Nov 2026: the noise starts at Ready, not Go, at the level of the task file as launched (LaunchTaskConfig);
+    # its Ready is RigHardware's, the stages its ReadyWaitsFor names.
+    nodes, edges = _scope(group("Audio"))
+    sent = next(i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "BackgroundNoise")
+    upstream = _upstream(edges, sent)
+    names = {nodes[i].findtext(W + "Name") for i in upstream}
+    assert {"LaunchTaskConfig", "Ready"} <= names and "TaskConfig" not in names
+    # Ready's stages: HarpClockSet, SpoutsHomed (LickSpoutStage.Homed) and MixerStarted (SpeakerMixer's on ReadyStages).
+    ready_nodes, ready_edges = _scope(group("Ready"))
+    zip_ = next(i for i, n in enumerate(ready_nodes) if combinators(n) == ["rx:Zip"])
+    subjects = {ready_nodes[i].findtext(W + "Name") for i in _upstream(ready_edges, zip_) if ready_nodes[i].get(XSI) == "SubscribeSubject"}
+    assert subjects == {"HarpClockSet", "LickSpoutStage.Homed", "ReadyStages"}
+    hardware = next(e for e in MAIN.iter(W + "Expression") if e.get("Path") == "OpenRigs.Devices:RigHardware.bonsai")
+    assert hardware.findtext(W + "ReadyWaitsFor") == ", ".join(lint.READY_STAGES_WITH_MIXER) == "HarpClockSet, SpoutsHomed, MixerStarted"
+
+
+def test_go_stops_on_a_background_noise_changed_after_launch():
+    nodes, edges = _scope(group("Task"))
+    (stop,) = [i for i, n in enumerate(nodes) if "core:ThrowError" in combinators(n)]
+    labels = _labels(nodes, _upstream(edges, stop))
+    assert {"TaskConfig", "LaunchTaskConfig", "BackgroundNoiseChanged?"} <= set(labels)
+    read_at_go = next(i for i, n in enumerate(nodes) if n.get(XSI) == "rx:AsyncSubject" and n.findtext(W + "Name") == "TaskConfig")
+    assert "ExperimentGo" in _labels(nodes, _upstream(edges, read_at_go))
+
+
 def test_the_speakers_are_declared_before_every_user():
     # A GroupWorkflow does not scope subjects; keep the declaration ahead of its subscribers.
     nodes, _ = _scope(group("Audio"))

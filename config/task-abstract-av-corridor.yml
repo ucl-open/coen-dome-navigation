@@ -19,7 +19,7 @@ taskParameters:
     levelDbfs: -58.1
   rewardTone:
     levelDbfs: -55.1
-  backgroundNoise:            # white noise on every speaker, unequalised, faded in at Go
+  backgroundNoise:            # white noise on every speaker, unequalised, faded in at Ready at the level launched
     enabled: true
     levelDbfs: -64.1
   positionStepCm: 1           # the distance run is rounded to this before it sets the frequency

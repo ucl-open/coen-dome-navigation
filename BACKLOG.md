@@ -2,6 +2,12 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-15 The background noise from Ready (Pip)
+
+- **Changed for the mice:** the background noise starts at Ready, not Go, faded in over 2 s. Ready waits for the mixer (RigHardware's `ReadyWaitsFor`: `HarpClockSet, SpoutsHomed, MixerStarted`), so the noise never reaches the mixer before it starts. Its level is the task file's as rig-control wrote it at launch, read at Start (`LaunchTaskConfig`) and checked then to peak under -1 dBFS; the stimuli and penalty sound still take theirs at Go.
+- Go stops the workflow, saying so, if the form changed `backgroundNoise` (`enabled` or `levelDbfs`) after launch: the noise already plays at the launch's level. To play it at another level, launch again with a task file that has it.
+- `TaskFilePath` is published at Start (it was at Go); `TaskConfig` is still read at Go.
+
 ## Audit round 3 of 3 (15 Nov 2026)
 
 - The reward tone's and background noise's `SpeakerBuffer` `LevelDbfs` in `src\main.bonsai` are lib-open-rigs' defaults (-36 and -50 dBFS RMS, `SoundLevel`), not -30; the task file's `levelDbfs` sets each at Go, as before. The README says what `scripts\deploy.ps1` and `.bonsai\Setup.ps1` do.
@@ -124,6 +130,8 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 - `QuietWait` is the same class here and in coen-dome-decision-making's `TrialLogic.cs`: moving it into the fork needs a package bump pushed into every in-use workflow, and each copy is tested where it runs. Change both copies together; move it if a third workflow needs it.
 
 ## Open
+
+- Migrate mice's stage history from the old av-dome / auditory-vr-corridor logs into current-format files once, then delete stage.py's old readers, the eartag-folder fallback, taskType's 'localization' fallback and the view's older_logs (Pip, 15 Nov 2026).
 
 ### To fix later (Tom, 10 Nov 2026)
 

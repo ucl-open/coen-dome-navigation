@@ -159,7 +159,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         default=RewardTone(), description="The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
     )
     background_noise: BackgroundNoise = Field(
-        default=BackgroundNoise(), description="The background white noise (src/waveforms/background_noise.bin) on every speaker, from Go (open_rigs.core.task BackgroundNoise)"
+        default=BackgroundNoise(), description="The background white noise (src/waveforms/background_noise.bin) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)"
     )
     position_step_cm: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
     trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
