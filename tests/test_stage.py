@@ -1,10 +1,13 @@
-import csv
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
-from ucl_open_coen_dome_navigation.stage import Experiment, experiments, suggest
+from ucl_open_coen_dome_navigation.stage import Experiment, experiments, read_new, suggest
+
+STAGE_PY = Path(__file__).parents[1] / "src" / "ucl_open_coen_dome_navigation" / "stage.py"
 
 # Stages are trainingStages rows from 0: Tom Childs' stage n is n - 1 (Pip, 9 Nov 2026).
 
@@ -49,153 +52,138 @@ def test_the_rate_counts_every_trial_but_rewards_only_at_the_last_stage():
     assert suggest([e], "auditory")[0] == 0
 
 
-def write(path: Path, header: list[str], rows: list[list]):
+REPO = "https://github.com/ucl-open/coen-dome-navigation.git"
+DROPPED = ("itiStartTime", "trialStartTime", "laserTriggerTime")  # jacuzzi-ingest's drop list (records.md, "Session summaries")
+ROWS = [["auditory", "Correct"]] * 60
+
+
+def summary(session: str, run: str, stage: int | None, rows: list[list], columns=("trialType", "outcome"), repo=REPO, **extra) -> dict:
+    """A session summary as records.md v1 describes it, in the keys stage.py reads."""
+    s = {"version": 1, "run": run, "subject": "TC9", "session": session, "source": {"repo": repo, "commit": "abc"},
+         "trials": {"columns": list(columns), "rows": rows},
+         "Settings_Experiment": None if stage is None else {"parameters": {"TrainingStage": str(stage)}}}
+    return {**s, **extra}
+
+
+def put(root: Path, s: dict, subject: str = "TC9") -> Path:
+    path = root / f"sub-{subject}" / f"{s['session']}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(header)
-        w.writerows(rows)
+    path.write_text(json.dumps(s), encoding="utf-8")
+    return path
 
 
-def write_new(folder: Path, stage: int, rows: list[list], header=("trialType", "outcome")):
-    """An experiment of this workflow: its trial log, and its stage in Settings_Experiment as ExperimentSettings writes it."""
-    write(folder / "BonsaiData" / "BonsaiData_Trial_x.csv", list(header), rows)
-    (folder / "Settings").mkdir()
-    settings = {"subject_id": "TC9", "parameters": {"TrainingStage": str(stage)}}
-    (folder / "Settings" / "Settings_Experiment_x.json").write_text(json.dumps(settings), encoding="utf-8")
+def expect(root: Path, *runs: str) -> Path:
+    path = root.parent / f"{root.name}-expected.json"
+    path.write_text(json.dumps(list(runs)), encoding="utf-8")
+    return path
 
 
-def test_an_old_format_experiment_is_not_read(tmp_path):
-    # Pip, 15 Nov 2026: the old readers are deleted. auditory-vr-corridor's TrialLog (ShapingStage, WasRewarded) and a
-    # folder named by eartag are not read; this workflow's experiment under the lab ID is.
-    write(tmp_path / "sub-TC9" / "ses-A6_date-2026-10-01T09-00-00" / "TrialLog_A6_TC9" / "TrialLog_A6_TC9_x.csv",
-          ["Modality", "ShapingStage", "WasRewarded"], [["A", 2, "True"] for _ in range(60)])
-    rows, head = [[1.0, i + 1, "auditory", "Correct"] for i in range(60)], ("Seconds", "trialNumber", "trialType", "outcome")
-    write_new(tmp_path / "sub-PCO1-01503" / "ses-001D1_2026-11-09T09-00-00", 1, rows, head)
-    unread = []
-    assert experiments("TC9", [tmp_path], unread) == [] and unread == []
-    write_new(tmp_path / "sub-TC9" / "ses-002D1_2026-11-10T09-00-00", 2, rows, head)
-    assert [e.name for e in experiments("TC9", [tmp_path])] == ["ses-002D1_2026-11-10T09-00-00"]
+def read(root: Path, *runs: str):
+    unread: list[str] = []
+    return experiments("TC9", root, expect(root, *runs), unread), unread
 
 
-def test_a_share_that_does_not_answer_gives_no_stage(tmp_path, monkeypatch, capsys):
+def test_a_summary_is_read_as_the_rules_need_it(tmp_path):
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS))
+    found, unread = read(tmp_path, "r2")
+    assert unread == [] and [e.name for e in found] == ["ses-002D1_2026-11-10T09-00-00"]
+    assert found[0].stage == [2] * 60 and all(found[0].rewarded) and found[0].modality[0] == "auditory"
+
+
+def test_the_newest_experiment_comes_first_and_a_mouse_with_no_expected_runs_has_no_history(tmp_path):
+    assert read(tmp_path) == ([], [])
+    put(tmp_path, summary("ses-001D1_2026-11-09T09-00-00", "r1", 1, ROWS))
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS))
+    found, unread = read(tmp_path, "r1", "r2")
+    assert unread == [] and [e.stage[0] for e in found] == [2, 1]
+
+
+def test_a_folder_that_does_not_answer_gives_no_stage(tmp_path, capsys, monkeypatch):
     # Audit, 9 Nov 2026: an unreachable share read as no history, and a trained mouse was offered Stage 1.
     from ucl_open_coen_dome_navigation import stage
 
-    share = Path(r"\\server\rigs\staging")
-    monkeypatch.setattr(stage, "unanswered", lambda root: root == share)
-    monkeypatch.setattr("sys.argv", ["suggest-stage", "--subject", "TC9", "--modality", "auditory",
-                                     "--root", str(tmp_path), "--root", str(share)])
+    missing = tmp_path / "no-share"
+    monkeypatch.setattr("sys.argv", ["stage.py", "--subject", "TC9", "--modality", "auditory",
+                                     "--summaries", str(missing), "--expected", str(expect(tmp_path))])
     stage.main()
     answer = json.loads(capsys.readouterr().out)
-    assert answer["value"] is None and str(share) in answer["why"]
+    assert answer["value"] is None and str(missing) in answer["why"] and "No Answer" in answer["why"]
 
 
-def test_an_experiment_with_only_its_manifest_left_gives_no_stage(tmp_path):
-    # Audit round 2, 9 Nov 2026: ingest clears staging but the manifest, so an older session would decide.
-    folder = tmp_path / "sub-TC9" / "ses-003D1_2026-11-12T09-00-00"
-    folder.mkdir(parents=True)
-    (folder / "manifest.json").write_text("{}", encoding="utf-8")
-    unread = []
-    assert experiments("TC9", [tmp_path], unread) == []
-    assert unread == ["ses-003D1_2026-11-12T09-00-00 (Only Its Manifest Is Left)"]
+def test_an_expected_run_with_no_file_gives_no_stage(tmp_path):
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS))
+    _, unread = read(tmp_path, "r2", "r3")
+    assert unread == ["Run r3 (No Summary File)"]
 
 
-@pytest.mark.parametrize("destination_first", [True, False])
-def test_an_ingested_experiment_whose_data_is_in_another_root_is_read_in_any_order(tmp_path, destination_first):
-    # Audit round 3, 9 Nov 2026: with ingest's destination added after staging, staging's manifest
-    # answered "Only Its Manifest Is Left" first and every suggestion stayed null.
-    name = "ses-003D1_2026-11-12T09-00-00"
-    staging, destination = tmp_path / "staging", tmp_path / "destination"
-    (staging / "sub-TC9" / name).mkdir(parents=True)
-    (staging / "sub-TC9" / name / "manifest.json").write_text("{}", encoding="utf-8")
-    write_new(destination / "sub-TC9" / name, 3, [["auditory", "Correct"]] * 100)
-    unread = []
-    roots = [destination, staging] if destination_first else [staging, destination]
-    found = experiments("TC9", roots, unread)
-    assert unread == [] and [e.name for e in found] == [name]
-
-
-def test_another_workflow_s_ingested_experiment_never_decides(tmp_path):
-    # Audit round 3, 9 Nov 2026: an av-dome experiment of the same mouse, ingested, blocked the suggestion.
-    folder = tmp_path / "sub-TC9" / "ses-009_2026-11-12T09-00-00"
-    folder.mkdir(parents=True)
-    (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/av-dome.git"}}), encoding="utf-8")
-    unread = []
-    assert experiments("TC9", [tmp_path], unread) == [] and unread == []
-
-
-def test_another_workflow_s_experiment_never_decides(tmp_path):
-    # Audit, 10 Nov 2026, round 5: an av-dome experiment of the same mouse, with its data, has trialType and
-    # outcome too, and was read as this task's (80 visual Correct at stage 3 suggested Stage 4).
-    folder = tmp_path / "sub-TC9" / "ses-010_2026-11-12T09-00-00"
-    write_new(folder, 3, [["visual", "Correct"]] * 80)
-    (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/av-dome.git"}}), encoding="utf-8")
-    assert experiments("TC9", [tmp_path]) == []
-    (folder / "manifest.json").write_text(json.dumps({"source": {"repo": "https://github.com/ucl-open/coen-dome-navigation.git"}}), encoding="utf-8")
-    assert [e.name for e in experiments("TC9", [tmp_path])] == [folder.name]
-
-
-def test_a_local_folder_that_is_not_there_is_no_history(tmp_path):
-    from ucl_open_coen_dome_navigation.stage import unanswered
-
-    assert not unanswered(tmp_path / "missing")
-
-
-def test_a_rig_folder_under_staging_is_read(tmp_path):
-    write_new(tmp_path / "BLUE-OPTO-2" / "sub-TC9" / "ses-001O2_2026-11-10T09-00-00", 1, [["visual", "Incorrect"]] * 50)
-    found = experiments("TC9", [tmp_path])
-    assert len(found) == 1 and found[0].modality[0] == "visual" and not any(found[0].rewarded)
-    assert found[0].stage == [1] * 50
-
-
-def test_an_optogenetics_experiment_keeps_its_stage():
-    # zapit-v2: 100% rewarded would advance stage 3 (Tom's 4), but an optogenetics experiment never changes the stage
-    e = Experiment("2026-01-02", "2026-01-02", ["auditory"] * 200, [3] * 200, [True] * 200, [i % 3 == 0 for i in range(200)], True)
-    stage, why = suggest([e], "auditory")
-    assert stage == 3 and why.startswith("Optogenetics Experiment") and "of 67 Laser-On" in why
-
-
-def test_laser_on_trials_do_not_count_in_stage_1_s_two_experiments_in_a_row():
-    # The earlier experiment has 50 rewarded stage-1 trials only if its laser-on ones count
-    from ucl_open_coen_dome_navigation.stage import TWO_IN_A_ROW_STAGE
-    now = exp("2026-01-02", TWO_IN_A_ROW_STAGE, 100, 60)
-    before = Experiment("2026-01-01", "2026-01-01", ["auditory"] * 100, [TWO_IN_A_ROW_STAGE] * 100,
-                        [i < 50 for i in range(100)], [i < 10 for i in range(100)], True)
-    assert suggest([now, before], "auditory")[0] == TWO_IN_A_ROW_STAGE
-
-
-def test_the_opto_columns_are_read(tmp_path):
-    from ucl_open_coen_dome_navigation.stage import read_new
-    folder = tmp_path / "ses-005D1_2026-11-04T10-00-00"
-    write_new(folder, 4, [["auditory", "Correct", "2.5", 3], ["auditory", "Incorrect", "0", 1]],
-              header=("trialType", "outcome", "laserPowerMw", "laserCondition"))
-    e = read_new(folder)
-    assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]
-
-
-def test_the_ingest_destination_is_a_root():
-    # Plan v11: once jacuzzi-ingest clears staging, the experiment is only in Live-Data (<MACHINE>\sub-<lab ID>\ses-...).
-    from ucl_open_coen_dome_navigation.stage import LIVE_DATA, ROOTS
-
-    assert LIVE_DATA in ROOTS
-
-
-def test_an_unreadable_experiment_gives_no_stage(tmp_path):
-    # Plan v11 (fail loudly): an experiment that cannot be read may be the one that decides.
-    folder = tmp_path / "GREEN-DOME-1" / "sub-TC9" / "ses-004D1_2026-11-13T09-00-00"
-    write(folder / "BonsaiData" / "BonsaiData_Trial_x.csv", ["trialType", "outcome"], [["auditory", "Correct"]])
-    unread = []
-    assert experiments("TC9", [tmp_path], unread) == []
-    assert unread == ["ses-004D1_2026-11-13T09-00-00 (Unreadable: FileNotFoundError)"]
+def test_a_file_that_cannot_be_read_gives_no_stage(tmp_path):
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS))
+    (tmp_path / "sub-TC9" / "ses-003D1_2026-11-11T09-00-00.json").write_text("{not json", encoding="utf-8")
+    _, unread = read(tmp_path, "r2")
+    assert unread == ["ses-003D1_2026-11-11T09-00-00.json (Unreadable: JSONDecodeError)"]
+    # trials but no Settings_Experiment: it may be the experiment that decides
+    put(tmp_path, summary("ses-004D1_2026-11-12T09-00-00", "r4", None, ROWS))
+    _, unread = read(tmp_path, "r2", "r4")
+    assert "ses-004D1_2026-11-12T09-00-00 (Unreadable: KeyError)" in unread
 
 
 def test_a_settings_file_without_a_stage_gives_no_stage(tmp_path):
     # A null TrainingStage raised TypeError, which ended suggest-stage with a traceback and no JSON line (audit cycle 2).
-    folder = tmp_path / "sub-TC9" / "ses-005D1_2026-11-13T09-00-00"
-    write_new(folder, 1, [["auditory", "Correct"]])
-    (folder / "Settings" / "Settings_Experiment_x.json").write_text(json.dumps({"parameters": {"TrainingStage": None}}), encoding="utf-8")
-    unread = []
-    assert experiments("TC9", [tmp_path], unread) == []
-    assert unread == ["ses-005D1_2026-11-13T09-00-00 (Unreadable: TypeError)"]
+    put(tmp_path, summary("ses-005D1_2026-11-13T09-00-00", "r5", 1, ROWS, Settings_Experiment={"parameters": {"TrainingStage": None}}))
+    found, unread = read(tmp_path, "r5")
+    assert found == [] and unread == ["ses-005D1_2026-11-13T09-00-00 (Unreadable: TypeError)"]
 
+
+def test_a_skipped_file_is_accounted_for_and_ignored(tmp_path):
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS))
+    put(tmp_path, {"version": 1, "run": "r3", "subject": "TC9", "session": "ses-003D1_2026-11-11T09-00-00", "skipped": "short"})
+    found, unread = read(tmp_path, "r2", "r3")
+    assert unread == [] and [e.name for e in found] == ["ses-002D1_2026-11-10T09-00-00"]
+
+
+def test_any_version_but_1_is_refused(tmp_path):
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS, version=2))
+    found, unread = read(tmp_path, "r2")
+    assert found == [] and "Version 2 Is Not Supported" in unread[0] and "No Summary File" in unread[1]
+    put(tmp_path, {"run": "r3", "session": "ses-003D1_2026-11-11T09-00-00", "skipped": "short"})  # no version at all
+    assert any("(Unreadable: KeyError)" in u for u in read(tmp_path, "r3")[1])
+
+
+def test_another_workflow_s_summary_never_decides_but_is_accounted_for(tmp_path):
+    # Audit, 10 Nov 2026, round 5: an av-dome experiment of the same mouse (80 visual Correct at stage 3)
+    # was read as this task's and suggested Stage 4.
+    other = "https://github.com/ucl-open/av-dome.git"
+    put(tmp_path, summary("ses-010D1_2026-11-12T09-00-00", "r10", 3, [["visual", "Correct"]] * 80, repo=other))
+    assert read(tmp_path, "r10") == ([], [])
+    put(tmp_path, summary("ses-011D1_2026-11-13T09-00-00", "r11", 3, [["visual", "Correct"]] * 80))
+    assert [e.name for e in read(tmp_path, "r10", "r11")[0]] == ["ses-011D1_2026-11-13T09-00-00"]
+
+
+def test_a_summary_with_no_trials_or_no_trial_type_is_not_an_experiment(tmp_path):
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, []))
+    put(tmp_path, summary("ses-003D1_2026-11-11T09-00-00", "r3", 2, [[1]], columns=("trialNumber",)))
+    assert read(tmp_path, "r2", "r3") == ([], [])
+
+
+def test_the_opto_columns_are_read():
+    # NaN is written as null
+    s = summary("ses-005D1_2026-11-04T10-00-00", "r5", 4, [["auditory", "Correct", 2.5, 3], ["auditory", "Incorrect", None, None]],
+                columns=("trialType", "outcome", "laserPowerMw", "laserCondition"))
+    e = read_new(s)
+    assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]
+
+
+def test_stage_py_reads_none_of_the_dropped_columns(tmp_path):
+    # jacuzzi-ingest drops these from every summary (records.md): reading one would read null for ever.
+    assert not [c for c in DROPPED if c in STAGE_PY.read_text(encoding="utf-8")]
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS))  # a file without them reads in full
+    assert read(tmp_path, "r2")[1] == []
+
+
+def test_the_script_runs_with_the_standard_library_alone(tmp_path):
+    # rig-control runs it with its own Python, -I, outside this project: no package import.
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, [["auditory", "Correct"]] * 100))
+    done = subprocess.run([sys.executable, "-I", str(STAGE_PY), "--subject=TC9", "--modality=auditory",
+                           f"--summaries={tmp_path}", f"--expected={expect(tmp_path, 'r2')}"],
+                          capture_output=True, text=True, check=True)
+    assert json.loads(done.stdout.strip().splitlines()[-1])["value"] == 3

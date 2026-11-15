@@ -29,7 +29,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 ## Audit round 3 of 3 (15 Nov 2026): items not changed
 
-- `stage.py`'s search of a mouse's experiments (`unanswered`, `ours`, the subject folders, `experiments`) stays a copy of lib-open-rigs' `open_rigs.rigs.experiments` (`unanswered`, `written_by`, `subject_folders`, `find`): app-rig-control runs `stage.py` with its own Python, `-I`, outside this project (`[task.suggest]`, standard library only), where `open_rigs` cannot be imported.
+- `stage.py` reads the mouse's session summaries (jacuzzi-ingest's `sub-<lab ID>/<ses folder>.json`) from `--summaries`, with `--expected` listing the run ids that must each have a file: app-rig-control runs it with its own Python, `-I`, outside this project (`[task.suggest]`, standard library only), so it keeps no search of experiment folders and imports no `open_rigs`.
 - `regenerate.py` is the same in coen-dome-navigation and coen-dome-decision-making but for the package name: it is tiny, and each repo owns its schemas.
 - `.bonsai\Setup.ps1` is the same 15 lines in five task repos (coen-dome-navigation, coen-dome-decision-making, coen-behaviour-box, coen-qc-calibrate-valve, coen-qc-preflight-rig): each repo needs its own bootstrap.
 
