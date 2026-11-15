@@ -131,7 +131,9 @@ public class CorridorSetup
     public const double LaserMaxMarginSeconds = 0.25; // task.py LASER_MAX_MARGIN_SECONDS
     public const double MaxLeadSeconds = 0.2;            // task.py MAX_LEAD_SECONDS: the furthest the trigger may come before the first pip
     public const double NoTimeLimitTriggerAfterSeconds = 2.0; // task.py NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS: the furthest after the first pip it may come on a stage without timeLimitSeconds
-    public const int DriftBeeps = 500;            // a drift stage's frequency reaches the sweep's end on its own after this many beeps (25 s)
+    public const double MaxQuietSeconds = 10.0;          // task.py MAX_QUIET_SECONDS: the longest lickQuietSeconds or wheelQuietSeconds
+    public const double MaxWheelQuietCm = 20.0;          // task.py MAX_WHEEL_QUIET_CM: under one turn of the 75 mm wheel
+    public const int DriftBeeps = 500;           // a drift stage's frequency reaches the sweep's end on its own after this many beeps (25 s)
     public const double GratingStartCpd = 0.03;   // the grating's spatial frequency at the track's start
     public const double GratingEndCpd = 0.3;      // and at its end
 
@@ -169,6 +171,14 @@ public class CorridorSetup
         number("stage '" + row.Label + "''s lickQuietSeconds", row.LickQuietSeconds, false);
         number("stage '" + row.Label + "''s wheelQuietSeconds", row.WheelQuietSeconds, false);
         number("stage '" + row.Label + "''s wheelQuietCm", row.WheelQuietCm, false);
+        // A long quiet wait and a licking mouse would hold Go with no message (Pip, 15 Nov 2026).
+        Action<string, double, double, string> atMost = (name, value, max, unit) =>
+        {
+            if (value > max) problems.Add(string.Format("stage '{0}''s {1} ({2} {3}) must be at most {4} {3}", row.Label, name, value, unit, max));
+        };
+        atMost("lickQuietSeconds", row.LickQuietSeconds, MaxQuietSeconds, "s");
+        atMost("wheelQuietSeconds", row.WheelQuietSeconds, MaxQuietSeconds, "s");
+        atMost("wheelQuietCm", row.WheelQuietCm, MaxWheelQuietCm, "cm");
         number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
         if (row.TimeLimitSeconds.HasValue) number("stage '" + row.Label + "''s timeLimitSeconds", row.TimeLimitSeconds.Value, true);
         if ((row.WheelQuietSeconds > 0) != (row.WheelQuietCm > 0)) problems.Add("stage '" + row.Label + "' needs wheelQuietSeconds and wheelQuietCm both above 0 (the wheel's quiet wait) or both 0 (off)");

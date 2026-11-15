@@ -2,6 +2,12 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 15 Nov 2026: Pip's decisions after the audit cycles
+
+- swc-aeon is pinned to the commit uv.lock held (`rev = "7cd561d..."`), not aeon_api's `main` branch.
+- The repo is BSD 3-Clause, as lib-open-rigs (`LICENSE`, "Coen Lab, University College London", as coen-behaviour-box's; lib's names upstream's holder).
+- The quiet waits have a maximum, in task.py and at Go (`CorridorSetup.Create`): `lickQuietSeconds` and `wheelQuietSeconds` 10 s (a longer wait and a licking mouse would hold Go with no message), `wheelQuietCm` 20 cm (under one turn of the 75 mm wheel, 23.6 cm: a whole turn within the wait is running, not stillness). Every stage of the task file is under them (lickQuietSeconds 0 or 1, the wheel's 0), so nothing changes for the mice.
+
 ## Audit cycles 1-3 (15 Nov 2026)
 
 - Done, details in `git log`: names end in `Seconds`; Go refuses a NaN or infinite time (`CorridorSetup.Create`); `suggest-stage` names an unreadable experiment; RigSetup reads rig.yml with lib-open-rigs' `ReadLabRig` (a test holds its `ConfigRoot`, as check-workflow does not look inside an include); the manifest hashes the three speakers' filters.

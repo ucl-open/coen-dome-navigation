@@ -240,6 +240,28 @@ public class TrialDrawTests
     }
 
     [TestMethod]
+    public void AQuietWaitAboveItsMaximumIsRefusedAtGo()
+    {
+        var cases = new Dictionary<string, Action<TrainingStage>>
+        {
+            { "lickQuietSeconds (10.5 s) must be at most 10 s", s => s.LickQuietSeconds = 10.5 },
+            { "wheelQuietSeconds (11 s) must be at most 10 s", s => { s.WheelQuietSeconds = 11; s.WheelQuietCm = 1; } },
+            { "wheelQuietCm (21 cm) must be at most 20 cm", s => { s.WheelQuietSeconds = 1; s.WheelQuietCm = 21; } },
+        };
+        foreach (var c in cases)
+        {
+            var task = Fixture.Task();
+            c.Value(task.TrainingStages[4]);
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4), c.Key).Message, c.Key);
+        }
+        var atMax = Fixture.Task();
+        atMax.TrainingStages[4].LickQuietSeconds = 10;
+        atMax.TrainingStages[4].WheelQuietSeconds = 10;
+        atMax.TrainingStages[4].WheelQuietCm = 20;
+        Fixture.Setup(atMax, 4);
+    }
+
+    [TestMethod]
     public void ANaNOrInfiniteTimeIsRefusedAtGo()
     {
         // YAML's .nan or .inf: an interval, quiet wait or timeout of NaN or infinity would hold the task for ever, with no error.
