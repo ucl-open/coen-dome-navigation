@@ -252,6 +252,6 @@ Fixed the same night: `stage.py` read another workflow's experiment of the same 
 
 Do not raise again without new information:
 
-- A task file that leaves out a sound'"'"'s `levelDbfs` plays at lib'"'"'s default (stimuli -30, penalty -30, reward tone -36, background -50), not refused: Pip chose defaults in lib (15 Nov 2026), the shipped files state every level, and older files are refused by the closed schema.
+- A task file that leaves out a sound's `levelDbfs` plays at lib's default (stimuli -30, penalty -30, reward tone -36, background -50), not refused: Pip chose defaults in lib (15 Nov 2026), the shipped files state every level, and older files are refused by the closed schema.
 - The background-noise and penalty chains are the same XML here and in coen-dome-decision-making: the noise sources differ (.bin here, .wav there) and lib's lint forces the level mapping.
 - No headless test that rig.yml's `bootDelay` above 3 s is honoured: the 3 s floor holds either way and the value arrives synchronously today.
