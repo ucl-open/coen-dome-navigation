@@ -1,5 +1,26 @@
 {
   "$defs": {
+    "BackgroundNoise": {
+      "description": "The background noise, one level for the experiment: looped on every speaker unequalised, faded in over 2 s once\nthe task file is read at Go (OpenRigs.Audio SpeakerMixer).",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Whether the background noise plays",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "levelDbfs": {
+          "default": -50.0,
+          "description": "The background noise's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -50. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation",
+          "maximum": -1.0,
+          "minimum": -120.0,
+          "title": "LevelDbfs",
+          "type": "number"
+        }
+      },
+      "title": "BackgroundNoise",
+      "type": "object"
+    },
     "OptogeneticsConfig": {
       "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and the corridor's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the\ntrigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first\ntone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's\noutcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.",
       "if": {
@@ -108,7 +129,7 @@
           "$ref": "#/$defs/PenaltySound",
           "default": {
             "enabled": true,
-            "gain": 1.0
+            "levelDbfs": -30.0
           },
           "description": "The penalty sound, with every timeout",
           "title": "Sound"
@@ -129,15 +150,46 @@
           "title": "Enabled",
           "type": "boolean"
         },
-        "gain": {
-          "default": 1.0,
-          "description": "Gain on the lab's penalty sound, 1 for its level",
-          "minimum": 0,
-          "title": "Gain",
+        "levelDbfs": {
+          "default": -30.0,
+          "description": "The penalty sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation",
+          "maximum": -1.0,
+          "minimum": -120.0,
+          "title": "LevelDbfs",
           "type": "number"
         }
       },
       "title": "PenaltySound",
+      "type": "object"
+    },
+    "RewardTone": {
+      "description": "A task's reward tone, played at levelDbfs.",
+      "properties": {
+        "levelDbfs": {
+          "default": -36.0,
+          "description": "The reward tone's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -36. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation",
+          "maximum": -1.0,
+          "minimum": -120.0,
+          "title": "LevelDbfs",
+          "type": "number"
+        }
+      },
+      "title": "RewardTone",
+      "type": "object"
+    },
+    "StimulusSound": {
+      "description": "A task's stimulus sounds, each played at levelDbfs (OpenRigs.Audio SpeakerBuffer or SpeakerSet.Buffer).",
+      "properties": {
+        "levelDbfs": {
+          "default": -30.0,
+          "description": "Each stimulus sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation",
+          "maximum": -1.0,
+          "minimum": -120.0,
+          "title": "LevelDbfs",
+          "type": "number"
+        }
+      },
+      "title": "StimulusSound",
       "type": "object"
     },
     "TrainingStage": {
@@ -365,13 +417,28 @@
           "title": "Modality",
           "type": "string"
         },
-        "backgroundNoiseLevel": {
-          "default": 0.5,
-          "description": "Constant background white noise RMS, as a fraction of the beep RMS (0 = off)",
-          "maximum": 1.0,
-          "minimum": 0.0,
-          "title": "BackgroundNoiseLevel",
-          "type": "number"
+        "tonePips": {
+          "$ref": "#/$defs/StimulusSound",
+          "default": {
+            "levelDbfs": -30.0
+          },
+          "description": "The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)",
+          "title": "TonePips"
+        },
+        "rewardTone": {
+          "$ref": "#/$defs/RewardTone",
+          "default": {
+            "levelDbfs": -36.0
+          },
+          "description": "The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
+        },
+        "backgroundNoise": {
+          "$ref": "#/$defs/BackgroundNoise",
+          "default": {
+            "enabled": true,
+            "levelDbfs": -50.0
+          },
+          "description": "The background white noise (src/waveforms/background_noise.bin) on every speaker, from Go (open_rigs.core.task BackgroundNoise)"
         },
         "positionStepCm": {
           "default": 1,

@@ -18,8 +18,6 @@
                  xmlns:harp="clr-namespace:Bonsai.Harp;assembly=Bonsai.Harp"
                  xmlns:gl="clr-namespace:Bonsai.Shaders;assembly=Bonsai.Shaders"
                  xmlns:dsp="clr-namespace:Bonsai.Dsp;assembly=Bonsai.Dsp"
-                 xmlns:mix="clr-namespace:Bonsai.Mixer;assembly=Bonsai.Mixer"
-                 xmlns:cvn="clr-namespace:OpenCV.Net;assembly=OpenCV.Net"
                  xmlns="https://bonsai-rx.org/2018/workflow">
   <Workflow>
     <Nodes>
@@ -28,7 +26,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>RigSetup</Name>
-        <Description>Reads this machine's rig.yml (ReadRigConfig) into the lab rig model (open_rigs.rigs.lab_rig), opens every device with RigHardware, starts the cameras 2 s later and opens the dome's display (ProjectorDisplay).</Description>
+        <Description>Reads this machine's rig.yml (ReadRigConfig) into the lab rig model (open_rigs.rigs.lab_rig), opens every device with RigHardware (which starts the cameras 2 s after Start and reports Ready once the Harp clock is set and the spouts are homed) and opens the dome's display (ProjectorDisplay).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="GroupWorkflow">
@@ -78,19 +76,6 @@
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:RigHardware.bonsai">
               <Description>Every dome device, named as in the data, behind its subjects (Building Blocks): the Behavior board (wheel distance, pulses, the ZapitTrigger line cleared however the workflow stops), the timestamp generator (Timestamp, HarpClockSet), both Lickety Splits, the three cameras and the lick spout stage, which homes, goes in and handles the spout commands.</Description>
             </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="BooleanProperty">
-                <Value>true</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Delay">
-                <rx:DueTime>PT2S</rx:DueTime>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>StartCameras</Name>
-            </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>RigConfigs</Name>
             </Expression>
@@ -115,10 +100,8 @@
             <Edge From="4" To="5" Label="Source1" />
             <Edge From="5" To="6" Label="Source1" />
             <Edge From="7" To="8" Label="Source1" />
-            <Edge From="8" To="9" Label="Source1" />
-            <Edge From="10" To="11" Label="Source1" />
-            <Edge From="11" To="13" Label="Source1" />
-            <Edge From="12" To="13" Label="Source2" />
+            <Edge From="8" To="10" Label="Source1" />
+            <Edge From="9" To="10" Label="Source2" />
           </Edges>
         </Workflow>
       </Expression>
@@ -436,15 +419,6 @@
             <Expression xsi:type="rx:PublishSubject" TypeArguments="sys:Tuple(sys:String,sys:Double)">
               <rx:Name>RewardRequests</rx:Name>
             </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="cvn:Mat">
-              <rx:Name>Buffer</rx:Name>
-            </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="cvn:Mat">
-              <rx:Name>RewardBuffer</rx:Name>
-            </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="cvn:Mat">
-              <rx:Name>PenaltyBuffer</rx:Name>
-            </Expression>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="ext:CorridorEvent">
               <rx:Name>TrialEvents</rx:Name>
             </Expression>
@@ -456,70 +430,6 @@
             </Expression>
           </Nodes>
           <Edges>
-          </Edges>
-        </Workflow>
-      </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Ready</Name>
-        <Description>Reports Ready once the Harp clock is set and the spouts are homed (the two zipped). Beside it, StartupWatchdog stops the workflow, naming what never came, if that takes longer than 180 s (the stage homes its five motors together, each within 60 s); it completes without a value, so nothing reads its output.</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>HarpClockSet</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="StringProperty">
-                <Value>HarpClockSet</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>LickSpoutStage.Homed</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="StringProperty">
-                <Value>SpoutsHomed</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Merge" />
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="core:StartupWatchdog">
-                <core:Expected>HarpClockSet, SpoutsHomed</core:Expected>
-                <core:TimeoutSeconds>180</core:TimeoutSeconds>
-                <core:What>Readying the rig (the Harp clock and the spout stage's homing)</core:What>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Zip" />
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ReportPhase">
-                <orcl:Phase>Ready</orcl:Phase>
-              </Combinator>
-            </Expression>
-          </Nodes>
-          <Edges>
-            <Edge From="0" To="1" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="3" To="4" Label="Source1" />
-            <Edge From="4" To="5" Label="Source1" />
-            <Edge From="2" To="6" Label="Source1" />
-            <Edge From="5" To="6" Label="Source2" />
-            <Edge From="6" To="7" Label="Source1" />
-            <Edge From="1" To="8" Label="Source1" />
-            <Edge From="4" To="8" Label="Source2" />
-            <Edge From="8" To="9" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -731,141 +641,15 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay (at least 3 s) after Start: one mixer source each for the pips (Buffer), the reward tone and the penalty sound, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. rig.yml's speakers and their filters are loaded once at Start (OpenRigs.Audio LoadSpeakers, into Speakers), which stops the workflow naming any speaker without a usable filter (the rule every dome holds). Every file in src\waveforms is one channel at the loudness it plays at, laid out on rig.yml's channelCount channels by SpeakerBuffer: the pips (PipBuffers) and the reward tone (RewardTone) on every rig.yml speaker, each equalised with its filter, and the background noise on every speaker as it is. The penalty sound (PenaltyTone) is the lab's (PenaltySoundBuffer), on rig.yml's penaltySoundChannel alone, at the task's penalty.sound.gain.</Description>
+        <Description>The dome speakers and their mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, tonePips.levelDbfs) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound (PenaltyTone, PenaltySoundBuffer) on rig.yml's penaltySoundChannel alone at penalty.sound.levelDbfs; and the background noise on every speaker as it is, at backgroundNoise.levelDbfs, sent to the mixer, which loops it and fades it in over 2 s. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="GroupWorkflow">
-              <Name>Mixer</Name>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="GroupWorkflow">
-                    <Name>MixerDevice</Name>
-                    <Workflow>
-                      <Nodes>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="mix:CreateMixerContext">
-                            <mix:HostApi>Windows WDM-KS</mix:HostApi>
-                            <mix:DeviceName>Speakers (XMOS xCORE-200 MC (UAC2.0))</mix:DeviceName>
-                            <mix:SampleRate>48000</mix:SampleRate>
-                            <mix:ChannelCount xsi:nil="true" />
-                            <mix:SuggestedLatency>0.002</mix:SuggestedLatency>
-                          </Combinator>
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="mix:StartMixer" />
-                        </Expression>
-                        <Expression xsi:type="rx:BehaviorSubject">
-                          <Name>Mixer</Name>
-                        </Expression>
-                        <Expression xsi:type="SubscribeSubject">
-                          <Name>RigConfigs</Name>
-                        </Expression>
-                        <Expression xsi:type="PropertyMapping">
-                          <PropertyMappings>
-                            <Property Name="HostApi" Selector="SpeakerArray.Device.HostApi" />
-                            <Property Name="DeviceName" Selector="SpeakerArray.Device.DeviceName" />
-                            <Property Name="SampleRate" Selector="SpeakerArray.Device.SampleRate" />
-                            <Property Name="SuggestedLatency" Selector="SpeakerArray.Device.SuggestedLatency" />
-                          </PropertyMappings>
-                        </Expression>
-                      </Nodes>
-                      <Edges>
-                        <Edge From="0" To="1" Label="Source1" />
-                        <Edge From="1" To="2" Label="Source1" />
-                        <Edge From="3" To="4" Label="Source1" />
-                        <Edge From="4" To="0" Label="Source1" />
-                      </Edges>
-                    </Workflow>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>RigConfigs</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Name>BootDelay</scr:Name>
-                    <scr:Description>rig.yml's bootDelay, never under 3 s: a fault while the sound card boots can blue-screen the PC.</scr:Description>
-                    <scr:Expression>TimeSpan.FromSeconds(Math.Max(3.0, SpeakerArray.Device.BootDelay))</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="PropertyMapping">
-                    <PropertyMappings>
-                      <Property Name="DueTime" />
-                    </PropertyMappings>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Name>MixerBootDelay</Name>
-                    <Description>Deliberate: the mixer starts at least 3 s after Start. Never remove or shorten it.</Description>
-                    <Combinator xsi:type="rx:DelaySubscription">
-                      <rx:DueTime>PT3S</rx:DueTime>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="1" To="2" Label="Source1" />
-                  <Edge From="2" To="3" Label="Source1" />
-                  <Edge From="0" To="4" Label="Source1" />
-                  <Edge From="3" To="4" Label="Source2" />
-                  <Edge From="4" To="5" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:SpeakerMixer.bonsai" />
             <Expression xsi:type="SubscribeSubject">
-              <Name>Buffer</Name>
+              <Name>TaskConfig</Name>
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>Mixer</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:CreateSource">
-                <mix:Looping>false</mix:Looping>
-                <mix:Playing>true</mix:Playing>
-                <mix:Gain>1</mix:Gain>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:AppendBuffer" />
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RewardBuffer</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>Mixer</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:CreateSource">
-                <mix:Looping>false</mix:Looping>
-                <mix:Playing>true</mix:Playing>
-                <mix:Gain>1</mix:Gain>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:AppendBuffer" />
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>PenaltyBuffer</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>Mixer</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:CreateSource">
-                <mix:Looping>false</mix:Looping>
-                <mix:Playing>true</mix:Playing>
-                <mix:Gain>1</mix:Gain>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:AppendBuffer" />
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RigFile</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="aud:LoadSpeakers">
-                <aud:MachineName />
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:AsyncSubject">
-              <Name>Speakers</Name>
+            <Expression xsi:type="MemberSelector">
+              <Selector>TaskParameters.TonePips.LevelDbfs</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Speakers</Name>
@@ -888,14 +672,29 @@
               <Combinator xsi:type="rx:Zip" />
             </Expression>
             <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Zip" />
+            </Expression>
+            <Expression xsi:type="InputMapping">
+              <PropertyMappings>
+                <Property Name="LevelDbfs" Selector="Item1" />
+              </PropertyMappings>
+              <Selector>Item2</Selector>
+            </Expression>
+            <Expression xsi:type="Combinator">
               <Combinator xsi:type="aud:SpeakerBuffer">
-                <aud:Gain>1</aud:Gain>
+                <aud:LevelDbfs>-30</aud:LevelDbfs>
                 <aud:Equalise>true</aud:Equalise>
                 <aud:SyncCopy>true</aud:SyncCopy>
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>PipBuffers</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TaskConfig</Name>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>TaskParameters.RewardTone.LevelDbfs</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Speakers</Name>
@@ -920,9 +719,19 @@
               <Combinator xsi:type="rx:Zip" />
             </Expression>
             <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Zip" />
+            </Expression>
+            <Expression xsi:type="InputMapping">
+              <PropertyMappings>
+                <Property Name="LevelDbfs" Selector="Item1" />
+              </PropertyMappings>
+              <Selector>Item2</Selector>
+            </Expression>
+            <Expression xsi:type="Combinator">
               <Combinator xsi:type="aud:SpeakerBuffer">
-                <aud:Gain>1</aud:Gain>
+                <aud:LevelDbfs>-30</aud:LevelDbfs>
                 <aud:Equalise>true</aud:Equalise>
+                <aud:SyncCopy>false</aud:SyncCopy>
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
@@ -932,7 +741,7 @@
               <Name>TaskConfig</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.Penalty.Sound.Gain</Selector>
+              <Selector>TaskParameters.Penalty.Sound.LevelDbfs</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Speakers</Name>
@@ -942,30 +751,41 @@
             </Expression>
             <Expression xsi:type="InputMapping">
               <PropertyMappings>
-                <Property Name="Gain" Selector="Item1" />
+                <Property Name="LevelDbfs" Selector="Item1" />
               </PropertyMappings>
               <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="aud:PenaltySoundBuffer">
-                <aud:Gain>1</aud:Gain>
+                <aud:LevelDbfs>-30</aud:LevelDbfs>
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>PenaltyTone</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>Mixer</Name>
+              <Name>TaskConfig</Name>
             </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:CreateSource">
-                <mix:Looping>true</mix:Looping>
-                <mix:Playing>true</mix:Playing>
-                <mix:Gain>0</mix:Gain>
-              </Combinator>
+            <Expression xsi:type="rx:Condition">
+              <Name>BackgroundNoiseEnabled?</Name>
+              <Workflow>
+                <Nodes>
+                  <Expression xsi:type="WorkflowInput">
+                    <Name>Source1</Name>
+                  </Expression>
+                  <Expression xsi:type="MemberSelector">
+                    <Selector>TaskParameters.BackgroundNoise.Enabled</Selector>
+                  </Expression>
+                  <Expression xsi:type="WorkflowOutput" />
+                </Nodes>
+                <Edges>
+                  <Edge From="0" To="1" Label="Source1" />
+                  <Edge From="1" To="2" Label="Source1" />
+                </Edges>
+              </Workflow>
             </Expression>
-            <Expression xsi:type="rx:BehaviorSubject">
-              <Name>BackgroundSource</Name>
+            <Expression xsi:type="MemberSelector">
+              <Selector>TaskParameters.BackgroundNoise.LevelDbfs</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Speakers</Name>
@@ -990,85 +810,60 @@
               <Combinator xsi:type="rx:Zip" />
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="aud:SpeakerBuffer">
-                <aud:Gain>1</aud:Gain>
-                <aud:Equalise>false</aud:Equalise>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>BackgroundSource</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:AppendBuffer" />
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="scr:ExpressionTransform">
-              <scr:Name>BackgroundNoiseGain</scr:Name>
-              <scr:Description>The noise file has a pip's RMS, so the task's backgroundNoiseLevel is the gain.</scr:Description>
-              <scr:Expression>Convert.ToSingle(it.TaskParameters.BackgroundNoiseLevel)</scr:Expression>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>BackgroundSource</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:CombineLatest" />
+              <Combinator xsi:type="rx:Zip" />
             </Expression>
             <Expression xsi:type="InputMapping">
               <PropertyMappings>
-                <Property Name="Gain" Selector="Item1" />
+                <Property Name="LevelDbfs" Selector="Item1" />
               </PropertyMappings>
               <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="mix:SetGain">
-                <mix:Gain>0</mix:Gain>
-                <mix:Duration>2</mix:Duration>
+              <Combinator xsi:type="aud:SpeakerBuffer">
+                <aud:LevelDbfs>-30</aud:LevelDbfs>
+                <aud:Equalise>false</aud:Equalise>
+                <aud:SyncCopy>false</aud:SyncCopy>
               </Combinator>
+            </Expression>
+            <Expression xsi:type="MulticastSubject">
+              <Name>BackgroundNoise</Name>
             </Expression>
           </Nodes>
           <Edges>
-            <Edge From="2" To="3" Label="Source1" />
-            <Edge From="1" To="4" Label="Source1" />
-            <Edge From="3" To="4" Label="Source2" />
-            <Edge From="6" To="7" Label="Source1" />
-            <Edge From="5" To="8" Label="Source1" />
-            <Edge From="7" To="8" Label="Source2" />
-            <Edge From="10" To="11" Label="Source1" />
-            <Edge From="9" To="12" Label="Source1" />
-            <Edge From="11" To="12" Label="Source2" />
-            <Edge From="13" To="14" Label="Source1" />
+            <Edge From="1" To="2" Label="Source1" />
+            <Edge From="4" To="5" Label="Source1" />
+            <Edge From="3" To="6" Label="Source1" />
+            <Edge From="5" To="6" Label="Source2" />
+            <Edge From="2" To="7" Label="Source1" />
+            <Edge From="6" To="7" Label="Source2" />
+            <Edge From="7" To="8" Label="Source1" />
+            <Edge From="8" To="9" Label="Source1" />
+            <Edge From="9" To="10" Label="Source1" />
+            <Edge From="11" To="12" Label="Source1" />
             <Edge From="14" To="15" Label="Source1" />
+            <Edge From="13" To="16" Label="Source1" />
+            <Edge From="15" To="16" Label="Source2" />
+            <Edge From="12" To="17" Label="Source1" />
+            <Edge From="16" To="17" Label="Source2" />
             <Edge From="17" To="18" Label="Source1" />
-            <Edge From="16" To="19" Label="Source1" />
-            <Edge From="18" To="19" Label="Source2" />
+            <Edge From="18" To="19" Label="Source1" />
             <Edge From="19" To="20" Label="Source1" />
-            <Edge From="20" To="21" Label="Source1" />
-            <Edge From="23" To="24" Label="Source1" />
-            <Edge From="22" To="25" Label="Source1" />
-            <Edge From="24" To="25" Label="Source2" />
+            <Edge From="21" To="22" Label="Source1" />
+            <Edge From="22" To="24" Label="Source1" />
+            <Edge From="23" To="24" Label="Source2" />
+            <Edge From="24" To="25" Label="Source1" />
             <Edge From="25" To="26" Label="Source1" />
             <Edge From="26" To="27" Label="Source1" />
             <Edge From="28" To="29" Label="Source1" />
-            <Edge From="29" To="31" Label="Source1" />
-            <Edge From="30" To="31" Label="Source2" />
-            <Edge From="31" To="32" Label="Source1" />
+            <Edge From="29" To="30" Label="Source1" />
             <Edge From="32" To="33" Label="Source1" />
-            <Edge From="33" To="34" Label="Source1" />
+            <Edge From="31" To="34" Label="Source1" />
+            <Edge From="33" To="34" Label="Source2" />
+            <Edge From="30" To="35" Label="Source1" />
+            <Edge From="34" To="35" Label="Source2" />
             <Edge From="35" To="36" Label="Source1" />
             <Edge From="36" To="37" Label="Source1" />
-            <Edge From="39" To="40" Label="Source1" />
-            <Edge From="38" To="41" Label="Source1" />
-            <Edge From="40" To="41" Label="Source2" />
-            <Edge From="41" To="42" Label="Source1" />
-            <Edge From="42" To="44" Label="Source1" />
-            <Edge From="43" To="44" Label="Source2" />
-            <Edge From="45" To="46" Label="Source1" />
-            <Edge From="46" To="48" Label="Source1" />
-            <Edge From="47" To="48" Label="Source2" />
-            <Edge From="48" To="49" Label="Source1" />
-            <Edge From="49" To="50" Label="Source1" />
+            <Edge From="37" To="38" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -1340,7 +1135,7 @@
               <Combinator xsi:type="ext:PipBuffer" />
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>Buffer</Name>
+              <Name>StimulusSounds</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
               <Selector>Frame.Row.visualSpatialFrequencyCpd</Selector>
@@ -1416,7 +1211,7 @@
               <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>RewardBuffer</Name>
+              <Name>RewardToneSounds</Name>
             </Expression>
             <Expression xsi:type="rx:Condition">
               <Name>PenaltySound?</Name>
@@ -1446,7 +1241,7 @@
               <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>PenaltyBuffer</Name>
+              <Name>PenaltySounds</Name>
             </Expression>
             <Expression xsi:type="rx:Condition">
               <Name>OptogeneticsOutcome?</Name>

@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 
 import jsonschema
@@ -71,9 +72,9 @@ def test_the_committed_waveforms_are_waveforms_py_s():
 def test_the_penalty_sound_is_the_lab_s():
     # Audit, 14 Nov 2026: the penalty sound is OpenRigs.Audio's (PenaltySoundBuffer), so the task file names no file and
     # waveforms.py makes none.
-    assert set(task()["taskParameters"]["penalty"]["sound"]) == {"enabled", "gain"}
+    assert set(task()["taskParameters"]["penalty"]["sound"]) == {"enabled", "levelDbfs"}
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    assert set(schema["$defs"]["PenaltySound"]["properties"]) == {"enabled", "gain"}
+    assert set(schema["$defs"]["PenaltySound"]["properties"]) == {"enabled", "levelDbfs"}
     # rig-control checks the task file against the closed schema, so a file naming a sound path is refused.
     doc = task()
     doc["taskParameters"]["penalty"]["sound"]["path"] = "waveforms\\penalty.wav"
@@ -81,13 +82,21 @@ def test_the_penalty_sound_is_the_lab_s():
     assert len(errors) == 1 and "'path'" in errors[0]
 
 
-def test_every_sound_is_at_the_loudness_it_plays_at():
-    # Tom's pips and reward tone peaked at amplitude squared (written at amplitude, scaled by it again); the noise has a
-    # pip's RMS, so backgroundNoiseLevel is its gain.
-    assert abs(float(np.max(np.abs(waveforms.tones(np.array([18000]))))) - 0.05**2) < 1e-4
-    assert abs(float(np.max(np.abs(waveforms.reward_tone()))) - 0.05**2) < 1e-6
-    rms = float(np.sqrt(np.mean(waveforms.background_noise().astype(np.float64) ** 2)))
-    assert abs(rms - 0.5 * 0.05**2) < 1e-5
+def _dbfs_rms(sound: np.ndarray) -> float:
+    return 20 * math.log10(float(np.sqrt(np.mean(sound.astype(np.float64) ** 2))))
+
+
+def test_the_task_file_states_the_levels_played_until_15_nov_2026():
+    # Until 15 Nov 2026 every file played as stored (Tom's pips and reward tone peaking at 0.05 squared, written at the
+    # amplitude and scaled by it again) and the noise at backgroundNoiseLevel 0.5 as its gain. Each level is now the task
+    # file's levelDbfs, in dBFS RMS of the sound as stored (OpenRigs.Audio SoundLevel), so it states those, within 0.05 dB.
+    p = task()["taskParameters"]
+    assert abs(p["tonePips"]["levelDbfs"] - max(_dbfs_rms(row) for row in waveforms.tones(waveforms.tone_frequencies()))) < 0.05
+    assert abs(p["tonePips"]["levelDbfs"] - min(_dbfs_rms(row) for row in waveforms.tones(waveforms.tone_frequencies()))) < 0.05
+    assert abs(p["rewardTone"]["levelDbfs"] - _dbfs_rms(waveforms.reward_tone())) < 0.05
+    assert abs(p["backgroundNoise"]["levelDbfs"] - (_dbfs_rms(waveforms.background_noise()) + 20 * math.log10(0.5))) < 0.05
+    assert p["backgroundNoise"]["enabled"] and p["penalty"]["sound"]["levelDbfs"] == -44.6
+    assert "backgroundNoiseLevel" not in p
 
 
 def _closed(node):

@@ -1,10 +1,11 @@
-"""The sounds the workflow plays, made once and committed in src/waveforms, each at the loudness it is played at.
+"""The sounds the workflow plays, made once and committed in src/waveforms.
 
 Tom Childs' gen_session.py wrote the tones again before every experiment, at the task's amplitude, and the workflow
-scaled them by the amplitude again, so a pip peaked at amplitude squared. The sweep and its loudness are fixed here
-(SWEEP_START_HZ ... PIP_PEAK, Tom's 2000 to 25000 Hz in 100 tones at 0.05 squared) and recorded in sweep.json, which
-the workflow reads for the sweep's frequencies (Corridor.cs Sweep) and task.py for the reward zones' bounds. The
-workflow plays every file at its loudness on rig.yml's speakers (OpenRigs.Audio SpeakerBuffer: the pips and the reward
+scaled them by the amplitude again, so a pip peaked at amplitude squared. The sweep is fixed here (SWEEP_START_HZ ...
+PIP_PEAK, Tom's 2000 to 25000 Hz in 100 tones at 0.05 squared) and recorded in sweep.json, which the workflow reads
+for the sweep's frequencies (Corridor.cs Sweep) and task.py for the reward zones' bounds. The files' amplitudes do not
+set how loud they play: the workflow plays each at the task file's level in dBFS RMS of the file as stored (tonePips,
+rewardTone, backgroundNoise .levelDbfs) on rig.yml's speakers (OpenRigs.Audio SpeakerBuffer: the pips and the reward
 tone equalised for each speaker, the noise as it is); the penalty sound is the lab's, from OpenRigs.Audio. Run `uv run generate-waveforms` after changing one of them, and commit.
 """
 
@@ -49,8 +50,8 @@ def reward_tone(peak: float = PIP_PEAK) -> np.ndarray:
 
 
 def background_noise(peak: float = PIP_PEAK) -> np.ndarray:
-    """60 s of zero-mean uniform white noise with a pip's RMS (half its peak), float32: the task's
-    backgroundNoiseLevel is the mixer gain it plays at."""
+    """60 s of zero-mean uniform white noise with a pip's RMS (half its peak), float32; it plays at the task file's
+    backgroundNoise.levelDbfs."""
     unit = np.random.default_rng(NOISE_SEED).uniform(-1.0, 1.0, SAMPLE_RATE * NOISE_SECONDS)  # RMS 1 / sqrt(3)
     return (unit * (0.5 * peak * np.sqrt(3))).astype(np.float32)
 

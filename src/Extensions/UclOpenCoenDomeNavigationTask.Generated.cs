@@ -120,6 +120,103 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
+    /// The background noise, one level for the experiment: looped on every speaker unequalised, faded in over 2 s once
+    ///the task file is read at Go (OpenRigs.Audio SpeakerMixer).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("The background noise, one level for the experiment: looped on every speaker unequ" +
+        "alised, faded in over 2 s once\nthe task file is read at Go (OpenRigs.Audio Speak" +
+        "erMixer).")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class BackgroundNoise
+    {
+    
+        private bool _enabled;
+    
+        private double _levelDbfs;
+    
+        public BackgroundNoise()
+        {
+            _enabled = true;
+            _levelDbfs = -50D;
+        }
+    
+        protected BackgroundNoise(BackgroundNoise other)
+        {
+            _enabled = other._enabled;
+            _levelDbfs = other._levelDbfs;
+        }
+    
+        /// <summary>
+        /// Whether the background noise plays
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("enabled")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="enabled")]
+        [System.ComponentModel.DescriptionAttribute("Whether the background noise plays")]
+        public bool Enabled
+        {
+            get
+            {
+                return _enabled;
+            }
+            set
+            {
+                _enabled = value;
+            }
+        }
+    
+        /// <summary>
+        /// The background noise's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -50. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
+        [System.ComponentModel.DescriptionAttribute(@"The background noise's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -50. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation")]
+        public double LevelDbfs
+        {
+            get
+            {
+                return _levelDbfs;
+            }
+            set
+            {
+                _levelDbfs = value;
+            }
+        }
+    
+        public System.IObservable<BackgroundNoise> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new BackgroundNoise(this)));
+        }
+    
+        public System.IObservable<BackgroundNoise> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new BackgroundNoise(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("Enabled = " + _enabled + ", ");
+            stringBuilder.Append("LevelDbfs = " + _levelDbfs);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
     /// Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and the corridor's laser timing.
     ///
     ///The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
@@ -478,18 +575,18 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _enabled;
     
-        private double _gain;
+        private double _levelDbfs;
     
         public PenaltySound()
         {
             _enabled = true;
-            _gain = 1D;
+            _levelDbfs = -30D;
         }
     
         protected PenaltySound(PenaltySound other)
         {
             _enabled = other._enabled;
-            _gain = other._gain;
+            _levelDbfs = other._levelDbfs;
         }
     
         /// <summary>
@@ -511,20 +608,20 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Gain on the lab's penalty sound, 1 for its level
+        /// The penalty sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("gain")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="gain")]
-        [System.ComponentModel.DescriptionAttribute("Gain on the lab\'s penalty sound, 1 for its level")]
-        public double Gain
+        [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
+        [System.ComponentModel.DescriptionAttribute(@"The penalty sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation")]
+        public double LevelDbfs
         {
             get
             {
-                return _gain;
+                return _levelDbfs;
             }
             set
             {
-                _gain = value;
+                _levelDbfs = value;
             }
         }
     
@@ -541,7 +638,150 @@ namespace UclOpenCoenDomeNavigationTask
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
             stringBuilder.Append("Enabled = " + _enabled + ", ");
-            stringBuilder.Append("Gain = " + _gain);
+            stringBuilder.Append("LevelDbfs = " + _levelDbfs);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// A task's reward tone, played at levelDbfs.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("A task\'s reward tone, played at levelDbfs.")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class RewardTone
+    {
+    
+        private double _levelDbfs;
+    
+        public RewardTone()
+        {
+            _levelDbfs = -36D;
+        }
+    
+        protected RewardTone(RewardTone other)
+        {
+            _levelDbfs = other._levelDbfs;
+        }
+    
+        /// <summary>
+        /// The reward tone's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -36. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
+        [System.ComponentModel.DescriptionAttribute(@"The reward tone's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -36. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation")]
+        public double LevelDbfs
+        {
+            get
+            {
+                return _levelDbfs;
+            }
+            set
+            {
+                _levelDbfs = value;
+            }
+        }
+    
+        public System.IObservable<RewardTone> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new RewardTone(this)));
+        }
+    
+        public System.IObservable<RewardTone> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new RewardTone(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("LevelDbfs = " + _levelDbfs);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// A task's stimulus sounds, each played at levelDbfs (OpenRigs.Audio SpeakerBuffer or SpeakerSet.Buffer).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("A task\'s stimulus sounds, each played at levelDbfs (OpenRigs.Audio SpeakerBuffer " +
+        "or SpeakerSet.Buffer).")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class StimulusSound
+    {
+    
+        private double _levelDbfs;
+    
+        public StimulusSound()
+        {
+            _levelDbfs = -30D;
+        }
+    
+        protected StimulusSound(StimulusSound other)
+        {
+            _levelDbfs = other._levelDbfs;
+        }
+    
+        /// <summary>
+        /// Each stimulus sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
+        [System.ComponentModel.DescriptionAttribute(@"Each stimulus sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops when the task file is read at Go if any peak would reach -1 dBFS after equalisation")]
+        public double LevelDbfs
+        {
+            get
+            {
+                return _levelDbfs;
+            }
+            set
+            {
+                _levelDbfs = value;
+            }
+        }
+    
+        public System.IObservable<StimulusSound> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new StimulusSound(this)));
+        }
+    
+        public System.IObservable<StimulusSound> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new StimulusSound(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("LevelDbfs = " + _levelDbfs);
             return true;
         }
     
@@ -1167,7 +1407,11 @@ namespace UclOpenCoenDomeNavigationTask
     
         private UclOpenCoenDomeNavigationTaskParametersModality _modality;
     
-        private double _backgroundNoiseLevel;
+        private StimulusSound _tonePips;
+    
+        private RewardTone _rewardTone;
+    
+        private BackgroundNoise _backgroundNoise;
     
         private int _positionStepCm;
     
@@ -1184,7 +1428,9 @@ namespace UclOpenCoenDomeNavigationTask
         public UclOpenCoenDomeNavigationTaskParameters()
         {
             _modality = UclOpenCoenDomeNavigationTaskParametersModality.Auditory;
-            _backgroundNoiseLevel = 0.5D;
+            _tonePips = new StimulusSound();
+            _rewardTone = new RewardTone();
+            _backgroundNoise = new BackgroundNoise();
             _positionStepCm = 1;
             _trialStructure = new TrialStructure();
             _penalty = new Penalty();
@@ -1197,7 +1443,9 @@ namespace UclOpenCoenDomeNavigationTask
         {
             _rngSeed = other._rngSeed;
             _modality = other._modality;
-            _backgroundNoiseLevel = other._backgroundNoiseLevel;
+            _tonePips = other._tonePips;
+            _rewardTone = other._rewardTone;
+            _backgroundNoise = other._backgroundNoise;
             _positionStepCm = other._positionStepCm;
             _trialStructure = other._trialStructure;
             _penalty = other._penalty;
@@ -1244,20 +1492,62 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Constant background white noise RMS, as a fraction of the beep RMS (0 = off)
+        /// The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("backgroundNoiseLevel")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="backgroundNoiseLevel")]
-        [System.ComponentModel.DescriptionAttribute("Constant background white noise RMS, as a fraction of the beep RMS (0 = off)")]
-        public double BackgroundNoiseLevel
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("tonePips")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="tonePips")]
+        [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/waveforms/all_waveforms.bin), each played at levelDbfs" +
+            " (open_rigs.core.task StimulusSound)")]
+        public StimulusSound TonePips
         {
             get
             {
-                return _backgroundNoiseLevel;
+                return _tonePips;
             }
             set
             {
-                _backgroundNoiseLevel = value;
+                _tonePips = value;
+            }
+        }
+    
+        /// <summary>
+        /// The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardTone")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardTone")]
+        [System.ComponentModel.DescriptionAttribute("The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.c" +
+            "ore.task RewardTone)")]
+        public RewardTone RewardTone
+        {
+            get
+            {
+                return _rewardTone;
+            }
+            set
+            {
+                _rewardTone = value;
+            }
+        }
+    
+        /// <summary>
+        /// The background white noise (src/waveforms/background_noise.bin) on every speaker, from Go (open_rigs.core.task BackgroundNoise)
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("backgroundNoise")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="backgroundNoise")]
+        [System.ComponentModel.DescriptionAttribute("The background white noise (src/waveforms/background_noise.bin) on every speaker," +
+            " from Go (open_rigs.core.task BackgroundNoise)")]
+        public BackgroundNoise BackgroundNoise
+        {
+            get
+            {
+                return _backgroundNoise;
+            }
+            set
+            {
+                _backgroundNoise = value;
             }
         }
     
@@ -1390,7 +1680,9 @@ namespace UclOpenCoenDomeNavigationTask
         {
             stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
             stringBuilder.Append("Modality = " + _modality + ", ");
-            stringBuilder.Append("BackgroundNoiseLevel = " + _backgroundNoiseLevel + ", ");
+            stringBuilder.Append("TonePips = " + _tonePips + ", ");
+            stringBuilder.Append("RewardTone = " + _rewardTone + ", ");
+            stringBuilder.Append("BackgroundNoise = " + _backgroundNoise + ", ");
             stringBuilder.Append("PositionStepCm = " + _positionStepCm + ", ");
             stringBuilder.Append("TrialStructure = " + _trialStructure + ", ");
             stringBuilder.Append("Penalty = " + _penalty + ", ");
@@ -1457,6 +1749,11 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<UclOpenCoenDomeNavigationTaskLogic>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<BackgroundNoise> source)
+        {
+            return Process<BackgroundNoise>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<OptogeneticsConfig> source)
         {
             return Process<OptogeneticsConfig>(source);
@@ -1470,6 +1767,16 @@ namespace UclOpenCoenDomeNavigationTask
         public System.IObservable<string> Process(System.IObservable<PenaltySound> source)
         {
             return Process<PenaltySound>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<RewardTone> source)
+        {
+            return Process<RewardTone>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<StimulusSound> source)
+        {
+            return Process<StimulusSound>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<TrainingStage> source)
@@ -1502,9 +1809,12 @@ namespace UclOpenCoenDomeNavigationTask
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BackgroundNoise>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]
@@ -1563,6 +1873,11 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<UclOpenCoenDomeNavigationTaskLogic>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<BackgroundNoise> source)
+        {
+            return Process<BackgroundNoise>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<OptogeneticsConfig> source)
         {
             return Process<OptogeneticsConfig>(source);
@@ -1576,6 +1891,16 @@ namespace UclOpenCoenDomeNavigationTask
         public System.IObservable<string> Process(System.IObservable<PenaltySound> source)
         {
             return Process<PenaltySound>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<RewardTone> source)
+        {
+            return Process<RewardTone>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<StimulusSound> source)
+        {
+            return Process<StimulusSound>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<TrainingStage> source)
@@ -1608,9 +1933,12 @@ namespace UclOpenCoenDomeNavigationTask
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BackgroundNoise>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]

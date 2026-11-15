@@ -12,8 +12,16 @@ name: UclOpenCoenDomeNavigation
 taskParameters:
   modality: auditory          # auditory (the tone sweep), visual (the grating) or audiovisual
   rngSeed: null               # null = rig-control draws one at Go; each seed used is a RngSeed event in BonsaiData_Async
-  # The sweep and its loudness are src\waveforms\sweep.json's, made with the tone files (generate-waveforms).
-  backgroundNoiseLevel: 0.5   # background noise RMS as a fraction of the beep RMS; 0 is off
+  # The sweep is src\waveforms\sweep.json's, made with the tone files (generate-waveforms); each sound's level is here,
+  # in dBFS RMS of the sound as stored, before equalisation: the levels played until 15 Nov 2026 (Tom Childs' pips were
+  # scaled by 0.05 twice, hence quiet; the lab's defaults are pips -30, reward tone -36, background -50, penalty -30).
+  tonePips:
+    levelDbfs: -58.1
+  rewardTone:
+    levelDbfs: -55.1
+  backgroundNoise:            # white noise on every speaker, unequalised, faded in at Go
+    enabled: true
+    levelDbfs: -64.1
   positionStepCm: 1           # the distance run is rounded to this before it sets the frequency
   trialStructure:
     itiMinSeconds: 2.0        # from the outcome (after any timeout) to the first pip, drinking included:
@@ -23,7 +31,7 @@ taskParameters:
     timeoutSeconds: 2.0       # s after a penalised trial
     sound:                    # the lab's penalty sound (OpenRigs.Audio), on a penalised trial
       enabled: true
-      gain: 1.0               # 1: the lab's level, from rig.yml's penaltySoundChannel alone
+      levelDbfs: -44.6        # dBFS RMS, on rig.yml's penaltySoundChannel alone
   truncation:                 # on a stage's truncated trials
     sweepFractions: [0.4, 0.6]
   optogenetics:               # Zapit; the laser runs from the trigger to the outcome (or laserMaxSeconds), laser-off trials laser off

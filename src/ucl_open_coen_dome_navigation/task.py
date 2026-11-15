@@ -4,15 +4,16 @@ workflow reads at Go (TaskPath). Ported from Tom Childs' auditory-vr-corridor ta
 Laid out as av-dome's (Pip, 9 Nov 2026): the stage is the TrainingStage experiment setting, a row of trainingStages
 from 0 (Tom's stages 1 to 6 are rows 0 to 5), and each row says what the stage does, where the workflow used to test
 the stage number; trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
-sound, and rngSeed seeds every draw. The sweep and its loudness are src/waveforms/sweep.json's, made with the tone files
-(`uv run generate-waveforms`), not the task file's (plan v11)."""
+sound, and rngSeed seeds every draw. The sweep is src/waveforms/sweep.json's, made with the tone files
+(`uv run generate-waveforms`), not the task file's (plan v11); every sound's level is the task file's (levelDbfs, in dBFS
+RMS: tonePips, rewardTone, backgroundNoise and penalty.sound)."""
 
 import json
 import math
 from pathlib import Path
 from typing import Literal
 
-from open_rigs.core.task import Optogenetics, Penalty, QuietWait, Task, TaskParameters
+from open_rigs.core.task import BackgroundNoise, Optogenetics, Penalty, QuietWait, RewardTone, StimulusSound, Task, TaskParameters
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS, ZAPIT_REPLY_MARGIN_SECONDS
 from open_rigs.rigs.lab_rig import MAX_REWARD_UL
 from pydantic import Field, field_validator, model_validator
@@ -151,8 +152,14 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     modality: Literal["auditory", "visual", "audiovisual"] = Field(
         default="auditory", description="What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)"
     )
-    background_noise_level: float = Field(
-        default=0.5, description="Constant background white noise RMS, as a fraction of the beep RMS (0 = off)", ge=0.0, le=1.0
+    tone_pips: StimulusSound = Field(
+        default=StimulusSound(), description="The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"
+    )
+    reward_tone: RewardTone = Field(
+        default=RewardTone(), description="The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
+    )
+    background_noise: BackgroundNoise = Field(
+        default=BackgroundNoise(), description="The background white noise (src/waveforms/background_noise.bin) on every speaker, from Go (open_rigs.core.task BackgroundNoise)"
     )
     position_step_cm: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
     trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")

@@ -27,7 +27,7 @@ Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `
 
 | Path | What |
 |---|---|
-| `src\main.bonsai` | The workflow, top level in data-flow order: RigSetup, Initialization, Declarations, Ready, Task, Zapit, Commands, Grating, Audio, StartTrials, TaskLogic, Logging, LiveView |
+| `src\main.bonsai` | The workflow, top level in data-flow order: RigSetup, Initialization, Declarations, Task, Zapit, Commands, Grating, Audio, StartTrials, TaskLogic, Logging, LiveView |
 | `src\Extensions\Corridor.cs` | The task: each trial's draw (`TrialDraw`), its interval, quiet wait and run along the virtual track (`VirtualTrack`, `CorridorState`) on the Harp clock, its outcome and row (`CreateTrialRow`), all tested in `tests\Extensions.Tests` |
 | `config\task-abstract-av-corridor.yml` | The task file rig-control copies at Go with the form's edits |
 | `schemas\trial-columns.yml` | What each `BonsaiData_Trial` column means |
@@ -42,7 +42,7 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | Block | Its job in this task | File |
 |---|---|---|
 | `ReadRigConfig`, `ResolveRigConfigDirectory` | read this machine's rig.yml | `OpenRigs.Core:ReadRigConfig.bonsai` |
-| `RigHardware` | every device, the Harp clock (`Timestamp`), the wheel's distance (`WheelDistanceCm`), the left lick detector (`LickStateLeft`), the ZapitTrigger line, the spout stage and its commands | `OpenRigs.Devices:RigHardware.bonsai` |
+| `RigHardware` | every device, the Harp clock (`Timestamp`), the wheel's distance (`WheelDistanceCm`), the left lick detector (`LickStateLeft`), the ZapitTrigger line, the spout stage and its commands, the cameras' trigger 2 s after Start, and Ready once the clock is set and the spouts are homed (a stop naming what never came after 180 s) | `OpenRigs.Devices:RigHardware.bonsai` |
 | `ProjectorDisplay` | the dome's window, where the grating draws | `OpenRigs.Vision:ProjectorDisplay.bonsai` |
 | `DeliverReward` | each reward on the left spout, planned from the valve's calibration; a reward over `MaxRewardUl` (20 µl, `LoadRewardLine`) stops the workflow, and so does a valve with no calibration, for every mouse | `OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai` |
 | `HarpLogs` | the Harp boards' logs | `OpenRigs.Devices:HarpLogs.bonsai` |
@@ -54,10 +54,10 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `RecordHarpDevices` | each Harp board checked at Start and its device record and register map written into the experiment | `OpenRigs.HarpDevices` |
 | `ExperimentManifest` | `manifest.json`: what ran, the config files by hash, what the experiment must leave | `OpenRigs.Manifest` |
 | `StreamDevices` | the live view (the last node) | `OpenRigs.LiveView` |
-| `StartupWatchdog` | Ready once the clock is set and the spouts are homed, or a stop naming what never came | `OpenRigs.Core` |
 | `ConnectZapit`, `ZapitLogs` | Zapit's commands (`ZapitCommands`, which it declares) and replies once the task uses it, its replies and conditions file logged (`ZapitLogs`), and the stops at start: an error reply, no conditions file loaded, a conditions count other than the task's file, a real mouse on a rig without hardware triggering | `OpenRigs.Devices:Zapit.ConnectZapit.bonsai` |
 | `ZapitConditionsSnapshot`, `ZapitLineMessage`, `ZapitTrial.ReplyMarginSeconds`, `ZapitTrial.CheckArmed` | the conditions file copied into the experiment, the trigger line's set and clear, the 0.2 s Zapit reply margin the task's checks use, the check of Zapit's armed reply (`CorridorState.OnZapitReply`) | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |
-| `LoadSpeakers`, `SpeakerBuffer`, `PenaltySoundBuffer` | rig.yml's speakers and their filters, loaded once at Start (`Speakers`), stopping the workflow naming any speaker without a usable filter; each sound laid out on rig.yml's `channelCount` channels, the pips and reward tone equalised on every rig.yml speaker and the background noise as it is on every speaker; the penalty sound the lab's, on `penaltySoundChannel` alone at the task's `penalty.sound.gain` | `OpenRigs.Audio` |
+| `SpeakerMixer` | rig.yml's speakers and their filters, loaded once at Start (`Speakers`), stopping the workflow naming any speaker without a usable filter; the mixer, started no sooner than 3 s after Start; the pips, reward tone, penalty sound and background noise played over each other | `OpenRigs.Audio:SpeakerMixer.bonsai` |
+| `SpeakerBuffer`, `PenaltySoundBuffer` | each sound laid out on rig.yml's `channelCount` channels at the task file's level in dBFS RMS (`tonePips`, `rewardTone`, `backgroundNoise`, `penalty.sound` `levelDbfs`), checked at Go to peak under -1 dBFS after equalisation: the pips and reward tone equalised on every rig.yml speaker, the background noise as it is on every speaker, the penalty sound the lab's, on `penaltySoundChannel` alone | `OpenRigs.Audio` |
 
 ## Checks
 
