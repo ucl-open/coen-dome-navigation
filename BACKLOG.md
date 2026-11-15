@@ -12,6 +12,10 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - `suggest-stage` says an experiment is unreadable, as for any other unreadable one, when its Settings_Experiment has a null `TrainingStage` or its trial log cannot be parsed as CSV; before, it ended with a traceback and no JSON line (test).
 - `trialStartTime`'s description is the shared block's again (lib-open-rigs e0ba7c0): the lead is 0 only for a task file with no optogenetics block, not "without optogenetics"; this task's lead applies with `useZapit` off too.
 
+## Audit cycle 3 (15 Nov 2026)
+
+- RigSetup reads rig.yml with lib-open-rigs' `ReadLabRig` include (OpenRigs.Devices), the same steps the hand-built `ReadRigConfig` group, `DeserializeFromYaml`, `Take` and `RigConfigs` ran (proved headless: `RigConfigDirectory` and `RigConfigs` reach a sibling group, and a wrong `ConfigRoot` stops at Start naming it); a test holds its `ConfigRoot` to the other nodes', as check-workflow does not look inside an include.
+
 ## 2026-11-15 The background noise from Ready (Pip)
 
 - **Changed for the mice:** the background noise starts at Ready, not Go, faded in over 2 s. Ready waits for the mixer (RigHardware's `ReadyWaitsFor`: `HarpClockSet, SpoutsHomed, MixerStarted`), so the noise never reaches the mixer before it starts. Its level is the task file's as rig-control wrote it at launch, read at Start (`LaunchTaskConfig`) and checked then to peak under -1 dBFS; the stimuli and penalty sound still take theirs at Go.

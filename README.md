@@ -41,7 +41,7 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 
 | Block | Its job in this task | File |
 |---|---|---|
-| `ReadRigConfig`, `ResolveRigConfigDirectory` | read this machine's rig.yml | `OpenRigs.Core:ReadRigConfig.bonsai` |
+| `ReadLabRig` | read this machine's rig.yml into the lab rig model (`RigConfigs`) and publish its folder (`RigConfigDirectory`) | `OpenRigs.Devices:ReadLabRig.bonsai` |
 | `RigHardware` | every device, the Harp clock (`Timestamp`), the wheel's distance (`WheelDistanceCm`), the left lick detector (`LickStateLeft`), the ZapitTrigger line, the spout stage and its commands, the cameras' trigger 2 s after Start, and Ready once the clock is set, the spouts are homed and the mixer has started (`ReadyWaitsFor`: `HarpClockSet, SpoutsHomed, MixerStarted`; a stop naming what never came after 180 s) | `OpenRigs.Devices:RigHardware.bonsai` |
 | `ProjectorDisplay` | the dome's window, where the grating draws | `OpenRigs.Vision:ProjectorDisplay.bonsai` |
 | `DeliverReward` | each reward on the left spout, planned from the valve's calibration; a reward over `MaxRewardUl` (20 µl, `LoadRewardLine`) stops the workflow, and so does a valve with no calibration, for every mouse | `OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai` |
@@ -49,7 +49,7 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `HarpDelay` | the trigger line cleared `triggerHoldSeconds` after the outcome, on the Harp clock, in an optogenetics experiment | `OpenRigs.Core` |
 | `ExperimentControl`, `ExperimentSettings`, `OnCommand`, `OnParameterSet`, `ParameterDefault`, `ParameterValue`, `ReportMetric`, `ReportPhase` | parameters, commands, Go and phases for rig-control; the settings files; the metrics the view shows | `OpenRigs.Control` (`ExperimentControl.bonsai`) |
 | `LogController`, `LogAsync`, `LogTrial`, `LogData`, `LogCameras`, `LogDataSchema`, `CreateAsyncEvent` | the experiment folder and its files: trial rows, async events (Go, commands, `RngSeed` at trial 1's Go), stimulus state, every camera's video, settings | `OpenRigs.Logging` |
-| `LabRig`, `DeserializeFromYaml`, `SerializeToJson` | rig.yml read as the lab rig model, as every lab workflow reads it, and logged as `Settings_Rig` | `OpenRigs.Devices` (`OpenRigs.Devices.Rigs`) |
+| `LabRig`, `SerializeToJson` | the lab rig model `ReadLabRig` reads rig.yml into, as every lab workflow does, logged as `Settings_Rig` | `OpenRigs.Devices` (`OpenRigs.Devices.Rigs`) |
 | `ReadTextFile` | the task file read at Start (`LaunchTaskConfig`, the background noise's) and at Go (`TaskConfig`) | `OpenRigs.Core` |
 | `ThrowError` | stops the workflow at Go if `backgroundNoise` differs from the launch's | `OpenRigs.Core` |
 | `RecordHarpDevices` | each Harp board checked at Start and its device record and register map written into the experiment | `OpenRigs.HarpDevices` |

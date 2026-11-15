@@ -42,6 +42,12 @@ def test_the_shared_blocks_replace_the_local_copies():
     assert "Disable" not in {e.get(XSI) for e in MAIN.iter(W + "Expression")}
 
 
+def test_rig_yml_is_read_once_by_read_lab_rig_under_the_lab_s_root():
+    # check-workflow's same-root check does not look inside an include, so ReadLabRig's ConfigRoot is held here with the rest.
+    assert TEXT.count('Path="OpenRigs.Devices:ReadLabRig.bonsai"') == 1 and "ResolveRigConfigDirectory" not in TEXT
+    assert set(re.findall(r"<(?:\w+:)?ConfigRoot>([^<]*)</", TEXT)) == {r"C:\Coen-Lab-Local\RigConfigs"}
+
+
 def test_the_launch_properties():
     # No MissingCalibration: a reward valve without a calibration always stops the workflow (Pip, 15 Nov 2026).
     top = MAIN.find(W + "Workflow").find(W + "Nodes")

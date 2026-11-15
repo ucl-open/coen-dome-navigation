@@ -26,44 +26,11 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>RigSetup</Name>
-        <Description>Reads this machine's rig.yml (ReadRigConfig) into the lab rig model (open_rigs.rigs.lab_rig), opens every device with RigHardware (which starts the cameras 2 s after Start and reports Ready once the Harp clock is set, the spouts are homed and the mixer has started: ReadyWaitsFor) and opens the dome's display (ProjectorDisplay).</Description>
+        <Description>Reads this machine's rig.yml (ReadLabRig, which publishes RigConfigDirectory and RigConfigs) into the lab rig model (open_rigs.rigs.lab_rig), opens every device with RigHardware (which starts the cameras 2 s after Start and reports Ready once the Harp clock is set, the spouts are homed and the mixer has started: ReadyWaitsFor) and opens the dome's display (ProjectorDisplay).</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="GroupWorkflow">
-              <Name>ReadRigConfig</Name>
-              <Description>Resolves this machine's rig configuration directory (ConfigRoot\MachineName), publishes it as RigConfigDirectory, and reads rig.yml from it. Fails at startup if either is missing.</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="core:ResolveRigConfigDirectory">
-                      <core:ConfigRoot>C:\Coen-Lab-Local\RigConfigs</core:ConfigRoot>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="rx:AsyncSubject">
-                    <Name>RigConfigDirectory</Name>
-                  </Expression>
-                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Core:ReadRigConfig.bonsai">
-                    <FileName>rig.yml</FileName>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                  <Edge From="2" To="3" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="rig:DeserializeFromYaml">
-              <rig:Type xsi:type="TypeMapping" TypeArguments="rig:LabRig" />
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:AsyncSubject">
-              <Name>RigConfigs</Name>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ReadLabRig.bonsai">
+              <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>SpoutStepSize</Name>
@@ -95,14 +62,11 @@
             </Expression>
           </Nodes>
           <Edges>
-            <Edge From="0" To="1" Label="Source1" />
             <Edge From="1" To="2" Label="Source1" />
             <Edge From="2" To="3" Label="Source1" />
             <Edge From="4" To="5" Label="Source1" />
-            <Edge From="5" To="6" Label="Source1" />
-            <Edge From="7" To="8" Label="Source1" />
-            <Edge From="8" To="10" Label="Source1" />
-            <Edge From="9" To="10" Label="Source2" />
+            <Edge From="5" To="7" Label="Source1" />
+            <Edge From="6" To="7" Label="Source2" />
           </Edges>
         </Workflow>
       </Expression>
