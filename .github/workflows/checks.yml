@@ -28,7 +28,7 @@ jobs:
         run: |
           uv sync --locked
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          uv run --locked --with pytest --with pyyaml pytest -q
+          uv run --locked pytest -q
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Bonsai setup
         shell: pwsh

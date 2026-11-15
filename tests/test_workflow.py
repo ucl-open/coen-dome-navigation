@@ -5,7 +5,10 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import open_rigs.rigs
+import yaml
 from open_rigs.rigs import workflow_lint as lint
+from open_rigs.rigs.lab_rig import LabRig
 
 ROOT = Path(__file__).parents[1]
 W = "{https://bonsai-rx.org/2018/workflow}"
@@ -253,6 +256,12 @@ def test_the_cameras_are_logged_by_log_cameras():
 
 def test_every_file_the_workflow_writes_is_in_the_manifest_s_expected_files():
     assert lint.expected_files_problems(WORKFLOW) == []
+
+
+def test_no_fixed_width_pulse_reaches_a_reward_valve():
+    # Every reward is DeliverReward's calibrated pulse; checked against the lab's rig template's valve lines.
+    rig = LabRig.model_validate(yaml.safe_load((Path(open_rigs.rigs.__file__).parent / "rig-template.yml").read_text(encoding="utf-8")))
+    assert rig.reward_valve_lines() and lint.fixed_width_pulses_on_reward_valves(WORKFLOW, rig.reward_valve_lines()) == []
 
 
 def test_the_rng_seed_is_logged_at_trial_1s_go():

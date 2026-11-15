@@ -9,15 +9,13 @@ sound, and rngSeed seeds every draw. The sweep is src/waveforms/sweep.json's, ma
 RMS: tonePips, rewardTone, backgroundNoise and penalty.sound)."""
 
 import json
-import math
 from pathlib import Path
 from typing import Literal
 
-from open_rigs.core.task import BackgroundNoise, Optogenetics, Penalty, QuietWait, RewardTone, StimulusSound, Task, TaskParameters
+from open_rigs.core.task import BackgroundNoise, Optogenetics, Penalty, QuietWait, RewardTone, StimulusSound, Task, TaskBlock, TaskParameters
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS, ZAPIT_REPLY_MARGIN_SECONDS
 from open_rigs.rigs.lab_rig import MAX_REWARD_UL
 from pydantic import Field, field_validator, model_validator
-from swc.aeon.schema import BaseSchema
 
 from ucl_open_coen_dome_navigation import __semver__
 
@@ -26,7 +24,6 @@ LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (timeL
 MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole beeps (Corridor.cs MaxLeadSeconds)
 NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without timeLimitSeconds (Corridor.cs)
 
-STAGE_COUNT = 6
 SWEEP_FILE = Path(__file__).resolve().parents[1] / "waveforms" / "sweep.json"  # src/waveforms/sweep.json
 
 
@@ -35,7 +32,7 @@ def sweep() -> dict:
     return json.loads(SWEEP_FILE.read_text(encoding="utf-8"))
 
 
-class TrialStructure(BaseSchema):
+class TrialStructure(TaskBlock):
     """Timing of each trial."""
 
     iti_min_seconds: float = Field(
@@ -55,7 +52,7 @@ class TrialStructure(BaseSchema):
         return self
 
 
-class Truncation(BaseSchema):
+class Truncation(TaskBlock):
     """Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).
 
     On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
@@ -106,12 +103,6 @@ class OptogeneticsConfig(Optogenetics):
             raise ValueError(f"laser_to_stimulus_seconds ({self.laser_to_stimulus_seconds}) must be a multiple of the {BEEP_SECONDS} s beep interval")
         if self.laser_to_stimulus_seconds > MAX_LEAD_SECONDS + 1e-9:
             raise ValueError(f"laser_to_stimulus_seconds ({self.laser_to_stimulus_seconds}) must be at most {MAX_LEAD_SECONDS} s")
-        return self
-
-    @model_validator(mode="after")
-    def validate_laser_max_finite(self):
-        if not math.isfinite(self.laser_max_seconds):
-            raise ValueError(f"laser_max_seconds ({self.laser_max_seconds}) must be a finite number of seconds")
         return self
 
 

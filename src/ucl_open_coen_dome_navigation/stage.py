@@ -32,7 +32,6 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-MAX_STAGE = 5
 MAX_AUTO_STAGE = 4
 MIN_TRIALS = 50
 ADVANCE_RATE = 0.7

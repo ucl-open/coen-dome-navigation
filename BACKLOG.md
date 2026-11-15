@@ -2,20 +2,13 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
-## Audit cycle 1 (15 Nov 2026)
+## Audit cycles 1-3 (15 Nov 2026)
 
-- Names and descriptions only, nothing the mice see or hear: the penalty sound's buffer subject is `PenaltySoundBuffer` (was `PenaltyTone`), as in coen-dome-decision-making; the Python and C# constants end in `Seconds` (`BEEP_SECONDS`, `MAX_LEAD_SECONDS`, `MaxLeadSeconds` and the rest; were `_SEC`, `Sec`); RigSetup's, Declarations' and RewardLeft/RewardRight's descriptions, the task file's header, `task.py`'s docstring, trial-columns.yml's header and `.gitignore` say what the code does now; the README lists the lib blocks `Corridor.cs` uses; `docs\zapit-rig-test.md` is one paragraph per line.
+- Done, details in `git log`: names end in `Seconds`; Go refuses a NaN or infinite time (`CorridorSetup.Create`); `suggest-stage` names an unreadable experiment; RigSetup reads rig.yml with lib-open-rigs' `ReadLabRig` (a test holds its `ConfigRoot`, as check-workflow does not look inside an include); the manifest hashes the three speakers' filters.
 
-## Audit cycle 2 (15 Nov 2026)
+## Audit cycle 4 (15 Nov 2026)
 
-- Go refuses a NaN or infinite time (YAML `.nan`, `.inf`), which held Go or a penalty timeout for ever with no error: `itiMinSeconds`, `itiMaxSeconds`, `penalty.timeoutSeconds`, the stage's quiet waits, `timeLimitSeconds`, `trackLengthScale` (above 0), each track length and, with optogenetics, `laserMaxSeconds` and `triggerHoldSeconds` (`CorridorSetup.Create`, test). A `sweep.json` missing a key is refused naming the file, not with a bare null error (test).
-- `suggest-stage` says an experiment is unreadable, as for any other unreadable one, when its Settings_Experiment has a null `TrainingStage` or its trial log cannot be parsed as CSV; before, it ended with a traceback and no JSON line (test).
-- `trialStartTime`'s description is the shared block's again (lib-open-rigs e0ba7c0): the lead is 0 only for a task file with no optogenetics block, not "without optogenetics"; this task's lead applies with `useZapit` off too.
-
-## Audit cycle 3 (15 Nov 2026)
-
-- RigSetup reads rig.yml with lib-open-rigs' `ReadLabRig` include (OpenRigs.Devices), the same steps the hand-built `ReadRigConfig` group, `DeserializeFromYaml`, `Take` and `RigConfigs` ran (proved headless: `RigConfigDirectory` and `RigConfigs` reach a sibling group, and a wrong `ConfigRoot` stops at Start naming it); a test holds its `ConfigRoot` to the other nodes', as check-workflow does not look inside an include.
-- The manifest hashes the three speakers' filters (`calibration\speaker-left.json`, `-right`, `-centre`), which the pips, reward tone and penalty sound are equalised with, as coen-dome-decision-making's already did (test); a missing one is a note, not a stop.
+- Deleted what nothing used: the `pydantic-settings` dependency (`pyyaml` is a dev one, for the tests), `MAX_STAGE`, `STAGE_COUNT`, the unused `gl` xmlns, the CI's `--with` packages the dev group already has, and stale BACKLOG lines. `TrialStructure` and `Truncation` are lib-open-rigs `TaskBlock`s, so the task file refuses inf and NaN in them as in every lab block (the schema is unchanged; test), and `laserMaxSeconds`' own finite check went, as `Optogenetics` already refuses it. A test runs lib-open-rigs' `fixed_width_pulses_on_reward_valves` against the lab's rig template.
 
 ## 2026-11-15 The background noise from Ready (Pip)
 
@@ -23,19 +16,14 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - Go stops the workflow, saying so, if the form changed `backgroundNoise` (`enabled` or `levelDbfs`) after launch: the noise already plays at the launch's level. To play it at another level, launch again with a task file that has it.
 - `TaskFilePath` is published at Start (it was at Go); `TaskConfig` is still read at Go.
 
-## Audit round 3 of 3 (15 Nov 2026)
-
-- The reward tone's and background noise's `SpeakerBuffer` `LevelDbfs` in `src\main.bonsai` are lib-open-rigs' defaults (-36 and -50 dBFS RMS, `SoundLevel`), not -30; the task file's `levelDbfs` sets each at Go, as before. The README says what `scripts\deploy.ps1` and `.bonsai\Setup.ps1` do.
-
-## Audit round 3 of 3 (15 Nov 2026): items not changed
+## Audit rounds 1-3 of 3 (15 Nov 2026, stage C): items not changed
 
 - `stage.py` reads the mouse's session summaries (jacuzzi-ingest's `sub-<lab ID>/<ses folder>.json`) from `--summaries`, with `--expected` listing the run ids that must each have a file: app-rig-control runs it with its own Python, `-I`, outside this project (`[task.suggest]`, standard library only), so it keeps no search of experiment folders and imports no `open_rigs`.
 - `regenerate.py` is the same in coen-dome-navigation and coen-dome-decision-making but for the package name: it is tiny, and each repo owns its schemas.
 - `.bonsai\Setup.ps1` is the same 15 lines in five task repos (coen-dome-navigation, coen-dome-decision-making, coen-behaviour-box, coen-qc-calibrate-valve, coen-qc-preflight-rig): each repo needs its own bootstrap.
-
-## Audit round 2 of 3 (15 Nov 2026, stage C)
-
-- Nothing changed beyond the fixes: `scripts\deploy.ps1` uses `uv sync --locked` and exits 1 naming a failing uv step.
+- A task file that leaves out a sound's `levelDbfs` plays at lib's default (stimuli -30, penalty -30, reward tone -36, background -50), not refused: Pip chose defaults in lib (15 Nov 2026), the shipped files state every level, and older files are refused by the closed schema.
+- The background-noise and penalty chains are the same XML here and in coen-dome-decision-making: the noise sources differ (.bin here, .wav there) and lib's lint forces the level mapping.
+- No headless test that rig.yml's `bootDelay` above 3 s is honoured: the 3 s floor holds either way and the value arrives synchronously today.
 
 ## 2026-11-15 One speaker mixer and sound levels (lib-open-rigs OpenRigs.Audio)
 
@@ -60,7 +48,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 - A trial cut by Stop gets no row; its Go is in `BonsaiData_Async`.
 - Trial 1 starts about 2.3 s after Go here and 1.2 s in coen-dome-decision-making: each task's own start-up, neither a bug.
 - `history` stays in trial-columns.yml until the old data's refactor.
-- `ReadTextFile.cs` is duplicated in both dome workflows (since 15 Nov 2026: it is not; both use OpenRigs.Core's `core:ReadTextFile`).
+
 ## 2026-11-14 Camera video on GREEN-DOME-2 (test mouse, open)
 
 The log is `K:\config\machines\GREEN-DOME-2\switch\iterate-log.md` (round 3).
@@ -74,8 +62,7 @@ The log is `K:\config\machines\GREEN-DOME-2\switch\iterate-log.md` (round 3).
 
 The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2's is beside it.
 
-- **Ready never came** (GREEN-DOME-2): the Ready group took `rx:Last` of a branch with StartupWatchdog in it, which never completes. Ready is now a Zip of `HarpClockSet` and `LickSpoutStage.Homed`, with StartupWatchdog on a branch of its own; two tests. GREEN-DOME-2's change (e4645ed); on BLUE-OPTO-2 every run reached Ready with it.
-- **ZapitCommands would close on the first laser trial**: `LaserOnUntilOutcome` multicasts it per laser trial, and in Bonsai 2.9 a MulticastSubject in a per-element nested graph passes that graph's completion to a PublishSubject (found in coen-dome-decision-making, where it emptied every trial after the first). It is a BehaviorSubject now, which ignores the completion; the same test as decision-making's.
+- Fixed then (tests hold both): Ready never came (a Zip now, StartupWatchdog on its own branch), and ZapitCommands is a BehaviorSubject, so a per-trial multicast's completion cannot close it.
 - Measured on the rig with both fixes, through the agent as the Setup page launches: stages 0-2 Ready in 17-29 s and idle 2 s after Stop (stage 0's drift ends 5 trials with the wheel still; stages 1 and 2 hold trial 1, having no time limit); stages 3, 4 and 5 at 99 trials each, first pip 0.49-0.51 ms after its scheduled time (max 1.02), drift under 0.25 ms an hour, every trial ending by Timeout 12.000 s after the first pip, the 2.000 s penalty timeout after each, stage 5 truncating 16 of 99 at 0.4 and 0.6, `BonsaiData_StimulusState` every 50 ms, no dictionary problems, no dropped camera frame, Stop to idle 1-2 s.
 
 ### Still untried
@@ -96,14 +83,9 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 - **Pip, 13 Nov 2026 (audit round 2): the wheel's quiet wait counts the travel in the last `wheelQuietSeconds`** (was all travel since the last restart, so slow fidgeting delayed Go); **the lick wait needs the spout released** for `lickQuietSeconds` (a held contact holds Go); **no laser after an answer** in both domes, and such a trial logs `laserPowerMw` 0. **Tell Tom.**
 - **Untried**: unit-tested (`CorridorTests.cs`) and build-checked only.
 
-## 2026-11-13 Audit round 3: changed
+## 2026-11-13 Audit rounds 3-5: changed
 
-- Zapit's connection, its start checks and the refusal of a real mouse on a rig without hardware triggering are lib-open-rigs' `Zapit.ConnectZapit` (Devices coen-lab.8), shared with coen-dome-decision-making; the refusal left `CorridorSetup`. The 0.2 s reply margin is lib-open-rigs' `ZapitTrial.ReplyMarginSeconds` and `ZAPIT_REPLY_MARGIN_SECONDS`.
-- Pip, 13 Nov 2026: every rig.yml speaker needs a filter, or the workflow stops at Start naming it (`RequireSpeakerFilters`, lib-open-rigs `DomeSpeakers.RequireFilters`), as in coen-dome-decision-making. Unit-tested and build-checked only.
-
-## 2026-11-13 Audit round 5: changed
-
-- Nothing in the workflow. The arming rule's gap is a BACKLOG item (Open, Zapit on BLUE-OPTO-2).
+- Done, details in `git log`: Zapit's connection and checks are lib-open-rigs' `Zapit.ConnectZapit`; one reward cap, `MAX_REWARD_UL`; `triggerHoldSeconds`' minimum is `ZAPIT_MAX_RAMP_DOWN_SECONDS`; no `ObserveOn` after `CorridorTask`; `config\main.layout` tracked.
 
 ## Audit round 5 (13 Nov 2026): not changed
 
@@ -114,18 +96,9 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 - A calibration `pulseGapMs` of 0 is allowed; the domes fire at the calibrated gap.
 - Lab IDs are not checked unique over time; the lab never reuses them.
 
-## 2026-11-13 Audit round 4: changed
-
-- One cap on a reward, lib-open-rigs' `MAX_REWARD_UL` (20 ul, tied there to `DeliverReward`'s `MaxRewardUl`): each stage's `rewardSizeUl` and `ManualRewardUl`'s `Maximum` (tests).
-- `triggerHoldSeconds`' minimum is lib-open-rigs' `ZAPIT_MAX_RAMP_DOWN_SECONDS` (tied there to `ZapitConditions.MaximumRampDownMs`), not a typed 0.5.
-- On a rig without hardware triggering, Zapit's reply to the StartStimulus sent at the trigger is checked as a hardware-triggered rig's is (`OnZapitReply` returned before, as nothing set `armSent`; test).
-- The `ObserveOn(NewThreadScheduler)` after `CorridorTask` is gone (plan v11 W3): `CorridorTask` emits under its own lock, and nothing after it blocks the clock (`ZapitClient` sends off the thread, `AppendBuffer` queues). Build-checked only.
-- `config\main.layout` is tracked, an empty layout for now, so `Setup.ps1` replaces a stale per-machine one; save the real one (camera windows) on a machine with the Spinnaker SDK. `src\DataSchemas\calibration.json` is gone: no config file used it.
-
 ## Audit round 4 (13 Nov 2026): not changed
 
 - coen-qc-calibrate-valve and the domes pace pulses on different Harp-synced devices, about 1 ms apart.
-- `ReadTextFile.cs` is duplicated in both dome workflows; moving it to a lab package costs a package bump (since 15 Nov 2026: moved; both use OpenRigs.Core's `core:ReadTextFile`).
 - The right valve needs a calibration too (`DeliverReward` loads both lines), though the corridor rewards on the left.
 - No Go time column but `trialStartTime`; the trigger is `laserTriggerTime` from 14 Nov 2026 (NaN without optogenetics or when the mouse answered first).
 - A skipped trial leaves Zapit armed; the next trial disarms it.
@@ -139,10 +112,6 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 - A skipped trial leaves Zapit armed; app-zapit disarms it.
 - coen-dome-navigation arms the next trial during the last one's ramp-down; the trigger hold is at least the longest ramp-down.
 - coen-dome-decision-making has no `goTime` column; it is `itiStartTime + itiSeconds - lead + quietWaitSeconds`.
-
-## Audit round 2 (13 Nov 2026): not changed
-
-- `QuietWait` is the same class here and in coen-dome-decision-making's `TrialLogic.cs`: moving it into the fork needs a package bump pushed into every in-use workflow, and each copy is tested where it runs. Change both copies together; move it if a third workflow needs it. (Since 14 Nov 2026: moved; both use OpenRigs.Core's `QuietWait.cs`.)
 
 ## Open
 
@@ -178,7 +147,6 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 - **Tested on BLUE-OPTO-2** (9 Nov 2026, `test` mouse), with optogenetics off and then on: Bonsai and Zapit agree on every trial. The logging bugs found are fixed (Decided); the Zapit rig issues are above. Not yet run: one of Tom's mice, a dome.
 - **Tom's mice move between BLUE-OPTO-1, BLUE-OPTO-2, GREEN-DOME-1 and GREEN-DOME-2**, so each needs a rig.yml, this clone and the calibration folder (above). A mouse without a spout file gets rig.yml's `lickSpoutDefaultPosition` (all 0 on BLUE-OPTO-2), not Tom's In positions (3550, 5500, 4700, 2150, 950): set and Save each mouse's positions in its first experiment (Pip, 10 Nov 2026; the rig.yml default stays).
 - `config\main.layout` is empty (audit round 4): save one with the camera windows on a machine with the Spinnaker SDK, then commit it (`.bonsai\Setup.ps1` copies it).
-- The old workflow's history: `stage.py` reads the old TrialLogs from each rig's `C:\Github\Coen-Lab\auditory-vr-corridor\Logs` and the RDSS share. On BLUE-OPTO-2 the local path does not exist, but the share answers with every TC mouse's history (9 Nov 2026); check the share from each other rig's account, or every suggestion there says it has no history.
 - A Zapit ticked with no `zapitConfigPath` is refused on the form (the task schema). A path that names no file on the rig stops the experiment at Go, before trial 1: the Zapit condition-count check reads the file when Zapit connects (zapit-v2).
 
 ### Smaller
@@ -215,16 +183,13 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 
 - Trials start 0.5 s after the experiment folder exists, not on Tom's Start button: decided above.
 - Zapit's hardware trigger is the rising edge of `zapit.triggerLine`, raised at beep 0 on every trial of an optogenetics experiment, on every rig; since 10 Nov 2026 held until 1 s after the outcome rather than pulsed for rig.yml's width (5 ms in Tom's; 3000 ms on BLUE-OPTO-2, still av-dome's), see above.
-- Background noise fades in from Go, not launch: at most trial 1's first second.
 - Waveform paths relative to `src`: av-dome's `src\LocalFiles` resolve the same under rig-control.
 - The suggestion not kept across an agent restart, and `test` getting one: edits are kept; harmless.
-- Legacy TrialLog picked by mtime, not Tom's ctime: the same file in practice.
 - Tom's CueOnsetHarp value kept. (Round 3 found it is the first tone pip and grating frame, after Skip's silent beeps, not beep 0 or the laser onset; the column is now the lab's `stimulusOnsetTime`.)
 
 ### Not changed on audit (9 Nov 2026, round 2)
 
 - The suggestion lost on an agent restart (raised again): restarts are rare and a person's edits are kept.
-- TaskLogic's unsent `EncoderReset` message (only a gate for BeepTimer) and its disabled "GERION INSERTED FOR TESTING" node: Tom's, node for node. (Both went with the rebuild of 13 Nov 2026.)
 - The manifest's `ConfigFiles` naming `calibration\MeshMap.csv` and `gammalut.bmp` while rig.yml points the projector at `C:\RigConfigs`, and the spout file read before zeroing may finish: av-dome's own, fixed there or in lib-open-rigs if at all. (BLUE-OPTO-2 has since been switched over, so there both point at `calibration\`.)
 
 ### Not changed on audit (9 Nov 2026, round 3)
@@ -234,49 +199,19 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 
 ### Not changed on audit (10 Nov 2026, the 9 Nov naming pass)
 
-Fixed the same day: `zapitConfigPath` again (rig-control keeps only fields ending ConfigPath), `truncatedTrialFraction` in trainingStages, the lab-wide `laserCondition`/`laserPowerMw` descriptions in add-names, the old-names test, stale prose; rig-control's names check reads only included workflows. Not changed, each on its merits:
-
 - `toneEndFrequencyHz` and `toneFrequencyHz` beside `visual...`: Pip chose "tone" for the sweep (9 Nov 2026); av-dome's `audio...` is a speaker position, a different thing.
 - Laser timing names differ from av-dome's (`laserToStimulusSeconds`, `laserMaxSeconds` against `laserDelaySeconds`, `laserDurationSeconds`): measured from different points (first pip against trial start) and a cap against a timed stimulus, so one name would mislabel one task.
 - `trialStructure` shaped unlike av-dome's (one `quiescentSeconds`, `timeLimitSeconds`): the tasks differ (a lick-free wait against a drawn quiescent period; a whole-trial limit against a response window).
 - StimulusState's column meanings in the README only, not the manifest: the lab has no schema for stream columns yet; adding one is a platform change.
-- Zapit's own `StimDuration` in `ZapitCommand.cs` and `CreateStartStimulus.cs`: Zapit's wire names.
 
-### Not changed on audit (10 Nov 2026, round 1 of 5)
+### Not changed on audit (10 Nov 2026, rounds 1-5 of 5)
 
-Fixed the same night: `stimulusOnsetTime`'s description said beep 1 always; with optogenetics on the first pip is `laserToStimulusSeconds` after beep 0 (trial-columns.yml, LogStimulus, rig-control's view). Stale "pulse" and "balanced" prose (task.py, the task file, rig.py's `triggerLine`, rig-template, Decided above). Not changed, each on its merits:
-
-- The disabled `HardwareTriggeredOptoTrial?` in OptoOnset: Bonsai passes values through a disabled node (probed: 1, 2, 3 in, 10, 20, 30 out), so the line rises on every trial as described. Tom's node, greyed in the editor, held by a test; av-dome's StartLaser has the same.
-- DO3 left high by a Stop mid-trial: ZapitClient stops the laser at exit and the PulseController include clears DO1 to DO3 at every start, so only the masking LEDs stay lit until the next launch. A clear at Stop would need board commands after the workflow has begun stopping. (Fixed 11 Nov 2026: Decided, DO3 cleared however the workflow stops.)
 - Pip, 13 Nov 2026: the trigger line and masking LEDs only in optogenetics experiments.
 - rig.yml's `PulseDO3` width still written to the board: unused while DO3 is not pulse-enabled; the mapping keeps the board's settings as av-dome's.
-- `InitialiseOptoTrial` has only text tests: probed this round over 2000 trials (the seed reproduces them; no laser-on in the first 20; every trial has a condition; 0.424 laser-on after them at p 0.4; conditions 671/650/679; the same condition as the trial before 0.325, independent being 1/3; a missing file throws). A C# test harness here is more than its rules need now.
-- The Zapit C# (`ZapitCommand`, `ZapitClient`, `CreateStartStimulus`) in both repos: one shared script or a lab package is a platform decision for Pip, worth it once a third workflow uses Zapit.
-
-### Not changed on audit (10 Nov 2026, round 2 of 5)
-
-Fixed the same night: endReason's meaning (copied into every manifest) said FreqReached at "stages 1-2", and two descriptions said "stage 6": stages are trainingStages rows from 0 now (rows 0 and 1, Tom's 1 and 2; row 5, Tom's 6); LogStimulus's description named the beep log StimulusLog, not BonsaiData_StimulusState (test added). av-dome now checks Zapit's loaded condition count against the task's file at startup, as this workflow does. Not changed, each on its merits:
-
 - `triggerLine: 0` allowed by the rig model (ge=0, as av-dome's, whose model this one copies field for field) while `DigitalOutputLine` refuses it at start: every rig.yml on the share says 3, and the refusal is loud.
 - `Settings_ZapitConditions` and rig-control's kept copy of the Zapit file are two copies: the settings copy is this workflow's record beside its other settings, the kept copy rig-control's rule for every `...ConfigPath` field.
-- `CreateStartStimulus`'s description still offers `StartDelay`: a generic Zapit operator, the same in both repos; no task maps it.
-
-### Not changed on audit (10 Nov 2026, round 3 of 5)
-
-Fixed the same night: this file said no rig has this workflow, but every dome has pulled it since 9 Nov 2026 (above); `laserMaxSeconds`'s description and the task file's comment quoted the time limit as 12 s, now `timeLimitSeconds`; the cap's margin and validators were named "stim" (`STIM_DURATION_MARGIN_SEC`, `StimDurationMarginSec`), now "laser max"; `CheckZapitConditionCount`'s comment called the Zapit file the "stimulus config" (tests added). Not changed, each on its merits:
-
 - `rewardSizeUl` on every trial row though fixed for the experiment: a lab-wide column shared with av-dome, where large-reward trials make it vary, so one reader serves both tasks.
-
-### Not changed on audit (10 Nov 2026, round 4 of 5)
-
-Fixed the same night: `ZapitConditions`' ramp-down comment described MATLAB Zapit 1.0.4's `stopOptoStim` shortcut as Zapit's; it now says so, and that the lab's Python Zapit (Coen-Lab/zapit `pointer.stop_opto_stim`) stops the DAQ task 0.2 s after any ramp-down. The check stays, as the rig test runs MATLAB Zapit. Not changed, each on its merits:
-
 - "Required with optogenetics on" and `ConnectZapit`'s "when the task YAML enables optogenetics", though the switch is `useZapit`: plain English for the block's one switch; the schema and the validator messages name `useZapit`.
-
-### Not changed on audit (10 Nov 2026, round 5 of 5)
-
-Fixed the same night: `stage.py` read another workflow's experiment of the same mouse as this task's whenever its data was there (av-dome's trial log has `trialType` visual or auditory and `outcome` too; reproduced: one av-dome experiment, 80 visual Correct at stage 3, suggested Stage 4). Only an ingested one was passed over; now any experiment whose manifest names another repo is (test). `docs\zapit-rig-test.md` step 1 looked for a `BonsaiData_ZapitReplies` folder; it is `BonsaiData\BonsaiData_ZapitReplies_*.csv`. Not changed, each on its merits:
-
 - rig-control's `taskfile.py` docstring names `taskParameters.trialStructure.itiMin` as its example of a dotted field: a generic example matching rig-control's own synthetic tests, not a workflow's field.
 
 ### Audit round 1 (13 Nov 2026): not changed
@@ -284,11 +219,3 @@ Fixed the same night: `stage.py` read another workflow's experiment of the same 
 - TC001's stage suggestion ignores Tom's two 12 Nov runs under `sub-PCO1-01456` (Pip: they stay as they are).
 - An uncalibrated right valve refuses Start although the task rewards only the left: the manual RewardRight needs it, and every line gets calibrated.
 
-
-### Audit round 1 of 3 (15 Nov 2026, stage C): not changed
-
-Do not raise again without new information:
-
-- A task file that leaves out a sound's `levelDbfs` plays at lib's default (stimuli -30, penalty -30, reward tone -36, background -50), not refused: Pip chose defaults in lib (15 Nov 2026), the shipped files state every level, and older files are refused by the closed schema.
-- The background-noise and penalty chains are the same XML here and in coen-dome-decision-making: the noise sources differ (.bin here, .wav there) and lib's lint forces the level mapping.
-- No headless test that rig.yml's `bootDelay` above 3 s is honoured: the 3 s floor holds either way and the value arrives synchronously today.

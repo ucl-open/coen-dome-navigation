@@ -164,6 +164,18 @@ def test_a_trigger_hold_as_long_as_the_shortest_interval_is_refused():
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 
 
+@pytest.mark.parametrize(
+    "block, key, value",
+    [("trialStructure", "itiMaxSeconds", math.inf), ("truncation", "sweepFractions", [math.nan]), ("optogenetics", "laserMaxSeconds", math.inf)],
+)
+def test_the_task_s_own_blocks_refuse_inf_and_nan(block, key, value):
+    # Each is a lib-open-rigs TaskBlock (allow_inf_nan off), as the lab's blocks are.
+    doc = task()
+    doc["taskParameters"][block][key] = value
+    with pytest.raises(pydantic.ValidationError, match="finite number"):
+        UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
+
+
 def test_the_committed_task_schema_is_the_model_s():
     model = pydantic.RootModel[UclOpenCoenDomeNavigationTaskLogic].model_json_schema(
         by_alias=True, mode="serialization", union_format="primitive_type_array"
