@@ -14,7 +14,7 @@ command:
 prints one JSON line, {"value": 3, "why": "..."}: the contract of rig-control's [task.suggest]. If
 a share among the roots does not answer, an experiment there cannot be read, or one has only its manifest
 left (its data ingested elsewhere), value is null and why names it: no stage is guessed, since the mouse's history
-may be only there (rig-sync deletes a rig's copy after 72 h).
+may be only there (an experiment on another rig is on the server, not on this one).
 
 The rules: the latest experiment of the modality with trials decides. Under 50 trials keeps its stage.
 Stage 1 advances only after two experiments in a row each with at least 50 rewarded trials, and falls
@@ -40,7 +40,7 @@ TWO_IN_A_ROW_REWARDED = 50
 REGRESS_RATE = 0.5
 EARLY_ADVANCE_FROM = 2  # Tom's stage 3: stages 2 and 3 also advance on their first 100 or 150 trials
 
-# This workflow's experiments: on the rig until rig-sync copies them, then in the server's staging, then where
+# This workflow's experiments: on the rig, copied by the overnight copy (jacuzzi-ingest's ingest-rig), then in the server's staging, then where
 # jacuzzi-ingest files them (Live-Data, <MACHINE>\sub-<lab ID>\ses-..., the project share's root). Folders are named
 # by the mouse's lab ID (plan v11), the SubjectId rig-control launches with.
 LIVE_DATA = Path(r"\\rdp.arc.ucl.ac.uk\ritd-ag-project-rd01n9-pcoen00")
