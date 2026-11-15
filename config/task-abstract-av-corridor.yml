@@ -14,7 +14,7 @@ taskParameters:
   rngSeed: null               # null = rig-control draws one at Go; each seed used is a RngSeed event in BonsaiData_Async
   # The sweep is src\waveforms\sweep.json's, made with the tone files (generate-waveforms); each sound's level is here,
   # in dBFS RMS of the sound as stored, before equalisation: the levels played until 15 Nov 2026 (Tom Childs' pips were
-  # scaled by 0.05 twice, hence quiet; the lab's defaults are pips -30, reward tone -36, background -50, penalty -30).
+  # scaled by 0.05 twice, hence quiet; the lab's defaults are lib-open-rigs' OpenRigs.Audio SoundLevel).
   tonePips:
     levelDbfs: -58.1
   rewardTone:
@@ -49,7 +49,7 @@ taskParameters:
     - label: Stage 0 (Tom's 1)   # rewarded on reaching the zone, no lick; short tracks; the frequency drifts too
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
-      rewardSizeUl: 2.0
+      rewardSizeUl: 3.0
       lickToReward: false
       wrongLickLimit: 0
       penaliseWrongZone: false
@@ -64,7 +64,7 @@ taskParameters:
     - label: Stage 1 (Tom's 2)   # as stage 0, no drift
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
-      rewardSizeUl: 2.0
+      rewardSizeUl: 3.0
       lickToReward: false
       wrongLickLimit: 0
       penaliseWrongZone: false
@@ -79,7 +79,7 @@ taskParameters:
     - label: Stage 2 (Tom's 3)   # a lick anywhere above the floor; full tracks; the end of the track ends the trial
       rewardFloorHz: 15248
       rewardCeilingHz: 25000
-      rewardSizeUl: 2.0
+      rewardSizeUl: 3.0
       lickToReward: true
       wrongLickLimit: 0
       penaliseWrongZone: false
@@ -94,7 +94,7 @@ taskParameters:
     - label: Stage 3 (Tom's 4)   # the ceiling comes in; wrong licks and slowness penalised
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
-      rewardSizeUl: 2.0
+      rewardSizeUl: 3.0
       lickToReward: true
       wrongLickLimit: 8
       penaliseWrongZone: true
@@ -109,7 +109,7 @@ taskParameters:
     - label: Stage 4 (Tom's 5)   # fewer wrong licks allowed
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
-      rewardSizeUl: 2.0
+      rewardSizeUl: 3.0
       lickToReward: true
       wrongLickLimit: 5
       penaliseWrongZone: true
@@ -124,7 +124,7 @@ taskParameters:
     - label: Stage 5 (Tom's 6)   # stage 4 with 16% truncated trials; only ever chosen by hand
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
-      rewardSizeUl: 2.0
+      rewardSizeUl: 3.0
       lickToReward: true
       wrongLickLimit: 5
       penaliseWrongZone: true

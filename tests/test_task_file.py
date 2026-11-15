@@ -150,7 +150,7 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
     params = task()["taskParameters"]
     opto = params["optogenetics"]
     assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserToStimulusSeconds"], opto["laserMaxSeconds"], opto["triggerHoldSeconds"]) == (0.4, 20, 0.1, 12.5, 1.0)
-    assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {2.0}
+    assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {3.0}
 
 
 def test_a_trigger_hold_as_long_as_the_shortest_interval_is_refused():
