@@ -239,6 +239,10 @@ def test_the_cameras_are_logged_by_log_cameras():
     assert lint.camera_log_problems(WORKFLOW) == []
 
 
+def test_every_file_the_workflow_writes_is_in_the_manifest_s_expected_files():
+    assert lint.expected_files_problems(WORKFLOW) == []
+
+
 def test_the_rng_seed_is_logged_at_trial_1s_go():
     # Once, at TaskLogic's top level from the first trial's Start (its Go), as coen-dome-decision-making; the Take after the multicast.
     nodes, edges = lint.scope(WORKFLOW.named("TaskLogic"))

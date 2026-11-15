@@ -528,6 +528,16 @@
             <Expression xsi:type="rx:AsyncSubject">
               <Name>CorridorSetup</Name>
             </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TaskConfig</Name>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>TaskParameters.Optogenetics.UseZapit</Selector>
+            </Expression>
+            <Expression xsi:type="rx:AsyncSubject">
+              <Name>Optogenetics</Name>
+              <Description>Whether this is an optogenetics experiment, from the task file (TaskParameters.Optogenetics.UseZapit): ExperimentManifest requires Zapit&apos;s logs only while it is true (ExpectedFiles ?Optogenetics).</Description>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
@@ -550,6 +560,8 @@
             <Edge From="20" To="21" Label="Source3" />
             <Edge From="21" To="22" Label="Source1" />
             <Edge From="22" To="23" Label="Source1" />
+            <Edge From="24" To="25" Label="Source1" />
+            <Edge From="25" To="26" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -1705,7 +1717,7 @@
               <Description>Writes manifest.json into the experiment folder (OpenRigs.Manifest), as av-dome's: the machine, this repo's commit, who launched it and sent Go, rig.yml and the calibration files the workflow reads (MeshMap.csv, gammalut.bmp, this mouse's spout positions) by hash, what each BonsaiData_Trial column means (schemas\trial-columns.yml), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState); DeliverReward copies each calibrated valve's file in as ValveCalibrationDO&lt;n&gt;.</Description>
               <mf:IngestScript>coen-dome-navigation</mf:IngestScript>
               <mf:ConfigFiles>C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\rig.yml;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\MeshMap.csv;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\gammalut.bmp;C:\Coen-Lab-Local\RigConfigs\%COMPUTERNAME%\calibration\LickSpoutPositions\{SubjectId}.csv</mf:ConfigFiles>
-              <mf:ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/</mf:ExpectedFiles>
+              <mf:ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/BonsaiData_Trial_;BonsaiData/BonsaiData_Async_;BonsaiData/BonsaiData_StimulusState_;BonsaiData/BonsaiData_ZapitReplies_?Optogenetics;Settings/Settings_ZapitConditions_?Optogenetics</mf:ExpectedFiles>
               <mf:TrialColumns>schemas\trial-columns.yml</mf:TrialColumns>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
