@@ -2,12 +2,24 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## Audit of the device-pieces cut (16 Nov 2026): not changed
+
+- Rig lists are registered in the lint: deliberate, documented and tested; an unregistered list fails loudly.
+- `PulseOutputs` and `ZapitTriggerLine` are not in `ONE_EACH`: no rig has two boards, and a collision fails the build.
+- The 7-line `check-workflow` wrappers are identical, and each repo's lint test calls are thin, by design.
+- The Ready-announcer rule is not run over expanded rig lists: lib's own scan covers every rig list in lib.
+- No package dependency from `OpenRigs.Devices` on `OpenRigs.Audio` or `OpenRigs.Vision` for `DomeHardware`: a missing package fails the build check, the existing convention.
+- `ReadyWaitsFor` is not exposed on `DomeHardware`: Ready waits for exactly what the pieces announce.
+- Package version reuse drift: the push script refuses a reused version with different contents.
+- `WindowState` is not exposed on `DomeHardware`; it was not before the cut either.
+
 ## 2026-11-15 Rig hardware as device pieces (lib-open-rigs, Pip: "NO BACKWARDS COMPATIBILITY")
 
 - The hardware is lib-open-rigs' `DomeHardware` rig list (one include per device, the Ready gate, the timestamp generator's clock, the camera triggers), after this workflow's own `ReadLabRig`; `RigHardware`, `HarpLogs` and `LogCameras` are gone from lib. Ready waits for the Harp clock, the spouts homed, a first frame from each camera and the mixer (`ReadyWaitsFor`). The groups follow coen-dome-decision-making's: `ReadLabRig` first, `Initialization`, then `LogLabExperiment` on its own and `Hardware` (a piece's log waits for `PathPrefix`; Bonsai builds a subject's whole top-level node when a subscriber comes first, so `LogLabExperiment` inside `Logging`, beside `DeliverReward`'s `Timestamp`, built as "defined in terms of itself").
 - Zapit is `Zapit.ConnectForTask`, the manual rewards `BehaviorBoard.ManualRewards` (`ManualRewardDropUl` gone), the shared logs `LogLabExperiment` and `LogControlEvents`; the manifest's `ConfigFiles` is lib's default `{RigFiles}` (rig.yml, every file it names, the mouse's spout positions). The background noise waits for `Ready` itself, not a copy of its stages. The quiet-wait checks are lib's (`QuietWait.SettingsProblems` at Go, open_rigs.core.task's caps in task.py).
 - **Data from this change on:** every video and its CSV include the first frame (the old include skipped it), and a dropped frame is a jump in `frameId` with the triggers around it kept (frames were paired to triggers in order). The cameras' trigger starts once all three cameras acquire (it was 2 s after Start).
 - **Phase 1 camera finding (recorded, past video left as is; Pip):** 7 av-dome sessions (12-13 Nov 2026, 4 rigs) had no frameId gaps, no non-Event register-92 messages, and camera clock and `harpTime` steps agreeing within 10 ms on every row, so no mid-run shift. Cameras in one session started 0 to 2 triggers apart; whether a late starter missed its first trigger or is paired one trigger late (at most 20 ms, constant) cannot be told from logs. No run of this workflow was on RDSS or K:\staging, so the first test experiment after this change is its first measurement (k = 0 expected).
+- 16 Nov 2026: `{RigFiles}` also records `valve-DO1.json` and `valve-DO2.json` now, which the old hand-typed `ConfigFiles` lists did not.
 
 ## 15 Nov 2026: Pip's decisions after the audit cycles
 

@@ -203,6 +203,12 @@ def test_the_trial_events_leave_the_clock_s_thread_unswitched():
 def test_the_hardware_is_the_lab_s_pieces():
     # DomeHardware's pieces, one clock, Ready waiting for every stage they announce, MixerStarted included.
     assert lint.hardware_problems(WORKFLOW) == []
+    # DomeHardware's devices, pinned: dropping one from the list fails here, not at the rig.
+    assert lint.required_devices(WORKFLOW) == [
+        ("TimestampGeneratorGen3-Main", "timestampGeneratorGen3"), ("BehaviorBoard-Main", "behaviorBoard"),
+        ("LicketySplit-Left", "licketySplit"), ("LicketySplit-Right", "licketySplit"),
+        ("StepperDriver-A", "stepperDriver"), ("StepperDriver-B", "stepperDriver"),
+        ("Camera-Face", "camera"), ("Camera-Pupil", "camera"), ("Camera-Body", "camera")]
 
 # The lab's rules for every workflow (open_rigs.rigs.workflow_lint, one copy in lib-open-rigs).
 WORKFLOW = lint.Workflow(ROOT)

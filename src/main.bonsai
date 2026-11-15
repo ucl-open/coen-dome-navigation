@@ -1378,7 +1378,7 @@
             </Expression>
             <Expression xsi:type="rx:SelectMany">
               <Name>ExperimentLogs</Name>
-              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix: BonsaiData_Trial (LogTrial; one row per trial, built by CreateTrialRow when the outcome is known; columns in schemas\trial-columns.yml), BonsaiData_StimulusState (one row per pip), the cameras (OpenRigs.Logging LogCameras), the settings files (Settings_Rig, Settings_Task, Settings_Experiment) and Zapit's logs (OpenRigs.Devices Zapit.ZapitLogs: its replies, and Settings_ZapitConditions in an optogenetics experiment). The RngSeed event is TaskLogic's, at trial 1's start.</Description>
+              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix: BonsaiData_Trial (LogTrial; one row per trial, built by CreateTrialRow when the outcome is known; columns in schemas\trial-columns.yml), BonsaiData_StimulusState (one row per pip), the cameras (each SpinnakerCamera piece in DomeHardware logs its own), the settings files (Settings_Rig, Settings_Task, Settings_Experiment) and Zapit's logs (OpenRigs.Devices Zapit.ZapitLogs: its replies, and Settings_ZapitConditions in an optogenetics experiment). The RngSeed event is TaskLogic's, at trial 1's start.</Description>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="SubscribeSubject">

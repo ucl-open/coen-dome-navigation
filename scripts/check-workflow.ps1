@@ -1,4 +1,4 @@
-# The lab's workflow check, one copy for every workflow on RigHardware: lib-open-rigs' open_rigs\scripts\check-workflow.ps1,
+# The lab's workflow check, one copy for every workflow made of the lab's device pieces: lib-open-rigs' open_rigs\scripts\check-workflow.ps1,
 # from the open-rigs this repo pins (uv sync puts it in .venv). Needs .bonsai\Setup.ps1 run first. Exit 0 when all pass.
 $repo = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 & uv sync --project $repo -q
