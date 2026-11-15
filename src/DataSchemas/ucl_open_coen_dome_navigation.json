@@ -598,17 +598,17 @@
           "title": "UnusedChannels",
           "type": "array"
         },
-        "errorSoundChannel": {
-          "description": "Mixer output channel the error sound plays on.",
+        "penaltySoundChannel": {
+          "description": "Mixer output channel the penalty sound plays on.",
           "minimum": 0,
-          "title": "ErrorSoundChannel",
+          "title": "PenaltySoundChannel",
           "type": "integer"
         }
       },
       "required": [
         "device",
         "speakers",
-        "errorSoundChannel"
+        "penaltySoundChannel"
       ],
       "title": "EqualisedSpeakerArray",
       "type": "object"

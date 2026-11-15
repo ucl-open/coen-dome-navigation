@@ -3,7 +3,7 @@ workflow reads at Go (TaskPath). Ported from Tom Childs' auditory-vr-corridor ta
 
 Laid out as av-dome's (Pip, 9 Nov 2026): the stage is the TrainingStage experiment setting, a row of trainingStages
 from 0 (Tom's stages 1 to 6 are rows 0 to 5), and each row says what the stage does, where the workflow used to test
-the stage number; trialStructure holds the ITI and the track lengths, punishment the timeout and error
+the stage number; trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
 sound, and rngSeed seeds every draw. The sweep and its loudness are src/waveforms/sweep.json's, made with the tone files
 (`uv run generate-waveforms`), not the task file's (plan v11)."""
 
@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 from typing import Literal
 
-from open_rigs.core.task import Optogenetics, QuietWait, Task, TaskParameters
+from open_rigs.core.task import Optogenetics, Penalty, QuietWait, Task, TaskParameters
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS, ZAPIT_REPLY_MARGIN_SECONDS
 from open_rigs.rigs.lab_rig import MAX_REWARD_UL
 from pydantic import Field, field_validator, model_validator
@@ -40,7 +40,7 @@ class TrialStructure(BaseSchema):
     iti_min_seconds: float = Field(
         default=2.0,
         ge=0,
-        description="Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any punishment timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
+        description="Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
     )
     iti_max_seconds: float = Field(default=3.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)")
     track_lengths_cm: list[float] = Field(
@@ -52,20 +52,6 @@ class TrialStructure(BaseSchema):
         if self.iti_max_seconds < self.iti_min_seconds:
             raise ValueError("iti_max_seconds must be >= iti_min_seconds")
         return self
-
-
-class PunishmentSound(BaseSchema):
-    """The error sound on a punished trial: the lab's (OpenRigs.Audio), from rig.yml's errorSoundChannel alone."""
-
-    enabled: bool = Field(default=True, description="Whether the error sound plays on a punished trial")
-    gain: float = Field(default=1.0, ge=0, description="Gain on the lab's error sound, 1 for the lab's level")
-
-
-class Punishment(BaseSchema):
-    """What an error costs, as the lab's tasks name it (the trial log's punishSound and punishTimeoutSeconds)."""
-
-    timeout_seconds: float = Field(default=2.0, ge=0, description="Timeout after a punished trial, in seconds")
-    sound: PunishmentSound = Field(default=PunishmentSound(), description="The error sound on a punished trial")
 
 
 class Truncation(BaseSchema):
@@ -141,8 +127,8 @@ class TrainingStage(QuietWait):
     )
     lick_to_reward: bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
-    punish_wrong_zone: bool = Field(
-        description="Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage"
+    penalise_wrong_zone: bool = Field(
+        description="Whether a trial that ends outside the reward zone is penalised. A trial that runs out of time or track with the frequency in the zone is penalised on every stage"
     )
     time_limit_seconds: float | None = Field(
         default=None, gt=0, description="The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit"
@@ -170,7 +156,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     )
     position_step_cm: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
     trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
-    punishment: Punishment = Field(default=Punishment(), description="The timeout and error sound a punished trial gets")
+    penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
     truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
     optogenetics: OptogeneticsConfig = Field(description="Zapit optogenetic stimulation")
     training_stages: list[TrainingStage] = Field(

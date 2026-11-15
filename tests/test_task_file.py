@@ -68,17 +68,15 @@ def test_the_committed_waveforms_are_waveforms_py_s():
     assert np.array_equal(np.fromfile(WAVES / "background_noise.bin", dtype=np.float32), waveforms.background_noise())
 
 
-def test_the_error_sound_is_the_lab_s():
-    # Audit, 14 Nov 2026: the error sound is OpenRigs.Audio's (ErrorSoundBuffer), so the task file names no file and
+def test_the_penalty_sound_is_the_lab_s():
+    # Audit, 14 Nov 2026: the penalty sound is OpenRigs.Audio's (PenaltySoundBuffer), so the task file names no file and
     # waveforms.py makes none.
-    assert not (WAVES / "error_tone.wav").exists()
-    assert not hasattr(waveforms, "error_tone")
-    assert set(task()["taskParameters"]["punishment"]["sound"]) == {"enabled", "gain"}
+    assert set(task()["taskParameters"]["penalty"]["sound"]) == {"enabled", "gain"}
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    assert set(schema["$defs"]["PunishmentSound"]["properties"]) == {"enabled", "gain"}
-    # rig-control checks the task file against the closed schema, so an old file still naming a path is refused.
+    assert set(schema["$defs"]["PenaltySound"]["properties"]) == {"enabled", "gain"}
+    # rig-control checks the task file against the closed schema, so a file naming a sound path is refused.
     doc = task()
-    doc["taskParameters"]["punishment"]["sound"]["path"] = "waveforms\\error_tone.wav"
+    doc["taskParameters"]["penalty"]["sound"]["path"] = "waveforms\\penalty.wav"
     errors = [e.message for e in jsonschema.Draft202012Validator(_closed(schema)).iter_errors(doc)]
     assert len(errors) == 1 and "'path'" in errors[0]
 

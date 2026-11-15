@@ -446,7 +446,7 @@
               <rx:Name>RewardBuffer</rx:Name>
             </Expression>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="cvn:Mat">
-              <rx:Name>ErrorBuffer</rx:Name>
+              <rx:Name>PenaltyBuffer</rx:Name>
             </Expression>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="ext:CorridorEvent">
               <rx:Name>TrialEvents</rx:Name>
@@ -733,7 +733,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay (at least 3 s) after Start: one mixer source each for the pips (Buffer), the reward tone and the error tone, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. rig.yml's speakers and their filters are loaded once at Start (OpenRigs.Audio LoadSpeakers, into Speakers), which stops the workflow naming any speaker without a usable filter (the rule every dome holds). Every file in src\waveforms is one channel at the loudness it plays at, laid out on rig.yml's channelCount channels by SpeakerBuffer: the pips (PipBuffers) and the reward tone (RewardTone) on every rig.yml speaker, each equalised with its filter, and the background noise on every speaker as it is. The error tone (ErrorTone) is the lab's (ErrorSoundBuffer), on rig.yml's errorSoundChannel alone, at the task's punishment.sound.gain.</Description>
+        <Description>The dome speakers (rig.yml speakerArray.device), started bootDelay (at least 3 s) after Start: one mixer source each for the pips (Buffer), the reward tone and the penalty sound, so they play over each other, and the background noise, looped from Start and faded in to the task's level at Go. rig.yml's speakers and their filters are loaded once at Start (OpenRigs.Audio LoadSpeakers, into Speakers), which stops the workflow naming any speaker without a usable filter (the rule every dome holds). Every file in src\waveforms is one channel at the loudness it plays at, laid out on rig.yml's channelCount channels by SpeakerBuffer: the pips (PipBuffers) and the reward tone (RewardTone) on every rig.yml speaker, each equalised with its filter, and the background noise on every speaker as it is. The penalty sound (PenaltyTone) is the lab's (PenaltySoundBuffer), on rig.yml's penaltySoundChannel alone, at the task's penalty.sound.gain.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="GroupWorkflow">
@@ -843,7 +843,7 @@
               <Combinator xsi:type="mix:AppendBuffer" />
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>ErrorBuffer</Name>
+              <Name>PenaltyBuffer</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Mixer</Name>
@@ -933,7 +933,7 @@
               <Name>TaskConfig</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.Punishment.Sound.Gain</Selector>
+              <Selector>TaskParameters.Penalty.Sound.Gain</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Speakers</Name>
@@ -948,12 +948,12 @@
               <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="aud:ErrorSoundBuffer">
+              <Combinator xsi:type="aud:PenaltySoundBuffer">
                 <aud:Gain>1</aud:Gain>
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
-              <Name>ErrorTone</Name>
+              <Name>PenaltyTone</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Mixer</Name>
@@ -1114,7 +1114,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\Corridor.cs, tests\Extensions.Tests): CorridorTask draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it at Go (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after Go, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), raises the ZapitTrigger line (and on a software-triggered rig sends the StartStimulus) in an optogenetics experiment only, and CorridorTask stops the task if Zapit has not answered by then; Pip plays the pip and sets the grating; Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the error tone, and in an optogenetics experiment clears the trigger line triggerHoldSeconds later (HarpDelay). Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\Corridor.cs, tests\Extensions.Tests): CorridorTask draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it at Go (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after Go, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), raises the ZapitTrigger line (and on a software-triggered rig sends the StartStimulus) in an optogenetics experiment only, and CorridorTask stops the task if Zapit has not answered by then; Pip plays the pip and sets the grating; Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the penalty sound, and in an optogenetics experiment clears the trigger line triggerHoldSeconds later (HarpDelay). Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -1420,14 +1420,14 @@
               <Name>RewardBuffer</Name>
             </Expression>
             <Expression xsi:type="rx:Condition">
-              <Name>ErrorSound?</Name>
+              <Name>PenaltySound?</Name>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="WorkflowInput">
                     <Name>Source1</Name>
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>ErrorSound</scr:Expression>
+                    <scr:Expression>PenaltySound</scr:Expression>
                   </Expression>
                   <Expression xsi:type="WorkflowOutput" />
                 </Nodes>
@@ -1438,7 +1438,7 @@
               </Workflow>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>ErrorTone</Name>
+              <Name>PenaltyTone</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -1447,7 +1447,7 @@
               <Selector>Item2</Selector>
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>ErrorBuffer</Name>
+              <Name>PenaltyBuffer</Name>
             </Expression>
             <Expression xsi:type="rx:Condition">
               <Name>OptogeneticsOutcome?</Name>

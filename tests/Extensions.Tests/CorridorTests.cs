@@ -314,8 +314,8 @@ public class CorridorStateTests
         var outcome = rig.Events.Single(e => e.Kind == CorridorEventKind.Outcome);
         Assert.AreEqual("Incorrect", outcome.Row.outcome);
         Assert.AreEqual("WrongLickLimit", outcome.Row.endReason);
-        Assert.IsTrue(outcome.Row.punishSound);
-        Assert.AreEqual(2.0, outcome.Row.punishTimeoutSeconds);
+        Assert.IsTrue(outcome.Row.penaltySound);
+        Assert.AreEqual(2.0, outcome.Row.penaltyTimeoutSeconds);
 
         // the next trial waits the timeout and its interval; the quiet second, counted from the interval's start, adds nothing
         var next = rig.RunTo(CorridorEventKind.Start);
@@ -493,7 +493,7 @@ public class CorridorStateTests
     }
 
     [TestMethod]
-    public void ATimeOutInTheZoneIsPunished()
+    public void ATimeOutInTheZoneIsPenalised()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 4));
         var start = rig.RunTo(CorridorEventKind.Start);
@@ -501,7 +501,7 @@ public class CorridorStateTests
         var outcome = rig.RunTo(CorridorEventKind.Outcome);
         Assert.AreEqual("Timeout", outcome.Row.endReason);
         Assert.AreEqual("NoResponse", outcome.Row.outcome);
-        Assert.IsTrue(outcome.Row.punishSound);
+        Assert.IsTrue(outcome.Row.penaltySound);
         Assert.AreEqual(start.Seconds + 0.1 + 12.0, outcome.Seconds, 0.0011);
     }
 
@@ -637,7 +637,7 @@ public class CorridorStateTests
         Assert.IsTrue(outcome.Row.toneEndFrequencyHz > 25000, outcome.Row.toneEndFrequencyHz.ToString());
         Assert.IsTrue(outcome.Rewarded);
         Assert.AreEqual("Correct", outcome.Row.outcome);
-        Assert.IsFalse(outcome.Row.punishSound);
+        Assert.IsFalse(outcome.Row.penaltySound);
     }
 
     [TestMethod]

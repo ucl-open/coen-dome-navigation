@@ -368,38 +368,39 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// What an error costs, as the lab's tasks name it (the trial log's punishSound and punishTimeoutSeconds).
+    /// What a wrong or missed trial costs: a timeout, and the penalty sound with it (the trial log's penaltySound and
+    ///penaltyTimeoutSeconds). Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("What an error costs, as the lab\'s tasks name it (the trial log\'s punishSound and " +
-        "punishTimeoutSeconds).")]
+    [System.ComponentModel.DescriptionAttribute("What a wrong or missed trial costs: a timeout, and the penalty sound with it (the" +
+        " trial log\'s penaltySound and\npenaltyTimeoutSeconds). Each task says which trial" +
+        "s are penalised; timeoutSeconds has no lab default: each task file gives it.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class Punishment
+    public partial class Penalty
     {
     
         private double _timeoutSeconds;
     
-        private PunishmentSound _sound;
+        private PenaltySound _sound;
     
-        public Punishment()
+        public Penalty()
         {
-            _timeoutSeconds = 2D;
-            _sound = new PunishmentSound();
+            _sound = new PenaltySound();
         }
     
-        protected Punishment(Punishment other)
+        protected Penalty(Penalty other)
         {
             _timeoutSeconds = other._timeoutSeconds;
             _sound = other._sound;
         }
     
         /// <summary>
-        /// Timeout after a punished trial, in seconds
+        /// Timeout after a penalised trial, in seconds; the next interval starts after it
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("timeoutSeconds")]
+        [Newtonsoft.Json.JsonPropertyAttribute("timeoutSeconds", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeoutSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Timeout after a punished trial, in seconds")]
+        [System.ComponentModel.DescriptionAttribute("Timeout after a penalised trial, in seconds; the next interval starts after it")]
         public double TimeoutSeconds
         {
             get
@@ -413,13 +414,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The error sound on a punished trial
+        /// The penalty sound, with every timeout
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("sound")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sound")]
-        [System.ComponentModel.DescriptionAttribute("The error sound on a punished trial")]
-        public PunishmentSound Sound
+        [System.ComponentModel.DescriptionAttribute("The penalty sound, with every timeout")]
+        public PenaltySound Sound
         {
             get
             {
@@ -431,14 +432,14 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
-        public System.IObservable<Punishment> Generate()
+        public System.IObservable<Penalty> Generate()
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Punishment(this)));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Penalty(this)));
         }
     
-        public System.IObservable<Punishment> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<Penalty> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new Punishment(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new Penalty(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
@@ -464,38 +465,39 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// The error sound on a punished trial: the lab's (OpenRigs.Audio), from rig.yml's errorSoundChannel alone.
+    /// The lab's penalty sound (OpenRigs.Audio PenaltySoundBuffer, the same in every task), on rig.yml's speakerArray.penaltySoundChannel alone, equalised for that speaker.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("The error sound on a punished trial: the lab\'s (OpenRigs.Audio), from rig.yml\'s e" +
-        "rrorSoundChannel alone.")]
+    [System.ComponentModel.DescriptionAttribute("The lab\'s penalty sound (OpenRigs.Audio PenaltySoundBuffer, the same in every tas" +
+        "k), on rig.yml\'s speakerArray.penaltySoundChannel alone, equalised for that spea" +
+        "ker.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class PunishmentSound
+    public partial class PenaltySound
     {
     
         private bool _enabled;
     
         private double _gain;
     
-        public PunishmentSound()
+        public PenaltySound()
         {
             _enabled = true;
             _gain = 1D;
         }
     
-        protected PunishmentSound(PunishmentSound other)
+        protected PenaltySound(PenaltySound other)
         {
             _enabled = other._enabled;
             _gain = other._gain;
         }
     
         /// <summary>
-        /// Whether the error sound plays on a punished trial
+        /// Whether the penalty sound plays with every timeout
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("enabled")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="enabled")]
-        [System.ComponentModel.DescriptionAttribute("Whether the error sound plays on a punished trial")]
+        [System.ComponentModel.DescriptionAttribute("Whether the penalty sound plays with every timeout")]
         public bool Enabled
         {
             get
@@ -509,11 +511,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Gain on the lab's error sound, 1 for the lab's level
+        /// Gain on the lab's penalty sound, 1 for its level
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("gain")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="gain")]
-        [System.ComponentModel.DescriptionAttribute("Gain on the lab\'s error sound, 1 for the lab\'s level")]
+        [System.ComponentModel.DescriptionAttribute("Gain on the lab\'s penalty sound, 1 for its level")]
         public double Gain
         {
             get
@@ -526,14 +528,14 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
-        public System.IObservable<PunishmentSound> Generate()
+        public System.IObservable<PenaltySound> Generate()
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PunishmentSound(this)));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PenaltySound(this)));
         }
     
-        public System.IObservable<PunishmentSound> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<PenaltySound> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new PunishmentSound(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new PenaltySound(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
@@ -588,7 +590,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private int _wrongLickLimit;
     
-        private bool _punishWrongZone;
+        private bool _penaliseWrongZone;
     
         private double? _timeLimitSeconds;
     
@@ -618,7 +620,7 @@ namespace UclOpenCoenDomeNavigationTask
             _rewardSizeUl = other._rewardSizeUl;
             _lickToReward = other._lickToReward;
             _wrongLickLimit = other._wrongLickLimit;
-            _punishWrongZone = other._punishWrongZone;
+            _penaliseWrongZone = other._penaliseWrongZone;
             _timeLimitSeconds = other._timeLimitSeconds;
             _trackEndEndsTrial = other._trackEndEndsTrial;
             _trackLengthScale = other._trackLengthScale;
@@ -795,21 +797,22 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage
+        /// Whether a trial that ends outside the reward zone is penalised. A trial that runs out of time or track with the frequency in the zone is penalised on every stage
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("punishWrongZone", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="punishWrongZone")]
-        [System.ComponentModel.DescriptionAttribute("Whether a trial that ends outside the reward zone is punished. A trial that runs " +
-            "out of time or track with the frequency in the zone is punished on every stage")]
-        public bool PunishWrongZone
+        [Newtonsoft.Json.JsonPropertyAttribute("penaliseWrongZone", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="penaliseWrongZone")]
+        [System.ComponentModel.DescriptionAttribute("Whether a trial that ends outside the reward zone is penalised. A trial that runs" +
+            " out of time or track with the frequency in the zone is penalised on every stage" +
+            "")]
+        public bool PenaliseWrongZone
         {
             get
             {
-                return _punishWrongZone;
+                return _penaliseWrongZone;
             }
             set
             {
-                _punishWrongZone = value;
+                _penaliseWrongZone = value;
             }
         }
     
@@ -925,7 +928,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl + ", ");
             stringBuilder.Append("LickToReward = " + _lickToReward + ", ");
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
-            stringBuilder.Append("PunishWrongZone = " + _punishWrongZone + ", ");
+            stringBuilder.Append("PenaliseWrongZone = " + _penaliseWrongZone + ", ");
             stringBuilder.Append("TimeLimitSeconds = " + _timeLimitSeconds + ", ");
             stringBuilder.Append("TrackEndEndsTrial = " + _trackEndEndsTrial + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
@@ -980,11 +983,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any punishment timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)
+        /// Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("itiMinSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMinSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any punishment timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)")]
+        [System.ComponentModel.DescriptionAttribute(@"Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)")]
         public double ItiMinSeconds
         {
             get
@@ -1170,7 +1173,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private TrialStructure _trialStructure;
     
-        private Punishment _punishment;
+        private Penalty _penalty;
     
         private Truncation _truncation;
     
@@ -1184,7 +1187,7 @@ namespace UclOpenCoenDomeNavigationTask
             _backgroundNoiseLevel = 0.5D;
             _positionStepCm = 1;
             _trialStructure = new TrialStructure();
-            _punishment = new Punishment();
+            _penalty = new Penalty();
             _truncation = new Truncation();
             _optogenetics = new OptogeneticsConfig();
             _trainingStages = new System.Collections.Generic.List<TrainingStage>();
@@ -1197,7 +1200,7 @@ namespace UclOpenCoenDomeNavigationTask
             _backgroundNoiseLevel = other._backgroundNoiseLevel;
             _positionStepCm = other._positionStepCm;
             _trialStructure = other._trialStructure;
-            _punishment = other._punishment;
+            _penalty = other._penalty;
             _truncation = other._truncation;
             _optogenetics = other._optogenetics;
             _trainingStages = other._trainingStages;
@@ -1296,21 +1299,22 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The timeout and error sound a punished trial gets
+        /// The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("punishment")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="punishment")]
-        [System.ComponentModel.DescriptionAttribute("The timeout and error sound a punished trial gets")]
-        public Punishment Punishment
+        [Newtonsoft.Json.JsonPropertyAttribute("penalty", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="penalty")]
+        [System.ComponentModel.DescriptionAttribute("The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty" +
+            ")")]
+        public Penalty Penalty
         {
             get
             {
-                return _punishment;
+                return _penalty;
             }
             set
             {
-                _punishment = value;
+                _penalty = value;
             }
         }
     
@@ -1389,7 +1393,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("BackgroundNoiseLevel = " + _backgroundNoiseLevel + ", ");
             stringBuilder.Append("PositionStepCm = " + _positionStepCm + ", ");
             stringBuilder.Append("TrialStructure = " + _trialStructure + ", ");
-            stringBuilder.Append("Punishment = " + _punishment + ", ");
+            stringBuilder.Append("Penalty = " + _penalty + ", ");
             stringBuilder.Append("Truncation = " + _truncation + ", ");
             stringBuilder.Append("Optogenetics = " + _optogenetics + ", ");
             stringBuilder.Append("TrainingStages = " + _trainingStages);
@@ -1458,14 +1462,14 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<OptogeneticsConfig>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<Punishment> source)
+        public System.IObservable<string> Process(System.IObservable<Penalty> source)
         {
-            return Process<Punishment>(source);
+            return Process<Penalty>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<PunishmentSound> source)
+        public System.IObservable<string> Process(System.IObservable<PenaltySound> source)
         {
-            return Process<PunishmentSound>(source);
+            return Process<PenaltySound>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<TrainingStage> source)
@@ -1499,8 +1503,8 @@ namespace UclOpenCoenDomeNavigationTask
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Punishment>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PunishmentSound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]
@@ -1564,14 +1568,14 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<OptogeneticsConfig>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<Punishment> source)
+        public System.IObservable<string> Process(System.IObservable<Penalty> source)
         {
-            return Process<Punishment>(source);
+            return Process<Penalty>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<PunishmentSound> source)
+        public System.IObservable<string> Process(System.IObservable<PenaltySound> source)
         {
-            return Process<PunishmentSound>(source);
+            return Process<PenaltySound>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<TrainingStage> source)
@@ -1605,8 +1609,8 @@ namespace UclOpenCoenDomeNavigationTask
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Punishment>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PunishmentSound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]

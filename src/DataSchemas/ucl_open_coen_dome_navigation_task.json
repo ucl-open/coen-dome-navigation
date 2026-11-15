@@ -95,47 +95,49 @@
       "title": "OptogeneticsConfig",
       "type": "object"
     },
-    "Punishment": {
-      "description": "What an error costs, as the lab's tasks name it (the trial log's punishSound and punishTimeoutSeconds).",
+    "Penalty": {
+      "description": "What a wrong or missed trial costs: a timeout, and the penalty sound with it (the trial log's penaltySound and\npenaltyTimeoutSeconds). Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.",
       "properties": {
         "timeoutSeconds": {
-          "default": 2.0,
-          "description": "Timeout after a punished trial, in seconds",
+          "description": "Timeout after a penalised trial, in seconds; the next interval starts after it",
           "minimum": 0,
           "title": "TimeoutSeconds",
           "type": "number"
         },
         "sound": {
-          "$ref": "#/$defs/PunishmentSound",
+          "$ref": "#/$defs/PenaltySound",
           "default": {
             "enabled": true,
             "gain": 1.0
           },
-          "description": "The error sound on a punished trial",
+          "description": "The penalty sound, with every timeout",
           "title": "Sound"
         }
       },
-      "title": "Punishment",
+      "required": [
+        "timeoutSeconds"
+      ],
+      "title": "Penalty",
       "type": "object"
     },
-    "PunishmentSound": {
-      "description": "The error sound on a punished trial: the lab's (OpenRigs.Audio), from rig.yml's errorSoundChannel alone.",
+    "PenaltySound": {
+      "description": "The lab's penalty sound (OpenRigs.Audio PenaltySoundBuffer, the same in every task), on rig.yml's speakerArray.penaltySoundChannel alone, equalised for that speaker.",
       "properties": {
         "enabled": {
           "default": true,
-          "description": "Whether the error sound plays on a punished trial",
+          "description": "Whether the penalty sound plays with every timeout",
           "title": "Enabled",
           "type": "boolean"
         },
         "gain": {
           "default": 1.0,
-          "description": "Gain on the lab's error sound, 1 for the lab's level",
+          "description": "Gain on the lab's penalty sound, 1 for its level",
           "minimum": 0,
           "title": "Gain",
           "type": "number"
         }
       },
-      "title": "PunishmentSound",
+      "title": "PenaltySound",
       "type": "object"
     },
     "TrainingStage": {
@@ -199,9 +201,9 @@
           "title": "WrongLickLimit",
           "type": "integer"
         },
-        "punishWrongZone": {
-          "description": "Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage",
-          "title": "PunishWrongZone",
+        "penaliseWrongZone": {
+          "description": "Whether a trial that ends outside the reward zone is penalised. A trial that runs out of time or track with the frequency in the zone is penalised on every stage",
+          "title": "PenaliseWrongZone",
           "type": "boolean"
         },
         "timeLimitSeconds": {
@@ -249,7 +251,7 @@
         "rewardSizeUl",
         "lickToReward",
         "wrongLickLimit",
-        "punishWrongZone",
+        "penaliseWrongZone",
         "trackEndEndsTrial",
         "trackLengthScale",
         "frequencyDrift",
@@ -263,7 +265,7 @@
       "properties": {
         "itiMinSeconds": {
           "default": 2.0,
-          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any punishment timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
+          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
           "minimum": 0,
           "title": "ItiMinSeconds",
           "type": "number"
@@ -391,16 +393,9 @@
           },
           "description": "Timing of each trial"
         },
-        "punishment": {
-          "$ref": "#/$defs/Punishment",
-          "default": {
-            "timeoutSeconds": 2.0,
-            "sound": {
-              "enabled": true,
-              "gain": 1.0
-            }
-          },
-          "description": "The timeout and error sound a punished trial gets"
+        "penalty": {
+          "$ref": "#/$defs/Penalty",
+          "description": "The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)"
         },
         "truncation": {
           "$ref": "#/$defs/Truncation",
@@ -427,6 +422,7 @@
         }
       },
       "required": [
+        "penalty",
         "optogenetics",
         "trainingStages"
       ],

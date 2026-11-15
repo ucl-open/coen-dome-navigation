@@ -83,7 +83,7 @@ public class RigTemplateTests
     public void EveryBufferHasTheTemplatesChannelCountAndPlaysOnlyOnItsSpeakers()
     {
         // Audit, 14 Nov 2026: the mixer's buffers are rig.yml's channelCount rows (32, as the Tile 32 they replace);
-        // a stimulus on every speaker, the error sound on errorSoundChannel alone.
+        // a stimulus on every speaker, the penalty sound on penaltySoundChannel alone.
         var rig = Deserialize(Template());
         var speakers = SpeakerSet.Load(TemplateRig(Template()));
         Assert.AreEqual(rig.SpeakerArray.Device.ChannelCount, speakers.ChannelCount);
@@ -101,13 +101,13 @@ public class RigTemplateTests
                 Assert.AreEqual(used.Contains(channel), CV.Norm(row) != 0, "channel " + channel);
             }
         }
-        var error = new ErrorSoundBuffer().Process(Observable.Return(speakers)).Wait();
+        var error = new PenaltySoundBuffer().Process(Observable.Return(speakers)).Wait();
         Assert.AreEqual(32, error.Rows);
         for (int channel = 0; channel < 32; channel++)
         {
             using (var row = error.GetRow(channel))
             {
-                Assert.AreEqual(channel == rig.SpeakerArray.ErrorSoundChannel, CV.Norm(row) != 0, "channel " + channel);
+                Assert.AreEqual(channel == rig.SpeakerArray.PenaltySoundChannel, CV.Norm(row) != 0, "channel " + channel);
             }
         }
     }

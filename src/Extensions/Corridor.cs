@@ -107,7 +107,7 @@ public class CorridorTrial
     public double rewardSizeUl;
     public bool lickToReward;
     public int wrongLickLimit;
-    public bool punishWrongZone;
+    public bool penaliseWrongZone;
     public double timeLimitSeconds;     // from the first pip; NaN: none
     public bool trackEndEndsTrial;
     public bool frequencyDrift;
@@ -233,7 +233,7 @@ public class TrialDraw
         t.rewardSizeUl = stage.RewardSizeUl;
         t.lickToReward = stage.LickToReward;
         t.wrongLickLimit = stage.WrongLickLimit;
-        t.punishWrongZone = stage.PunishWrongZone;
+        t.penaliseWrongZone = stage.PenaliseWrongZone;
         t.timeLimitSeconds = stage.TimeLimitSeconds ?? double.NaN;
         t.trackEndEndsTrial = stage.TrackEndEndsTrial;
         t.frequencyDrift = stage.FrequencyDrift;
@@ -264,7 +264,7 @@ public enum CorridorEventKind
     Start,      // Go, beep 0: the trial starts
     Trigger,    // optogenetics: laserToStimulusSeconds before the first pip, the trigger line up (a software-triggered Zapit's StartStimulus)
     Pip,        // a beep with the stimulus on: the tone pip and grating frame
-    Outcome,    // the trial ended: its row, the reward or punishment
+    Outcome,    // the trial ended: its row, the reward or penalty
     LaserCap    // laserMaxSeconds after the trigger with no outcome yet: stop the laser
 }
 
@@ -277,7 +277,7 @@ public class CorridorEvent
     public StimulusFrame Frame;   // Pip
     public TrialRow Row;          // Outcome
     public bool Rewarded;         // Outcome
-    public bool ErrorSound;       // Outcome: the punishment's sound plays
+    public bool PenaltySound;       // Outcome: the penalty sound plays
     public string RewardSide;     // Outcome: "left", the spout the task rewards
 
     public Tuple<string, double> Reward { get { return Tuple.Create(RewardSide, Trial.rewardSizeUl); } }
@@ -318,8 +318,8 @@ public class TrialRow
     public double stimulusOnsetTime;
     public double outcomeTime;
     public double rewardSizeUl;
-    public bool punishSound;
-    public double punishTimeoutSeconds;
+    public bool penaltySound;
+    public double penaltyTimeoutSeconds;
     public int laserCondition;
     public double laserPowerMw;
     public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
@@ -337,7 +337,7 @@ public class TrialRow
 /// (after any timeout; trial 1 from the first clock tick), during which a hardware-triggered Zapit is armed (once the
 /// last trial's trigger line has fallen); Go (beep 0) at the interval's end less the lead, max(laserToStimulusSeconds, 0),
 /// or later until the stage's quiet waits hold; the first pip the lead after Go and the trigger laserToStimulusSeconds
-/// before it (a reply not in by then stops the task); beeps every 50 ms until the outcome; then the punishment's timeout.
+/// before it (a reply not in by then stops the task); beeps every 50 ms until the outcome; then the penalty timeout.
 /// </summary>
 public class CorridorState
 {
@@ -513,8 +513,8 @@ public class CorridorState
     }
 
     /// <summary>The outcome (Tom Childs' ProcessTrialEnd): a trial that ends on a lick in the zone or the zone reached
-    /// is rewarded; one that runs out of time or track in the zone is punished, as is one ending outside it on a stage
-    /// with punishWrongZone. Reaching the zone is the floor alone, as in Tom's FreqAboveThreshold: a drifting stage's
+    /// is rewarded; one that runs out of time or track in the zone is penalised, as is one ending outside it on a stage
+    /// with penaliseWrongZone. Reaching the zone is the floor alone, as in Tom's FreqAboveThreshold: a drifting stage's
     /// tone can pass the ceiling (and the sweep's end) on the beep it crosses the floor, and is rewarded.</summary>
     CorridorEvent End(string reason)
     {
@@ -522,8 +522,8 @@ public class CorridorState
         var onTarget = reason == "FreqReached" || OnTarget(tone);
         var timedOut = reason == "Timeout" || reason == "EndOfTrack";
         var rewarded = onTarget && (reason == "Lick" || reason == "FreqReached");
-        var punished = onTarget ? timedOut : trial.punishWrongZone;
-        var timeout = punished ? setup.Task.Punishment.TimeoutSeconds : 0;
+        var penalised = onTarget ? timedOut : trial.penaliseWrongZone;
+        var timeout = penalised ? setup.Task.Penalty.TimeoutSeconds : 0;
         var row = new TrialRow
         {
             trialNumber = trial.trialNumber,
@@ -536,8 +536,8 @@ public class CorridorState
             stimulusOnsetTime = onset,
             outcomeTime = now,
             rewardSizeUl = trial.rewardSizeUl,
-            punishSound = punished && setup.Task.Punishment.Sound.Enabled,
-            punishTimeoutSeconds = timeout,
+            penaltySound = penalised && setup.Task.Penalty.Sound.Enabled,
+            penaltyTimeoutSeconds = timeout,
             laserCondition = trial.laserCondition,
             laserPowerMw = triggered ? trial.laserPowerMw : 0,  // a trial ended before its trigger had no laser
             laserTriggerTime = triggered ? laserOnset : double.NaN,
@@ -548,7 +548,7 @@ public class CorridorState
             visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             truncationFraction = trial.truncationFraction
         };
-        var outcome = new CorridorEvent { Kind = CorridorEventKind.Outcome, Seconds = now, Trial = trial, Row = row, Rewarded = rewarded, ErrorSound = row.punishSound, RewardSide = "left" };
+        var outcome = new CorridorEvent { Kind = CorridorEventKind.Outcome, Seconds = now, Trial = trial, Row = row, Rewarded = rewarded, PenaltySound = row.penaltySound, RewardSide = "left" };
         phase = Phase.Timeout;
         lastOutcome = now;
         waitUntil = now + timeout;

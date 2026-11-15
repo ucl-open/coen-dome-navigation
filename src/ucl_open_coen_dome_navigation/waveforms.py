@@ -5,7 +5,7 @@ scaled them by the amplitude again, so a pip peaked at amplitude squared. The sw
 (SWEEP_START_HZ ... PIP_PEAK, Tom's 2000 to 25000 Hz in 100 tones at 0.05 squared) and recorded in sweep.json, which
 the workflow reads for the sweep's frequencies (Corridor.cs Sweep) and task.py for the reward zones' bounds. The
 workflow plays every file at its loudness on rig.yml's speakers (OpenRigs.Audio SpeakerBuffer: the pips and the reward
-tone equalised for each speaker, the noise as it is); the error sound is the lab's, from OpenRigs.Audio. Run `uv run generate-waveforms` after changing one of them, and commit.
+tone equalised for each speaker, the noise as it is); the penalty sound is the lab's, from OpenRigs.Audio. Run `uv run generate-waveforms` after changing one of them, and commit.
 """
 
 import json
@@ -62,7 +62,7 @@ def sweep() -> dict:
 
 def write(out_dir: Path = OUT_DIR) -> None:
     """Write all_waveforms.bin (n x 2400 float32, row-major, no header), frequencies.txt, reward_tone.bin (float32),
-    background_noise.bin (float32 mono, no header) and sweep.json. The error sound is the lab's (OpenRigs.Audio)."""
+    background_noise.bin (float32 mono, no header) and sweep.json. The penalty sound is the lab's (OpenRigs.Audio)."""
     out_dir.mkdir(parents=True, exist_ok=True)
     frequencies = tone_frequencies()
     tones(frequencies).tofile(out_dir / "all_waveforms.bin")

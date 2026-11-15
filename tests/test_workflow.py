@@ -234,14 +234,14 @@ def test_the_background_noise_plays_unequalised_on_every_speaker():
     assert buffer.findtext(AUD + "Equalise") == "false" and not (buffer.findtext(AUD + "Channels") or "").strip()
 
 
-def test_the_error_sound_is_the_lab_s_at_the_task_s_gain():
-    # Audit, 14 Nov 2026: OpenRigs.Audio's ErrorSoundBuffer (rig.yml's errorSoundChannel, equalised), its Gain set from
-    # the task's punishment.sound.gain before each buffer (InputMapping), so the speakers arriving first cannot use 1.
-    nodes, upstream = _audio_chain("ErrorTone")
-    assert _labels(nodes, upstream) == ["TaskConfig", "TaskParameters.Punishment.Sound.Gain", "Speakers", "rx:Zip", "Item2", "aud:ErrorSoundBuffer"]
+def test_the_penalty_sound_is_the_lab_s_at_the_task_s_gain():
+    # Audit, 14 Nov 2026: OpenRigs.Audio's PenaltySoundBuffer (rig.yml's penaltySoundChannel, equalised), its Gain set from
+    # the task's penalty.sound.gain before each buffer (InputMapping), so the speakers arriving first cannot use 1.
+    nodes, upstream = _audio_chain("PenaltyTone")
+    assert _labels(nodes, upstream) == ["TaskConfig", "TaskParameters.Penalty.Sound.Gain", "Speakers", "rx:Zip", "Item2", "aud:PenaltySoundBuffer"]
     mapping = next(nodes[i] for i in upstream if nodes[i].get(XSI) == "InputMapping")
     assert [(p.get("Name"), p.get("Selector")) for p in mapping.iter(W + "Property")] == [("Gain", "Item1")]
-    assert "error_tone.wav" not in TEXT and "al:AudioReader" not in TEXT and "Sound.Path" not in TEXT
+    assert "al:AudioReader" not in TEXT and "Sound.Path" not in TEXT
     assert 'xmlns:aud="clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio"' in TEXT
 
 

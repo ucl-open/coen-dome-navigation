@@ -1554,7 +1554,7 @@ namespace UclOpenCoenDomeNavigation
     
         private System.Collections.Generic.List<int> _unusedChannels;
     
-        private int _errorSoundChannel;
+        private int _penaltySoundChannel;
     
         public EqualisedSpeakerArray()
         {
@@ -1571,7 +1571,7 @@ namespace UclOpenCoenDomeNavigation
             _syncChannel = other._syncChannel;
             _syncGain = other._syncGain;
             _unusedChannels = other._unusedChannels;
-            _errorSoundChannel = other._errorSoundChannel;
+            _penaltySoundChannel = other._penaltySoundChannel;
         }
     
         /// <summary>
@@ -1668,20 +1668,20 @@ namespace UclOpenCoenDomeNavigation
         }
     
         /// <summary>
-        /// Mixer output channel the error sound plays on.
+        /// Mixer output channel the penalty sound plays on.
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("errorSoundChannel", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="errorSoundChannel")]
-        [System.ComponentModel.DescriptionAttribute("Mixer output channel the error sound plays on.")]
-        public int ErrorSoundChannel
+        [Newtonsoft.Json.JsonPropertyAttribute("penaltySoundChannel", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="penaltySoundChannel")]
+        [System.ComponentModel.DescriptionAttribute("Mixer output channel the penalty sound plays on.")]
+        public int PenaltySoundChannel
         {
             get
             {
-                return _errorSoundChannel;
+                return _penaltySoundChannel;
             }
             set
             {
-                _errorSoundChannel = value;
+                _penaltySoundChannel = value;
             }
         }
     
@@ -1702,7 +1702,7 @@ namespace UclOpenCoenDomeNavigation
             stringBuilder.Append("SyncChannel = " + _syncChannel + ", ");
             stringBuilder.Append("SyncGain = " + _syncGain + ", ");
             stringBuilder.Append("UnusedChannels = " + _unusedChannels + ", ");
-            stringBuilder.Append("ErrorSoundChannel = " + _errorSoundChannel);
+            stringBuilder.Append("PenaltySoundChannel = " + _penaltySoundChannel);
             return true;
         }
     
