@@ -354,11 +354,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Signed, in seconds: the trigger (the ZapitTrigger line) comes this long before the stimulus; 0 with it; negative after it. Go is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the stimulus comes the lead after Go in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger only with optogenetics. Zapit is armed during the interval and adds no time. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin); each task adds its own limits
+        /// Signed, in seconds: the trigger (the ZapitTrigger line) comes this long before the stimulus; 0 with it; negative after it. The trial's start is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the stimulus comes the lead after the trial's start in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger only with optogenetics. Zapit is armed during the interval and adds no time. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin); each task adds its own limits
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserToStimulusSeconds", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserToStimulusSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Signed, in seconds: the trigger (the ZapitTrigger line) comes this long before the stimulus; 0 with it; negative after it. Go is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the stimulus comes the lead after Go in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger only with optogenetics. Zapit is armed during the interval and adds no time. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin); each task adds its own limits")]
+        [System.ComponentModel.DescriptionAttribute(@"Signed, in seconds: the trigger (the ZapitTrigger line) comes this long before the stimulus; 0 with it; negative after it. The trial's start is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the stimulus comes the lead after the trial's start in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger only with optogenetics. Zapit is armed during the interval and adds no time. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin); each task adds its own limits")]
         public double LaserToStimulusSeconds
         {
             get
@@ -869,11 +869,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Quiet wait: Go needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds Go until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)
+        /// Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("lickQuietSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickQuietSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: Go needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds Go until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)")]
+        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)")]
         public double LickQuietSeconds
         {
             get
@@ -887,13 +887,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)
+        /// Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("wheelQuietSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelQuietSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Quiet wait: Go needs this long with the wheel still, in seconds, counted from the" +
-            " interval\'s start: the wheel\'s distance (forward and back added) over the last w" +
-            "heelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)")]
+        [System.ComponentModel.DescriptionAttribute("Quiet wait: a trial\'s start needs this long with the wheel still, in seconds, cou" +
+            "nted from the interval\'s start: the wheel\'s distance (forward and back added) ov" +
+            "er the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQ" +
+            "uietCm 0)")]
         public double WheelQuietSeconds
         {
             get
@@ -907,12 +908,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The most the wheel may move, forward and back added, within the last wheelQuietSeconds before Go, in cm; 0: off (with wheelQuietSeconds 0)
+        /// The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("wheelQuietCm")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelQuietCm")]
         [System.ComponentModel.DescriptionAttribute("The most the wheel may move, forward and back added, within the last wheelQuietSe" +
-            "conds before Go, in cm; 0: off (with wheelQuietSeconds 0)")]
+            "conds before the trial\'s start, in cm; 0: off (with wheelQuietSeconds 0)")]
         public double WheelQuietCm
         {
             get

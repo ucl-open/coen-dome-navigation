@@ -69,7 +69,7 @@
           "type": "number"
         },
         "laserToStimulusSeconds": {
-          "description": "Signed, in seconds: the trigger (the ZapitTrigger line) comes this long before the stimulus; 0 with it; negative after it. Go is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the stimulus comes the lead after Go in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger only with optogenetics. Zapit is armed during the interval and adds no time. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin); each task adds its own limits",
+          "description": "Signed, in seconds: the trigger (the ZapitTrigger line) comes this long before the stimulus; 0 with it; negative after it. The trial's start is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the stimulus comes the lead after the trial's start in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger only with optogenetics. Zapit is armed during the interval and adds no time. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin); each task adds its own limits",
           "title": "LaserToStimulusSeconds",
           "type": "number"
         },
@@ -197,7 +197,7 @@
       "properties": {
         "lickQuietSeconds": {
           "default": 0.0,
-          "description": "Quiet wait: Go needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds Go until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
+          "description": "Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
           "maximum": 10.0,
           "minimum": 0,
           "title": "LickQuietSeconds",
@@ -205,7 +205,7 @@
         },
         "wheelQuietSeconds": {
           "default": 0.0,
-          "description": "Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)",
+          "description": "Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)",
           "maximum": 10.0,
           "minimum": 0,
           "title": "WheelQuietSeconds",
@@ -213,7 +213,7 @@
         },
         "wheelQuietCm": {
           "default": 0.0,
-          "description": "The most the wheel may move, forward and back added, within the last wheelQuietSeconds before Go, in cm; 0: off (with wheelQuietSeconds 0)",
+          "description": "The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0)",
           "maximum": 20.0,
           "minimum": 0,
           "title": "WheelQuietCm",
