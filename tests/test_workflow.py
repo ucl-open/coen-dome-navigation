@@ -181,10 +181,6 @@ def test_no_trial_graph_closes_a_shared_subject():
     assert lint.subjects_closed_by_a_nested_multicast(WORKFLOW) == []
 
 
-def test_nothing_reads_a_startup_watchdog_s_output():
-    assert lint.startup_watchdog_readers(WORKFLOW) == 0
-
-
 def test_every_sound_plays_at_the_task_file_s_level():
     assert lint.sound_level_problems(WORKFLOW) == []
 

@@ -75,6 +75,7 @@
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:RigHardware.bonsai">
               <Description>Every dome device, named as in the data, behind its subjects (Building Blocks): the Behavior board (wheel distance, pulses, the ZapitTrigger line cleared however the workflow stops), the timestamp generator (Timestamp, HarpClockSet), both Lickety Splits, the three cameras and the lick spout stage, which homes, goes in and handles the spout commands.</Description>
+              <ReadyWaitsFor>HarpClockSet, SpoutsHomed, MixerStarted</ReadyWaitsFor>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>RigConfigs</Name>
