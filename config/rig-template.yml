@@ -114,7 +114,7 @@ speakerArray:
     channelCount: 32
     suggestedLatency: 0.002 # s
     bootDelay: 3.0          # s before the mixer starts: a fault while the sound card boots can blue-screen the PC
-  syncChannel: 31           # the sync copy of each stimulus
+  syncChannel: 31           # the sync copy of each stimulus; this task does not play one yet (BACKLOG), others do
   syncGain: 0.2
   errorSoundChannel: 2      # the error sound's channel
   unusedChannels: [30]      # not connected

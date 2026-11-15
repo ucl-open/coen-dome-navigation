@@ -529,7 +529,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Ready</Name>
-        <Description>Reports Ready once the Harp clock is set and the spouts are homed (the two zipped). Beside it, StartupWatchdog stops the workflow, naming what never came, if that takes longer than 400 s (the stage homes each motor within 60 s); it completes without a value, so nothing reads its output.</Description>
+        <Description>Reports Ready once the Harp clock is set and the spouts are homed (the two zipped). Beside it, StartupWatchdog stops the workflow, naming what never came, if that takes longer than 180 s (the stage homes its five motors together, each within 60 s); it completes without a value, so nothing reads its output.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -564,7 +564,7 @@
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="core:StartupWatchdog">
                 <core:Expected>HarpClockSet, SpoutsHomed</core:Expected>
-                <core:TimeoutSeconds>400</core:TimeoutSeconds>
+                <core:TimeoutSeconds>180</core:TimeoutSeconds>
                 <core:What>Readying the rig (the Harp clock and the spout stage's homing)</core:What>
               </Combinator>
             </Expression>

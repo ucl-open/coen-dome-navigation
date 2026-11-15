@@ -139,6 +139,7 @@ The log is `K:\config\machines\BLUE-OPTO-2\switch\iterate-log.md`; GREEN-DOME-2'
 
 ### Smaller
 
+- No sync copy of the stimulus: rig.yml's `speakerArray.syncChannel` and `syncGain` are read by coen-dome-decision-making but not here, so no channel carries a copy of the pips for alignment with acquisition (found on the 14 Nov 2026 alignment audit). Add it if Tom's analysis needs it.
 - For analysis: logs are written one file per clock hour (`..._T20-00-00`, `..._T21-00-00`), so an experiment across an hour has two of each; join them.
 
 ## Decided
