@@ -7,10 +7,10 @@ using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reflection;
-using UclOpenCoenDomeNavigation;
+using OpenRigs.Devices.Rigs;
 
-/// <summary>config\rig-template.yml read as the workflow reads rig.yml: the generated DeserializeFromYaml, whose objects
-/// refuse a key the C# lacks, so a template the workflow would stop on at Start fails here.</summary>
+/// <summary>The speakers of the lab's rig template (open-rigs' rigs\rig-template.yml, in .venv), read as the workflow reads
+/// rig.yml (OpenRigs.Devices.Rigs) and loaded by OpenRigs.Audio as the workflow loads them.</summary>
 [TestClass]
 public class RigTemplateTests
 {
@@ -23,32 +23,9 @@ public class RigTemplateTests
 
     static string Template()
     {
-        return File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "rig-template.yml"));
+        return File.ReadAllText(Path.Combine(Fixture.Repo(), ".venv", "Lib", "site-packages", "open_rigs", "rigs", "rig-template.yml"));
     }
 
-    [TestMethod]
-    public void TheTemplateDeserializes()
-    {
-        var rig = Deserialize(Template());
-        Assert.IsNotNull(rig.SpeakerArray);
-        Assert.IsNotNull(rig.Zapit);
-    }
-
-    [TestMethod]
-    public void EachVideoEncoderCodecIsReadByItsFFmpegName()
-    {
-        // A C# enum here took only its C# names (H264Nvenc), so rig.yml's h264_nvenc stopped the workflow at Start.
-        foreach (var codec in new[] { "libx264", "h264_nvenc", "h264_qsv" })
-        {
-            Assert.AreEqual(codec, Deserialize(Template() + "\nvideoEncoder: { codec: " + codec + " }\n").VideoEncoder.Codec);
-        }
-    }
-
-    [TestMethod]
-    public void AKeyTheCSharpLacksIsRefused()
-    {
-        Assert.ThrowsException<YamlDotNet.Core.YamlException>(() => Deserialize(Template() + "\nrewardValves: { left: DO1, right: DO2 }\n"));
-    }
 
     /// <summary>The template as this machine's rig.yml in a scratch folder, each speaker's filter a symmetric 3-tap
     /// SpeakerFilter measured here, as OpenRigs.Audio's LoadSpeakers wants.</summary>

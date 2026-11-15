@@ -182,12 +182,8 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     @model_validator(mode="after")
     def _the_lead_fits(self):
         # Corridor.cs CorridorSetup.Create's same rules (Pip, 13 Nov 2026).
-        lead, iti = self.optogenetics.laser_to_stimulus_seconds, self.trial_structure.iti_min_seconds
-        if lead + ZAPIT_REPLY_MARGIN_SECONDS > iti + 1e-9:
-            raise ValueError(
-                f"optogenetics.laser_to_stimulus_seconds ({lead} s) plus Zapit's {ZAPIT_REPLY_MARGIN_SECONDS} s reply margin must be at most "
-                f"trial_structure.iti_min_seconds ({iti} s), the shortest interval"
-            )
+        self.optogenetics.check_lead_fits(self.trial_structure.iti_min_seconds)
+        lead = self.optogenetics.laser_to_stimulus_seconds
         # A negative lead puts the trigger after the first pip, at most the stage's timeLimitSeconds (any stage here; Go checks the one chosen).
         after = max(stage.time_limit_seconds or NO_TIME_LIMIT_TRIGGER_AFTER_SEC for stage in self.training_stages)
         if -lead > after + 1e-9:

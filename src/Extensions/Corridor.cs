@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using UclOpenCoenDomeNavigation;
+using OpenRigs.Devices.Rigs;
 using UclOpenCoenDomeNavigationTask;
 
 // The corridor task in tested C# (plan v11, W3): each trial's draw, its interval, its run along the virtual track on
@@ -166,7 +166,8 @@ public class CorridorSetup
         var leadBeeps = lead / BeepSeconds;
         if (!(Math.Abs(leadBeeps - Math.Round(leadBeeps)) < 1e-6)) problems.Add("optogenetics.laserToStimulusSeconds must be a whole number of 0.05 s beeps");
         if (lead > MaxLeadSec + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, MaxLeadSec));
-        if (lead + ZapitTrial.ReplyMarginSeconds > task.TrialStructure.ItiMinSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) plus Zapit's {1} s reply margin must be at most trialStructure.itiMinSeconds ({2} s), the shortest interval", lead, ZapitTrial.ReplyMarginSeconds, task.TrialStructure.ItiMinSeconds));
+        var leadProblem = ZapitTrial.LeadProblem(lead, task.TrialStructure.ItiMinSeconds);
+        if (leadProblem != null) problems.Add(leadProblem);
         var after = row.TimeLimitSeconds ?? NoTimeLimitTriggerAfterSec;
         if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage '{2}''s {3}", lead, after, row.Label, row.TimeLimitSeconds.HasValue ? "timeLimitSeconds" : "limit for a stage without timeLimitSeconds"));
         var hold = task.Optogenetics.TriggerHoldSeconds;
@@ -188,7 +189,7 @@ public class CorridorSetup
         }
         if (problems.Count > 0) throw new InvalidOperationException("The task cannot be run: " + string.Join("; ", problems) + ".");
         if (opto.UseZapit) setup.ConditionCount = zapitConditionCount != null ? zapitConditionCount(opto.ZapitConfigPath) : ZapitConditions.Check(opto.ZapitConfigPath);
-        setup.Seed = task.RngSeed.HasValue ? (int)task.RngSeed.Value : Guid.NewGuid().GetHashCode();
+        setup.Seed = RngSeed.Resolve(task.RngSeed);
         setup.Audio = task.Modality != UclOpenCoenDomeNavigationTaskParametersModality.Visual;
         setup.Visual = task.Modality != UclOpenCoenDomeNavigationTaskParametersModality.Auditory;
         return setup;
@@ -249,9 +250,8 @@ public class TrialDraw
             t.triggerHoldSeconds = opto.TriggerHoldSeconds;
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
             t.armZapit = setup.HardwareTriggered;
-            t.laserCondition = random.Next(setup.ConditionCount) + 1;
-            t.laserOn = t.trialNumber > opto.TrialsBeforeLaser && random.NextDouble() < opto.LaserOnProbability;
-            t.laserPowerMw = t.laserOn ? opto.LaserPowerMw.Value : 0;
+            ZapitTrial.Draw(random, t.trialNumber, setup.ConditionCount, opto.TrialsBeforeLaser, opto.LaserOnProbability, opto.LaserPowerMw.Value,
+                out t.laserCondition, out t.laserOn, out t.laserPowerMw);
             t.laserMaxSeconds = opto.LaserMaxSeconds;
         }
         return t;
@@ -454,9 +454,7 @@ public class CorridorState
         {
             if (trial.armZapit && !armed)
             {
-                throw new InvalidOperationException(string.Format(
-                    "Zapit had not answered trial {0}'s StartStimulus by its trigger at {1} s on the Harp clock, so the task stopped rather than move the trigger. Is Zapit running and answering quickly?",
-                    trial.trialNumber, now));
+                throw ZapitTrial.NotArmedByTrigger(trial.trialNumber, now);
             }
             triggered = true;
             if (!trial.armZapit) armSent = true;  // a software-triggered Zapit is sent its StartStimulus with the Trigger event

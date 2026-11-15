@@ -30,10 +30,9 @@ Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `
 | `src\main.bonsai` | The workflow, top level in data-flow order: RigSetup, Initialization, Declarations, Ready, Task, Zapit, Commands, Grating, Audio, StartTrials, TaskLogic, Logging, LiveView |
 | `src\Extensions\Corridor.cs` | The task: each trial's draw (`TrialDraw`), its interval, quiet wait and run along the virtual track (`VirtualTrack`, `CorridorState`) on the Harp clock, its outcome and row (`CreateTrialRow`), all tested in `tests\Extensions.Tests` |
 | `config\task-abstract-av-corridor.yml` | The task file rig-control copies at Go with the form's edits |
-| `config\rig-template.yml` | The lab rig model's template (`open_rigs.rigs.lab_rig`): every lab workflow reads the same `C:\Coen-Lab-Local\RigConfigs\<MACHINE>\rig.yml` |
 | `schemas\trial-columns.yml` | What each `BonsaiData_Trial` column means |
 | `src\waveforms` | The tone pips, reward tone and background noise, each one channel at the loudness it plays at (the penalty sound is the lab's, from `OpenRigs.Audio`), and `sweep.json`, the sweep they were made for; made by `uv run generate-waveforms` and committed |
-| `src\ucl_open_coen_dome_navigation` | Rig and task models (`regenerate-schemas` makes `src\DataSchemas` and the C#), waveforms, stage suggestion |
+| `src\ucl_open_coen_dome_navigation` | The task model (`regenerate-schemas` makes `src\DataSchemas` and its C#; the rig model is lib-open-rigs' `open_rigs.rigs.lab_rig`, its C# OpenRigs.Devices' and its template open-rigs' `rigs\rig-template.yml`), waveforms, stage suggestion |
 | `local_packages` | The lab's OpenRigs packages from `Coen-Lab/lib-open-rigs`; never edited here |
 
 ## Shared Blocks
@@ -49,12 +48,14 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `HarpLogs` | the Harp boards' logs | `OpenRigs.Devices:HarpLogs.bonsai` |
 | `HarpDelay` | the trigger line cleared `triggerHoldSeconds` after the outcome, on the Harp clock, in an optogenetics experiment | `OpenRigs.Core` |
 | `ExperimentControl`, `ExperimentSettings`, `OnCommand`, `OnParameterSet`, `ParameterDefault`, `ParameterValue`, `ReportMetric`, `ReportPhase` | parameters, commands, Go and phases for rig-control; the settings files; the metrics the view shows | `OpenRigs.Control` (`ExperimentControl.bonsai`) |
-| `LogController`, `LogAsync`, `LogTrial`, `LogData`, `LogVideoFfmpeg`, `LogDataSchema`, `CreateAsyncEvent` | the experiment folder and its files: trial rows, async events (Go, commands, `RngSeed`), stimulus state, Zapit replies, video, settings | `OpenRigs.Logging` |
+| `LogController`, `LogAsync`, `LogTrial`, `LogData`, `LogCameras`, `LogDataSchema`, `CreateAsyncEvent` | the experiment folder and its files: trial rows, async events (Go, commands, `RngSeed` at trial 1's Go), stimulus state, every camera's video, settings | `OpenRigs.Logging` |
+| `LabRig`, `DeserializeFromYaml`, `SerializeToJson` | rig.yml read as the lab rig model, as every lab workflow reads it, and logged as `Settings_Rig` | `OpenRigs.Devices` (`OpenRigs.Devices.Rigs`) |
+| `ReadTextFile` | the task file read when its path arrives at Go | `OpenRigs.Core` |
 | `RecordHarpDevices` | each Harp board checked at Start and its device record and register map written into the experiment | `OpenRigs.HarpDevices` |
 | `ExperimentManifest` | `manifest.json`: what ran, the config files by hash, what the experiment must leave | `OpenRigs.Manifest` |
 | `StreamDevices` | the live view (the last node) | `OpenRigs.LiveView` |
 | `StartupWatchdog` | Ready once the clock is set and the spouts are homed, or a stop naming what never came | `OpenRigs.Core` |
-| `ConnectZapit` | Zapit's commands and replies once the task uses it, and the stops at start: an error reply, no conditions file loaded, a conditions count other than the task's file, a real mouse on a rig without hardware triggering | `OpenRigs.Devices:Zapit.ConnectZapit.bonsai` |
+| `ConnectZapit`, `ZapitLogs` | Zapit's commands (`ZapitCommands`, which it declares) and replies once the task uses it, its replies and conditions file logged (`ZapitLogs`), and the stops at start: an error reply, no conditions file loaded, a conditions count other than the task's file, a real mouse on a rig without hardware triggering | `OpenRigs.Devices:Zapit.ConnectZapit.bonsai` |
 | `ZapitConditionsSnapshot`, `ZapitLineMessage`, `ZapitTrial.ReplyMarginSeconds`, `ZapitTrial.CheckArmed` | the conditions file copied into the experiment, the trigger line's set and clear, the 0.2 s Zapit reply margin the task's checks use, the check of Zapit's armed reply (`CorridorState.OnZapitReply`) | `OpenRigs.Devices` (`OpenRigs.Devices.Zapit`) |
 | `LoadSpeakers`, `SpeakerBuffer`, `PenaltySoundBuffer` | rig.yml's speakers and their filters, loaded once at Start (`Speakers`), stopping the workflow naming any speaker without a usable filter; each sound laid out on rig.yml's `channelCount` channels, the pips and reward tone equalised on every rig.yml speaker and the background noise as it is on every speaker; the penalty sound the lab's, on `penaltySoundChannel` alone at the task's `penalty.sound.gain` | `OpenRigs.Audio` |
 

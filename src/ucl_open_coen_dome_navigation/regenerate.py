@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pydantic
 
-import ucl_open_coen_dome_navigation.rig
 import ucl_open_coen_dome_navigation.task
 
 SCHEMA_ROOT = Path("./src/DataSchemas/")
@@ -33,9 +32,8 @@ def regenerate(model_type: type, schema_file: Path) -> None:
 
 
 def main():
-    """Regenerate the JSON schemas and Bonsai.Sgen C# classes from the pydantic models."""
+    """Regenerate the task's JSON schema and Bonsai.Sgen C# classes from its pydantic model (the rig's are lib-open-rigs' OpenRigs.Devices.Rigs)."""
     SCHEMA_ROOT.mkdir(parents=True, exist_ok=True)
-    regenerate(ucl_open_coen_dome_navigation.rig.UclOpenCoenDomeNavigationRig, SCHEMA_ROOT / "ucl_open_coen_dome_navigation.json")
     regenerate(ucl_open_coen_dome_navigation.task.UclOpenCoenDomeNavigationTaskLogic, SCHEMA_ROOT / "ucl_open_coen_dome_navigation_task.json")
 
 

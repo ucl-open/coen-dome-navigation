@@ -2,7 +2,7 @@
 <WorkflowBuilder Version="2.9.0"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xmlns:ext="clr-namespace:;assembly=Extensions"
-                 xmlns:rig="clr-namespace:UclOpenCoenDomeNavigation;assembly=Extensions"
+                 xmlns:rig="clr-namespace:OpenRigs.Devices.Rigs;assembly=OpenRigs.Devices"
                  xmlns:task="clr-namespace:UclOpenCoenDomeNavigationTask;assembly=Extensions"
                  xmlns:core="clr-namespace:OpenRigs.Core;assembly=OpenRigs.Core"
                  xmlns:zap="clr-namespace:OpenRigs.Devices.Zapit;assembly=OpenRigs.Devices"
@@ -427,12 +427,9 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Declarations</Name>
-        <Description>Subjects several groups share: Zapit's commands and replies, reward requests (side, microlitres) for DeliverReward, the mixer's buffers, and the task's events and rows.</Description>
+        <Description>Subjects several groups share: Zapit's replies (ConnectZapit declares its commands), reward requests (side, microlitres) for DeliverReward, the mixer's buffers, and the task's events and rows.</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="rx:BehaviorSubject" TypeArguments="zap:ZapitCommand">
-              <rx:Name>ZapitCommands</rx:Name>
-            </Expression>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="zap:ZapitReply">
               <rx:Name>ZapitReplies</rx:Name>
             </Expression>
@@ -458,7 +455,8 @@
               <rx:Name>StimulusRows</rx:Name>
             </Expression>
           </Nodes>
-          <Edges />
+          <Edges>
+          </Edges>
         </Workflow>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
@@ -534,7 +532,7 @@
               <Name>TaskFilePath</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rig:ReadTextFile" />
+              <Combinator xsi:type="core:ReadTextFile" />
             </Expression>
             <Expression xsi:type="task:DeserializeFromYaml">
               <task:Type xsi:type="TypeMapping" TypeArguments="task:UclOpenCoenDomeNavigationTaskLogic" />
@@ -893,6 +891,7 @@
               <Combinator xsi:type="aud:SpeakerBuffer">
                 <aud:Gain>1</aud:Gain>
                 <aud:Equalise>true</aud:Equalise>
+                <aud:SyncCopy>true</aud:SyncCopy>
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
@@ -1507,6 +1506,35 @@
                 <ext:Kind>Trigger</ext:Kind>
               </Combinator>
             </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TrialEvents</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="ext:CorridorEvents">
+                <ext:Kind>Start</ext:Kind>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Name>RngSeed</Name>
+              <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once at trial 1's Go: the Take(1) is after the multicast, so the shared AsyncEvents subject never completes.</Description>
+              <Selector>Trial.rngSeed</Selector>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orl:CreateAsyncEvent">
+                <orl:Event>RngSeed</orl:Event>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="Bonsai.Harp:WithLatestTimestamp.bonsai">
+              <Name>Timestamp</Name>
+            </Expression>
+            <Expression xsi:type="MulticastSubject">
+              <Name>AsyncEvents</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:Take">
+                <rx:Count>1</rx:Count>
+              </Combinator>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="5" Label="Source1" />
@@ -1573,6 +1601,12 @@
             <Edge From="65" To="66" Label="Source1" />
             <Edge From="66" To="67" Label="Source1" />
             <Edge From="68" To="69" Label="Source1" />
+            <Edge From="70" To="71" Label="Source1" />
+            <Edge From="71" To="72" Label="Source1" />
+            <Edge From="72" To="73" Label="Source1" />
+            <Edge From="73" To="74" Label="Source1" />
+            <Edge From="74" To="75" Label="Source1" />
+            <Edge From="75" To="76" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -1644,7 +1678,7 @@
             </Expression>
             <Expression xsi:type="rx:SelectMany">
               <Name>ExperimentLogs</Name>
-              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix: BonsaiData_Trial (LogTrial; one row per trial, built by CreateTrialRow when the outcome is known; columns in schemas\trial-columns.yml), BonsaiData_StimulusState (one row per pip), the three cameras (LogVideoFfmpeg, after PathPrefix: an include cannot subscribe to the experiment folder early), the settings files (Settings_Rig, Settings_Task, Settings_Experiment, Settings_ZapitConditions in an optogenetics experiment), the RngSeed event and Zapit's replies.</Description>
+              <Description>Starts every experiment log once LogControllerLogic publishes PathPrefix: BonsaiData_Trial (LogTrial; one row per trial, built by CreateTrialRow when the outcome is known; columns in schemas\trial-columns.yml), BonsaiData_StimulusState (one row per pip), the cameras (OpenRigs.Logging LogCameras), the settings files (Settings_Rig, Settings_Task, Settings_Experiment) and Zapit's logs (OpenRigs.Devices Zapit.ZapitLogs: its replies, and Settings_ZapitConditions in an optogenetics experiment). The RngSeed event is TaskLogic's, at trial 1's Go.</Description>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="SubscribeSubject">
@@ -1660,99 +1694,6 @@
                     <Selector />
                     <AutoFlush>true</AutoFlush>
                     <Extension>csv</Extension>
-                  </Expression>
-                  <Expression xsi:type="GroupWorkflow">
-                    <Name>Cameras</Name>
-                    <Workflow>
-                      <Nodes>
-                        <Expression xsi:type="SubscribeSubject">
-                          <Name>PathPrefix</Name>
-                        </Expression>
-                        <Expression xsi:type="rx:SelectMany">
-                          <Workflow>
-                            <Nodes>
-                              <Expression xsi:type="SubscribeSubject">
-                                <Name>Camera-Face.Data</Name>
-                              </Expression>
-                              <Expression xsi:type="Combinator">
-                                <Combinator xsi:type="rx:Skip">
-                                  <rx:Count>1</rx:Count>
-                                </Combinator>
-                              </Expression>
-                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideoFfmpeg.bonsai">
-                                <LogName>Camera-Face</LogName>
-                                <FrameRate>50</FrameRate>
-                              </Expression>
-                              <Expression xsi:type="SubscribeSubject">
-                                <Name>Camera-Pupil.Data</Name>
-                              </Expression>
-                              <Expression xsi:type="Combinator">
-                                <Combinator xsi:type="rx:Skip">
-                                  <rx:Count>1</rx:Count>
-                                </Combinator>
-                              </Expression>
-                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideoFfmpeg.bonsai">
-                                <LogName>Camera-Pupil</LogName>
-                                <FrameRate>50</FrameRate>
-                              </Expression>
-                              <Expression xsi:type="SubscribeSubject">
-                                <Name>Camera-Body.Data</Name>
-                              </Expression>
-                              <Expression xsi:type="Combinator">
-                                <Combinator xsi:type="rx:Skip">
-                                  <rx:Count>1</rx:Count>
-                                </Combinator>
-                              </Expression>
-                              <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogVideoFfmpeg.bonsai">
-                                <LogName>Camera-Body</LogName>
-                                <FrameRate>50</FrameRate>
-                              </Expression>
-                              <Expression xsi:type="SubscribeSubject">
-                                <Name>BehaviorBoard-Main</Name>
-                              </Expression>
-                              <Expression xsi:type="PropertyMapping">
-                                <PropertyMappings>
-                                  <Property Name="FrameRate" Selector="Settings.CameraTriggerController.Trigger0Frequency" />
-                                </PropertyMappings>
-                              </Expression>
-                              <Expression xsi:type="SubscribeSubject">
-                                <Name>BehaviorBoard-Main</Name>
-                              </Expression>
-                              <Expression xsi:type="PropertyMapping">
-                                <PropertyMappings>
-                                  <Property Name="FrameRate" Selector="Settings.CameraTriggerController.Trigger0Frequency" />
-                                </PropertyMappings>
-                              </Expression>
-                              <Expression xsi:type="SubscribeSubject">
-                                <Name>BehaviorBoard-Main</Name>
-                              </Expression>
-                              <Expression xsi:type="PropertyMapping">
-                                <PropertyMappings>
-                                  <Property Name="FrameRate" Selector="Settings.CameraTriggerController.Trigger0Frequency" />
-                                </PropertyMappings>
-                              </Expression>
-                            </Nodes>
-                            <Edges>
-                              <Edge From="0" To="1" Label="Source1" />
-                              <Edge From="1" To="2" Label="Source1" />
-                              <Edge From="3" To="4" Label="Source1" />
-                              <Edge From="4" To="5" Label="Source1" />
-                              <Edge From="6" To="7" Label="Source1" />
-                              <Edge From="7" To="8" Label="Source1" />
-                              <Edge From="9" To="10" Label="Source1" />
-                              <Edge From="10" To="2" Label="Source2" />
-                              <Edge From="11" To="12" Label="Source1" />
-                              <Edge From="12" To="5" Label="Source2" />
-                              <Edge From="13" To="14" Label="Source1" />
-                              <Edge From="14" To="8" Label="Source2" />
-                            </Edges>
-                          </Workflow>
-                        </Expression>
-                      </Nodes>
-                      <Edges>
-                        <Edge From="0" To="1" Label="Source1" />
-                      </Edges>
-                    </Workflow>
                   </Expression>
                   <Expression xsi:type="SubscribeSubject">
                     <Name>RigConfigs</Name>
@@ -1788,119 +1729,18 @@
                     <Name>Settings_Experiment</Name>
                     <Extension>json</Extension>
                   </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>TrialEvents</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="ext:CorridorEvents">
-                      <ext:Kind>Start</ext:Kind>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="MemberSelector">
-                    <Name>RngSeed</Name>
-                    <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once: the Take(1) is after the multicast, so the shared AsyncEvents subject never completes.</Description>
-                    <Selector>Trial.rngSeed</Selector>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="orl:CreateAsyncEvent">
-                      <orl:Event>RngSeed</orl:Event>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="IncludeWorkflow" Path="Bonsai.Harp:WithLatestTimestamp.bonsai">
-                    <Name>Timestamp</Name>
-                  </Expression>
-                  <Expression xsi:type="MulticastSubject">
-                    <Name>AsyncEvents</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="rx:Take">
-                      <rx:Count>1</rx:Count>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="GroupWorkflow">
-                      <Name>ZapitReplies</Name>
-                      <Description>Harp-timestamped log of every Zapit reply from when ExperimentLogs starts (the presented condition and laser state per StartStimulus). ZapitReplies is a PublishSubject, so a reply before then, such as the startup GetNumConditions, is not in it.</Description>
-                      <Workflow>
-                        <Nodes>
-                          <Expression xsi:type="SubscribeSubject">
-                            <Name>ZapitReplies</Name>
-                          </Expression>
-                          <Expression xsi:type="scr:ExpressionTransform">
-                            <scr:Expression>new(
-                  CommandCode as command,
-                  Value as value,
-                  LaserOn as laserOn,
-                  IsError as isError,
-                  ServerDatenum as serverDatenum)</scr:Expression>
-                          </Expression>
-                          <Expression xsi:type="IncludeWorkflow" Path="Bonsai.Harp:WithLatestTimestamp.bonsai">
-                            <Name>Timestamp</Name>
-                          </Expression>
-                          <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogData.bonsai">
-                            <LogName>BonsaiData_ZapitReplies</LogName>
-                            <Selector />
-                            <Extension>csv</Extension>
-                          </Expression>
-                          <Expression xsi:type="WorkflowOutput" />
-                        </Nodes>
-                        <Edges>
-                          <Edge From="0" To="1" Label="Source1" />
-                          <Edge From="1" To="2" Label="Source1" />
-                          <Edge From="2" To="3" Label="Source1" />
-                          <Edge From="3" To="4" Label="Source1" />
-                        </Edges>
-                      </Workflow>
-                    </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>TaskConfig</Name>
-                  </Expression>
-                  <Expression xsi:type="rx:Condition">
-                    <Name>OptogeneticsExperiment?</Name>
-                    <Workflow>
-                      <Nodes>
-                        <Expression xsi:type="WorkflowInput">
-                          <Name>Source1</Name>
-                        </Expression>
-                        <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Expression>TaskParameters.Optogenetics.UseZapit</scr:Expression>
-                        </Expression>
-                        <Expression xsi:type="WorkflowOutput" />
-                      </Nodes>
-                      <Edges>
-                        <Edge From="0" To="1" Label="Source1" />
-                        <Edge From="1" To="2" Label="Source1" />
-                      </Edges>
-                    </Workflow>
-                  </Expression>
-                  <Expression xsi:type="MemberSelector">
-                    <Selector>TaskParameters.Optogenetics.ZapitConfigPath</Selector>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="zap:ZapitConditionsSnapshot" />
-                  </Expression>
-                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogDataSchema.bonsai">
-                    <Name>Settings_ZapitConditions</Name>
-                  </Expression>
+                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogCameras.bonsai" />
+                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ZapitLogs.bonsai" />
                 </Nodes>
                 <Edges>
                   <Edge From="0" To="1" Label="Source1" />
                   <Edge From="2" To="3" Label="Source1" />
+                  <Edge From="4" To="5" Label="Source1" />
                   <Edge From="5" To="6" Label="Source1" />
-                  <Edge From="6" To="7" Label="Source1" />
+                  <Edge From="7" To="8" Label="Source1" />
                   <Edge From="8" To="9" Label="Source1" />
-                  <Edge From="9" To="10" Label="Source1" />
+                  <Edge From="10" To="11" Label="Source1" />
                   <Edge From="11" To="12" Label="Source1" />
-                  <Edge From="12" To="13" Label="Source1" />
-                  <Edge From="14" To="15" Label="Source1" />
-                  <Edge From="15" To="16" Label="Source1" />
-                  <Edge From="16" To="17" Label="Source1" />
-                  <Edge From="17" To="18" Label="Source1" />
-                  <Edge From="18" To="19" Label="Source1" />
-                  <Edge From="19" To="20" Label="Source1" />
-                  <Edge From="22" To="23" Label="Source1" />
-                  <Edge From="23" To="24" Label="Source1" />
-                  <Edge From="24" To="25" Label="Source1" />
-                  <Edge From="25" To="26" Label="Source1" />
                 </Edges>
               </Workflow>
             </Expression>
