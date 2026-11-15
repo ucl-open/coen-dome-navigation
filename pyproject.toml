@@ -6,7 +6,7 @@ build-backend = "uv_build"
 name = "ucl-open-coen-dome-navigation"
 description = "The coen-dome-navigation experiment's rig and task schemas, waveforms and shaping-stage choice."
 authors = [ {name = "Tom Childs", email = "thomas.childs.19@ucl.ac.uk"}]
-license = "MIT"
+license = "BSD-3-Clause"
 requires-python = ">=3.11, <3.12"
 classifiers = [
     "Programming Language :: Python :: 3.11",
