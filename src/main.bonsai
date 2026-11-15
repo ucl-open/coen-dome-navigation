@@ -129,7 +129,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, ManualRewardUl and SpoutStepSize settable live (each a subject of its name, its one default there, shown to the controller by ParameterDefault a second after Start), the spout commands (handled by HarpLickSpoutStage in RigHardware) at any time; at Go RunSettings (subject, session), TaskFilePath (TaskPath, the task file rig-control wrote) and TrainingStage are published.</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, SpoutStepSize settable live (its subject's one default, shown to the controller by ParameterDefault a second after Start), ManualRewardDropUl, the 2.5 ul every RewardLeft and RewardRight gives before and during a run through the valve's calibration (Pip's fixed manual drop, 15 Nov 2026), the spout commands (handled by HarpLickSpoutStage in RigHardware) at any time; at Go RunSettings (subject, session), TaskFilePath (TaskPath, the task file rig-control wrote) and TrainingStage are published.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -171,13 +171,6 @@
                   <Minimum>0</Minimum>
                   <Maximum>5</Maximum>
                   <WholeNumber>true</WholeNumber>
-                </Parameter>
-                <Parameter>
-                  <Name>ManualRewardUl</Name>
-                  <Value />
-                  <Description>Microlitres RewardLeft and RewardRight deliver, taken live before Go and kept after it; until set, the ManualRewardUl subject's default (Initialization). The task's own rewards are this stage's rewardSizeUl (trainingStages).</Description>
-                  <Minimum>0</Minimum>
-                  <Maximum>20</Maximum>
                 </Parameter>
                 <Parameter>
                   <Name>SpoutStepSize</Name>
@@ -371,45 +364,11 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="DoubleProperty">
-                <Value>3</Value>
+                <Value>2.5</Value>
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:BehaviorSubject">
-              <Name>ManualRewardUl</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ControlEvents</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:OnParameterSet">
-                <orcl:Name>ManualRewardUl</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>Given?</Name>
-              <Description>A blank set keeps the size as it was.</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>it.Trim().Length &gt; 0</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="scr:ExpressionTransform">
-              <scr:Name>RewardToDouble</scr:Name>
-              <scr:Expression>Convert.ToDouble(it)</scr:Expression>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>ManualRewardUl</Name>
+              <Name>ManualRewardDropUl</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>SpoutStepSize</Name>
@@ -427,24 +386,6 @@
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="orcl:ParameterDefault">
                 <orcl:Name>SpoutStepSize</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ManualRewardUl</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:DelaySubscription">
-                <rx:DueTime>PT1S</rx:DueTime>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ParameterDefault">
-                <orcl:Name>ManualRewardUl</orcl:Name>
               </Combinator>
             </Expression>
           </Nodes>
@@ -481,13 +422,6 @@
             <Edge From="38" To="39" Label="Source1" />
             <Edge From="39" To="40" Label="Source1" />
             <Edge From="40" To="41" Label="Source1" />
-            <Edge From="41" To="42" Label="Source1" />
-            <Edge From="43" To="44" Label="Source1" />
-            <Edge From="44" To="45" Label="Source1" />
-            <Edge From="45" To="46" Label="Source1" />
-            <Edge From="47" To="48" Label="Source1" />
-            <Edge From="48" To="49" Label="Source1" />
-            <Edge From="49" To="50" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -655,7 +589,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="rx:Condition">
-              <Name>OptogeneticsEnabled?</Name>
+              <Name>OptogeneticsExperiment?</Name>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="WorkflowInput">
@@ -687,7 +621,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Commands</Name>
-        <Description>RewardLeft and RewardRight give ManualRewardUl on that side (DeliverReward). The spout commands are RigHardware's (HarpLickSpoutStage).</Description>
+        <Description>RewardLeft and RewardRight give ManualRewardDropUl (2.5 ul, Initialization) on that side (DeliverReward). The spout commands are RigHardware's (HarpLickSpoutStage).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -704,7 +638,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>ManualRewardUl</Name>
+              <Name>ManualRewardDropUl</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -723,7 +657,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>ManualRewardUl</Name>
+              <Name>ManualRewardDropUl</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -1642,9 +1576,6 @@
           </Edges>
         </Workflow>
       </Expression>
-      <Expression xsi:type="ExternalizedMapping">
-        <Property Name="MissingCalibration" Description="What a reward valve with no calibration file does: Refuse stops the workflow at Start; DeliverNothing (the test mouse) logs each reward as 0 ul. rig-control sets it per launch." />
-      </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
         <Description>Everything written to the experiment folder: LogControllerLogic makes the folder at Go and publishes PathPrefix; ExperimentLogs holds every log that waits for it; HarpLogs records the Harp boards; DeliverReward delivers and logs rewards; BonsaiData_Async takes the controller's events; RecordHarpDevices, ExperimentManifest and the Recording phase follow PathPrefix.</Description>
@@ -1987,14 +1918,10 @@
                 <Property Name="RigFile" />
               </PropertyMappings>
             </Expression>
-            <Expression xsi:type="ExternalizedMapping">
-              <Property Name="MissingCalibration" />
-            </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai">
               <Description>Each reward (side, microlitres), planned from that side's valve calibration and fired on the Harp clock at the calibration's pulseGapMs; a RewardDelivered row in BonsaiData_Async and each calibrated valve's file as ValveCalibrationDO&lt;n&gt;.</Description>
               <RigFile>UNMAPPED</RigFile>
               <CalibrationDirectory />
-              <MissingCalibration>Refuse</MissingCalibration>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>PathPrefix</Name>
@@ -2043,15 +1970,14 @@
           <Edges>
             <Edge From="2" To="3" Label="Source1" />
             <Edge From="6" To="7" Label="Source1" />
-            <Edge From="5" To="9" Label="Source1" />
-            <Edge From="7" To="9" Label="Source2" />
-            <Edge From="8" To="9" Label="Source3" />
+            <Edge From="5" To="8" Label="Source1" />
+            <Edge From="7" To="8" Label="Source2" />
+            <Edge From="9" To="10" Label="Source1" />
             <Edge From="10" To="11" Label="Source1" />
-            <Edge From="11" To="12" Label="Source1" />
+            <Edge From="14" To="15" Label="Source1" />
             <Edge From="15" To="16" Label="Source1" />
             <Edge From="16" To="17" Label="Source1" />
             <Edge From="17" To="18" Label="Source1" />
-            <Edge From="18" To="19" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -2066,7 +1992,6 @@
     <Edges>
       <Edge From="0" To="1" Label="Source1" />
       <Edge From="2" To="3" Label="Source1" />
-      <Edge From="13" To="14" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>

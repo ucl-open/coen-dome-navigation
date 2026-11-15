@@ -61,7 +61,7 @@ def write_new(folder: Path, stage: int, rows: list[list], header=("trialType", "
     """An experiment of this workflow: its trial log, and its stage in Settings_Experiment as ExperimentSettings writes it."""
     write(folder / "BonsaiData" / "BonsaiData_Trial_x.csv", list(header), rows)
     (folder / "Settings").mkdir()
-    settings = {"subject_id": "TC9", "parameters": {"TrainingStage": str(stage), "ManualRewardUl": "2"}}
+    settings = {"subject_id": "TC9", "parameters": {"TrainingStage": str(stage)}}
     (folder / "Settings" / "Settings_Experiment_x.json").write_text(json.dumps(settings), encoding="utf-8")
 
 

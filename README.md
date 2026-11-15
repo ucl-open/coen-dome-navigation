@@ -45,7 +45,7 @@ The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; w
 | `ReadRigConfig`, `ResolveRigConfigDirectory` | read this machine's rig.yml | `OpenRigs.Core:ReadRigConfig.bonsai` |
 | `RigHardware` | every device, the Harp clock (`Timestamp`), the wheel's distance (`WheelDistanceCm`), the left lick detector (`LickStateLeft`), the ZapitTrigger line, the spout stage and its commands | `OpenRigs.Devices:RigHardware.bonsai` |
 | `ProjectorDisplay` | the dome's window, where the grating draws | `OpenRigs.Vision:ProjectorDisplay.bonsai` |
-| `DeliverReward` | each reward on the left spout, planned from the valve's calibration; a reward over `MaxRewardUl` (20 µl, `LoadRewardLine`) stops the workflow; `MissingCalibration` is a launch property | `OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai` |
+| `DeliverReward` | each reward on the left spout, planned from the valve's calibration; a reward over `MaxRewardUl` (20 µl, `LoadRewardLine`) stops the workflow, and so does a valve with no calibration, for every mouse | `OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai` |
 | `HarpLogs` | the Harp boards' logs | `OpenRigs.Devices:HarpLogs.bonsai` |
 | `HarpDelay` | the trigger line cleared `triggerHoldSeconds` after the outcome, on the Harp clock, in an optogenetics experiment | `OpenRigs.Core` |
 | `ExperimentControl`, `ExperimentSettings`, `OnCommand`, `OnParameterSet`, `ParameterDefault`, `ParameterValue`, `ReportMetric`, `ReportPhase` | parameters, commands, Go and phases for rig-control; the settings files; the metrics the view shows | `OpenRigs.Control` (`ExperimentControl.bonsai`) |

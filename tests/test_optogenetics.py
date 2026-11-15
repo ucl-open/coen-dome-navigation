@@ -18,6 +18,12 @@ from ucl_open_coen_dome_navigation.task import (
 ROOT = Path(__file__).parent.parent
 TASK = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_text(encoding="utf-8"))["taskParameters"]
 CORRIDOR = (ROOT / "src" / "Extensions" / "Corridor.cs").read_text(encoding="utf-8-sig")
+FILE_OPTO = OptogeneticsConfig.model_validate(TASK["optogenetics"]).model_dump()
+
+
+def opto(**fields) -> OptogeneticsConfig:
+    """The task file's optogenetics block with fields changed: laserOnProbability, laserToStimulusSeconds and trialsBeforeLaser have no default."""
+    return OptogeneticsConfig(**{**FILE_OPTO, **fields})
 
 
 def params(time_limit=None, **opto):
@@ -34,13 +40,13 @@ def params(time_limit=None, **opto):
 @pytest.mark.parametrize("seconds", [0.05, 0.1, 0.15, 0.2, 0.0, -0.05, -1.0])
 def test_a_signed_lead_in_whole_beeps_up_to_0_2_is_accepted(seconds):
     # Pip, 13 Nov 2026: signed; negative puts the trigger after the first pip.
-    assert OptogeneticsConfig(laser_to_stimulus_seconds=seconds).laser_to_stimulus_seconds == seconds
+    assert opto(laser_to_stimulus_seconds=seconds).laser_to_stimulus_seconds == seconds
 
 
 @pytest.mark.parametrize("seconds", [0.07, 0.125, -0.07, 0.25, 1.0])
 def test_other_lead_times_are_refused(seconds):
     with pytest.raises(pydantic.ValidationError, match="laser_to_stimulus_seconds"):
-        OptogeneticsConfig(laser_to_stimulus_seconds=seconds)
+        opto(laser_to_stimulus_seconds=seconds)
 
 
 def test_a_trigger_past_every_stage_s_limit_is_refused():
@@ -89,12 +95,12 @@ def test_laser_power_is_required_with_optogenetics_on_and_above_0():
         params(laserPowerMw=None)
     with pytest.raises(pydantic.ValidationError):
         params(laserPowerMw=0)
-    assert OptogeneticsConfig().laser_power_mw is None
+    assert opto().laser_power_mw is None
 
 
 def test_the_trigger_hold_outlasts_the_longest_ramp_down():
     with pytest.raises(pydantic.ValidationError, match="trigger_hold_seconds"):
-        OptogeneticsConfig(trigger_hold_seconds=0.4)
+        opto(trigger_hold_seconds=0.4)
 
 
 def test_corridor_cs_uses_the_same_constants():

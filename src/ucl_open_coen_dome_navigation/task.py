@@ -12,10 +12,10 @@ import math
 from pathlib import Path
 from typing import Literal
 
-from open_rigs.core.task import Task, TaskParameters
+from open_rigs.core.task import Optogenetics, QuietWait, Task, TaskParameters
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS, ZAPIT_REPLY_MARGIN_SECONDS
 from open_rigs.rigs.lab_rig import MAX_REWARD_UL
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from swc.aeon.schema import BaseSchema
 
 from ucl_open_coen_dome_navigation import __semver__
@@ -90,81 +90,26 @@ class Truncation(BaseSchema):
         return value
 
 
-class OptogeneticsConfig(BaseSchema):
-    """Zapit optogenetic stimulation.
+class OptogeneticsConfig(Optogenetics):
+    """Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and the corridor's laser timing.
 
-    The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; the laser
-    power is laser_power_mw, sent with every laser-on trial's StartStimulus (it overrides the file's power) and
-    logged as laserPowerMw. Bonsai reads the same file to list its conditions (stimLocations01, stimLocations02, ...).
-    Every trial of an optogenetics experiment sends Zapit a condition drawn at random: laser-on trials with the laser
-    on, all others as laser-off trials with the laser off, so galvo noise and masking light are the same on every
-    trial. "Stimulus" is the tone and grating; the laser is continuous: it starts at the trigger (the trigger line's
-    rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first tone pip (after it if negative),
-    and Bonsai stops it at the trial's outcome, or after laser_max_seconds if that comes first. A trial that ends before
-    its trigger has no laser. Zapit is armed during the interval and adds no time. Zapit's host, port and
-    triggering are rig.yml's zapit block.
+    The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
+    the same file to list its conditions. "Stimulus" is the tone and grating; the laser is continuous: it starts at the
+    trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first
+    tone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's
+    outcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.
     """
 
-    # The same rule as validate_config_path's, in the JSON schema: rig-control checks the task file
-    # against the schema, not this model, so a ticked Zapit with no config path was sent at Go and
-    # the workflow stopped at trial 1 (audit, 9 Nov 2026, round 3). additionalProperties is spelt
-    # out because rig-control closes every object that lists properties.
-    model_config = ConfigDict(
-        json_schema_extra={
-            "if": {"properties": {"useZapit": {"const": True}}, "required": ["useZapit"], "additionalProperties": True},
-            "then": {
-                "properties": {"zapitConfigPath": {"minLength": 1}, "laserPowerMw": {"type": "number"}},
-                "required": ["laserPowerMw"],
-                "additionalProperties": True,
-            },
-        }
-    )
-
-    use_zapit: bool = Field(default=False, description="Whether Zapit runs this experiment: every trial sends it a condition, laser on or off, and rig-control checks Zapit is answering before Go")
-    zapit_config_path: str = Field(
-        default="",
-        description="Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions: numbered 1 to N with no gaps, each with an offRampDownDuration_ms of 100 to 500 ms (the masking light goes out trigger_hold_seconds after the outcome)",
-    )
-    laser_power_mw: float | None = Field(
-        default=None,
-        gt=0,
-        description="Laser power on laser-on trials, in mW, the same for every condition: sent to Zapit with each StartStimulus (overriding the conditions file's power; Zapit's laser calibration turns it into volts) and logged as laserPowerMw (0 on laser-off trials). Required with optogenetics on",
-    )
-    laser_on_probability: float = Field(
-        default=0.4,
-        ge=0,
-        le=1,
-        description="Probability that a trial after trials_before_laser is a laser-on trial, shared equally by every condition in the Zapit conditions file, a laser-on control site included. All other trials are laser-off trials: Zapit is sent a condition with the laser off. Each trial's condition is drawn at random from all of them, laser on or off, independently of every other trial (no queue: one would make sequences predictable)",
-    )
     laser_max_seconds: float = Field(
         default=12.5,
         gt=0,
         description="Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
-    )
-    laser_to_stimulus_seconds: float = Field(
-        default=0.1,
-        description="Signed, in whole 50 ms beeps: the trigger comes this long before the first tone pip and grating frame (at most 0.2 s); 0 with it; negative after it. Go (beep 0, the trial's start) is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the first pip comes the lead after Go in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger rises at Go with a lead, or this long after the first pip if negative. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin) and further after the first pip than a stage's timeLimitSeconds (2 s on a stage without one). Licks before the first pip count for nothing (neither reward nor the wrong-lick limit)",
     )
     trigger_hold_seconds: float = Field(
         default=1.0,
         ge=ZAPIT_MAX_RAMP_DOWN_SECONDS,
         description=f"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least {ZAPIT_MAX_RAMP_DOWN_SECONDS}, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger",
     )
-    trials_before_laser: int = Field(
-        default=20,
-        ge=0,
-        description="Trials at the experiment's start with no laser-on trial among them (each still sends Zapit a condition at 0 mW). laser_on_probability applies from the next trial",
-    )
-
-    @model_validator(mode="after")
-    def validate_config_path(self):
-        if self.use_zapit and not self.zapit_config_path:
-            raise ValueError("use_zapit is on but zapit_config_path is empty")
-        if self.use_zapit and self.laser_power_mw is None:
-            raise ValueError("use_zapit is on but laser_power_mw is not set")
-        if self.laser_power_mw is not None and not math.isfinite(self.laser_power_mw):
-            raise ValueError(f"laser_power_mw ({self.laser_power_mw}) must be a finite number of mW")
-        return self
 
     @model_validator(mode="after")
     def validate_lead_time(self):
@@ -183,8 +128,8 @@ class OptogeneticsConfig(BaseSchema):
         return self
 
 
-class TrainingStage(BaseSchema):
-    """One row of the training stage table: what the stage does. Rows are selected by the TrainingStage setting."""
+class TrainingStage(QuietWait):
+    """One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting."""
 
     label: str = Field(description="The stage's name, for people")
     reward_floor_hz: float = Field(ge=1, le=25000, description="Lower frequency of the reward zone, in Hz")
@@ -192,24 +137,13 @@ class TrainingStage(BaseSchema):
     reward_size_ul: float = Field(
         gt=0,
         le=MAX_REWARD_UL,
-        description=f"Microlitres each reward gives, at most {MAX_REWARD_UL} (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start; the test mouse runs on one with no water (each reward logged as 0 ul)",
+        description=f"Microlitres each reward gives, at most {MAX_REWARD_UL} (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start",
     )
     lick_to_reward: bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
     punish_wrong_zone: bool = Field(
         description="Whether a trial that ends outside the reward zone is punished. A trial that runs out of time or track with the frequency in the zone is punished on every stage"
     )
-    lick_quiet_seconds: float = Field(
-        default=0.0,
-        ge=0,
-        description="Quiet wait: Go needs this long with the spout released, in seconds, counted from the interval's start and restarted by every touch and release (uncapped); a held contact holds Go until released, so licks for the last reward cannot carry into the next trial; 0: off. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds). Was quietSeconds, counted after the interval, until 13 Nov 2026",
-    )
-    wheel_quiet_seconds: float = Field(
-        default=0.0,
-        ge=0,
-        description="Quiet wait: Go needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0)",
-    )
-    wheel_quiet_cm: float = Field(default=0.0, ge=0, description="The most the wheel may move, forward and back added, within the last wheelQuietSeconds before Go, in cm; 0: off (with wheelQuietSeconds 0)")
     time_limit_seconds: float | None = Field(
         default=None, gt=0, description="The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit"
     )
@@ -222,8 +156,6 @@ class TrainingStage(BaseSchema):
     def _zone_ordered(self) -> "TrainingStage":
         if self.reward_floor_hz >= self.reward_ceiling_hz:
             raise ValueError("reward_floor_hz must be below reward_ceiling_hz")
-        if (self.wheel_quiet_seconds > 0) != (self.wheel_quiet_cm > 0):
-            raise ValueError("wheel_quiet_seconds and wheel_quiet_cm must both be above 0 (the wheel's quiet wait) or both 0 (off)")
         return self
 
 
@@ -240,7 +172,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
     punishment: Punishment = Field(default=Punishment(), description="The timeout and error sound a punished trial gets")
     truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
-    optogenetics: OptogeneticsConfig = Field(default=OptogeneticsConfig(), description="Zapit optogenetic stimulation")
+    optogenetics: OptogeneticsConfig = Field(description="Zapit optogenetic stimulation")
     training_stages: list[TrainingStage] = Field(
         description="Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go"
     )

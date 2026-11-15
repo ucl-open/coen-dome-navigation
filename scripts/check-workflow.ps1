@@ -11,7 +11,7 @@ param(
 #      config\rig-template.yml filled in as a rig's, every node that reads rig.yml pointed at that copy.
 #      Then checks what the build made: RecordHarpDevices' boards, ExperimentManifest's expected files and
 #      the trial row's columns against schemas\trial-columns.yml.
-#   4. Each config\task*.yml reads as the workflow reads it at Go, TaskPath and MissingCalibration are exposed,
+#   4. Each config\task*.yml reads as the workflow reads it at Go, TaskPath is exposed,
 #      and every key in the template reaches the Settings_Rig JSON the experiment logs.
 # TaskLogic's waits (all on the Harp clock but the laser cap's backstop) are tests\test_workflow.py's.
 # Needs the environment set up (.bonsai\Setup.ps1: .bonsai\Packages). Exit 0 when all pass.
@@ -154,8 +154,8 @@ if ($Step -eq 'Checks') {
         } catch { $x = $_.Exception; while ($x.InnerException) { $x = $x.InnerException }; "  FAIL  config\$($file.Name): $($x.Message)"; $failed++ }
     }
     $wf = Get-Content (Join-Path $repo 'src\main.bonsai') -Raw
-    if ($wf -match '<Property Name="TaskPath"' -and $wf -match '<Property Name="MissingCalibration"') { "  ok    main.bonsai exposes TaskPath and MissingCalibration" }
-    else { "  FAIL  main.bonsai does not expose TaskPath and MissingCalibration"; $failed++ }
+    if ($wf -match '<Property Name="TaskPath"') { "  ok    main.bonsai exposes TaskPath" }
+    else { "  FAIL  main.bonsai does not expose TaskPath"; $failed++ }
     $yaml = [IO.File]::ReadAllText((Write-FilledTemplate))
     $E = [Linq.Expressions.Expression]
     $wait = [System.Reactive.Linq.Observable].GetMethods() | Where-Object { $_.Name -eq 'Wait' -and $_.GetParameters().Count -eq 1 } | Select-Object -First 1

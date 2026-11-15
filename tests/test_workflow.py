@@ -48,11 +48,11 @@ def test_video_is_logged_after_the_experiment_folder():
     assert "OpenRigs.Logging:LogVideo.bonsai" not in logs
 
 
-def test_missing_calibration_is_a_launch_property():
-    # app-rig-control launches the test mouse with DeliverNothing, every other with Refuse.
+def test_the_launch_properties():
+    # No MissingCalibration: a reward valve without a calibration always stops the workflow (Pip, 15 Nov 2026).
     top = MAIN.find(W + "Workflow").find(W + "Nodes")
     exposed = {p.get("Name") for e in top if e.get(XSI) == "ExternalizedMapping" for p in e}
-    assert {"SubjectId", "SessionId", "TaskPath", "MissingCalibration", "DisplayDevice"} == exposed
+    assert {"SubjectId", "SessionId", "TaskPath", "DisplayDevice"} == exposed
 
 
 def test_the_metrics_are_the_view_s():
@@ -253,12 +253,15 @@ def test_the_speakers_are_declared_before_every_user():
     assert len(users) == 4 and min(users) > declared
 
 
-def test_the_manual_reward_is_capped_as_every_reward():
-    # Audit round 4: ManualRewardUl's Maximum is lib-open-rigs' MAX_REWARD_UL (DeliverReward's MaxRewardUl).
-    from open_rigs.rigs.lab_rig import MAX_REWARD_UL
-
-    parameter = next(p for p in MAIN.iter(W + "Parameter") if p.findtext(W + "Name") == "ManualRewardUl")
-    assert float(parameter.findtext(W + "Maximum")) == MAX_REWARD_UL
+def test_the_manual_reward_is_pip_s_fixed_drop():
+    # Pip, 15 Nov 2026: RewardLeft and RewardRight each give 2.5 ul, before and during a run; no setting.
+    assert not any(p.findtext(W + "Name") == "ManualRewardUl" for p in MAIN.iter(W + "Parameter"))
+    nodes, edges = _scope(group("Initialization"))
+    subject = next(i for i, n in enumerate(nodes) if n.get(XSI) == "rx:BehaviorSubject" and n.findtext(W + "Name") == "ManualRewardDropUl")
+    (source,) = [f for f, t in edges if t == subject]
+    assert float(next(nodes[source].iter(W + "Value")).text) == 2.5
+    commands = [n.findtext(W + "Name") for n in group("Commands").iter(W + "Expression") if n.get(XSI) == "SubscribeSubject"]
+    assert commands.count("ManualRewardDropUl") == 2
 
 
 def test_the_trial_events_leave_the_clock_s_thread_unswitched():
