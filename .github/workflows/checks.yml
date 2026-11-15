@@ -1,0 +1,42 @@
+# The checks run before a push (README), on every push to main: the Python tests, then Bonsai set up as a rig sets it
+# up (.bonsai\Setup.ps1) and the lab's workflow check (scripts\check-workflow.ps1: the Extensions under C# 5, their
+# tests, main.bonsai built with Bonsai's builders against the lab's rig template, the task files read as at Go).
+
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    # Windows, as on the rigs: Bonsai and the C# 5 compile need it.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+      - name: Python tests
+        shell: pwsh
+        run: |
+          uv sync --locked
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          uv run --locked --with pytest --with pyyaml pytest -q
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Bonsai setup
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .bonsai/Setup.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Workflow check
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-workflow.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
