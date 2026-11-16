@@ -62,7 +62,7 @@ Open work first, then what has been decided. The conversion from `ucl-open/audit
 
 ## Audit cycles 1-3 (15 Nov 2026)
 
-- Done, details in `git log`: names end in `Seconds`; Go refuses a NaN or infinite time (`CorridorSetup.Create`); `suggest-stage` names an unreadable experiment; RigSetup reads rig.yml with lib-open-rigs' `ReadLabRig` (a test holds its `ConfigRoot`, as check-workflow does not look inside an include); the manifest hashes the three speakers' filters.
+- Done, details in `git log`: names end in `Seconds`; Go refuses a NaN or infinite time (`CorridorSetup.Create`); `suggest-stage` names an unreadable experiment; rig.yml is read with lib-open-rigs' `ReadLabRig` (a test holds its `ConfigRoot`, as check-workflow does not look inside an include); the manifest hashes the three speakers' filters.
 
 ## Audit cycle 4 (15 Nov 2026)
 

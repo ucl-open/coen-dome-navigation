@@ -293,7 +293,7 @@ def test_the_pips_carry_their_sync_copy():
 def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
     # Pip, 15 Nov 2026: sweep.json is read at Start (LoadSweep, from rig.yml's speakerArray.device.sampleRate), so a wrong
     # working folder or a waveform rate other than the audio device's stops the run at Start, not at Go.
-    nodes, edges = _scope(group("Task"))
+    nodes, edges = _scope(group("TaskFile"))
     (sweep,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "rx:AsyncSubject" and n.findtext(W + "Name") == "Sweep"]
     labels = _labels(nodes, _upstream(edges, sweep))
     assert labels == ["RigConfigs", "SpeakerArray.Device.SampleRate", "ext:LoadSweep"]

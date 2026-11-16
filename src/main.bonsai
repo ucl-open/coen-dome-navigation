@@ -25,16 +25,13 @@
         <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="DisplayDevice" Description="The display the dome projector is on (DomeHardware's ProjectorDisplay); a launch property." />
-      </Expression>
-      <Expression xsi:type="ExternalizedMapping">
         <Property Name="SubjectId" Description="The mouse's lab ID; the launch's own, from rig-control." />
         <Property Name="SessionId" Description="The session number; the launch's own, from rig-control." />
         <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Start for the background noise and again at Go with the form's edits; from the editor, config\task-abstract-av-corridor.yml." />
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, and TrainingStage, the task's one parameter. The pieces declare their own (16 Nov 2026): SpoutStepSize, settable live, and the spout commands are DomeHardware's LickSpoutStage's, RewardLeft and RewardRight (2.5 ul through the valve's calibration before and during a run: Pip's fixed manual drop, 15 Nov 2026) BehaviorBoard.ManualRewards'; LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath, the task file rig-control wrote at launch and writes again at Go with the form's edits) at Start and RunSettings (subject, session) at Go; TrainingStage (OpenRigs.Control) publishes the parameter TrainingStage at Go and reports it as the metric trainingStage.</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test) and SessionId are the launch's; the parameter a controller may change until Go (TrainingStage; the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath); the pieces declare their own parameters and commands (16 Nov 2026). The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath) at Start and RunSettings (SubjectId, SessionId) at Go; TrainingStage (OpenRigs.Control) publishes TrainingStage at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardLeft and RewardRight each give 2.5 ul before and during a run through the valve's calibration (BehaviorBoard.ManualRewards: Pip's fixed manual drop, 15 Nov 2026).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -76,53 +73,8 @@
           </Edges>
         </Workflow>
       </Expression>
-      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogLabExperiment.bonsai">
-        <Description>The experiment folder at Go (PathPrefix), BonsaiData_Async, Settings_Rig, Settings_Experiment and the Recording phase. Before Hardware: every device's log waits for PathPrefix, so its definition must read nothing the devices define.</Description>
-      </Expression>
       <Expression xsi:type="GroupWorkflow">
-        <Name>Hardware</Name>
-        <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, the speakers and their mixer and the projector included, and Ready once the Harp clock is set, the spouts are homed, every camera has sent a frame and the mixer has started).</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
-              <Description>Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage, the three cameras, which start triggering once all three acquire, the speakers (SpeakerMixer) and the projector (ProjectorDisplay, stimuli on DrawStimuli).</Description>
-            </Expression>
-            <Expression xsi:type="ExternalizedMapping">
-              <Property Name="DisplayDevice" />
-            </Expression>
-          </Nodes>
-          <Edges>
-            <Edge From="1" To="0" Label="Source1" />
-          </Edges>
-        </Workflow>
-      </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Declarations</Name>
-        <Description>Subjects several groups share: Zapit's replies (ConnectZapit declares its commands), reward requests (side, microlitres) for DeliverReward, and the task's events (TrialEvents), trial rows (TrialRow) and stimulus rows (StimulusRows).</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="zap:ZapitReply">
-              <rx:Name>ZapitReplies</rx:Name>
-            </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="sys:Tuple(sys:String,sys:Double)">
-              <rx:Name>RewardRequests</rx:Name>
-            </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="ext:CorridorEvent">
-              <rx:Name>TrialEvents</rx:Name>
-            </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="harp:Timestamped(ext:TrialRow)">
-              <rx:Name>TrialRow</rx:Name>
-            </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="harp:Timestamped(ext:StimulusStateRow)">
-              <rx:Name>StimulusRows</rx:Name>
-            </Expression>
-          </Nodes>
-          <Edges>
-          </Edges>
-        </Workflow>
-      </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Task</Name>
+        <Name>TaskFile</Name>
         <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\waveforms\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with the stage, rig.yml and the sweep (CreateCorridorSetup: a stage past the table, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is the Zapit group's refusal.</Description>
         <Workflow>
           <Nodes>
@@ -224,10 +176,56 @@
           </Edges>
         </Workflow>
       </Expression>
-      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ConnectForTask.bonsai" />
-      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai" />
       <Expression xsi:type="GroupWorkflow">
-        <Name>Grating</Name>
+        <Name>Declarations</Name>
+        <Description>Subjects several groups share: Zapit's replies (ConnectZapit declares its commands), reward requests (side, microlitres) for DeliverReward, and the task's events (TrialEvents), trial rows (TrialRow) and stimulus rows (StimulusRows).</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="rx:PublishSubject" TypeArguments="zap:ZapitReply">
+              <rx:Name>ZapitReplies</rx:Name>
+            </Expression>
+            <Expression xsi:type="rx:PublishSubject" TypeArguments="sys:Tuple(sys:String,sys:Double)">
+              <rx:Name>RewardRequests</rx:Name>
+            </Expression>
+            <Expression xsi:type="rx:PublishSubject" TypeArguments="ext:CorridorEvent">
+              <rx:Name>TrialEvents</rx:Name>
+            </Expression>
+            <Expression xsi:type="rx:PublishSubject" TypeArguments="harp:Timestamped(ext:TrialRow)">
+              <rx:Name>TrialRow</rx:Name>
+            </Expression>
+            <Expression xsi:type="rx:PublishSubject" TypeArguments="harp:Timestamped(ext:StimulusStateRow)">
+              <rx:Name>StimulusRows</rx:Name>
+            </Expression>
+          </Nodes>
+          <Edges>
+          </Edges>
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogLabExperiment.bonsai">
+        <Description>The experiment folder at Go (PathPrefix), BonsaiData_Async, Settings_Rig, Settings_Experiment and the Recording phase. Before Hardware: every device's log waits for PathPrefix, so its definition must read nothing the devices define.</Description>
+      </Expression>
+      <Expression xsi:type="ExternalizedMapping">
+        <Property Name="DisplayDevice" Description="The display the dome projector is on (DomeHardware's ProjectorDisplay); a launch property." />
+      </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Hardware</Name>
+        <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, each logging itself; the cameras triggered once all three acquire; the speakers and their mixer; the projector, DisplayDevice a launch property), with Ready once the Harp clock is set, the spouts are homed, each camera has sent a frame and the mixer has started, and a stop naming what never came after 180 s.</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
+              <Description>Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage, the three cameras, which start triggering once all three acquire, the speakers (SpeakerMixer) and the projector (ProjectorDisplay, stimuli on DrawStimuli).</Description>
+            </Expression>
+            <Expression xsi:type="ExternalizedMapping">
+              <Property Name="DisplayDevice" />
+            </Expression>
+          </Nodes>
+          <Edges>
+            <Edge From="1" To="0" Label="Source1" />
+          </Edges>
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Display</Name>
         <Description>The grating (BonVision DrawGratings) on the dome: each pip sets its spatial frequency and opacity (TaskLogic); off between trials.</Description>
         <Workflow>
           <Nodes>
@@ -411,6 +409,53 @@
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:BackgroundNoise.bonsai">
         <Description>The background noise, the lab's one file, rig.yml's speakerArray.backgroundNoise (60 s of white noise, 32-bit float), unequalised on every speaker at the launched task file's backgroundNoise.levelDbfs from Ready; Go stops if the task file changed backgroundNoise after launch.</Description>
       </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ConnectForTask.bonsai" />
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Logging</Name>
+        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), BonsaiData_Trial and Zapit's logs, ExperimentLogs the task's own BonsaiData_StimulusState; each device logs itself; ExperimentRecords, last but LiveView, delivers and logs rewards, takes the controller's events, records the Harp devices and writes the manifest.</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>PathPrefix</Name>
+            </Expression>
+            <Expression xsi:type="rx:SelectMany">
+              <Name>ExperimentLogs</Name>
+              <Description>The task's own log that waits for the experiment folder (PathPrefix): BonsaiData_StimulusState (LogData of StimulusRows).</Description>
+              <Workflow>
+                <Nodes>
+                  <Expression xsi:type="SubscribeSubject">
+                    <Name>StimulusRows</Name>
+                  </Expression>
+                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogData.bonsai">
+                    <LogName>BonsaiData_StimulusState</LogName>
+                    <Selector />
+                    <AutoFlush>true</AutoFlush>
+                    <Extension>csv</Extension>
+                  </Expression>
+                </Nodes>
+                <Edges>
+                  <Edge From="0" To="1" Label="Source1" />
+                </Edges>
+              </Workflow>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TaskConfig</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="task:SerializeToJson">
+                <task:Formatting>Indented</task:Formatting>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:TaskLogs.bonsai" />
+          </Nodes>
+          <Edges>
+            <Edge From="0" To="1" Label="Source1" />
+            <Edge From="2" To="3" Label="Source1" />
+            <Edge From="3" To="4" Label="Source1" />
+          </Edges>
+        </Workflow>
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>StartTrials</Name>
         <Description>Trials start 0.5 s after the experiment folder exists and the tones are loaded (TrialsReady).</Description>
@@ -883,51 +928,6 @@
           </Edges>
         </Workflow>
       </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Logging</Name>
-        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), BonsaiData_Trial and Zapit's logs, ExperimentLogs the task's own BonsaiData_StimulusState; each device logs itself; ExperimentRecords, last but LiveView, delivers and logs rewards, takes the controller's events, records the Harp devices and writes the manifest.</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>PathPrefix</Name>
-            </Expression>
-            <Expression xsi:type="rx:SelectMany">
-              <Name>ExperimentLogs</Name>
-              <Description>The task's own log that waits for the experiment folder (PathPrefix): BonsaiData_StimulusState (LogData of StimulusRows).</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>StimulusRows</Name>
-                  </Expression>
-                  <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogData.bonsai">
-                    <LogName>BonsaiData_StimulusState</LogName>
-                    <Selector />
-                    <AutoFlush>true</AutoFlush>
-                    <Extension>csv</Extension>
-                  </Expression>
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="task:SerializeToJson">
-                <task:Formatting>Indented</task:Formatting>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:TaskLogs.bonsai" />
-          </Nodes>
-          <Edges>
-            <Edge From="0" To="1" Label="Source1" />
-            <Edge From="2" To="3" Label="Source1" />
-            <Edge From="3" To="4" Label="Source1" />
-          </Edges>
-        </Workflow>
-      </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:ExperimentRecords.bonsai">
         <Description>Each reward through its valve's calibration (DeliverReward: a RewardDelivered row in BonsaiData_Async, each calibrated valve's file as ValveCalibrationDO&lt;n&gt;), the controller's events (LogControlEvents), every Harp device in rig.yml checked at Start and recorded (RecordHarpDevices: the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits), and manifest.json (ExperimentManifest: rig.yml and every file it names and this mouse's spout positions by hash ({RigFiles}), schemas\trial-columns.yml, and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState), Zapit's logs in an optogenetics experiment). Last but LiveView, as it finds each device by the subjects published before it.</Description>
         <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
@@ -943,8 +943,8 @@
       </Expression>
     </Nodes>
     <Edges>
-      <Edge From="2" To="3" Label="Source1" />
-      <Edge From="1" To="5" Label="Source1" />
+      <Edge From="1" To="2" Label="Source1" />
+      <Edge From="6" To="7" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>
