@@ -449,7 +449,7 @@ public class CorridorState
             armSent = true;
             events.Add(new CorridorEvent { Kind = CorridorEventKind.Arm, Seconds = now, Trial = trial });
         }
-        if (phase == Phase.Interval && now >= wait.GoTime - 1e-9) events.AddRange(Begin());
+        if (phase == Phase.Interval && now >= wait.TrialStartTime - 1e-9) events.AddRange(Begin());
         else if (phase == Phase.Running) events.AddRange(Run());
         return events;
     }
@@ -469,8 +469,8 @@ public class CorridorState
     IEnumerable<CorridorEvent> Begin()
     {
         phase = Phase.Running;
-        start = wait.GoTime;
-        quietWait = wait.GoTime - wait.Earliest;
+        start = wait.TrialStartTime;
+        quietWait = wait.TrialStartTime - wait.Earliest;
         onset = double.NaN;
         nextBeep = 0;
         wrongLicks = 0;
