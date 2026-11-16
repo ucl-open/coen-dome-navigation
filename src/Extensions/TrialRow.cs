@@ -1,11 +1,4 @@
-﻿using Bonsai;
-using Bonsai.Harp;
-using OpenRigs.Devices;
-using System;
-using System.ComponentModel;
-using System.Reactive.Linq;
-
-/// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
+﻿/// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
 /// outcome). The fields up to laserTriggerTime are the lab's shared block, its core with the opto and quietWait blocks (lib-open-rigs
 /// open_rigs.rigs.trials), in coen-dome-decision-making's order and words too (Pip, 14 Nov 2026);
 /// this task's own follow.</summary>
@@ -34,15 +27,4 @@ public class TrialRow
     public double toneEndFrequencyHz;
     public double visualEndSpatialFrequencyCpd;
     public double truncationFraction;
-}
-
-[Combinator]
-[Description("An Outcome event's trial row (TrialEvents), stamped with the Harp time the outcome was known, for LogTrial.")]
-[WorkflowElementCategory(ElementCategory.Transform)]
-public class CreateTrialRow
-{
-    public IObservable<Timestamped<TrialRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> source)
-    {
-        return source.Where(e => e.Kind == TrialEventKind.Outcome).Select(e => Timestamped.Create(e.Outcome.Row, e.Seconds));
-    }
 }

@@ -233,7 +233,7 @@ def test_training_stage_s_maximum_is_the_task_file_s_last_row():
 
 
 def test_a_reward_over_the_cap_is_refused():
-    # lib-open-rigs' MAX_REWARD_UL, DeliverReward's MaxRewardUl.
+    # lib-open-rigs' MAX_REWARD_UL, RewardValve's MaxRewardUl.
     import copy
 
     from open_rigs.rigs.lab_rig import MAX_REWARD_UL

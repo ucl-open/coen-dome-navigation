@@ -32,7 +32,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the parameter a controller may change until Go (TrainingStage; the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath); the pieces declare their own parameters and commands (16 Nov 2026). The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath) at Start and RunSettings (SubjectId, SessionId) at Go; TrainingStage (OpenRigs.Control) publishes TrainingStage at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardLeft and RewardRight each give 2.5 ul before and during a run through the valve's calibration (BehaviorBoard.Rewards includes ManualRewards: Pip's fixed manual drop, 15 Nov 2026).</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the parameter a controller may change until Go (TrainingStage; the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath); the pieces declare their own parameters and commands (16 Nov 2026). The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath) at Start and RunSettings (SubjectId, SessionId) at Go; TrainingStage (OpenRigs.Control) publishes TrainingStage at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each BehaviorBoard.RewardValve piece's manual drop: Pip's fixed drop, 15 Nov 2026).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -181,7 +181,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Declarations</Name>
-        <Description>Subjects several groups share: the trial loop's events (TrialEvents), the current trial (Trial), trial rows (TrialRow) and stimulus rows (StimulusRows). Zapit's commands and replies are ConnectZapit's, reward requests Rewards'.</Description>
+        <Description>Subjects several groups share: the trial loop's events (TrialEvents), the current trial (Trial), trial rows (TrialRow) and stimulus rows (StimulusRows). Zapit's commands and replies are ConnectZapit's, reward requests Rewards' (each RewardValve piece delivers its own).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="dev:TrialEvent(ext:Trial,ext:StimulusFrame,ext:TrialOutcome)">
@@ -412,7 +412,7 @@
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ConnectForTask.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), BonsaiData_Trial and Zapit's logs, ExperimentLogs the task's own BonsaiData_StimulusState; each device logs itself; Rewards (its DeliverReward) logs each reward and each calibrated valve's file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
+        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), BonsaiData_Trial and Zapit's logs, ExperimentLogs the task's own BonsaiData_StimulusState; each device logs itself; Rewards logs each reward (RewardDelivered) and each RewardValve piece its calibration file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -509,9 +509,19 @@
         </Workflow>
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.Rewards.bonsai" />
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.RewardValve.bonsai">
+        <Name>RewardValve-Left</Name>
+        <Board>BehaviorBoard-Main</Board>
+        <BoardTriggerCalibratedPulseSubjectName>BehaviorBoard-Main.TriggerCalibratedPulse</BoardTriggerCalibratedPulseSubjectName>
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.RewardValve.bonsai">
+        <Name>RewardValve-Right</Name>
+        <Board>BehaviorBoard-Main</Board>
+        <BoardTriggerCalibratedPulseSubjectName>BehaviorBoard-Main.TriggerCalibratedPulse</BoardTriggerCalibratedPulseSubjectName>
+      </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (BehaviorBoard.SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating; Outcome writes the trial row, rewards (RewardRequests, left spout) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (BehaviorBoard.SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating; Outcome writes the trial row, rewards (RewardRequests, the left valve) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="MemberSelector">
@@ -773,8 +783,8 @@
             <Expression xsi:type="MulticastSubject">
               <Name>GratingOpacity</Name>
             </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:CreateTrialRow" />
+            <Expression xsi:type="MemberSelector">
+              <Selector>Outcome.Row</Selector>
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>TrialRow</Name>

@@ -77,16 +77,9 @@ public class Trial : IZapitTrial
     public int rngSeed;                 // the experiment's seed, for the RngSeed event
 }
 
-/// <summary>A trial's outcome: its row, its reward or penalty and the timeout before the next interval.</summary>
-public class TrialOutcome : ITrialOutcome
-{
-    public TrialRow Row;
-    public bool Rewarded;
-    public bool PenaltySound;                 // the penalty sound plays
-    public Tuple<string, double> Reward;      // (side, microlitres) for Rewards: the left spout, the row's rewardOfferedUl
-
-    public double PenaltyTimeoutSeconds { get { return Row.penaltyTimeoutSeconds; } }
-}
+/// <summary>A trial's outcome (lib-open-rigs' TrialOutcome): its row, the reward at the left valve, the penalty sound
+/// and the timeout before the next interval.</summary>
+public class TrialOutcome : OpenRigs.Devices.TrialOutcome<TrialRow> { public TrialOutcome(TrialRow row) : base(row, "left") { } }
 
 /// <summary>
 /// This task's rules for lib-open-rigs' TrialLoop, with everything fixed for the experiment that the trials are
@@ -249,7 +242,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var row = SharedTrialColumns.Fill(new TrialRow
         {
             trialType = trial.trialType,
-            outcome = rewarded ? "Correct" : ranOut || !trial.lickToReward ? "NoResponse" : "Incorrect",
+            outcome = rewarded ? TrialOutcomes.Correct : ranOut || !trial.lickToReward ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
             endReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
             endPositionCm = track.Position,
@@ -257,7 +250,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             truncationFraction = trial.truncationFraction
         }, trial, times, trial.rewardOfferedUl, rewarded, penalised, task.Penalty.TimeoutSeconds, task.Penalty.Sound.Enabled);
-        return new TrialOutcome { Row = row, Rewarded = row.rewarded, PenaltySound = row.penaltySound, Reward = Tuple.Create("left", row.rewardOfferedUl) };
+        return new TrialOutcome(row);
     }
 }
 
@@ -453,6 +446,6 @@ public class RunTrials
     public IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> Process(IObservable<TrialRules> rules, IObservable<double> clock,
         IObservable<double> wheelCm, IObservable<bool> lickLeft, IObservable<bool> lickRight, IObservable<ZapitReply> zapitReplies)
     {
-        return TrialLoop.Observe<Trial, StimulusFrame, TrialOutcome>(rules, clock, wheelCm, lickLeft, lickRight, zapitReplies);
+        return TrialLoop.Observe(rules, clock, new[] { lickLeft, lickRight }, zapitReplies, wheelCm);
     }
 }

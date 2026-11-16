@@ -61,7 +61,7 @@ class Rig
 
     public Rig(TrialRules rules)
     {
-        Loop = new TrialLoop<Trial, StimulusFrame, TrialOutcome>(rules);
+        Loop = new TrialLoop<Trial, StimulusFrame, TrialOutcome>(rules, true);
     }
 
     public void Until(double seconds, Func<bool> stop = null)
@@ -239,7 +239,7 @@ public class TrialDrawTests
             Assert.AreEqual(type == "visual" ? 0.0 : 1.0, pip.ToneGain, type);
             Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, pip.GratingOpacity, type);
             rig.Wheel(1000);
-            Assert.AreEqual(type, rig.RunTo(TrialEventKind.Outcome).Outcome.Row.trialType);
+            Assert.AreEqual(type, rig.RunTo(TrialEventKind.Outcome).Outcome.Row.Value.trialType);
         }
     }
 
@@ -435,10 +435,10 @@ public class TrialRulesTests
         rig.Wheel(1000);   // the end of a short track: the sweep's end
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.IsTrue(outcome.Outcome.Rewarded);
-        Assert.AreEqual("Correct", outcome.Outcome.Row.outcome);
-        Assert.AreEqual("FreqReached", outcome.Outcome.Row.endReason);
+        Assert.AreEqual("Correct", outcome.Outcome.Row.Value.outcome);
+        Assert.AreEqual("FreqReached", outcome.Outcome.Row.Value.endReason);
         Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's rewardSizeUl (3 ul since 15 Nov 2026)
-        Assert.IsTrue(outcome.Outcome.Row.rewarded && !outcome.Outcome.Row.penalised && outcome.Outcome.Row.rewardOfferedUl == 3, "the row says what the valve did");
+        Assert.IsTrue(outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Row.Value.penalised && outcome.Outcome.Row.Value.rewardOfferedUl == 3, "the row says what the valve did");
         var next = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(outcome.Seconds + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
         rig.Until(rig.Now + 0.2);
@@ -451,10 +451,10 @@ public class TrialRulesTests
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
-        Assert.AreEqual("FreqReached", outcome.Outcome.Row.endReason);
-        Assert.IsTrue(outcome.Outcome.Row.toneEndFrequencyHz >= 18000);
-        Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.trialStartTime > 10 && outcome.Seconds - outcome.Outcome.Row.trialStartTime < 25);
-        Assert.AreEqual(outcome.Seconds, outcome.Outcome.Row.outcomeTime, "outcomeTime is the row's own time, harpTime");
+        Assert.AreEqual("FreqReached", outcome.Outcome.Row.Value.endReason);
+        Assert.IsTrue(outcome.Outcome.Row.Value.toneEndFrequencyHz >= 18000);
+        Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime > 10 && outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime < 25);
+        Assert.AreEqual(outcome.Seconds, outcome.Outcome.Row.Value.outcomeTime, "outcomeTime is the row's own time, harpTime");
     }
 
     [TestMethod]
@@ -468,12 +468,12 @@ public class TrialRulesTests
         Assert.IsFalse(rig.Events.Any(e => e.Kind == TrialEventKind.Outcome));
         rig.Lick();
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
-        Assert.AreEqual("Incorrect", outcome.Outcome.Row.outcome);
-        Assert.AreEqual("WrongLickLimit", outcome.Outcome.Row.endReason);
-        Assert.IsTrue(outcome.Outcome.Row.penaltySound);
-        Assert.IsTrue(outcome.Outcome.Row.penalised && !outcome.Outcome.Row.rewarded && !outcome.Outcome.Rewarded, "penalised, unrewarded");
-        Assert.AreEqual(3.0, outcome.Outcome.Row.rewardOfferedUl, "the offer kept on a trial not rewarded");
-        Assert.AreEqual(2.0, outcome.Outcome.Row.penaltyTimeoutSeconds);
+        Assert.AreEqual("Incorrect", outcome.Outcome.Row.Value.outcome);
+        Assert.AreEqual("WrongLickLimit", outcome.Outcome.Row.Value.endReason);
+        Assert.IsTrue(outcome.Outcome.Row.Value.penaltySound);
+        Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Rewarded, "penalised, unrewarded");
+        Assert.AreEqual(3.0, outcome.Outcome.Row.Value.rewardOfferedUl, "the offer kept on a trial not rewarded");
+        Assert.AreEqual(2.0, outcome.Outcome.Row.Value.penaltyTimeoutSeconds);
 
         // the next trial waits the timeout and its interval; the quiet second, counted from the interval's start, adds nothing
         var next = rig.RunTo(TrialEventKind.Start);
@@ -484,9 +484,9 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.06);
         rig.Lick();
         var rewarded = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome);
-        Assert.AreEqual("CorrectLick", rewarded.Outcome.Row.endReason);
-        Assert.AreEqual(2.0, rewarded.Outcome.Row.itiStartTime - outcome.Seconds, 0.0011);
-        Assert.AreEqual(next.Trial.itiSeconds, rewarded.Outcome.Row.itiSeconds);
+        Assert.AreEqual("CorrectLick", rewarded.Outcome.Row.Value.endReason);
+        Assert.AreEqual(2.0, rewarded.Outcome.Row.Value.itiStartTime - outcome.Seconds, 0.0011);
+        Assert.AreEqual(next.Trial.itiSeconds, rewarded.Outcome.Row.Value.itiSeconds);
     }
 
     [TestMethod]
@@ -525,8 +525,8 @@ public class TrialRulesTests
     {
         r.Wheel(1000);   // the end of the track ends the trial
         var outcome = r.Events.Single(e => e.Kind == TrialEventKind.Outcome);
-        Assert.AreEqual(started.Seconds - (started.Trial.itiSeconds - 0.1 + 0.001), outcome.Outcome.Row.quietWaitSeconds, 1e-9);
-        Assert.AreEqual(started.Seconds, outcome.Outcome.Row.trialStartTime, 1e-12);
+        Assert.AreEqual(started.Seconds - (started.Trial.itiSeconds - 0.1 + 0.001), outcome.Outcome.Row.Value.quietWaitSeconds, 1e-9);
+        Assert.AreEqual(started.Seconds, outcome.Outcome.Row.Value.trialStartTime, 1e-12);
     }
 
     [TestMethod]
@@ -613,9 +613,9 @@ public class TrialRulesTests
         rig.Wheel(1000);                                    // the end of the track ends the trial before the trigger
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
         Assert.IsTrue(arm.Trial.laserOn);
-        Assert.AreEqual(0, outcome.Outcome.Row.laserPowerMw, "no laser came, so none is logged");
+        Assert.AreEqual(0, outcome.Outcome.Row.Value.laserPowerMw, "no laser came, so none is logged");
         Assert.IsFalse(rig.Events.Any(e => e.Kind == TrialEventKind.Trigger));
-        Assert.IsTrue(double.IsNaN(outcome.Outcome.Row.laserTriggerTime), "answered before the trigger: laserTriggerTime NaN");
+        Assert.IsTrue(double.IsNaN(outcome.Outcome.Row.Value.laserTriggerTime), "answered before the trigger: laserTriggerTime NaN");
     }
 
     // laserTriggerTime (the shared block's 16th column) is the trigger's Harp time when it came.
@@ -635,8 +635,8 @@ public class TrialRulesTests
             rig.Until(rig.Now + 0.2);
             rig.Wheel(1000);                                // the end of the track ends the trial after the trigger
             var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
-            Assert.AreEqual(trigger.Seconds, outcome.Outcome.Row.laserTriggerTime, 1e-12);
-            Assert.AreEqual(probability > 0 ? 2.0 : 0.0, outcome.Outcome.Row.laserPowerMw, "laser off: a trigger time, 0 mW");
+            Assert.AreEqual(trigger.Seconds, outcome.Outcome.Row.Value.laserTriggerTime, 1e-12);
+            Assert.AreEqual(probability > 0 ? 2.0 : 0.0, outcome.Outcome.Row.Value.laserPowerMw, "laser off: a trigger time, 0 mW");
         }
     }
 
@@ -647,8 +647,8 @@ public class TrialRulesTests
         rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);
         var outcome = rig.RunTo(TrialEventKind.Outcome);
-        Assert.IsTrue(double.IsNaN(outcome.Outcome.Row.laserTriggerTime));
-        Assert.AreEqual(0, outcome.Outcome.Row.laserCondition);
+        Assert.IsTrue(double.IsNaN(outcome.Outcome.Row.Value.laserTriggerTime));
+        Assert.AreEqual(0, outcome.Outcome.Row.Value.laserCondition);
     }
 
     [TestMethod]
@@ -672,10 +672,10 @@ public class TrialRulesTests
         var start = rig.RunTo(TrialEventKind.Start);
         rig.Wheel(start.Trial.trackLengthCm * 0.85);
         var outcome = rig.RunTo(TrialEventKind.Outcome);
-        Assert.AreEqual("ResponseWindowEnd", outcome.Outcome.Row.endReason);
-        Assert.AreEqual("NoResponse", outcome.Outcome.Row.outcome);
-        Assert.IsTrue(outcome.Outcome.Row.penaltySound);
-        Assert.IsTrue(outcome.Outcome.Row.penalised && !outcome.Outcome.Row.rewarded);
+        Assert.AreEqual("ResponseWindowEnd", outcome.Outcome.Row.Value.endReason);
+        Assert.AreEqual("NoResponse", outcome.Outcome.Row.Value.outcome);
+        Assert.IsTrue(outcome.Outcome.Row.Value.penaltySound);
+        Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded);
         Assert.AreEqual(start.Seconds + 0.1 + 12.0, outcome.Seconds, 0.0011);
     }
 
@@ -687,8 +687,8 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.1);
         rig.Wheel(start.Trial.trackLengthCm + 5);
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
-        Assert.AreEqual("EndOfTrack", outcome.Outcome.Row.endReason);
-        Assert.AreEqual(start.Trial.trackLengthCm, outcome.Outcome.Row.endPositionCm, 1e-9);
+        Assert.AreEqual("EndOfTrack", outcome.Outcome.Row.Value.endReason);
+        Assert.AreEqual(start.Trial.trackLengthCm, outcome.Outcome.Row.Value.endPositionCm, 1e-9);
     }
 
     [TestMethod]
@@ -799,11 +799,11 @@ public class TrialRulesTests
             rig.Until(rig.Now + 0.05);
             outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == TrialEventKind.Outcome);
         }
-        Assert.AreEqual("FreqReached", outcome.Outcome.Row.endReason);
-        Assert.IsTrue(outcome.Outcome.Row.toneEndFrequencyHz > 25000, outcome.Outcome.Row.toneEndFrequencyHz.ToString());
+        Assert.AreEqual("FreqReached", outcome.Outcome.Row.Value.endReason);
+        Assert.IsTrue(outcome.Outcome.Row.Value.toneEndFrequencyHz > 25000, outcome.Outcome.Row.Value.toneEndFrequencyHz.ToString());
         Assert.IsTrue(outcome.Outcome.Rewarded);
-        Assert.AreEqual("Correct", outcome.Outcome.Row.outcome);
-        Assert.IsFalse(outcome.Outcome.Row.penaltySound);
+        Assert.AreEqual("Correct", outcome.Outcome.Row.Value.outcome);
+        Assert.IsFalse(outcome.Outcome.Row.Value.penaltySound);
     }
 
     [TestMethod]
