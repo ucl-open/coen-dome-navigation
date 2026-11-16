@@ -22,7 +22,7 @@
       "type": "object"
     },
     "OptogeneticsConfig": {
-      "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and the corridor's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the\ntrigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first\ntone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's\noutcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.",
+      "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the\ntrigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first\ntone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's\noutcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.",
       "if": {
         "additionalProperties": true,
         "properties": {
@@ -81,7 +81,7 @@
         },
         "laserMaxSeconds": {
           "default": 12.5,
-          "description": "Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
+          "description": "Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus responseWindowSeconds), so it never ends the laser before the response window closes; on a stage without responseWindowSeconds a longer trial loses its laser before the outcome",
           "exclusiveMinimum": 0,
           "title": "LaserMaxSeconds",
           "type": "number"
@@ -261,7 +261,7 @@
           "title": "PenaliseWrongZone",
           "type": "boolean"
         },
-        "timeLimitSeconds": {
+        "responseWindowSeconds": {
           "anyOf": [
             {
               "exclusiveMinimum": 0,
@@ -272,8 +272,8 @@
             }
           ],
           "default": null,
-          "description": "The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit",
-          "title": "TimeLimitSeconds"
+          "description": "The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes",
+          "title": "ResponseWindowSeconds"
         },
         "trackEndEndsTrial": {
           "description": "Whether reaching the end of the track ends the trial",

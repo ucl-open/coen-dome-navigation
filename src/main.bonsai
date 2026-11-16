@@ -184,7 +184,7 @@
         <Description>Subjects several groups share: the trial loop's events (TrialEvents), the current trial (Trial), trial rows (TrialRow) and stimulus rows (StimulusRows). Zapit's commands and replies are ConnectZapit's, reward requests Rewards'.</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="dev:TrialEvent(ext:Trial,ext:StimulusFrame,ext:CorridorOutcome)">
+            <Expression xsi:type="rx:PublishSubject" TypeArguments="dev:TrialEvent(ext:Trial,ext:StimulusFrame,ext:TrialOutcome)">
               <rx:Name>TrialEvents</rx:Name>
             </Expression>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="harp:Timestamped(ext:TrialRow)">

@@ -127,7 +127,7 @@ public class LoadSweep
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CreateStimulusRow
 {
-    public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, CorridorOutcome>> source)
+    public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> source)
     {
         return source.Where(e => e.Kind == TrialEventKind.Update).Select(e => Timestamped.Create(e.Update.Row, e.Seconds));
     }
@@ -138,7 +138,7 @@ public class CreateStimulusRow
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class PipBuffer
 {
-    public IObservable<Mat> Process(IObservable<Tuple<TrialEvent<Trial, StimulusFrame, CorridorOutcome>, IList<Mat>>> source)
+    public IObservable<Mat> Process(IObservable<Tuple<TrialEvent<Trial, StimulusFrame, TrialOutcome>, IList<Mat>>> source)
     {
         return source.Select(x =>
         {

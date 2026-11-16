@@ -38,7 +38,7 @@ taskParameters:
     zapitConfigPath: ''   # the Zapit conditions file loaded in Zapit
     laserPowerMw: null        # mW on laser-on trials, every condition; required with optogenetics on
     laserOnProbability: 0.4   # laser-on trials after trialsBeforeLaser; the rest are 0 mW; each trial's condition drawn at random
-    laserMaxSeconds: 12.5     # s from the trigger; a cap: at least the longest timeLimitSeconds + laserToStimulusSeconds + 0.25, the laser stops at the outcome
+    laserMaxSeconds: 12.5     # s from the trigger; a cap: at least the longest responseWindowSeconds + laserToStimulusSeconds + 0.25, the laser stops at the outcome
     laserToStimulusSeconds: 0.1   # s, signed, whole 0.05 s beeps, at most 0.2: the trigger before the first pip (negative: after); the first pip comes max(this, 0) after the trial's start in every experiment
     triggerHoldSeconds: 1.0   # s the trigger line and masking light stay on after the outcome (at least 0.5, the longest ramp-down; the next trial is armed once it falls)
     trialsBeforeLaser: 20     # no laser-on trial among the first this many
@@ -55,7 +55,7 @@ taskParameters:
       lickQuietSeconds: 0
       wheelQuietSeconds: 0
       wheelQuietCm: 0
-      timeLimitSeconds: null
+      responseWindowSeconds: null   # the window never closes
       trackEndEndsTrial: false
       trackLengthScale: 0.125
       frequencyDrift: true
@@ -70,7 +70,7 @@ taskParameters:
       lickQuietSeconds: 0
       wheelQuietSeconds: 0
       wheelQuietCm: 0
-      timeLimitSeconds: null
+      responseWindowSeconds: null   # the window never closes
       trackEndEndsTrial: false
       trackLengthScale: 0.125
       frequencyDrift: false
@@ -85,7 +85,7 @@ taskParameters:
       lickQuietSeconds: 0
       wheelQuietSeconds: 0
       wheelQuietCm: 0
-      timeLimitSeconds: null
+      responseWindowSeconds: null   # the window never closes
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
@@ -100,7 +100,7 @@ taskParameters:
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       wheelQuietSeconds: 0
       wheelQuietCm: 0
-      timeLimitSeconds: 12.0  # from the first tone pip
+      responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
@@ -115,7 +115,7 @@ taskParameters:
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       wheelQuietSeconds: 0
       wheelQuietCm: 0
-      timeLimitSeconds: 12.0  # from the first tone pip
+      responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
@@ -130,7 +130,7 @@ taskParameters:
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       wheelQuietSeconds: 0
       wheelQuietCm: 0
-      timeLimitSeconds: 12.0  # from the first tone pip
+      responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
       trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false

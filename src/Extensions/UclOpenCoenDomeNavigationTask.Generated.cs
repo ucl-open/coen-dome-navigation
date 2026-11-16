@@ -217,7 +217,7 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and the corridor's laser timing.
+    /// Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.
     ///
     ///The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
     ///the same file to list its conditions. "Stimulus" is the tone and grating; the laser is continuous: it starts at the
@@ -226,7 +226,7 @@ namespace UclOpenCoenDomeNavigationTask
     ///outcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and the corridor's laser timing.
+    [System.ComponentModel.DescriptionAttribute(@"Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.
 
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
     the same file to list its conditions. ""Stimulus"" is the tone and grating; the laser is continuous: it starts at the
@@ -391,11 +391,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome
+        /// Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus responseWindowSeconds), so it never ends the laser before the response window closes; on a stage without responseWindowSeconds a longer trial loses its laser before the outcome
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("laserMaxSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="laserMaxSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome")]
+        [System.ComponentModel.DescriptionAttribute(@"Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus responseWindowSeconds), so it never ends the laser before the response window closes; on a stage without responseWindowSeconds a longer trial loses its laser before the outcome")]
         public double LaserMaxSeconds
         {
             get
@@ -832,7 +832,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _penaliseWrongZone;
     
-        private double? _timeLimitSeconds;
+        private double? _responseWindowSeconds;
     
         private bool _trackEndEndsTrial;
     
@@ -861,7 +861,7 @@ namespace UclOpenCoenDomeNavigationTask
             _lickToReward = other._lickToReward;
             _wrongLickLimit = other._wrongLickLimit;
             _penaliseWrongZone = other._penaliseWrongZone;
-            _timeLimitSeconds = other._timeLimitSeconds;
+            _responseWindowSeconds = other._responseWindowSeconds;
             _trackEndEndsTrial = other._trackEndEndsTrial;
             _trackLengthScale = other._trackLengthScale;
             _frequencyDrift = other._frequencyDrift;
@@ -1056,21 +1056,22 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit
+        /// The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("timeLimitSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeLimitSeconds")]
-        [System.ComponentModel.DescriptionAttribute("The longest a trial runs from its first tone pip, in seconds, after which it ends" +
-            " as a Timeout; null: no limit")]
-        public double? TimeLimitSeconds
+        [Newtonsoft.Json.JsonPropertyAttribute("responseWindowSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="responseWindowSeconds")]
+        [System.ComponentModel.DescriptionAttribute("The response window: the longest a trial runs from its first tone pip, in seconds" +
+            ", after which it ends as NoResponse (endReason ResponseWindowEnd); null: the win" +
+            "dow never closes")]
+        public double? ResponseWindowSeconds
         {
             get
             {
-                return _timeLimitSeconds;
+                return _responseWindowSeconds;
             }
             set
             {
-                _timeLimitSeconds = value;
+                _responseWindowSeconds = value;
             }
         }
     
@@ -1168,7 +1169,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("LickToReward = " + _lickToReward + ", ");
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
             stringBuilder.Append("PenaliseWrongZone = " + _penaliseWrongZone + ", ");
-            stringBuilder.Append("TimeLimitSeconds = " + _timeLimitSeconds + ", ");
+            stringBuilder.Append("ResponseWindowSeconds = " + _responseWindowSeconds + ", ");
             stringBuilder.Append("TrackEndEndsTrial = " + _trackEndEndsTrial + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
             stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");

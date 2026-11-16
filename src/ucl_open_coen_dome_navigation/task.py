@@ -19,9 +19,9 @@ from pydantic import Field, field_validator, model_validator
 from ucl_open_coen_dome_navigation import __semver__
 
 BEEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (TrialLogic.cs BeepSeconds)
-LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
+LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (responseWindowSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
 MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole beeps (TrialLogic.cs MaxLeadSeconds)
-NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without timeLimitSeconds (TrialLogic.cs)
+UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without responseWindowSeconds (TrialLogic.cs)
 
 SWEEP_FILE = Path(__file__).resolve().parents[1] / "waveforms" / "sweep.json"  # src/waveforms/sweep.json
 
@@ -74,7 +74,7 @@ class Truncation(TaskBlock):
 
 
 class OptogeneticsConfig(Optogenetics):
-    """Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and the corridor's laser timing.
+    """Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.
 
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
     the same file to list its conditions. "Stimulus" is the tone and grating; the laser is continuous: it starts at the
@@ -86,7 +86,7 @@ class OptogeneticsConfig(Optogenetics):
     laser_max_seconds: float = Field(
         default=12.5,
         gt=0,
-        description="Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage timeLimitSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus timeLimitSeconds), so it never ends a timed-out trial's laser early; on a stage without timeLimitSeconds a longer trial loses its laser before the outcome",
+        description="Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus responseWindowSeconds), so it never ends the laser before the response window closes; on a stage without responseWindowSeconds a longer trial loses its laser before the outcome",
     )
     trigger_hold_seconds: float = Field(
         default=1.0,
@@ -121,8 +121,8 @@ class TrainingStage(QuietWait):
     penalise_wrong_zone: bool = Field(
         description="Whether a trial that ends outside the reward zone is penalised. A trial that runs out of time or track with the frequency in the zone is penalised on every stage"
     )
-    time_limit_seconds: float | None = Field(
-        default=None, gt=0, description="The longest a trial runs from its first tone pip, in seconds, after which it ends as a Timeout; null: no limit"
+    response_window_seconds: float | None = Field(
+        default=None, gt=0, description="The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes"
     )
     track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
     track_length_scale: float = Field(gt=0, description="The drawn track length is multiplied by this")
@@ -162,16 +162,16 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
 
     @model_validator(mode="after")
     def _laser_max_outlasts_the_trial(self):
-        # The laser is meant to stay on until the outcome: the cap must be longer than the longest timed trial, a stage's
-        # time limit (timeLimitSeconds, counted from the first tone pip) plus laser_to_stimulus_seconds (zapit-v2)
+        # The laser is meant to stay on until the outcome: the cap must be longer than the longest trial, a stage's
+        # response window (responseWindowSeconds, counted from the first tone pip) plus laser_to_stimulus_seconds (zapit-v2)
         opto = self.optogenetics
-        limits = [stage.time_limit_seconds for stage in self.training_stages if stage.time_limit_seconds is not None]
+        limits = [stage.response_window_seconds for stage in self.training_stages if stage.response_window_seconds is not None]
         if not opto.use_zapit or not limits:
             return self
         shortest = max(limits) + opto.laser_to_stimulus_seconds + LASER_MAX_MARGIN_SECONDS
         if opto.laser_max_seconds < shortest - 1e-9:
             raise ValueError(
-                f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: the longest stage timeLimitSeconds "
+                f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: the longest stage responseWindowSeconds "
                 f"({max(limits):g} s) counts from the first tone pip, laser_to_stimulus_seconds ({opto.laser_to_stimulus_seconds} s) after onset"
             )
         return self
@@ -181,8 +181,8 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         # TrialLogic.cs TrialRules.Create's same rules (Pip, 13 Nov 2026).
         self.optogenetics.check_lead_fits(self.trial_structure.iti_min_seconds)
         lead = self.optogenetics.laser_to_stimulus_seconds
-        # A negative lead puts the trigger after the first pip, at most the stage's timeLimitSeconds (any stage here; Go checks the one chosen).
-        after = max(stage.time_limit_seconds or NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS for stage in self.training_stages)
+        # A negative lead puts the trigger after the first pip, at most the stage's responseWindowSeconds (any stage here; Go checks the one chosen).
+        after = max(stage.response_window_seconds or UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS for stage in self.training_stages)
         if -lead > after + 1e-9:
             raise ValueError(f"optogenetics.laser_to_stimulus_seconds ({lead} s) puts the trigger more than {after:g} s after the first pip, past every stage's limit")
         return self

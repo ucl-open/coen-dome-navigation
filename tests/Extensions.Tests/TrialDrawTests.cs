@@ -9,7 +9,7 @@ using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.Serialization;
-using TrialEventOf = OpenRigs.Devices.TrialEvent<Trial, StimulusFrame, CorridorOutcome>;
+using TrialEventOf = OpenRigs.Devices.TrialEvent<Trial, StimulusFrame, TrialOutcome>;
 
 static class Fixture
 {
@@ -44,17 +44,17 @@ static class Fixture
     }
 }
 
-/// <summary>Runs lib-open-rigs' TrialLoop with the corridor's rules on a stand-in Harp clock, 1 ms a tick, the wheel,
+/// <summary>Runs lib-open-rigs' TrialLoop with the task's rules on a stand-in Harp clock, 1 ms a tick, the wheel,
 /// the left spout and Zapit's replies put in by the test (as RunTrials feeds it: no right spout).</summary>
 class Rig
 {
-    public readonly TrialLoop<Trial, StimulusFrame, CorridorOutcome> Loop;
+    public readonly TrialLoop<Trial, StimulusFrame, TrialOutcome> Loop;
     public readonly List<TrialEventOf> Events = new List<TrialEventOf>();
     public double Now;
 
     public Rig(TrialRules rules)
     {
-        Loop = new TrialLoop<Trial, StimulusFrame, CorridorOutcome>(rules);
+        Loop = new TrialLoop<Trial, StimulusFrame, TrialOutcome>(rules);
     }
 
     public void Until(double seconds, Func<bool> stop = null)
@@ -194,9 +194,9 @@ public class TrialDrawTests
         var late = new TrialDraw(Fixture.Setup(ok, 4)).Next();
         Assert.IsTrue(late.firstPipBeep == 0 && Fixture.Setup(ok, 4).Timing(late).LaserToStimulusSeconds == -0.5);
         ok.Optogenetics.LaserToStimulusSeconds = -12.05;  // past stage 4's 12 s limit
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok, 4)).Message, "timeLimitSeconds");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok, 4)).Message, "responseWindowSeconds");
         ok.Optogenetics.LaserToStimulusSeconds = -2.05;   // past the 2 s on a stage without one
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok, 2)).Message, "without timeLimitSeconds");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok, 2)).Message, "without responseWindowSeconds");
         var tight = Fixture.Task();
         tight.TrialStructure.ItiMinSeconds = 0.35;
         tight.Optogenetics.LaserToStimulusSeconds = 0.2;
@@ -249,7 +249,7 @@ public class TrialDrawTests
             { "lickQuietSeconds", t => t.TrainingStages[4].LickQuietSeconds = double.NaN },
             { "wheelQuietSeconds", t => t.TrainingStages[4].WheelQuietSeconds = double.PositiveInfinity },
             { "trackLengthScale", t => t.TrainingStages[4].TrackLengthScale = 0 },
-            { "timeLimitSeconds", t => t.TrainingStages[4].TimeLimitSeconds = double.NaN },
+            { "responseWindowSeconds", t => t.TrainingStages[4].ResponseWindowSeconds = double.NaN },
             { "trackLengthsCm", t => t.TrialStructure.TrackLengthsCm[0] = double.PositiveInfinity },
             { "laserMaxSeconds", t => { Fixture.Opto(t); t.Optogenetics.LaserMaxSeconds = double.PositiveInfinity; } },
         };
@@ -291,9 +291,9 @@ public class TrialDrawTests
     }
 }
 
-/// <summary>The corridor's trials: TrialLoop driven tick by tick with the corridor's rules.</summary>
+/// <summary>The task's trials: TrialLoop driven tick by tick with the task's rules.</summary>
 [TestClass]
-public class CorridorTrialTests
+public class TrialRulesTests
 {
     [TestMethod]
     public void TheFirstTrialWaitsItsIntervalAndPipsEvery50MsFromTheLead()
@@ -531,13 +531,13 @@ public class CorridorTrialTests
     }
 
     [TestMethod]
-    public void ATimeOutInTheZoneIsPenalised()
+    public void AResponseWindowEndingInTheZoneIsPenalised()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 4));
         var start = rig.RunTo(TrialEventKind.Start);
         rig.Wheel(start.Trial.trackLengthCm * 0.85);
         var outcome = rig.RunTo(TrialEventKind.Outcome);
-        Assert.AreEqual("Timeout", outcome.Outcome.Row.endReason);
+        Assert.AreEqual("ResponseWindowEnd", outcome.Outcome.Row.endReason);
         Assert.AreEqual("NoResponse", outcome.Outcome.Row.outcome);
         Assert.IsTrue(outcome.Outcome.Row.penaltySound);
         Assert.AreEqual(start.Seconds + 0.1 + 12.0, outcome.Seconds, 0.0011);
@@ -636,7 +636,7 @@ public class CorridorTrialTests
     }
 
     [TestMethod]
-    public void TheLaserIsCappedOnTheHarpClockOnAStageWithoutATimeLimit()
+    public void TheLaserIsCappedOnTheHarpClockOnAStageWithAnUnlimitedResponseWindow()
     {
         var task = Fixture.Task();
         Fixture.Opto(task);

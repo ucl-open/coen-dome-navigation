@@ -43,10 +43,10 @@ def test_the_stage_rows_keep_tom_s_reward_zones():
     assert zones == [(18000, 25000)] * 2 + [(floor, 25000)] + [(floor, ceiling)] * 3
 
 
-def test_the_time_limit_and_quiet_wait_are_one_optional_field_each_per_stage():
-    # A stage's timeLimitSeconds, null for none; the quiet waits (Pip, 13 Nov 2026), 0 for off.
+def test_the_response_window_and_quiet_wait_are_one_optional_field_each_per_stage():
+    # A stage's responseWindowSeconds, null for none; the quiet waits (Pip, 13 Nov 2026), 0 for off.
     rows = task()["taskParameters"]["trainingStages"]
-    assert [r["timeLimitSeconds"] for r in rows] == [None] * 3 + [12.0] * 3
+    assert [r["responseWindowSeconds"] for r in rows] == [None] * 3 + [12.0] * 3
     assert [r["lickQuietSeconds"] for r in rows] == [0] * 3 + [1.0] * 3
     assert all(r["wheelQuietSeconds"] == 0 and r["wheelQuietCm"] == 0 for r in rows)
 
@@ -205,7 +205,7 @@ def test_a_reward_over_the_cap_is_refused():
         UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
 
 # The optogenetics settings' rules: laser_to_stimulus_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap
-# longer than the longest timed trial (a stage's timeLimitSeconds + laser_to_stimulus_seconds), and TrialLogic.cs checking the same rules.
+# longer than the longest trial (a stage's responseWindowSeconds + laser_to_stimulus_seconds), and TrialLogic.cs checking the same rules.
 
 PARAMS = yaml.safe_load(TASK.read_text(encoding="utf-8"))["taskParameters"]
 TRIAL_LOGIC = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
@@ -217,14 +217,14 @@ def opto(**fields) -> OptogeneticsConfig:
     return OptogeneticsConfig(**{**FILE_OPTO, **fields})
 
 
-def params(time_limit=None, **opto):
-    """The task file's parameters with optogenetics on, every timed stage's limit set to time_limit."""
+def params(window=None, **opto):
+    """The task file's parameters with optogenetics on, every stage with a response window given this one."""
     doc = copy.deepcopy(PARAMS)
     doc["optogenetics"].update({"useZapit": True, "zapitConfigPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
-    if time_limit is not None:
+    if window is not None:
         for row in doc["trainingStages"]:
-            if row["timeLimitSeconds"] is not None:
-                row["timeLimitSeconds"] = time_limit
+            if row["responseWindowSeconds"] is not None:
+                row["responseWindowSeconds"] = window
     return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
 
 
@@ -270,14 +270,14 @@ def test_a_cap_longer_than_the_longest_trial_is_accepted(limit, lead, cap):
 
 
 @pytest.mark.parametrize("limit, lead, cap", [(12, 0.1, 12.0), (12, 0.2, 12.4), (15, 0.1, 12.5)])
-def test_a_cap_that_would_end_a_timed_out_trial_early_is_refused(limit, lead, cap):
+def test_a_cap_that_would_end_the_laser_before_the_window_closes_is_refused(limit, lead, cap):
     with pytest.raises(pydantic.ValidationError, match="laser_max_seconds"):
         params(limit, laserToStimulusSeconds=lead, laserMaxSeconds=cap)
 
 
 def test_the_cap_rule_only_applies_with_optogenetics_on():
     doc = copy.deepcopy(PARAMS)
-    doc["trainingStages"][3]["timeLimitSeconds"] = 30
+    doc["trainingStages"][3]["responseWindowSeconds"] = 30
     assert UclOpenCoenDomeNavigationTaskParameters.model_validate(doc).optogenetics.use_zapit is False
 
 
@@ -300,7 +300,7 @@ def test_trial_logic_cs_uses_the_same_constants():
     assert float(re.search(r"const double BeepSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == BEEP_SECONDS
     from ucl_open_coen_dome_navigation import task
 
-    for py, cs in (("MAX_LEAD_SECONDS", "MaxLeadSeconds"), ("NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS", "NoTimeLimitTriggerAfterSeconds")):
+    for py, cs in (("MAX_LEAD_SECONDS", "MaxLeadSeconds"), ("UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS", "UnlimitedWindowTriggerAfterSeconds")):
         assert float(re.search(rf"const double {cs} = ([\d.]+);", TRIAL_LOGIC).group(1)) == getattr(task, py)
     # Zapit's reply margin is lib-open-rigs' alone (ZapitTrial.ReplyMarginSeconds, ZAPIT_REPLY_MARGIN_SECONDS).
     assert "ZapitTrial.ReplyMarginSeconds" in TRIAL_LOGIC

@@ -15,7 +15,7 @@ rig-control, `test` mouse, Training Stage 4 (Tom's 5), optogenetics unticked; ~2
 
 ## 2. Optogenetics on
 
-Same, optogenetics ticked with `zapitConfigPath` and `laserPowerMw`; at least 30 trials (the first 20, `trialsBeforeLaser`, are all 0 mW: galvos move, laser off). With nobody at the wheel every trial times out 12 s after its first pip (the stage's `timeLimitSeconds`).
+Same, optogenetics ticked with `zapitConfigPath` and `laserPowerMw`; at least 30 trials (the first 20, `trialsBeforeLaser`, are all 0 mW: galvos move, laser off). With nobody at the wheel every trial ends as NoResponse 12 s after its first pip, when the stage's response window (`responseWindowSeconds`) closes.
 **Pass:**
 - `BonsaiData_ZapitReplies` log: StartStimulus (command 1) then StopStimulus (command 0) on every trial, alternating, `isError` False.
 - Trial rows: `laserCondition` on every trial; `laserPowerMw` the task's `laserPowerMw` on about 40% of trials after the first 20, 0 on the rest.
@@ -36,7 +36,7 @@ Step 2 on the rig with `hardwareTriggered: true`.
 
 ## 5. Laser on (power meter or photodiode)
 
-Laser trials reach the set power; laser-off trials stay dark; at every offset the light fades over the ramp-down (not a cut: the fade is what prevents rebound); a Training Stage 1-2 (no time limit) `test` trial with the wheel still goes dark 12.5 s after onset (the cap).
+Laser trials reach the set power; laser-off trials stay dark; at every offset the light fades over the ramp-down (not a cut: the fade is what prevents rebound); a Training Stage 1-2 (a response window that never closes) `test` trial with the wheel still goes dark 12.5 s after onset (the cap).
 
 ## If Bonsai dies mid-experiment
 

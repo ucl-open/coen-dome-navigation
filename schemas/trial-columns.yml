@@ -37,7 +37,7 @@ trialType:
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
-  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the time limit or the end of the track (endReason says which), or unrewarded on a stage without lickToReward. rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
+  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the end of the response window or of the track (endReason says which), or unrewarded on a stage without lickToReward. rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
 itiStartTime:
   type: double
   unit: s
@@ -69,7 +69,7 @@ outcomeTime:
   type: double
   unit: s
   description: Harp time the workflow knew the outcome, the same time as harpTime, as its own column so that every moment of a trial is named; the reward, the penalty sound and the timeout are timed from it. On a lick it is the Harp clock's latest tick when the workflow saw the lick, a few ms after it; each lick's own Harp time is in the lick detectors' logs.
-  note: Why the trial ended is endReason - a lick in the reward zone, the wrong-lick limit, the time limit, the end of the track or the reward frequency reached.
+  note: Why the trial ended is endReason - a lick in the reward zone, the wrong-lick limit, the end of the response window, the end of the track or the reward frequency reached.
   history: A column of this name held the same until 13 Nov 2026; from then to 14 Nov 2026 only the row's time column did.
 rewardSizeUl:
   type: double
@@ -97,8 +97,9 @@ laserTriggerTime:
   history: From 14 Nov 2026.
 endReason:
   type: string
-  values: [FreqReached, CorrectLick, WrongLickLimit, Timeout, EndOfTrack]
-  description: Why the trial ended - the reward frequency reached (on a stage without lickToReward, rows 0 and 1 of the task file, Tom Childs' stages 1 and 2), a lick in the reward zone, too many wrong licks, the trial's time limit, or the end of the track.
+  values: [FreqReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, EndOfTrack]
+  description: Why the trial ended - the reward frequency reached (on a stage without lickToReward, rows 0 and 1 of the task file, Tom Childs' stages 1 and 2), a lick in the reward zone, too many wrong licks, the end of the stage's response window (responseWindowSeconds after the first pip), or the end of the track.
+  history: ResponseWindowEnd was Timeout until 16 Nov 2026, when the task file's timeLimitSeconds became responseWindowSeconds; timeout means only the penalty's (one name per meaning).
 trackLengthCm:
   type: double
   unit: cm

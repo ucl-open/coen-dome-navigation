@@ -39,7 +39,7 @@ public class TrialRow
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CreateTrialRow
 {
-    public IObservable<Timestamped<TrialRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, CorridorOutcome>> source)
+    public IObservable<Timestamped<TrialRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> source)
     {
         return source.Where(e => e.Kind == TrialEventKind.Outcome).Select(e => Timestamped.Create(e.Outcome.Row, e.Seconds));
     }
