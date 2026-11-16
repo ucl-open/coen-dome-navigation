@@ -1,4 +1,4 @@
-"""The task file's schema: config/task-abstract-av-corridor.yml, which rig-control copies at launch and again at Go with the
+﻿"""The task file's schema: config/task-abstract-av-corridor.yml, which rig-control copies at launch and again at Go with the
 form's edits; the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest. Ported from Tom Childs' auditory-vr-corridor task.py.
 
 Laid out as av-dome's (Pip, 9 Nov 2026): the stage is the TrainingStage experiment setting, a row of trainingStages
@@ -19,10 +19,10 @@ from pydantic import Field, field_validator, model_validator
 
 from ucl_open_coen_dome_navigation import __semver__
 
-BEEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (Corridor.cs BeepSeconds)
+BEEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (TrialLogic.cs BeepSeconds)
 LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (timeLimitSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
-MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole beeps (Corridor.cs MaxLeadSeconds)
-NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without timeLimitSeconds (Corridor.cs)
+MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole beeps (TrialLogic.cs MaxLeadSeconds)
+NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without timeLimitSeconds (TrialLogic.cs)
 
 SWEEP_FILE = Path(__file__).resolve().parents[1] / "waveforms" / "sweep.json"  # src/waveforms/sweep.json
 
@@ -179,7 +179,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
 
     @model_validator(mode="after")
     def _the_lead_fits(self):
-        # Corridor.cs CorridorSetup.Create's same rules (Pip, 13 Nov 2026).
+        # TrialLogic.cs CorridorSetup.Create's same rules (Pip, 13 Nov 2026).
         self.optogenetics.check_lead_fits(self.trial_structure.iti_min_seconds)
         lead = self.optogenetics.laser_to_stimulus_seconds
         # A negative lead puts the trigger after the first pip, at most the stage's timeLimitSeconds (any stage here; Go checks the one chosen).

@@ -1,4 +1,4 @@
-"""src\\main.bonsai's rules: shared blocks, every task wait on the Harp clock, the logs' completion rules and the names
+﻿"""src\\main.bonsai's rules: shared blocks, every task wait on the Harp clock, the logs' completion rules and the names
 the stage and README depend on."""
 
 import json
@@ -26,7 +26,7 @@ def combinators(element: ET.Element) -> list[str]:
     return [c.get(XSI) for c in element.iter(W + "Combinator")]
 
 
-def test_every_task_wait_is_on_the_harp_clock():
+def test_no_wall_clock_wait_inside_task_logic():
     # Plan v11: no wall-clock wait inside TaskLogic but the laser cap's backstop, should the board stall.
     logic = group("TaskLogic")
     waits = [c for c in combinators(logic) if c in ("rx:Timer", "rx:Delay", "rx:Throttle", "rx:DelaySubscription", "rx:Timeout", "rx:Interval")]
@@ -45,7 +45,7 @@ def test_the_shared_blocks_replace_the_local_copies():
     assert not includes & {lint.SPEAKER_MIXER, lint.PROJECTOR_DISPLAY}
     assert not [p for p in includes if p.startswith("Extensions")]
     assert sorted(p.name for p in (ROOT / "src" / "Extensions").iterdir()) == [
-        "Corridor.cs", "UclOpenCoenDomeNavigationTask.Generated.cs"]
+        "README.md", "Sweep.cs", "TrialLogic.cs", "TrialRow.cs", "UclOpenCoenDomeNavigationTask.Generated.cs"]
     assert "Disable" not in {e.get(XSI) for e in MAIN.iter(W + "Expression")}
 
 
@@ -64,7 +64,7 @@ def test_the_launch_properties():
     # No MissingCalibration: a reward valve without a calibration always stops the workflow (Pip, 15 Nov 2026).
     top = MAIN.find(W + "Workflow").find(W + "Nodes")
     exposed = {p.get("Name") for e in top if e.get(XSI) == "ExternalizedMapping" for p in e}
-    assert {"SubjectId", "SessionId", "TaskPath", "DisplayDevice"} == exposed
+    assert {"SubjectId", "SessionId", "TaskPath", "DisplayDevice", "ConfigRoot"} == exposed
 
 
 def test_the_metrics_are_the_view_s():
@@ -111,10 +111,27 @@ def test_the_trigger_event_raises_the_line_and_starts_a_software_triggered_zapit
     # Pip, 13 Nov 2026: the trigger comes laserToStimulusSeconds before the first pip (CorridorTask's Trigger), not at Start.
     nodes, edges = _scope(group("TaskLogic"))
     kind = "{clr-namespace:;assembly=Extensions}Kind"
-    for name in ("Optogenetics?", "SoftwareTriggered?"):
-        target = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == name)
-        feeding = [nodes[a].find(W + "Combinator") for a, b in edges if b == target]
-        assert [f.findtext(kind) for f in feeding if f is not None] == ["Trigger"]
+    opto = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "Optogenetics?")
+    feeding = [nodes[a].find(W + "Combinator") for a, b in edges if b == opto]
+    assert [f.findtext(kind) for f in feeding if f is not None] == ["Trigger"]
+    arm = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "ArmZapit")
+    assert opto in _upstream(edges, arm)
+
+
+def test_the_trial_loop_starts_on_the_clock_thread():
+    # As coen-dome-decision-making (BLUE-OPTO-2, 14 Nov 2026): the setup reaches CorridorTask from lib-open-rigs' OnNextTick
+    # on the Harp clock's thread, not from a wall-clock Delay.
+    nodes, edges = _scope(group("TaskLogic"))
+    (task,) = [i for i, n in enumerate(nodes) if "ext:CorridorTask" in combinators(n)]
+    (tick,) = [i for i, n in enumerate(nodes) if "core:OnNextTick" in combinators(n)]
+    assert tick in _upstream(edges, task)
+    assert "rx:Delay" not in TEXT
+
+
+def test_zapit_s_hardware_triggering_is_rig_yml_s():
+    # lib-open-rigs' ZapitTrialCommand, its HardwareTriggered mapped from rig.yml's zapit.hardwareTriggered, never typed in.
+    assert TEXT.count('"zap:ZapitTrialCommand"') == 1 and "ext:ZapitTrialCommand" not in TEXT
+    assert '<Property Name="HardwareTriggered" Selector="Zapit.HardwareTriggered" />' in TEXT and "HardwareTriggered>true<" not in TEXT
 
 
 AUD = "{clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio}"
@@ -135,7 +152,7 @@ def test_the_speakers_and_the_mixer_are_the_shared_block_s():
     # OpenRigs.Audio's SpeakerMixer loads rig.yml's speakers once into Speakers (every filter checked, so a speaker without
     # one stops the workflow at Start, naming it) and starts the mixer no sooner than 3 s after Start.
     assert lint.speaker_mixer_problems(WORKFLOW) == []
-    assert "RequireSpeakerFilters" not in TEXT and "RequireSpeakerFilters" not in (ROOT / "src" / "Extensions" / "Corridor.cs").read_text(encoding="utf-8")
+    assert "RequireSpeakerFilters" not in TEXT and "RequireSpeakerFilters" not in (ROOT / "src" / "Extensions" / "Sweep.cs").read_text(encoding="utf-8")
 
 def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
     found = [c for i in upstream for c in nodes[i].iter(W + "Combinator") if c.get(XSI) == "aud:SpeakerBuffer"]
@@ -146,7 +163,7 @@ def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
 def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     # Audit, 14 Nov 2026: each sound is one row laid out by OpenRigs.Audio's SpeakerBuffer on rig.yml's channels
     # (no Tile 32), equalised for each speaker; no Channels is every rig.yml speaker.
-    for subject, reader in (("PipBuffers", "all_waveforms.bin"), ("RewardTone", "reward_tone.bin")):
+    for subject, reader in (("PipBuffers", "all_waveforms.bin"), ("RewardToneBuffer", "reward_tone.bin")):
         nodes, upstream = _audio_chain(subject)
         labels = _labels(nodes, upstream)
         assert "Speakers" in labels and "rx:Zip" in labels and "dsp:Tile" not in labels, labels
@@ -284,7 +301,7 @@ def test_the_task_logs_are_the_shared_include():
     assert lint.task_logs_problems(WORKFLOW) == []
 
 
-def test_the_pips_carry_their_sync_copy():
+def test_each_trial_s_sound_carries_its_sync_copy():
     # rig.yml's syncChannel at syncGain for each pip (OpenRigs.Audio SpeakerBuffer.SyncCopy), as coen-dome-decision-making's stimulus.
     nodes, upstream = _audio_chain("PipBuffers")
     assert _speaker_buffer(nodes, upstream).findtext("{clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio}SyncCopy") == "true"
@@ -298,7 +315,7 @@ def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
     labels = _labels(nodes, _upstream(edges, sweep))
     assert labels == ["RigConfigs", "SpeakerArray.Device.SampleRate", "ext:LoadSweep"]
     assert "ExperimentGo" not in labels
-    (setup,) = [i for i, n in enumerate(nodes) if "ext:CreateCorridorSetup" in combinators(n)]
+    (setup,) = [i for i, n in enumerate(nodes) if "ext:CheckTaskAtGo" in combinators(n)]
     zip_ = next(a for a, b in edges if b == setup)
     assert [nodes[a].findtext(W + "Name") for a, b in sorted(edges, key=lambda e: e[0]) if b == zip_] == ["TaskConfig", "TrainingStage", "RigConfigs", "Sweep"]
     assert "SweepFile" not in ET.tostring(nodes[setup], encoding="unicode")

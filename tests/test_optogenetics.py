@@ -1,5 +1,5 @@
-"""The optogenetics settings' rules (zapit-v2): laser_to_stimulus_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap longer than
-the longest timed trial (a stage's timeLimitSeconds + laser_to_stimulus_seconds), and Corridor.cs checking the same rules."""
+﻿"""The optogenetics settings' rules (zapit-v2): laser_to_stimulus_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap longer than
+the longest timed trial (a stage's timeLimitSeconds + laser_to_stimulus_seconds), and TrialLogic.cs checking the same rules."""
 import copy
 import re
 from pathlib import Path
@@ -17,7 +17,7 @@ from ucl_open_coen_dome_navigation.task import (
 
 ROOT = Path(__file__).parent.parent
 TASK = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_text(encoding="utf-8"))["taskParameters"]
-CORRIDOR = (ROOT / "src" / "Extensions" / "Corridor.cs").read_text(encoding="utf-8-sig")
+CORRIDOR = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
 FILE_OPTO = OptogeneticsConfig.model_validate(TASK["optogenetics"]).model_dump()
 
 
@@ -104,7 +104,7 @@ def test_the_trigger_hold_outlasts_the_longest_ramp_down():
 
 
 def test_corridor_cs_uses_the_same_constants():
-    # Corridor.cs's own checks of these rules, and the laser-off trials' 0 mW, are tests\Extensions.Tests' (CorridorTests.cs).
+    # TrialLogic.cs's own checks of these rules, and the laser-off trials' 0 mW, are tests\Extensions.Tests' (TrialDrawTests.cs).
     assert float(re.search(r"const double LaserMaxMarginSeconds = ([\d.]+);", CORRIDOR).group(1)) == LASER_MAX_MARGIN_SECONDS
     assert float(re.search(r"const double BeepSeconds = ([\d.]+);", CORRIDOR).group(1)) == BEEP_SECONDS
     from ucl_open_coen_dome_navigation import task

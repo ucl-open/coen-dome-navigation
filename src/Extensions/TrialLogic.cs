@@ -1,4 +1,4 @@
-using Bonsai;
+﻿using Bonsai;
 using Bonsai.Harp;
 using Newtonsoft.Json.Linq;
 using OpenCV.Net;
@@ -17,74 +17,6 @@ using UclOpenCoenDomeNavigationTask;
 // The corridor task in tested C# (plan v11, W3): each trial's draw, its interval, its run along the virtual track on
 // the Harp clock and its row. main.bonsai drives the hardware from the events CorridorTask gives; tests\Extensions.Tests
 // runs the same classes on stand-in clocks.
-
-/// <summary>The sweep the committed tone files were made for, and the rate every waveform was made at
-/// (src\waveforms\sweep.json, ucl_open_coen_dome_navigation.waveforms).</summary>
-public class Sweep
-{
-    public double StartHz;
-    public double EndHz;
-    public int Steps;
-    public double PipPeak;
-    public int SampleRate;
-
-    /// <summary>One pip's samples, a row of all_waveforms.bin: a beep at SampleRate.</summary>
-    public int PipSamples { get { return (int)Math.Round(SampleRate * CorridorSetup.BeepSeconds); } }
-
-    public static Sweep Load(string path)
-    {
-        path = Path.GetFullPath(path);
-        if (!File.Exists(path))
-        {
-            throw new FileNotFoundException("There is no sweep file at " + path + ": Bonsai's working folder must be the workflow's (src), or run `uv run generate-waveforms`.", path);
-        }
-        var json = JObject.Parse(File.ReadAllText(path));
-        var sweep = new Sweep
-        {
-            // A missing key reads as NaN or 0, so the check below names the file rather than a bare null.
-            StartHz = json.Value<double?>("sweepStartHz") ?? double.NaN,
-            EndHz = json.Value<double?>("sweepEndHz") ?? double.NaN,
-            Steps = json.Value<int?>("sweepSteps") ?? 0,
-            PipPeak = json.Value<double?>("pipPeak") ?? double.NaN,
-            SampleRate = json.Value<int?>("sampleRate") ?? 0
-        };
-        if (!(sweep.StartHz > 0 && sweep.EndHz > sweep.StartHz && sweep.Steps > 1 && sweep.SampleRate > 0))
-        {
-            throw new InvalidOperationException(path + " holds no usable sweep: it needs 0 < sweepStartHz < sweepEndHz, sweepSteps above 1 and sampleRate above 0. Run `uv run generate-waveforms`.");
-        }
-        return sweep;
-    }
-
-    /// <summary>Loads the sweep and throws unless its waveforms were made at the audio device's rate: nothing converts them,
-    /// so they would play at the wrong pitch and speed (as OpenRigs.Audio's CheckWaveRate for a WAV).</summary>
-    public static Sweep Load(string path, int deviceRate)
-    {
-        var sweep = Load(path);
-        if (sweep.SampleRate != deviceRate)
-        {
-            throw new InvalidOperationException(Path.GetFullPath(path) + " is " + sweep.SampleRate + " Hz, but the audio device runs at " + deviceRate + " Hz: make the waveforms again at " + deviceRate + " Hz (waveforms.py SAMPLE_RATE, `uv run generate-waveforms`).");
-        }
-        return sweep;
-    }
-
-    /// <summary>The frequency a fraction (0 to 1, clamped) of the way along the sweep, on a log scale.</summary>
-    public double FrequencyAt(double fraction)
-    {
-        return StartHz * Math.Pow(EndHz / StartHz, Math.Max(0, Math.Min(1, fraction)));
-    }
-
-    /// <summary>How far along the sweep a frequency is, on a log scale.</summary>
-    public double FractionOf(double hz)
-    {
-        return hz <= 0 ? 0 : Math.Log(hz / StartHz) / Math.Log(EndHz / StartHz);
-    }
-
-    /// <summary>The tone file's row (0 to Steps - 1) nearest a frequency.</summary>
-    public int BinOf(double hz)
-    {
-        return (int)Math.Max(0, Math.Min(Steps - 1, Math.Round(FractionOf(hz) * (Steps - 1))));
-    }
-}
 
 /// <summary>
 /// The distance along the track: the distance run since the trial's start, less the furthest the mouse has run
@@ -116,8 +48,13 @@ public class VirtualTrack
 }
 
 /// <summary>One trial as drawn, with what its stage asks; fields named as the trial log's columns where they are one.</summary>
-public class CorridorTrial
+public class Trial : IZapitTrial
 {
+    int IZapitTrial.TrialNumber { get { return trialNumber; } }
+    int IZapitTrial.LaserCondition { get { return laserCondition; } }
+    bool IZapitTrial.LaserOn { get { return laserOn; } }
+    double IZapitTrial.LaserPowerMw { get { return laserPowerMw; } }
+
     public int trialNumber;
     public string trialType;            // the task's modality in words
     public double itiSeconds;           // the interval before this trial: the last outcome (after any timeout; trial 1: the first clock tick) to the first pip, with a quiet mouse
@@ -246,11 +183,11 @@ public class TrialDraw
         random = new Random(setup.Seed);
     }
 
-    public CorridorTrial Next()
+    public Trial Next()
     {
         var task = setup.Task;
         var stage = setup.Stage;
-        var t = new CorridorTrial();
+        var t = new Trial();
         t.trialNumber = ++drawn;
         t.rngSeed = setup.Seed;
         t.trialType = task.Modality.ToString().ToLowerInvariant();
@@ -310,7 +247,7 @@ public class CorridorEvent
 {
     public CorridorEventKind Kind;
     public double Seconds;
-    public CorridorTrial Trial;
+    public Trial Trial;
     public StimulusFrame Frame;   // Pip
     public TrialRow Row;          // Outcome
     public bool Rewarded;         // Outcome
@@ -318,54 +255,6 @@ public class CorridorEvent
     public string RewardSide;     // Outcome: "left", the spout the task rewards
 
     public Tuple<string, double> Reward { get { return Tuple.Create(RewardSide, Trial.rewardSizeUl); } }
-}
-
-/// <summary>A beep's stimulus: its BonsaiData_StimulusState row and what the mixer and grating play.</summary>
-public class StimulusFrame
-{
-    public StimulusStateRow Row;
-    public int Bin;              // the tone file's row
-    public double ToneGain;      // 1, or 0 when truncated or not auditory
-    public double GratingOpacity; // 1, or 0 when truncated or not visual
-}
-
-/// <summary>A BonsaiData_StimulusState row, one per pip while a trial runs.</summary>
-public class StimulusStateRow
-{
-    public int trialNumber;
-    public double positionCm;
-    public double toneFrequencyHz;
-    public bool stimulusActive;
-    public double visualSpatialFrequencyCpd;
-}
-
-/// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
-/// outcome). The fields up to laserTriggerTime are the lab's shared block, its core with the opto and quietWait blocks (lib-open-rigs
-/// open_rigs.rigs.trials), in coen-dome-decision-making's order and words too (Pip, 14 Nov 2026);
-/// this task's own follow.</summary>
-public class TrialRow
-{
-    public int trialNumber;
-    public string trialType;
-    public string outcome;
-    public double itiStartTime;
-    public double itiSeconds;
-    public double quietWaitSeconds;
-    public double trialStartTime;
-    public double stimulusOnsetTime;
-    public double outcomeTime;
-    public double rewardSizeUl;
-    public bool penaltySound;
-    public double penaltyTimeoutSeconds;
-    public int laserCondition;
-    public double laserPowerMw;
-    public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
-    public string endReason;
-    public double trackLengthCm;
-    public double endPositionCm;
-    public double toneEndFrequencyHz;
-    public double visualEndSpatialFrequencyCpd;
-    public double truncationFraction;
 }
 
 /// <summary>
@@ -383,7 +272,7 @@ public class CorridorState
     readonly CorridorSetup setup;
     readonly TrialDraw draw;
     Phase phase = Phase.Waiting;
-    CorridorTrial trial;
+    Trial trial;
     VirtualTrack track;
     QuietWait wait;
     bool wheelSeen, touched;   // touched: the lick detector's state now
@@ -398,7 +287,7 @@ public class CorridorState
         draw = new TrialDraw(setup);
     }
 
-    public CorridorTrial Trial { get { return trial; } }
+    public Trial Trial { get { return trial; } }
 
     public void Wheel(double cm)
     {
@@ -597,28 +486,9 @@ public class CorridorState
 }
 
 [Combinator]
-[Description("Reads sweep.json at Start: the sweep the tone files were made for and the rate every waveform was made at. Input: the audio device's rate (rig.yml's speakerArray.device.sampleRate). Stops the workflow naming the file when it is missing, and naming both rates when they differ.")]
-[WorkflowElementCategory(ElementCategory.Transform)]
-public class LoadSweep
-{
-    public LoadSweep()
-    {
-        SweepFile = @"waveforms\sweep.json";
-    }
-
-    [Description("sweep.json, relative to the workflow's folder (src).")]
-    public string SweepFile { get; set; }
-
-    public IObservable<Sweep> Process(IObservable<int> source)
-    {
-        return source.Select(rate => Sweep.Load(SweepFile, rate));
-    }
-}
-
-[Combinator]
 [Description("Checks the task at Go and makes what the trials are drawn from. Input: (task file, TrainingStage, rig.yml, sweep). Stops the workflow on a stage past the table, a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
-public class CreateCorridorSetup
+public class CheckTaskAtGo
 {
     public IObservable<CorridorSetup> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, LabRig, Sweep>> source)
     {
@@ -667,66 +537,6 @@ public class CorridorEvents
     {
         var kind = Kind;
         return source.Where(e => e.Kind == kind);
-    }
-}
-
-[Combinator]
-[Description("An Outcome event's trial row, stamped with the Harp time the outcome was known, for LogTrial.")]
-[WorkflowElementCategory(ElementCategory.Transform)]
-public class CreateTrialRow
-{
-    public IObservable<Timestamped<TrialRow>> Process(IObservable<CorridorEvent> source)
-    {
-        return source.Where(e => e.Kind == CorridorEventKind.Outcome).Select(e => Timestamped.Create(e.Row, e.Seconds));
-    }
-}
-
-[Combinator]
-[Description("A Pip event's BonsaiData_StimulusState row, stamped with its Harp time.")]
-[WorkflowElementCategory(ElementCategory.Transform)]
-public class CreateStimulusRow
-{
-    public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<CorridorEvent> source)
-    {
-        return source.Where(e => e.Kind == CorridorEventKind.Pip).Select(e => Timestamped.Create(e.Frame.Row, e.Seconds));
-    }
-}
-
-[Combinator]
-[Description("A trial's Zapit StartStimulus: its condition, the laser on or off (galvos and masking light either way, 0 mW off), continuous: Bonsai stops it at the outcome or the cap.")]
-[WorkflowElementCategory(ElementCategory.Transform)]
-public class ZapitTrialCommand
-{
-    [Description("Whether the Zapit DAQ waits for the ZapitTrigger line (rig.yml's zapit.hardwareTriggered).")]
-    public bool HardwareTriggered { get; set; }
-
-    public IObservable<ZapitCommand> Process(IObservable<CorridorEvent> source)
-    {
-        var hardware = HardwareTriggered;
-        return source.Select(e => Build(e.Trial, hardware));
-    }
-
-    public static ZapitCommand Build(CorridorTrial trial, bool hardwareTriggered)
-    {
-        return ZapitTrial.Command(trial.trialNumber, trial.laserCondition, trial.laserOn, trial.laserPowerMw, hardwareTriggered, 0);
-    }
-}
-
-[Combinator]
-[Description("A pip's buffer for the mixer: the tone file's row for the pip's bin (input: the Pip event and the tone rows), silent when the pip's ToneGain is 0.")]
-[WorkflowElementCategory(ElementCategory.Transform)]
-public class PipBuffer
-{
-    public IObservable<Mat> Process(IObservable<Tuple<CorridorEvent, IList<Mat>>> source)
-    {
-        return source.Select(x =>
-        {
-            var tone = x.Item2[x.Item1.Frame.Bin];
-            if (x.Item1.Frame.ToneGain > 0) return tone;
-            var silent = new Mat(tone.Size, tone.Depth, tone.Channels);
-            silent.SetZero();
-            return silent;
-        });
     }
 }
 

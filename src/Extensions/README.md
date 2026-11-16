@@ -1,0 +1,10 @@
+﻿# Local Bonsai extensions
+
+Bonsai compiles every `*.cs` file here when `src\main.bonsai` loads, as C# 5 (`src\Extensions.csproj` sets `LangVersion` 5): no `$"..."`, `?.`, `nameof`, expression-bodied members or property initialisers. `tests\Extensions.Tests` (MSTest, net472, C# 5) tests them; `scripts\check-workflow.ps1` compiles and runs both. Everything shared between dome workflows lives in lib-open-rigs (see the README's Shared Blocks); only this task's logic is here.
+
+| File | What it holds |
+|---|---|
+| `TrialLogic.cs` | `Trial` (lib-open-rigs' `IZapitTrial`, for its `ZapitTrialCommand`); `CorridorSetup` (what the trials are drawn from, checked at Go by `CheckTaskAtGo`: the stage in the table, the reward zones inside the sweep, the optogenetics rules); `TrialDraw` (each trial's draw, its interval, lead, quiet waits and Zapit condition); `VirtualTrack` (the distance along the track); `CorridorState` and `CorridorTask` (the trials on the Harp clock, the wheel, the left lick detector and Zapit's replies, as `CorridorEvent`s of each `CorridorEventKind`, picked by `CorridorEvents`); `StopZapit` |
+| `TrialRow.cs` | `TrialRow`, one `BonsaiData_Trial` row, its fields the columns of `schemas	rial-columns.yml` in order (a test holds them equal), and `CreateTrialRow` |
+| `Sweep.cs` | The tone sweep (`Sweep`, read at Start from `waveforms\sweep.json` by `LoadSweep` and checked against rig.yml's rate), each pip's buffer (`PipBuffer`) and its `BonsaiData_StimulusState` row (`StimulusFrame`, `StimulusStateRow`, `CreateStimulusRow`) |
+| `*.Generated.cs` | Bonsai.Sgen classes for the task file (rig.yml's are OpenRigs.Devices' `OpenRigs.Devices.Rigs`); regenerate with `uv run regenerate-schemas`, never edit |
