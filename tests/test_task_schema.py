@@ -357,3 +357,25 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
     assert OptogeneticsConfig.model_fields["trigger_hold_seconds"].metadata[0].ge == ZAPIT_MAX_RAMP_DOWN_SECONDS
     with pytest.raises(pydantic.ValidationError, match="greater than or equal to 0.5"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params(triggerHoldSeconds=ZAPIT_MAX_RAMP_DOWN_SECONDS - 0.1))
+
+
+@pytest.mark.parametrize("where, key, value", [
+    ((), "positionStepCm", 0), (("trainingStages", 0), "wrongLickLimit", -1), (("trainingStages", 0), "rewardSizeUl", 0),
+    (("trialWeights",), "visual", -1)])
+def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
+    # Round 3 F17: the task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
+    data = task()["taskParameters"]
+    block = data
+    for step in where:
+        block = block[step]
+    block[key] = value
+    with pytest.raises(pydantic.ValidationError):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(data)
+    source = (ROOT / "src" / "ucl_open_coen_dome_navigation" / "task.py").read_text(encoding="utf-8")
+    assert not re.search(r"\w: (float|bool|str|Int)\b", source)
+
+
+def test_the_backlog_has_the_pupil_gain_decided():
+    # Round 3 F6: the Pupil camera's gain is 0 (Pip), not the 20 the BACKLOG kept.
+    text = (ROOT / "BACKLOG.md").read_text(encoding="utf-8")
+    assert "gain stays 20" not in text and "Pupil camera's gain is 0" in text

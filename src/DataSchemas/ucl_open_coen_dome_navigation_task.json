@@ -455,7 +455,7 @@
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskParameters": {
-      "description": "Task params.",
+      "description": "Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, truncation, optogenetics and the training stages.",
       "properties": {
         "rngSeed": {
           "default": null,

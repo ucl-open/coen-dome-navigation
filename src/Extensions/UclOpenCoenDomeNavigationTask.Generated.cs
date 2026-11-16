@@ -1579,10 +1579,12 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Task params.
+    /// Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, truncation, optogenetics and the training stages.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Task params.")]
+    [System.ComponentModel.DescriptionAttribute("Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds," +
+        " the trial structure, the penalty, truncation, optogenetics and the training sta" +
+        "ges.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class UclOpenCoenDomeNavigationTaskParameters

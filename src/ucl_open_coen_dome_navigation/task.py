@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Literal
 
+# Integers are int: open_rigs' Int carries its own range, which drops a Field's ge or gt (round 3 F17).
+from open_rigs.core.base import Bool, Double, String
 from open_rigs.core.task import BackgroundNoise, Optogenetics, Penalty, QuietWait, RewardTone, StimulusSound, Task, TaskBlock, TaskParameters
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
 from open_rigs.rigs.lab_rig import MAX_REWARD_UL
@@ -34,13 +36,13 @@ def sweep() -> dict:
 class TrialStructure(TaskBlock):
     """Timing of each trial."""
 
-    iti_min_seconds: float = Field(
+    iti_min_seconds: Double = Field(
         default=2.0,
         ge=0,
         description="Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
     )
-    iti_max_seconds: float = Field(default=3.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)")
-    track_lengths_cm: list[float] = Field(
+    iti_max_seconds: Double = Field(default=3.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)")
+    track_lengths_cm: list[Double] = Field(
         default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
     )
 
@@ -59,7 +61,7 @@ class Truncation(TaskBlock):
     zone without the stimulus.
     """
 
-    sweep_fractions: list[float] = Field(
+    sweep_fractions: list[Double] = Field(
         default=[0.4, 0.6],
         min_length=1,
         description="Where the stimulus switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
@@ -83,12 +85,12 @@ class OptogeneticsConfig(Optogenetics):
     outcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.
     """
 
-    laser_max_seconds: float = Field(
+    laser_max_seconds: Double = Field(
         default=12.5,
         gt=0,
         description="Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus responseWindowSeconds), so it never ends the laser before the response window closes; on a stage without responseWindowSeconds a longer trial loses its laser before the outcome",
     )
-    trigger_hold_seconds: float = Field(
+    trigger_hold_seconds: Double = Field(
         default=1.0,
         ge=ZAPIT_MAX_RAMP_DOWN_SECONDS,
         description=f"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least {ZAPIT_MAX_RAMP_DOWN_SECONDS}, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger",
@@ -131,30 +133,30 @@ class TrialTypeWeights(TaskBlock):
 class TrainingStage(QuietWait):
     """One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting."""
 
-    label: str = Field(description="The stage's name, for people")
+    label: String = Field(description="The stage's name, for people")
     trial_weights: TrialTypeWeights | None = Field(
         default=None,
         description="This stage's own trialWeights, replacing the task's (the mouse's) for this stage; null: the task's trialWeights apply",
     )
-    reward_floor_hz: float = Field(ge=1, le=25000, description="Lower frequency of the reward zone, in Hz")
-    reward_ceiling_hz: float = Field(ge=1, le=25000, description="Upper frequency of the reward zone, in Hz")
-    reward_size_ul: float = Field(
+    reward_floor_hz: Double = Field(ge=1, le=25000, description="Lower frequency of the reward zone, in Hz")
+    reward_ceiling_hz: Double = Field(ge=1, le=25000, description="Upper frequency of the reward zone, in Hz")
+    reward_size_ul: Double = Field(
         gt=0,
         le=MAX_REWARD_UL,
         description=f"Microlitres each reward gives, at most {MAX_REWARD_UL} (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start",
     )
-    lick_to_reward: bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
+    lick_to_reward: Bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
-    penalise_wrong_zone: bool = Field(
+    penalise_wrong_zone: Bool = Field(
         description="Whether a trial that ends outside the reward zone is penalised. A trial that runs out of time or track with the frequency in the zone is penalised on every stage"
     )
-    response_window_seconds: float | None = Field(
+    response_window_seconds: Double | None = Field(
         default=None, gt=0, description="The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes"
     )
-    track_end_ends_trial: bool = Field(description="Whether reaching the end of the track ends the trial")
-    track_length_scale: float = Field(gt=0, description="The drawn track length is multiplied by this")
-    frequency_drift: bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
-    truncated_trial_fraction: float = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")
+    track_end_ends_trial: Bool = Field(description="Whether reaching the end of the track ends the trial")
+    track_length_scale: Double = Field(gt=0, description="The drawn track length is multiplied by this")
+    frequency_drift: Bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
+    truncated_trial_fraction: Double = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")
 
     @model_validator(mode="after")
     def _zone_ordered(self) -> "TrainingStage":
@@ -164,7 +166,7 @@ class TrainingStage(QuietWait):
 
 
 class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
-    """Task params."""
+    """Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, truncation, optogenetics and the training stages."""
 
     trial_weights: TrialTypeWeights = Field(
         default=TrialTypeWeights(visual=0, auditory=1, audiovisual_coherent=0, audiovisual_conflict=0, neutral=0),
