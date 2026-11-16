@@ -231,8 +231,10 @@ def test_the_readme_lists_every_open_rigs_block():
     assert lint.readme_missing_blocks(WORKFLOW) == []
 
 
-def test_the_workflow_declares_every_command_it_handles():
-    assert lint.undeclared_commands(WORKFLOW) == []
+def test_every_command_is_declared_once_by_the_task_or_its_piece():
+    # The pieces declare their own (LickSpoutStage's spout commands and SpoutStepSize, ManualRewards' RewardLeft
+    # and RewardRight, 16 Nov 2026): a task's copy stops ControlServer at Start.
+    assert lint.undeclared_commands(WORKFLOW) == [] and lint.declared_twice(WORKFLOW) == []
 
 
 def test_spout_step_size_is_the_lick_spout_stage_s():

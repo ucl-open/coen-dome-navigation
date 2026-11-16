@@ -2,6 +2,10 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-16 Pieces declare their own commands and parameters (lib-open-rigs def14f6; Control .13, Devices .27)
+
+- ExperimentControl declares only `TrainingStage`: `SpoutStepSize` and the 14 spout commands are DomeHardware's `LickSpoutStage`'s, `RewardLeft` and `RewardRight` `ManualRewards'`, each declared by its piece (`DeclareControls`), and ControlServer stops at Start on a name declared twice. `tests\test_workflow.py` holds the task to `undeclared_commands` and `declared_twice`.
+
 ## 2026-11-16 Device-pieces test on BLUE-OPTO-2 (runs 001E3, 001E4; lib eccf28a, this repo 1ba43e4)
 
 - Passed, 40 s test runs, no mouse: launch accepted, Ready 20-21 s, expected files, camera k 0 and 0 gaps, CSV closed, RewardLeft row, DO1-DO3 low at Start, Bonsai exit 1.6 s after Stop, no ffmpeg left. Camera USB serials are rig.yml's serialNumber in hex.

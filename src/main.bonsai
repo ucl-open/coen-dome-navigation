@@ -34,7 +34,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, SpoutStepSize settable live (DomeHardware's LickSpoutStage takes it and shows its default), RewardLeft and RewardRight (2.5 ul through the valve's calibration before and during a run, BehaviorBoard.ManualRewards: Pip's fixed manual drop, 15 Nov 2026), the spout commands (handled by DomeHardware's LickSpoutStage) at any time; LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath, the task file rig-control wrote at launch and writes again at Go with the form's edits) at Start and RunSettings (subject, session) at Go, and TrainingStage is published at Go.</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, and TrainingStage, the task's one parameter. The pieces declare their own (16 Nov 2026): SpoutStepSize, settable live, and the spout commands are DomeHardware's LickSpoutStage's, RewardLeft and RewardRight (2.5 ul through the valve's calibration before and during a run: Pip's fixed manual drop, 15 Nov 2026) BehaviorBoard.ManualRewards'; LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath, the task file rig-control wrote at launch and writes again at Go with the form's edits) at Start and RunSettings (subject, session) at Go, and TrainingStage is published at Go.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -56,80 +56,8 @@
                   <Maximum>5</Maximum>
                   <WholeNumber>true</WholeNumber>
                 </Parameter>
-                <Parameter>
-                  <Name>SpoutStepSize</Name>
-                  <Value />
-                  <Description>Motor steps each spout nudge command moves, taken live while ready (DomeHardware's LickSpoutStage); until set, its default, 150.</Description>
-                  <Minimum>1</Minimum>
-                  <WholeNumber>true</WholeNumber>
-                </Parameter>
               </Parameters>
-              <Commands>
-                <Command>
-                  <Name>RewardLeft</Name>
-                  <Description>Give 2.5 ul on the left spout, through its valve's calibration (BehaviorBoard.ManualRewards).</Description>
-                </Command>
-                <Command>
-                  <Name>RewardRight</Name>
-                  <Description>Give 2.5 ul on the right spout, through its valve's calibration (BehaviorBoard.ManualRewards).</Description>
-                </Command>
-                <Command>
-                  <Name>SpoutsHome</Name>
-                  <Description>Move both spouts to the home position.</Description>
-                </Command>
-                <Command>
-                  <Name>SpoutsIn</Name>
-                  <Description>Move both spouts to the in position.</Description>
-                </Command>
-                <Command>
-                  <Name>SpoutsOut</Name>
-                  <Description>Move both spouts to the out position.</Description>
-                </Command>
-                <Command>
-                  <Name>SaveSpoutPositions</Name>
-                  <Description>Save the spouts' in positions to this mouse's file.</Description>
-                </Command>
-                <Command>
-                  <Name>LeftUp</Name>
-                  <Description>Nudge the left spout up by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>LeftDown</Name>
-                  <Description>Nudge the left spout down by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>RightUp</Name>
-                  <Description>Nudge the right spout up by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>RightDown</Name>
-                  <Description>Nudge the right spout down by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>LeftFront</Name>
-                  <Description>Nudge the left spout forward by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>LeftBack</Name>
-                  <Description>Nudge the left spout back by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>RightFront</Name>
-                  <Description>Nudge the right spout forward by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>RightBack</Name>
-                  <Description>Nudge the right spout back by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>BaseLeft</Name>
-                  <Description>Nudge the spout base left by SpoutStepSize.</Description>
-                </Command>
-                <Command>
-                  <Name>BaseRight</Name>
-                  <Description>Nudge the spout base right by SpoutStepSize.</Description>
-                </Command>
-              </Commands>
+              <Commands />
             </Expression>
             <Expression xsi:type="ExternalizedMapping">
               <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Start for the background noise and again at Go with the form's edits; from the editor, config\task-abstract-av-corridor.yml." />
