@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-# Integers are int: open_rigs' Int carries its own range, which drops a Field's ge or gt (round 3 F17).
+# Integers are int: open_rigs' Int carries its own range, which drops a Field's ge or gt.
 from open_rigs.core.base import Bool, Double, String
 from open_rigs.core.task import BackgroundNoise, Optogenetics, Penalty, QuietWait, RewardTone, StimulusSound, Task, TaskBlock, TaskParameters
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
@@ -75,7 +75,7 @@ class Truncation(TaskBlock):
         return value
 
 
-class OptogeneticsConfig(Optogenetics):
+class OptogeneticsSettings(Optogenetics):
     """Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.
 
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
@@ -185,7 +185,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
     penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
     truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
-    optogenetics: OptogeneticsConfig = Field(description="Zapit optogenetic stimulation")
+    optogenetics: OptogeneticsSettings = Field(description="Zapit optogenetic stimulation")
     training_stages: list[TrainingStage] = Field(
         description="Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go"
     )
@@ -196,7 +196,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         # response window (responseWindowSeconds, counted from the first tone pip) plus laser_to_stimulus_seconds (zapit-v2)
         opto = self.optogenetics
         limits = [stage.response_window_seconds for stage in self.training_stages if stage.response_window_seconds is not None]
-        if not opto.use_zapit or not limits:
+        if not opto.enabled or not limits:
             return self
         shortest = max(limits) + opto.laser_to_stimulus_seconds + LASER_MAX_MARGIN_SECONDS
         if opto.laser_max_seconds < shortest - 1e-9:

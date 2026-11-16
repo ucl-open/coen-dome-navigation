@@ -235,12 +235,12 @@ namespace UclOpenCoenDomeNavigationTask
     outcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class OptogeneticsConfig
+    public partial class OptogeneticsSettings
     {
     
-        private bool _useZapit;
+        private bool _enabled;
     
-        private string _zapitConfigPath;
+        private string _zapitConditionsPath;
     
         private double? _laserPowerMw;
     
@@ -254,18 +254,18 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _triggerHoldSeconds;
     
-        public OptogeneticsConfig()
+        public OptogeneticsSettings()
         {
-            _useZapit = false;
-            _zapitConfigPath = "";
+            _enabled = false;
+            _zapitConditionsPath = "";
             _laserMaxSeconds = 12.5D;
             _triggerHoldSeconds = 1D;
         }
     
-        protected OptogeneticsConfig(OptogeneticsConfig other)
+        protected OptogeneticsSettings(OptogeneticsSettings other)
         {
-            _useZapit = other._useZapit;
-            _zapitConfigPath = other._zapitConfigPath;
+            _enabled = other._enabled;
+            _zapitConditionsPath = other._zapitConditionsPath;
             _laserPowerMw = other._laserPowerMw;
             _laserOnProbability = other._laserOnProbability;
             _laserToStimulusSeconds = other._laserToStimulusSeconds;
@@ -275,43 +275,40 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Whether Zapit runs this experiment: every trial sends it a condition from the conditions file (laser off at 0 mW on laser-off trials: the galvos move and the masking light shows), and the launching app checks Zapit is answering before Go
+        /// Whether this is an optogenetics experiment, Zapit running it: every trial sends it a condition from the conditions file (laser off at 0 mW on laser-off trials: the galvos move and the masking light shows), and the launching app checks Zapit is answering before Go
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("useZapit")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="useZapit")]
-        [System.ComponentModel.DescriptionAttribute("Whether Zapit runs this experiment: every trial sends it a condition from the con" +
-            "ditions file (laser off at 0 mW on laser-off trials: the galvos move and the mas" +
-            "king light shows), and the launching app checks Zapit is answering before Go")]
-        public bool UseZapit
+        [Newtonsoft.Json.JsonPropertyAttribute("enabled")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="enabled")]
+        [System.ComponentModel.DescriptionAttribute(@"Whether this is an optogenetics experiment, Zapit running it: every trial sends it a condition from the conditions file (laser off at 0 mW on laser-off trials: the galvos move and the masking light shows), and the launching app checks Zapit is answering before Go")]
+        public bool Enabled
         {
             get
             {
-                return _useZapit;
+                return _enabled;
             }
             set
             {
-                _useZapit = value;
+                _enabled = value;
             }
         }
     
         /// <summary>
-        /// Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions, numbered 1 to N with no gaps. Named ...ConfigPath so the launching app keeps a copy beside the task file at Go
+        /// Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions, numbered 1 to N with no gaps. The launching app keeps a copy beside the task file at Go
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("zapitConfigPath")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="zapitConfigPath")]
+        [Newtonsoft.Json.JsonPropertyAttribute("zapitConditionsPath")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="zapitConditionsPath")]
         [System.ComponentModel.DescriptionAttribute("Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01," +
             " stimLocations02, ... entries are the conditions, numbered 1 to N with no gaps. " +
-            "Named ...ConfigPath so the launching app keeps a copy beside the task file at Go" +
-            "")]
-        public string ZapitConfigPath
+            "The launching app keeps a copy beside the task file at Go")]
+        public string ZapitConditionsPath
         {
             get
             {
-                return _zapitConfigPath;
+                return _zapitConditionsPath;
             }
             set
             {
-                _zapitConfigPath = value;
+                _zapitConditionsPath = value;
             }
         }
     
@@ -426,20 +423,20 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
-        public System.IObservable<OptogeneticsConfig> Generate()
+        public System.IObservable<OptogeneticsSettings> Generate()
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new OptogeneticsConfig(this)));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new OptogeneticsSettings(this)));
         }
     
-        public System.IObservable<OptogeneticsConfig> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<OptogeneticsSettings> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new OptogeneticsConfig(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new OptogeneticsSettings(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("UseZapit = " + _useZapit + ", ");
-            stringBuilder.Append("ZapitConfigPath = " + _zapitConfigPath + ", ");
+            stringBuilder.Append("Enabled = " + _enabled + ", ");
+            stringBuilder.Append("ZapitConditionsPath = " + _zapitConditionsPath + ", ");
             stringBuilder.Append("LaserPowerMw = " + _laserPowerMw + ", ");
             stringBuilder.Append("LaserOnProbability = " + _laserOnProbability + ", ");
             stringBuilder.Append("LaserToStimulusSeconds = " + _laserToStimulusSeconds + ", ");
@@ -1608,7 +1605,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private Truncation _truncation;
     
-        private OptogeneticsConfig _optogenetics;
+        private OptogeneticsSettings _optogenetics;
     
         private System.Collections.Generic.List<TrainingStage> _trainingStages;
     
@@ -1622,7 +1619,7 @@ namespace UclOpenCoenDomeNavigationTask
             _trialStructure = new TrialStructure();
             _penalty = new Penalty();
             _truncation = new Truncation();
-            _optogenetics = new OptogeneticsConfig();
+            _optogenetics = new OptogeneticsSettings();
             _trainingStages = new System.Collections.Generic.List<TrainingStage>();
         }
     
@@ -1822,7 +1819,7 @@ namespace UclOpenCoenDomeNavigationTask
         [Newtonsoft.Json.JsonPropertyAttribute("optogenetics", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="optogenetics")]
         [System.ComponentModel.DescriptionAttribute("Zapit optogenetic stimulation")]
-        public OptogeneticsConfig Optogenetics
+        public OptogeneticsSettings Optogenetics
         {
             get
             {
@@ -1923,9 +1920,9 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<BackgroundNoise>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<OptogeneticsConfig> source)
+        public System.IObservable<string> Process(System.IObservable<OptogeneticsSettings> source)
         {
-            return Process<OptogeneticsConfig>(source);
+            return Process<OptogeneticsSettings>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<Penalty> source)
@@ -1984,7 +1981,7 @@ namespace UclOpenCoenDomeNavigationTask
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BackgroundNoise>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
@@ -2053,9 +2050,9 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<BackgroundNoise>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<OptogeneticsConfig> source)
+        public System.IObservable<string> Process(System.IObservable<OptogeneticsSettings> source)
         {
-            return Process<OptogeneticsConfig>(source);
+            return Process<OptogeneticsSettings>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<Penalty> source)
@@ -2114,7 +2111,7 @@ namespace UclOpenCoenDomeNavigationTask
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskLogic>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<BackgroundNoise>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsConfig>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]

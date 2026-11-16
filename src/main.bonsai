@@ -150,6 +150,7 @@
               <Combinator xsi:type="rx:Zip" />
             </Expression>
             <Expression xsi:type="Combinator">
+              <Name>CheckTaskAtGo</Name>
               <Combinator xsi:type="ext:CheckTaskAtGo" />
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
@@ -540,6 +541,7 @@
               <Name>ZapitReplies</Name>
             </Expression>
             <Expression xsi:type="Combinator">
+              <Name>RunTrials</Name>
               <Combinator xsi:type="ext:RunTrials" />
             </Expression>
             <Expression xsi:type="MulticastSubject">
@@ -550,7 +552,7 @@
             </Expression>
             <Expression xsi:type="rx:Condition">
               <Name>Optogenetics?</Name>
-              <Description>An optogenetics experiment: the rules have a laser (optogenetics.useZapit).</Description>
+              <Description>An optogenetics experiment: the rules have a laser (optogenetics.enabled).</Description>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="WorkflowInput">

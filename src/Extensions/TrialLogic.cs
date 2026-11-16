@@ -116,7 +116,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var opto = task.Optogenetics;
         // Every StartStimulus continuous: the laser on from the trigger until the outcome or LaserCap, the trigger line
         // (and the masking light on it) held triggerHoldSeconds past the outcome, the next trial armed once it falls.
-        laser = opto.UseZapit ? LaserTiming.UntilOutcome(hardwareTriggered, opto.TriggerHoldSeconds, opto.LaserMaxSeconds) : null;
+        laser = opto.Enabled ? LaserTiming.UntilOutcome(hardwareTriggered, opto.TriggerHoldSeconds, opto.LaserMaxSeconds) : null;
     }
 
     /// <summary>The rules for a task file's stage with the sweep and Zapit's hardware triggering; throws naming every
@@ -307,7 +307,7 @@ public class TrialDraw
         this.task = task;
         this.stage = CheckTask(task, stage, sweep);
         var opto = task.Optogenetics;
-        if (opto.UseZapit) conditionCount = zapitConditionCount != null ? zapitConditionCount(opto.ZapitConfigPath) : ZapitConditions.Check(opto.ZapitConfigPath);
+        if (opto.Enabled) conditionCount = zapitConditionCount != null ? zapitConditionCount(opto.ZapitConditionsPath) : ZapitConditions.Check(opto.ZapitConditionsPath);
         Seed = RngSeed.Resolve(task.RngSeed);
         random = new Random(Seed);
     }
@@ -351,11 +351,11 @@ public class TrialDraw
         if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage '{2}''s {3}", lead, after, row.Label, row.ResponseWindowSeconds.HasValue ? "responseWindowSeconds" : "limit for a stage without responseWindowSeconds"));
         var hold = task.Optogenetics.TriggerHoldSeconds;
         var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;
-        if (task.Optogenetics.UseZapit && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitTrial.ReplyMarginSeconds));
+        if (task.Optogenetics.Enabled && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitTrial.ReplyMarginSeconds));
         if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage '" + row.Label + "' truncates trials but truncation.sweepFractions is empty");
         if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage '{0}''s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", row.Label, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
         var opto = task.Optogenetics;
-        if (opto.UseZapit)
+        if (opto.Enabled)
         {
             if (!(opto.LaserPowerMw > 0)) problems.Add("optogenetics.laserPowerMw must be a power in mW above 0 with optogenetics on");
             number("optogenetics.laserMaxSeconds", opto.LaserMaxSeconds, true);
@@ -399,10 +399,10 @@ public class TrialDraw
         t.trackEndEndsTrial = stage.TrackEndEndsTrial;
         t.frequencyDrift = stage.FrequencyDrift;
         var opto = task.Optogenetics;
-        t.optogenetics = opto.UseZapit;
+        t.optogenetics = opto.Enabled;
         // The lead applies in every experiment, so timing never reveals Zapit (Pip, 13 Nov 2026).
         t.firstPipBeep = Math.Max((int)Math.Round(opto.LaserToStimulusSeconds / TrialRules.BeepSeconds), 0);
-        if (opto.UseZapit)
+        if (opto.Enabled)
         {
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
             ZapitTrial.Draw(random, t.trialNumber, conditionCount, opto.TrialsBeforeLaser, opto.LaserOnProbability, opto.LaserPowerMw.Value,

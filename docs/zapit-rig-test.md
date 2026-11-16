@@ -15,7 +15,7 @@ rig-control, `test` mouse, Training Stage 4 (Tom's 5), optogenetics unticked; ~2
 
 ## 2. Optogenetics on
 
-Same, optogenetics ticked with `zapitConfigPath` and `laserPowerMw`; at least 30 trials (the first 20, `trialsBeforeLaser`, are all 0 mW: galvos move, laser off). With nobody at the wheel every trial ends as NoResponse 12 s after its first pip, when the stage's response window (`responseWindowSeconds`) closes.
+Same, optogenetics ticked with `zapitConditionsPath` and `laserPowerMw`; at least 30 trials (the first 20, `trialsBeforeLaser`, are all 0 mW: galvos move, laser off). With nobody at the wheel every trial ends as NoResponse 12 s after its first pip, when the stage's response window (`responseWindowSeconds`) closes.
 **Pass:**
 - `BonsaiData_ZapitReplies` log: StartStimulus (command 1) then StopStimulus (command 0) on every trial, alternating, `isError` False.
 - Trial rows: `laserCondition` on every trial; `laserPowerMw` the task's `laserPowerMw` on about 40% of trials after the first 20, 0 on the rest.
@@ -30,7 +30,7 @@ Step 2 on the rig with `hardwareTriggered: true`.
 ## 4. Failures (each should stop the experiment with a message)
 
 - A different config (different number of conditions) loaded in Zapit, at Go.
-- A config with a ramp-down under 100 ms or over 500 ms, named in `zapitConfigPath` (and loaded in Zapit), at Go.
+- A config with a ramp-down under 100 ms or over 500 ms, named in `zapitConditionsPath` (and loaded in Zapit), at Go.
 - A non-`test` mouse on a rig with `hardwareTriggered: false`, at Go.
 - Zapit closed mid-experiment.
 

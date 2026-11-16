@@ -21,30 +21,30 @@
       "title": "BackgroundNoise",
       "type": "object"
     },
-    "OptogeneticsConfig": {
+    "OptogeneticsSettings": {
       "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the\ntrigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first\ntone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's\noutcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.",
       "if": {
         "additionalProperties": true,
         "properties": {
-          "useZapit": {
+          "enabled": {
             "const": true
           }
         },
         "required": [
-          "useZapit"
+          "enabled"
         ]
       },
       "properties": {
-        "useZapit": {
+        "enabled": {
           "default": false,
-          "description": "Whether Zapit runs this experiment: every trial sends it a condition from the conditions file (laser off at 0 mW on laser-off trials: the galvos move and the masking light shows), and the launching app checks Zapit is answering before Go",
-          "title": "UseZapit",
+          "description": "Whether this is an optogenetics experiment, Zapit running it: every trial sends it a condition from the conditions file (laser off at 0 mW on laser-off trials: the galvos move and the masking light shows), and the launching app checks Zapit is answering before Go",
+          "title": "Enabled",
           "type": "boolean"
         },
-        "zapitConfigPath": {
+        "zapitConditionsPath": {
           "default": "",
-          "description": "Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions, numbered 1 to N with no gaps. Named ...ConfigPath so the launching app keeps a copy beside the task file at Go",
-          "title": "ZapitConfigPath",
+          "description": "Path to the Zapit conditions file loaded in Zapit. Its top-level stimLocations01, stimLocations02, ... entries are the conditions, numbered 1 to N with no gaps. The launching app keeps a copy beside the task file at Go",
+          "title": "ZapitConditionsPath",
           "type": "string"
         },
         "laserPowerMw": {
@@ -102,7 +102,7 @@
       "then": {
         "additionalProperties": true,
         "properties": {
-          "zapitConfigPath": {
+          "zapitConditionsPath": {
             "minLength": 1
           },
           "laserPowerMw": {
@@ -113,7 +113,7 @@
           "laserPowerMw"
         ]
       },
-      "title": "OptogeneticsConfig",
+      "title": "OptogeneticsSettings",
       "type": "object"
     },
     "Penalty": {
@@ -536,7 +536,7 @@
           "description": "Where the stimulus switches off on a truncated trial"
         },
         "optogenetics": {
-          "$ref": "#/$defs/OptogeneticsConfig",
+          "$ref": "#/$defs/OptogeneticsSettings",
           "description": "Zapit optogenetic stimulation",
           "title": "Optogenetics"
         },

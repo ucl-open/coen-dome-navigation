@@ -175,7 +175,7 @@ def test_a_name_that_only_contains_ours_is_another_workflow_and_no_repo_gives_no
 
 
 def test_a_summary_with_no_trials_is_not_an_experiment_and_one_without_rewarded_is_unreadable(tmp_path):
-    # Round 3 F15: rewarded is read from its own column; a summary without it (an older format) is named, never
+    # Rewarded is read from its own column; a summary without it (an older format) is named, never
     # passed over, as passing it over offered a trained mouse Stage 0.
     put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, []))
     assert read(tmp_path, "r2") == ([], [])
@@ -189,7 +189,7 @@ def test_rewarded_is_the_rewarded_column():
     assert read_experiment(s).rewarded == [False, True]
 
 
-def test_the_opto_columns_are_read():
+def test_the_optogenetics_columns_are_read():
     # NaN is written as null
     s = summary("ses-005D1_2026-11-04T10-00-00", "r5", 4, [["auditory", True, 2.5, 3], ["auditory", False, None, None]],
                 columns=("trialType", "rewarded", "laserPowerMw", "laserCondition"))

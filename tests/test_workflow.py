@@ -69,7 +69,7 @@ def test_the_launch_properties():
 
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
-    # trialType as coen-dome-decision-making reports it (round 3 F7): the view's type_metric.
+    # trialType as coen-dome-decision-making reports it: the view's type_metric.
     assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition"}
     # trainingStage is OpenRigs.Control's TrainingStage's (16 Nov 2026).
     assert lint.training_stage_problems(WORKFLOW) == []
@@ -125,7 +125,7 @@ def test_the_trigger_event_raises_the_line_and_starts_a_software_triggered_zapit
 
 
 def test_zapit_runs_only_in_an_optogenetics_experiment_so_a_rig_yml_without_a_zapit_block_works():
-    # A task with useZapit false on a rig.yml with no zapit block must build and run: the arm, the laser's stop and the
+    # A task with optogenetics.enabled false on a rig.yml with no zapit block must build and run: the arm, the laser's stop and the
     # rig.yml HardwareTriggered mapping (Zapit is null there) sit under the Optogenetics? gate, as in coen-dome-decision-making.
     nodes, edges = _scope(group("TaskLogic"))
     (gate,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "Optogenetics?"]
@@ -381,7 +381,7 @@ def test_run_trials_reads_both_lick_streams():
 
 
 def test_the_extensions_readme_names_every_public_class():
-    # Round 3 F18: the README had fallen behind the code (classes left out, the lick inputs misdescribed).
+    # The README had fallen behind the code (classes left out, the lick inputs misdescribed).
     import re
 
     folder = Path(__file__).parents[1] / "src" / "Extensions"

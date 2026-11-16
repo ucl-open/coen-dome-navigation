@@ -45,8 +45,8 @@ static class Fixture
 
     public static void Opto(UclOpenCoenDomeNavigationTaskParameters task)
     {
-        task.Optogenetics.UseZapit = true;
-        task.Optogenetics.ZapitConfigPath = "conditions.yml";
+        task.Optogenetics.Enabled = true;
+        task.Optogenetics.ZapitConditionsPath = "conditions.yml";
         task.Optogenetics.LaserPowerMw = 2.0;
     }
 }
@@ -106,7 +106,7 @@ public class TrialDrawTests
     [TestMethod]
     public void TheRulesAreReadOnlyAndTheDrawChecksTheTask()
     {
-        // Round 3 F11: as coen-dome-decision-making's, no public mutable fields, the checks in TrialDraw.CheckTask.
+        // As coen-dome-decision-making's, no public mutable fields, the checks in TrialDraw.CheckTask.
         Assert.AreEqual(0, typeof(TrialRules).GetFields(BindingFlags.Public | BindingFlags.Instance).Length);
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => TrialDraw.CheckTask(Fixture.Task(), 6, Fixture.Sweep())).Message, "TrainingStage is 6");
         Assert.AreEqual(Fixture.Task().TrainingStages[2].Label, TrialDraw.CheckTask(Fixture.Task(), 2, Fixture.Sweep()).Label);

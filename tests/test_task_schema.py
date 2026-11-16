@@ -14,7 +14,7 @@ from ucl_open_coen_dome_navigation import waveforms
 from ucl_open_coen_dome_navigation.task import (
     BEEP_SECONDS,
     LASER_MAX_MARGIN_SECONDS,
-    OptogeneticsConfig,
+    OptogeneticsSettings,
     UclOpenCoenDomeNavigationTaskLogic,
     UclOpenCoenDomeNavigationTaskParameters,
 )
@@ -136,7 +136,7 @@ def _closed(node):
     return node
 
 
-def test_the_schema_refuses_zapit_ticked_with_no_config_path():
+def test_the_schema_refuses_zapit_ticked_with_no_conditions_path():
     # rig-control checks the task file against the schema, not the model.
     validator = jsonschema.Draft202012Validator(_closed(json.loads(SCHEMA.read_text(encoding="utf-8"))))
 
@@ -146,20 +146,20 @@ def test_the_schema_refuses_zapit_ticked_with_no_config_path():
         return [e.message for e in validator.iter_errors(doc)]
 
     assert problems() == []
-    assert problems(useZapit=True, laserPowerMw=2.0) == ["'' should be non-empty"]
-    assert problems(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml") == ["None is not of type 'number'"]
-    assert problems(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0) == []
+    assert problems(enabled=True, laserPowerMw=2.0) == ["'' should be non-empty"]
+    assert problems(enabled=True, zapitConditionsPath=r"C:\Zapit\conditions.yml") == ["None is not of type 'number'"]
+    assert problems(enabled=True, zapitConditionsPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0) == []
 
 
 def test_the_optogenetics_block_has_pip_s_names():
-    names = ["useZapit", "zapitConfigPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserToStimulusSeconds",
+    names = ["enabled", "zapitConditionsPath", "laserPowerMw", "laserOnProbability", "laserMaxSeconds", "laserToStimulusSeconds",
              "triggerHoldSeconds", "trialsBeforeLaser"]
     assert list(task()["taskParameters"]["optogenetics"]) == names
 
 
 def test_rig_control_keeps_the_zapit_file():
     # rig-control copies a task field ending in ConfigPath beside the task file at Go (taskfile.keep_files).
-    assert [k for k in task()["taskParameters"]["optogenetics"] if k.endswith("Path")] == ["zapitConfigPath"]
+    assert [k for k in task()["taskParameters"]["optogenetics"] if k.endswith("Path")] == ["zapitConditionsPath"]
 
 
 def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
@@ -175,7 +175,7 @@ def test_a_trigger_hold_as_long_as_the_shortest_interval_is_refused():
     doc = task()
     doc["taskParameters"]["optogenetics"]["triggerHoldSeconds"] = 2.0
     UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
-    doc["taskParameters"]["optogenetics"].update(useZapit=True, zapitConfigPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0)
+    doc["taskParameters"]["optogenetics"].update(enabled=True, zapitConditionsPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0)
     with pytest.raises(pydantic.ValidationError, match="trigger_hold_seconds"):
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 
@@ -253,18 +253,18 @@ def test_a_reward_over_the_cap_is_refused():
 
 PARAMS = yaml.safe_load(TASK.read_text(encoding="utf-8"))["taskParameters"]
 TRIAL_LOGIC = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
-FILE_OPTO = OptogeneticsConfig.model_validate(PARAMS["optogenetics"]).model_dump()
+FILE_OPTO = OptogeneticsSettings.model_validate(PARAMS["optogenetics"]).model_dump()
 
 
-def opto(**fields) -> OptogeneticsConfig:
+def opto(**fields) -> OptogeneticsSettings:
     """The task file's optogenetics block with fields changed: laserOnProbability, laserToStimulusSeconds and trialsBeforeLaser have no default."""
-    return OptogeneticsConfig(**{**FILE_OPTO, **fields})
+    return OptogeneticsSettings(**{**FILE_OPTO, **fields})
 
 
 def params(window=None, **opto):
     """The task file's parameters with optogenetics on, every stage with a response window given this one."""
     doc = copy.deepcopy(PARAMS)
-    doc["optogenetics"].update({"useZapit": True, "zapitConfigPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
+    doc["optogenetics"].update({"enabled": True, "zapitConditionsPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
     if window is not None:
         for row in doc["trainingStages"]:
             if row["responseWindowSeconds"] is not None:
@@ -322,7 +322,7 @@ def test_a_cap_that_would_end_the_laser_before_the_window_closes_is_refused(limi
 def test_the_cap_rule_only_applies_with_optogenetics_on():
     doc = copy.deepcopy(PARAMS)
     doc["trainingStages"][3]["responseWindowSeconds"] = 30
-    assert UclOpenCoenDomeNavigationTaskParameters.model_validate(doc).optogenetics.use_zapit is False
+    assert UclOpenCoenDomeNavigationTaskParameters.model_validate(doc).optogenetics.enabled is False
 
 
 def test_laser_power_is_required_with_optogenetics_on_and_above_0():
@@ -354,7 +354,7 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
     # The longest ramp-down is lib-open-rigs' ZAPIT_MAX_RAMP_DOWN_SECONDS (ZapitConditions.MaximumRampDownSeconds), not a typed 0.5.
     from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
 
-    assert OptogeneticsConfig.model_fields["trigger_hold_seconds"].metadata[0].ge == ZAPIT_MAX_RAMP_DOWN_SECONDS
+    assert OptogeneticsSettings.model_fields["trigger_hold_seconds"].metadata[0].ge == ZAPIT_MAX_RAMP_DOWN_SECONDS
     with pytest.raises(pydantic.ValidationError, match="greater than or equal to 0.5"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params(triggerHoldSeconds=ZAPIT_MAX_RAMP_DOWN_SECONDS - 0.1))
 
@@ -363,7 +363,7 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
     ((), "positionStepCm", 0), (("trainingStages", 0), "wrongLickLimit", -1), (("trainingStages", 0), "rewardSizeUl", 0),
     (("trialWeights",), "visual", -1)])
 def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
-    # Round 3 F17: the task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
+    # The task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
     data = task()["taskParameters"]
     block = data
     for step in where:
@@ -376,6 +376,6 @@ def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
 
 
 def test_the_backlog_has_the_pupil_gain_decided():
-    # Round 3 F6: the Pupil camera's gain is 0 (Pip), not the 20 the BACKLOG kept.
+    # The Pupil camera's gain is 0 (Pip).
     text = (ROOT / "BACKLOG.md").read_text(encoding="utf-8")
     assert "gain stays 20" not in text and "Pupil camera's gain is 0" in text

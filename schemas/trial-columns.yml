@@ -1,6 +1,6 @@
 # What each BonsaiData_Trial column this workflow writes means. ExperimentManifest (TrialColumns) copies
 # this file into every experiment's manifest.json at Start, so each experiment carries the meaning of its
-# own trial log; open_rigs.trials reads it from there.
+# own trial log; open_rigs.trial_log reads it from there.
 #
 # Each column: type (int, double, bool or string), and where they apply values (the strings it may hold),
 # unit, description (what it is), note (this task's detail) and history (what it was before, dated). The names and types must also be on the lab's
@@ -10,7 +10,7 @@
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a duration or other quantity ends in its
 # unit (itiSeconds, rewardOfferedUl); never a stored latency.
 #
-# The first 18 columns, harpTime to laserTriggerTime, are the lab's shared block, its core with the opto and quietWait blocks (Pip, 14 Nov 2026),
+# The first 18 columns, harpTime to laserTriggerTime, are the lab's shared block, its core with the optogenetics and quietWait blocks (Pip, 14 Nov 2026),
 # defined once in lib-open-rigs open_rigs.rigs.trials: coen-dome-decision-making and
 # coen-dome-navigation list them in this order with these types, units and descriptions, word for word
 # (tests/test_trial_columns.py holds both), so one analysis reads both tasks.
@@ -124,7 +124,7 @@ endPositionCm:
 toneEndFrequencyHz:
   type: double
   unit: Hz
-  description: The sweep's frequency when the trial ended.
+  description: The tone sweep's frequency when the trial ended.
 visualEndSpatialFrequencyCpd:
   type: double
   unit: cycles/deg
