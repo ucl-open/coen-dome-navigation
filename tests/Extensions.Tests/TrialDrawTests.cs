@@ -134,6 +134,57 @@ public class TrialDrawTests
             Assert.AreEqual(x.trackLengthCm, y.trackLengthCm);
             Assert.AreEqual(x.truncationFraction, y.truncationFraction);
             Assert.AreEqual(x.itiSeconds, y.itiSeconds);
+            Assert.AreEqual(x.trialType, y.trialType);
+        }
+    }
+
+    [TestMethod]
+    public void EachTrialsTypeIsDrawnFromItsStagesWeights()
+    {
+        // The task file: every stage auditory alone (Pip, 16 Nov 2026), so mice run as before trialWeights
+        var file = new TrialDraw(Fixture.Setup(Fixture.Task(), 3));
+        for (int i = 0; i < 100; i++) Assert.AreEqual("auditory", file.Next().trialType);
+        var task = Fixture.Task();
+        var w = task.TrainingStages[3].TrialWeights;
+        w.Auditory = 1; w.Visual = 0; w.Audiovisual = 3;
+        var draw = new TrialDraw(Fixture.Setup(task, 3));
+        var types = Enumerable.Range(0, 4000).Select(i => draw.Next().trialType).ToList();
+        Assert.AreEqual(0, types.Count(t => t == "visual"));   // weight 0: never
+        Assert.AreEqual(0.75, types.Count(t => t == "audiovisual") / 4000.0, 0.03);
+        Assert.AreEqual(1000, types.Count(t => t == "auditory"), 120);
+        var again = new TrialDraw(Fixture.Setup(task, 3));   // the same seed: the same types
+        CollectionAssert.AreEqual(types, Enumerable.Range(0, 4000).Select(i => again.Next().trialType).ToList());
+        task.RngSeed = 2;
+        var other = new TrialDraw(Fixture.Setup(task, 3));
+        CollectionAssert.AreNotEqual(types, Enumerable.Range(0, 4000).Select(i => other.Next().trialType).ToList());
+    }
+
+    [TestMethod]
+    public void AStageWhoseWeightsAreAllZeroIsRefused()
+    {
+        var task = Fixture.Task();
+        task.TrainingStages[2].TrialWeights.Auditory = 0;
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "trialWeights");
+        task.TrainingStages[2].TrialWeights.Visual = -1;
+        task.TrainingStages[2].TrialWeights.Audiovisual = 2;
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "trialWeights");
+    }
+
+    [TestMethod]
+    public void EachTrialShowsWhatItsTypeSaysAndLogsIt()
+    {
+        foreach (var type in TrialDraw.TypeNames)
+        {
+            var task = Fixture.Task();
+            var w = task.TrainingStages[1].TrialWeights;
+            w.Auditory = type == "auditory" ? 1 : 0; w.Visual = type == "visual" ? 1 : 0; w.Audiovisual = type == "audiovisual" ? 1 : 0;
+            var rig = new Rig(Fixture.Setup(task, 1));
+            rig.RunTo(TrialEventKind.Start);
+            var pip = rig.RunTo(TrialEventKind.Update).Update;
+            Assert.AreEqual(type == "visual" ? 0.0 : 1.0, pip.ToneGain, type);
+            Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, pip.GratingOpacity, type);
+            rig.Wheel(1000);
+            Assert.AreEqual(type, rig.RunTo(TrialEventKind.Outcome).Outcome.Row.trialType);
         }
     }
 

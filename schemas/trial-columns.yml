@@ -33,7 +33,8 @@ trialNumber:
 trialType:
   type: string
   values: [auditory, visual, audiovisual]
-  description: What the trial showed, in words, as av-dome's trialType - auditory (the tone sweep), visual (the grating) or both; the task file's modality.
+  description: What the trial showed, in words (TrialDraw.TypeNames, also the keys of the stage's trialWeights; coen-dome-decision-making's names where they overlap) - auditory (the tone sweep alone), visual (the grating alone) or audiovisual (both), drawn for each trial with the stage's trialWeights as relative chances.
+  history: Until 16 Nov 2026 the task file's session-wide modality, the same on every trial.
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]

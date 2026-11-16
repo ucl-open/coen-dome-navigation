@@ -12,44 +12,44 @@ STAGE_PY = Path(__file__).parents[1] / "src" / "ucl_open_coen_dome_navigation" /
 # Stages are trainingStages rows from 0: Tom Childs' stage n is n - 1 (Pip, 9 Nov 2026).
 
 
-def exp(name, stage, n, rewarded, modality="auditory", stages=None):
+def exp(name, stage, n, rewarded, stages=None):
     """An experiment of n trials at one stage, the first `rewarded` of them rewarded."""
-    return Experiment(name, name, [modality] * n, stages or [stage] * n, [i < rewarded for i in range(n)])
+    return Experiment(name, name, stages or [stage] * n, [i < rewarded for i in range(n)])
 
 
 @pytest.mark.parametrize(
-    "history, modality, stage",
+    "history, stage",
     [
-        ([], "auditory", 0),
-        ([exp("2026-01-02", 2, 40, 40)], "auditory", 2),  # under 50 trials keeps the stage
-        ([exp("2026-01-02", 0, 100, 70)], "auditory", 1),  # 70% advances
-        ([exp("2026-01-02", 0, 100, 69)], "auditory", 0),
-        ([exp("2026-01-02", 2, 200, 100)], "auditory", 3),  # first 100 all rewarded
-        ([exp("2026-01-02", 4, 100, 100)], "auditory", 4),  # 4 never advances on its own
-        ([exp("2026-01-02", 5, 100, 10)], "auditory", 5),  # 5 is kept
-        ([exp("2026-01-02", 1, 100, 60), exp("2026-01-01", 1, 100, 50)], "auditory", 2),
-        ([exp("2026-01-02", 1, 100, 60), exp("2026-01-01", 1, 100, 49)], "auditory", 1),
-        ([exp("2026-01-02", 1, 100, 40)], "auditory", 0),  # stage 1 under 50% falls back
-        ([exp("2026-01-02", 3, 100, 100, "visual"), exp("2026-01-01", 1, 100, 60)], "auditory", 1),  # other modality ignored
-        ([exp("2026-01-02", 0, 0, 0), exp("2026-01-01", 2, 40, 0)], "auditory", 2),  # an empty experiment is skipped
+        ([], 0),
+        ([exp("2026-01-02", 2, 40, 40)], 2),  # under 50 trials keeps the stage
+        ([exp("2026-01-02", 0, 100, 70)], 1),  # 70% advances
+        ([exp("2026-01-02", 0, 100, 69)], 0),
+        ([exp("2026-01-02", 2, 200, 100)], 3),  # first 100 all rewarded
+        ([exp("2026-01-02", 4, 100, 100)], 4),  # 4 never advances on its own
+        ([exp("2026-01-02", 5, 100, 10)], 5),  # 5 is kept
+        ([exp("2026-01-02", 1, 100, 60), exp("2026-01-01", 1, 100, 50)], 2),
+        ([exp("2026-01-02", 1, 100, 60), exp("2026-01-01", 1, 100, 49)], 1),
+        ([exp("2026-01-02", 1, 100, 40)], 0),  # stage 1 under 50% falls back
+        ([exp("2026-01-02", 3, 100, 100), exp("2026-01-01", 1, 100, 60)], 4),  # the latest decides, whatever trial types it drew (16 Nov 2026)
+        ([exp("2026-01-02", 0, 0, 0), exp("2026-01-01", 2, 40, 0)], 2),  # an empty experiment is skipped
     ],
 )
-def test_the_rules_are_tom_s(history, modality, stage):
-    assert suggest(history, modality)[0] == stage
+def test_the_rules_are_tom_s(history, stage):
+    assert suggest(history)[0] == stage
 
 
 @pytest.mark.parametrize("late, stage", [(40, 4), (39, 3)])
 def test_stage_3_advances_on_its_first_150_trials(late, stage):
     # 65 of the first 100 (under 70%), `late` of the next 50: 105/150 is 70%, 104/150 is not.
     rewarded = [i < 65 for i in range(100)] + [i < late for i in range(50)] + [False] * 150
-    e = Experiment("2026-01-02", "2026-01-02", ["auditory"] * 300, [3] * 300, rewarded)
-    assert suggest([e], "auditory")[0] == stage
+    e = Experiment("2026-01-02", "2026-01-02", [3] * 300, rewarded)
+    assert suggest([e])[0] == stage
 
 
 def test_the_rate_counts_every_trial_but_rewards_only_at_the_last_stage():
     # 60 trials at stage 0, all rewarded, then 40 at stage 1 none: 0/100 at stage 1, under 50%.
     e = exp("2026-01-02", 1, 100, 60, stages=[0] * 60 + [1] * 40)
-    assert suggest([e], "auditory")[0] == 0
+    assert suggest([e])[0] == 0
 
 
 REPO = "https://github.com/ucl-open/coen-dome-navigation.git"
@@ -87,7 +87,7 @@ def test_a_summary_is_read_as_the_rules_need_it(tmp_path):
     put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS))
     found, unread = read(tmp_path, "r2")
     assert unread == [] and [e.name for e in found] == ["ses-002D1_2026-11-10T09-00-00"]
-    assert found[0].stage == [2] * 60 and all(found[0].rewarded) and found[0].modality[0] == "auditory"
+    assert found[0].stage == [2] * 60 and all(found[0].rewarded)
 
 
 def test_the_newest_experiment_comes_first_and_a_mouse_with_no_expected_runs_has_no_history(tmp_path):
@@ -103,7 +103,7 @@ def test_a_folder_that_does_not_answer_gives_no_stage(tmp_path, capsys, monkeypa
     from ucl_open_coen_dome_navigation import stage
 
     missing = tmp_path / "no-share"
-    monkeypatch.setattr("sys.argv", ["stage.py", "--subject", "TC9", "--modality", "auditory",
+    monkeypatch.setattr("sys.argv", ["stage.py", "--subject", "TC9",
                                      "--summaries", str(missing), "--expected", str(expect(tmp_path))])
     stage.main()
     answer = json.loads(capsys.readouterr().out)
@@ -191,7 +191,7 @@ def test_the_opto_columns_are_read():
 def test_the_script_runs_with_the_standard_library_alone(tmp_path):
     # rig-control runs it with its own Python, -I, outside this project: no package import.
     put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, [["auditory", "Correct"]] * 100))
-    done = subprocess.run([sys.executable, "-I", str(STAGE_PY), "--subject=TC9", "--modality=auditory",
+    done = subprocess.run([sys.executable, "-I", str(STAGE_PY), "--subject=TC9",
                            f"--summaries={tmp_path}", f"--expected={expect(tmp_path, 'r2')}"],
                           capture_output=True, text=True, check=True)
     assert json.loads(done.stdout.strip().splitlines()[-1])["value"] == 3

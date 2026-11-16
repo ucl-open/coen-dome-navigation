@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_dome_navigation_task.json
-# The task file: rig-control copies it at launch and again at Go with the form's edits (Modality on
-# the form; the stage is the Training Stage setting, suggested from the mouse's earlier experiments),
+# The task file: rig-control copies it at launch and again at Go with the form's edits (the stage is
+# the Training Stage setting, suggested from the mouse's earlier experiments),
 # and the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest.
 # From the editor, the workflow reads this file as it is.
 #
@@ -9,7 +9,6 @@
 # checks this file against the pydantic model (src\ucl_open_coen_dome_navigation\task.py), which
 # also says what each field does.
 taskParameters:
-  modality: auditory          # auditory (the tone sweep), visual (the grating) or audiovisual
   rngSeed: null               # null = the workflow draws one at Go; each seed used is a RngSeed event in BonsaiData_Async
   # The sweep is src\waveforms\sweep.json's, made with the tone files (generate-waveforms); each sound's level is here,
   # in dBFS RMS of the sound as stored, before equalisation: the levels played until 15 Nov 2026 (Tom Childs' pips were
@@ -46,6 +45,7 @@ taskParameters:
   # Tom's: centred on 18 kHz in log space, a 6 kHz window from stage 2 (task.py's old derivation).
   trainingStages:
     - label: Stage 0 (Tom's 1)   # rewarded on reaching the zone, no lick; short tracks; the frequency drifts too
+      trialWeights: { auditory: 1, visual: 0, audiovisual: 0 }   # relative chances of what a trial shows: the tone sweep, the grating or both
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
@@ -61,6 +61,7 @@ taskParameters:
       frequencyDrift: true
       truncatedTrialFraction: 0.0
     - label: Stage 1 (Tom's 2)   # as stage 0, no drift
+      trialWeights: { auditory: 1, visual: 0, audiovisual: 0 }   # relative chances of what a trial shows: the tone sweep, the grating or both
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
@@ -76,6 +77,7 @@ taskParameters:
       frequencyDrift: false
       truncatedTrialFraction: 0.0
     - label: Stage 2 (Tom's 3)   # a lick anywhere above the floor; full tracks; the end of the track ends the trial
+      trialWeights: { auditory: 1, visual: 0, audiovisual: 0 }   # relative chances of what a trial shows: the tone sweep, the grating or both
       rewardFloorHz: 15248
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
@@ -91,6 +93,7 @@ taskParameters:
       frequencyDrift: false
       truncatedTrialFraction: 0.0
     - label: Stage 3 (Tom's 4)   # the ceiling comes in; wrong licks and slowness penalised
+      trialWeights: { auditory: 1, visual: 0, audiovisual: 0 }   # relative chances of what a trial shows: the tone sweep, the grating or both
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0
@@ -106,6 +109,7 @@ taskParameters:
       frequencyDrift: false
       truncatedTrialFraction: 0.0
     - label: Stage 4 (Tom's 5)   # fewer wrong licks allowed
+      trialWeights: { auditory: 1, visual: 0, audiovisual: 0 }   # relative chances of what a trial shows: the tone sweep, the grating or both
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0
@@ -121,6 +125,7 @@ taskParameters:
       frequencyDrift: false
       truncatedTrialFraction: 0.0
     - label: Stage 5 (Tom's 6)   # stage 4 with 16% truncated trials; only ever chosen by hand
+      trialWeights: { auditory: 1, visual: 0, audiovisual: 0 }   # relative chances of what a trial shows: the tone sweep, the grating or both
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0

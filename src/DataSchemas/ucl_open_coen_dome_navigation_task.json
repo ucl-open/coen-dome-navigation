@@ -21,16 +21,6 @@
       "title": "BackgroundNoise",
       "type": "object"
     },
-    "Modality": {
-      "description": "What a trial shows.",
-      "enum": [
-        "auditory",
-        "visual",
-        "audiovisual"
-      ],
-      "title": "Modality",
-      "type": "string"
-    },
     "OptogeneticsConfig": {
       "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the\ntrigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first\ntone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's\noutcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.",
       "if": {
@@ -234,6 +224,11 @@
           "title": "Label",
           "type": "string"
         },
+        "trialWeights": {
+          "$ref": "#/$defs/TrialTypeWeights",
+          "description": "Relative draw weight per trial type: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)",
+          "title": "TrialWeights"
+        },
         "rewardFloorHz": {
           "description": "Lower frequency of the reward zone, in Hz",
           "maximum": 25000,
@@ -311,6 +306,7 @@
       },
       "required": [
         "label",
+        "trialWeights",
         "rewardFloorHz",
         "rewardCeilingHz",
         "rewardSizeUl",
@@ -358,6 +354,36 @@
         }
       },
       "title": "TrialStructure",
+      "type": "object"
+    },
+    "TrialTypeWeights": {
+      "description": "Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),\nas coen-dome-decision-making's TrialTypeWeights (Pip, 16 Nov 2026).",
+      "properties": {
+        "auditory": {
+          "description": "The tone sweep alone",
+          "minimum": 0,
+          "title": "Auditory",
+          "type": "integer"
+        },
+        "visual": {
+          "description": "The grating alone",
+          "minimum": 0,
+          "title": "Visual",
+          "type": "integer"
+        },
+        "audiovisual": {
+          "description": "The tone sweep and the grating together",
+          "minimum": 0,
+          "title": "Audiovisual",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "auditory",
+        "visual",
+        "audiovisual"
+      ],
+      "title": "TrialTypeWeights",
       "type": "object"
     },
     "Truncation": {
@@ -418,11 +444,6 @@
             "number",
             "null"
           ]
-        },
-        "modality": {
-          "$ref": "#/$defs/Modality",
-          "default": "auditory",
-          "description": "What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)"
         },
         "tonePips": {
           "$ref": "#/$defs/StimulusSound",

@@ -1,15 +1,15 @@
-"""The training stage to suggest for a mouse's next experiment, from its earlier ones of the same
-modality: Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
+"""The training stage to suggest for a mouse's next experiment, from its earlier ones of this workflow, whatever
+trial types they drew (each stage's trialWeights, Pip, 16 Nov 2026; by the session's modality until then): Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
 unchanged, reading the mouse's session summaries (jacuzzi-ingest's `sub-<lab ID>/<ses folder>.json`, version 1:
 claude-tools records.md, "Session summaries"). The old workflow's TrialLog files (ShapingStage,
 WasRewarded) and folders named by eartag are not read: their readers were deleted on 15 Nov 2026 (Pip).
 
 Stages are the task file's trainingStages rows, from 0 (Pip, 9 Nov 2026: as av-dome's): Tom's stages 1
-to 6 are 0 to 5. rig-control asks for it when a mouse and modality
-are chosen and fills the TrainingStage setting with it; the experimenter can change it before Go. As a
+to 6 are 0 to 5. rig-control asks for it when a mouse
+is chosen and fills the TrainingStage setting with it; the experimenter can change it before Go. As a
 command:
 
-    python -I stage.py --subject TC003 --modality auditory --summaries DIR --expected FILE.json
+    python -I stage.py --subject TC003 --summaries DIR --expected FILE.json
 
 --summaries is the folder holding the sub-<lab ID> folders and --expected a JSON list of the run ids
 the mouse has had (rig-control writes it). Prints one JSON line, {"value": 3, "why": "..."}: the contract
@@ -17,7 +17,7 @@ of rig-control's [task.suggest]. If the folder does not answer, an expected run 
 cannot be read, value is null and why names it: no stage is guessed. A skipped file (a run too short or
 old to count) is accounted for and otherwise ignored.
 
-The rules: the latest experiment of the modality with trials decides. Under 50 trials keeps its stage.
+The rules: the latest experiment with trials decides. Under 50 trials keeps its stage.
 Stage 1 advances only after two experiments in a row each with at least 50 rewarded trials, and falls
 back to 0 under 50% rewarded. Stages 2 and 3 also advance on 70% over the first 100 or 150 trials
 (mice stop licking late on). Otherwise 70% over the experiment advances, below keeps. Stage 4 never
@@ -48,7 +48,6 @@ class Experiment:
 
     name: str
     when: str  # sortable: the folder name's date and time
-    modality: list[str]
     stage: list[int]
     rewarded: list[bool]
     laser: list[bool] = field(default_factory=list)  # laser-on trials (laserPowerMw > 0); empty when there were none
@@ -66,7 +65,7 @@ def _when(folder: str) -> str:
 
 
 def read_new(summary: dict) -> Experiment | None:
-    """An experiment of this workflow from its summary: trialType the modality, outcome Correct is rewarded, its
+    """An experiment of this workflow from its summary: outcome Correct is rewarded, its
     stage the TrainingStage setting in Settings_Experiment (fixed for the experiment, so not a trial column).
     None without trials or without a trialType column."""
     columns, rows = summary["trials"]["columns"], summary["trials"]["rows"]
@@ -78,7 +77,7 @@ def read_new(summary: dict) -> Experiment | None:
     stage = int(float(settings["parameters"]["TrainingStage"]))
     rows = [dict(zip(columns, row)) for row in rows]
     name = summary["session"]
-    return Experiment(name, _when(name), [r["trialType"] for r in rows], [stage] * len(rows),
+    return Experiment(name, _when(name), [stage] * len(rows),
                       [r.get("outcome") == "Correct" for r in rows],
                       [float(r.get("laserPowerMw") or 0) > 0 for r in rows],
                       any(int(float(r.get("laserCondition") or 0)) > 0 for r in rows))
@@ -149,11 +148,11 @@ def _rate(rewarded: list[bool]) -> float:
     return sum(rewarded) / len(rewarded) if rewarded else 0.0
 
 
-def suggest(history: list[Experiment], modality: str) -> tuple[int, str]:
-    """(stage, why) for the next experiment of this modality, from the mouse's experiments newest first."""
-    same = [e for e in history if e.rewarded and e.modality[-1] == modality]
+def suggest(history: list[Experiment]) -> tuple[int, str]:
+    """(stage, why) for the next experiment, from the mouse's experiments newest first."""
+    same = [e for e in history if e.rewarded]
     if not same:
-        return 0, f"No Earlier {modality.title()} Experiment With Trials: Stage 0"
+        return 0, "No Earlier Experiment With Trials: Stage 0"
     last = same[0]
     stage = last.stage[-1]
     if last.optogenetics:
@@ -191,10 +190,9 @@ def suggest(history: list[Experiment], modality: str) -> tuple[int, str]:
 
 
 def main() -> None:
-    """Print the suggestion for --subject and --modality as one JSON line."""
+    """Print the suggestion for --subject as one JSON line."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--subject", required=True)
-    parser.add_argument("--modality", required=True, choices=["auditory", "visual", "audiovisual"])
     parser.add_argument("--summaries", required=True, type=Path, help="the folder of sub-<lab ID> folders of session summaries")
     parser.add_argument("--expected", required=True, type=Path, help="a JSON file listing the run ids the mouse has had")
     args = parser.parse_args()
@@ -204,7 +202,7 @@ def main() -> None:
         # The mouse's history may be there alone: no guess, or a trained mouse would be offered Stage 1.
         print(json.dumps({"value": None, "why": f"Could Not Read {' and '.join(unread)}: Choose the Stage by Hand"}))
         return
-    stage, why = suggest(history, args.modality)
+    stage, why = suggest(history)
     print(json.dumps({"value": stage, "why": why}))
 
 

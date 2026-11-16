@@ -8,12 +8,11 @@ sound, and rngSeed seeds every draw. The sweep is src/waveforms/sweep.json's, ma
 RMS: tonePips, rewardTone, backgroundNoise and penalty.sound)."""
 
 import json
-from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
 from open_rigs.core.task import BackgroundNoise, Optogenetics, Penalty, QuietWait, RewardTone, StimulusSound, Task, TaskBlock, TaskParameters
-from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS, ZAPIT_REPLY_MARGIN_SECONDS
+from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
 from open_rigs.rigs.lab_rig import MAX_REWARD_UL
 from pydantic import Field, field_validator, model_validator
 
@@ -106,18 +105,28 @@ class OptogeneticsConfig(Optogenetics):
         return self
 
 
-class Modality(StrEnum):
-    """What a trial shows."""
+class TrialTypeWeights(TaskBlock):
+    """Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),
+    as coen-dome-decision-making's TrialTypeWeights (Pip, 16 Nov 2026)."""
 
-    AUDITORY = "auditory"
-    VISUAL = "visual"
-    AUDIOVISUAL = "audiovisual"
+    auditory: int = Field(ge=0, description="The tone sweep alone")
+    visual: int = Field(ge=0, description="The grating alone")
+    audiovisual: int = Field(ge=0, description="The tone sweep and the grating together")
+
+    @model_validator(mode="after")
+    def _some_weight(self) -> "TrialTypeWeights":
+        if not any(self.model_dump().values()):
+            raise ValueError("trial_weights needs a trial type with a weight above 0")
+        return self
 
 
 class TrainingStage(QuietWait):
     """One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting."""
 
     label: str = Field(description="The stage's name, for people")
+    trial_weights: TrialTypeWeights = Field(
+        description="Relative draw weight per trial type: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)"
+    )
     reward_floor_hz: float = Field(ge=1, le=25000, description="Lower frequency of the reward zone, in Hz")
     reward_ceiling_hz: float = Field(ge=1, le=25000, description="Upper frequency of the reward zone, in Hz")
     reward_size_ul: float = Field(
@@ -148,9 +157,6 @@ class TrainingStage(QuietWait):
 class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     """Task params."""
 
-    modality: Modality = Field(
-        default=Modality.AUDITORY, description="What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)"
-    )
     tone_pips: StimulusSound = Field(
         default=StimulusSound(), description="The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"
     )
@@ -198,15 +204,8 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
 
     @model_validator(mode="after")
     def _the_next_trial_is_armed_in_time(self):
-        # The next trial is armed once the trigger line falls, trigger_hold_seconds after the outcome; its trigger comes at the
-        # soonest iti_min_seconds - laser_to_stimulus_seconds after that outcome, and Zapit's reply needs its margin before it.
-        hold, iti, lead = self.optogenetics.trigger_hold_seconds, self.trial_structure.iti_min_seconds, self.optogenetics.laser_to_stimulus_seconds
-        longest = iti - lead - ZAPIT_REPLY_MARGIN_SECONDS
-        if self.optogenetics.use_zapit and hold > longest + 1e-9:
-            raise ValueError(
-                f"optogenetics.trigger_hold_seconds ({hold} s) must be at most {longest:g} s (trial_structure.iti_min_seconds - laser_to_stimulus_seconds - "
-                f"{ZAPIT_REPLY_MARGIN_SECONDS} s): the next trial is armed once the line falls"
-            )
+        # The next trial is armed once the trigger line falls, trigger_hold_seconds after the outcome (TrialLoop's rule).
+        self.optogenetics.check_zapit_free_in_time(self.trial_structure.iti_min_seconds, trigger_hold_seconds=self.optogenetics.trigger_hold_seconds)
         return self
 
     @model_validator(mode="after")

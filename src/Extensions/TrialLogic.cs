@@ -46,13 +46,13 @@ public class VirtualTrack
 /// <summary>One trial as drawn, with what its stage asks; fields named as the trial log's columns where they are one.</summary>
 public class Trial : IZapitTrial
 {
-    int IZapitTrial.TrialNumber { get { return trialNumber; } }
+    int ITrial.TrialNumber { get { return trialNumber; } }
     int IZapitTrial.LaserCondition { get { return laserCondition; } }
     bool IZapitTrial.LaserOn { get { return laserOn; } }
     double IZapitTrial.LaserPowerMw { get { return laserPowerMw; } }
 
     public int trialNumber;
-    public string trialType;            // the task's modality in words
+    public string trialType;            // TrialDraw.TypeNames: what the trial shows, drawn from the stage's trialWeights
     public double itiSeconds;           // the interval before this trial: the last outcome (after any timeout; trial 1: the first clock tick) to the first pip, with a quiet mouse
     public double lickQuietSeconds;     // the stage's quiet waits, from the interval's start (QuietWait); 0: off
     public double wheelQuietSeconds;
@@ -85,7 +85,7 @@ public class TrialOutcome : ITrialOutcome
     public bool PenaltySound;                 // the penalty sound plays
     public Tuple<string, double> Reward;      // (side, microlitres) for Rewards: the left spout, the trial's rewardSizeUl
 
-    public double TimeoutSeconds { get { return Row.penaltyTimeoutSeconds; } }
+    public double PenaltyTimeoutSeconds { get { return Row.penaltyTimeoutSeconds; } }
 }
 
 /// <summary>
@@ -114,8 +114,6 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     public int ConditionCount;
     public bool HardwareTriggered;
     public int Seed;
-    public bool Auditory;
-    public bool Visual;
 
     TrialDraw draw;
     LaserTiming laser;
@@ -148,6 +146,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
         foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage '" + row.Label + "': " + p);
         number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
+        var weights = TrialDraw.Weights(row);
+        if (weights.Any(w => w < 0) || weights.Sum() <= 0) problems.Add("stage '" + row.Label + "''s trialWeights needs every weight 0 or more and one above 0");
         if (row.ResponseWindowSeconds.HasValue) number("stage '" + row.Label + "''s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
         // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
         // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
@@ -188,8 +188,6 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             rules.laser = LaserTiming.UntilOutcome(hardwareTriggered, opto.TriggerHoldSeconds, opto.LaserMaxSeconds);
         }
         rules.Seed = RngSeed.Resolve(task.RngSeed);
-        rules.Auditory = task.Modality != Modality.Visual;
-        rules.Visual = task.Modality != Modality.Auditory;
         rules.draw = new TrialDraw(rules);
         return rules;
     }
@@ -206,7 +204,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     {
         return new TrialTiming
         {
-            IntervalSeconds = trial.itiSeconds,
+            ItiSeconds = trial.itiSeconds,
             // The lead applies in every experiment, so timing never reveals Zapit (Pip, 13 Nov 2026).
             LaserToStimulusSeconds = Task.Optogenetics.LaserToStimulusSeconds,
             LickQuietSeconds = trial.lickQuietSeconds,
@@ -285,8 +283,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         {
             Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, toneFrequencyHz = tone, stimulusActive = active, visualSpatialFrequencyCpd = grating },
             Bin = Sweep.BinOf(tone),
-            ToneGain = active && Auditory ? 1 : 0,
-            GratingOpacity = active && Visual ? 1 : 0
+            ToneGain = active && trial.trialType != TrialDraw.Visual ? 1 : 0,
+            GratingOpacity = active && trial.trialType != TrialDraw.Auditory ? 1 : 0
         };
     }
 
@@ -306,30 +304,19 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var ranOut = reason == "ResponseWindowEnd" || reason == "EndOfTrack";
         var rewarded = onTarget && (reason == "Lick" || reason == "FreqReached");
         var penalised = onTarget ? ranOut : trial.penaliseWrongZone;
-        var row = new TrialRow
+        // The shared block (trialNumber, the times, penaltySound, penaltyTimeoutSeconds, the laser) is lib-open-rigs'.
+        var row = SharedTrialColumns.Fill(new TrialRow
         {
-            trialNumber = trial.trialNumber,
             trialType = trial.trialType,
             outcome = rewarded ? "Correct" : ranOut || !trial.lickToReward ? "NoResponse" : "Incorrect",
-            itiStartTime = times.IntervalStartTime,
-            itiSeconds = trial.itiSeconds,
-            quietWaitSeconds = times.QuietWaitSeconds,
-            trialStartTime = times.TrialStartTime,
-            stimulusOnsetTime = times.StimulusOnsetTime,
-            outcomeTime = times.Now,
             rewardSizeUl = trial.rewardSizeUl,
-            penaltySound = penalised && Task.Penalty.Sound.Enabled,
-            penaltyTimeoutSeconds = penalised ? Task.Penalty.TimeoutSeconds : 0,
-            laserCondition = trial.laserCondition,
-            laserPowerMw = times.LaserFired ? trial.laserPowerMw : 0,  // a trial ended before its trigger had no laser
-            laserTriggerTime = times.LaserTriggerTime,
             endReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
             endPositionCm = track.Position,
             toneEndFrequencyHz = tone,
             visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             truncationFraction = trial.truncationFraction
-        };
+        }, trial, times, penalised, Task.Penalty.TimeoutSeconds, Task.Penalty.Sound.Enabled);
         return new TrialOutcome { Row = row, Rewarded = rewarded, PenaltySound = row.penaltySound, Reward = Tuple.Create("left", trial.rewardSizeUl) };
     }
 }
@@ -337,6 +324,19 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 /// <summary>Draws every trial of an experiment from one random stream seeded with the task's rngSeed.</summary>
 public class TrialDraw
 {
+    public const string Auditory = "auditory";       // the tone sweep alone
+    public const string Visual = "visual";           // the grating alone
+    public const string Audiovisual = "audiovisual"; // both
+    /// <summary>The trial types, the keys of a stage's trialWeights and the trial row's trialType (coen-dome-decision-making's names where they overlap).</summary>
+    public static readonly string[] TypeNames = { Auditory, Visual, Audiovisual };
+
+    /// <summary>A stage's trialWeights in TypeNames' order.</summary>
+    public static int[] Weights(TrainingStage stage)
+    {
+        var w = stage.TrialWeights;
+        return w == null ? new int[TypeNames.Length] : new[] { w.Auditory, w.Visual, w.Audiovisual };
+    }
+
     readonly TrialRules rules;
     readonly Random random;
     int drawn;
@@ -354,7 +354,6 @@ public class TrialDraw
         var t = new Trial();
         t.trialNumber = ++drawn;
         t.rngSeed = rules.Seed;
-        t.trialType = task.Modality.ToString().ToLowerInvariant();
         var iti = task.TrialStructure.ItiMinSeconds + (task.TrialStructure.ItiMaxSeconds - task.TrialStructure.ItiMinSeconds) * random.NextDouble();
         t.itiSeconds = iti;  // trial 1 too, from the first clock tick, so Zapit is armed before its trigger
         var lengths = task.TrialStructure.TrackLengthsCm;
@@ -387,7 +386,21 @@ public class TrialDraw
                 out t.laserCondition, out t.laserOn, out t.laserPowerMw);
             t.laserMaxSeconds = opto.LaserMaxSeconds;
         }
+        t.trialType = TypeNames[WeightedType(stage)];   // drawn last, so the draws above are as before trialWeights
         return t;
+    }
+
+    /// <summary>A trial type drawn with the stage's trialWeights as relative chances (TrialRules.Create refuses all 0).</summary>
+    int WeightedType(TrainingStage stage)
+    {
+        var weights = Weights(stage);
+        int draw = random.Next(weights.Sum());
+        for (int type = 0; type < weights.Length; type++)
+        {
+            draw -= weights[type];
+            if (draw < 0) return type;
+        }
+        throw new InvalidOperationException("No trial type drawn.");
     }
 }
 

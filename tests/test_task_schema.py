@@ -51,6 +51,27 @@ def test_the_response_window_and_quiet_wait_are_one_optional_field_each_per_stag
     assert all(r["wheelQuietSeconds"] == 0 and r["wheelQuietCm"] == 0 for r in rows)
 
 
+def test_every_stage_draws_auditory_trials_alone_and_no_session_modality_is_left():
+    # Pip, 16 Nov 2026: trialWeights per stage replace the session-wide modality; the task file runs mice as before.
+    params = task()["taskParameters"]
+    assert "modality" not in params
+    assert [r["trialWeights"] for r in params["trainingStages"]] == [{"auditory": 1, "visual": 0, "audiovisual": 0}] * 6
+    assert "modality" not in UclOpenCoenDomeNavigationTaskParameters.model_fields
+    assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
+
+
+def test_a_stage_whose_trial_weights_are_all_zero_or_negative_is_refused():
+    for weights, match in (({"auditory": 0, "visual": 0, "audiovisual": 0}, "weight above 0"), ({"auditory": 1, "visual": -1, "audiovisual": 0}, "greater than or equal")):
+        params = task()["taskParameters"]
+        params["trainingStages"][2]["trialWeights"] = weights
+        with pytest.raises(pydantic.ValidationError, match=match):
+            UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+    params = task()["taskParameters"]
+    del params["trainingStages"][0]["trialWeights"]
+    with pytest.raises(pydantic.ValidationError, match="trialWeights"):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+
+
 def test_the_interval_runs_from_the_outcome_and_keeps_tom_s_timing():
     # As decision-making's, itiSeconds runs from the outcome (after any timeout) and includes the drink,
     # so Tom's fixed 2 s then 0 to 1 s is 2 to 3 s.
