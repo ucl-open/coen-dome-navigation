@@ -159,11 +159,13 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
 
 def test_the_background_noise_is_the_shared_include():
     # OpenRigs.Audio's BackgroundNoise (16 Nov 2026): the noise unequalised on every speaker at the launched task file's
-    # level from Ready, Go stopping on a backgroundNoise changed after launch; it reads the committed 32-bit float WAV.
+    # level from Ready, Go stopping on a backgroundNoise changed after launch. The noise is the lab's one file, rig.yml's
+    # speakerArray.backgroundNoise (16 Nov 2026, this repo's old background_noise.wav byte for byte, now on the server's
+    # config\shared): the include takes no file and the repo keeps none (the lint).
     assert lint.background_noise_problems(WORKFLOW) == []
     (noise,) = [e for e in MAIN.iter(W + "Expression") if e.get("Path") == lint.BACKGROUND_NOISE]
-    assert noise.findtext(W + "FileName") == r"waveforms\background_noise.wav"
-    assert (ROOT / "src" / "waveforms" / "background_noise.wav").is_file()
+    assert noise.find(W + "FileName") is None
+    assert not list((ROOT / "src").rglob("*noise*.wav"))
 
 
 def test_the_speakers_are_declared_before_every_user():

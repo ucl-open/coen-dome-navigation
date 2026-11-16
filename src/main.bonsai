@@ -550,8 +550,7 @@
         </Workflow>
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:BackgroundNoise.bonsai">
-        <Description>The background noise, waveforms\background_noise.wav (60 s of white noise, 32-bit float, made by generate-waveforms), unequalised on every speaker at the launched task file's backgroundNoise.levelDbfs from Ready; Go stops if the task file changed backgroundNoise after launch.</Description>
-        <FileName>waveforms\background_noise.wav</FileName>
+        <Description>The background noise, the lab's one file, rig.yml's speakerArray.backgroundNoise (60 s of white noise, 32-bit float), unequalised on every speaker at the launched task file's backgroundNoise.levelDbfs from Ready; Go stops if the task file changed backgroundNoise after launch.</Description>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>StartTrials</Name>

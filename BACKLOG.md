@@ -2,6 +2,12 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-16 One background noise for every dome task (lib-open-rigs a5120a4; Audio .12, Devices .24; Pip: "It should be literally the same file")
+
+- The background noise is rig.yml's `speakerArray.backgroundNoise`, `../shared/sounds/background_noise.wav` from the rig's folder: the server's `K:\config\shared\sounds\background_noise.wav`, which app-rig-control's upkeep copies down to `RigConfigs\shared\`. That file is this repo's `src\waveforms\background_noise.wav` byte for byte (SHA-256 762999848f9152e400e2ac7c452a729a2cf980056a59c34d44e148681b177704), so the mice hear the same noise at the same level (`backgroundNoise.levelDbfs` -64.1). The manifest hashes it with rig.yml's other files (`{RigFiles}`).
+- The include takes no `FileName`; `BackgroundNoise` stops at Start, naming the file, when rig.yml names none, it is missing or not at the device's rate. This repo's copy, `waveforms.background_noise`, `write_wave`, `read_wave` and their test are deleted; `generate-waveforms` writes the pips, reward tone and `sweep.json` only.
+- Open: each dome's rig.yml on the share needs the `backgroundNoise` line and the share the file before a rig runs this version (a rig on older packages refuses the key; the file goes first, the key with the new packages).
+
 ## 2026-11-16 Task-side includes (lib-open-rigs 5ea5729; Audio .11, Control .12, Core .19, Devices .22, Logging .15, Manifest .23, Video .17)
 
 - `LaunchSettings` (OpenRigs.Control) publishes `SubjectId`, `TaskFilePath` and `RunSettings`; Initialization keeps ExperimentControl and the training stage. One inner `ExternalizedMapping` maps `SubjectId` onto ExperimentControl and LaunchSettings (ExperimentControl was subscribed once `SubjectId` came; it now takes the launch property directly).

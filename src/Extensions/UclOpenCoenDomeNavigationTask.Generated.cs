@@ -1531,14 +1531,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The background white noise (src/waveforms/background_noise.wav) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)
+        /// The lab's background white noise (rig.yml's speakerArray.backgroundNoise) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("backgroundNoise")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="backgroundNoise")]
-        [System.ComponentModel.DescriptionAttribute("The background white noise (src/waveforms/background_noise.wav) on every speaker," +
-            " from Ready at the level of the task file as launched (open_rigs.core.task Backg" +
-            "roundNoise)")]
+        [System.ComponentModel.DescriptionAttribute("The lab\'s background white noise (rig.yml\'s speakerArray.backgroundNoise) on ever" +
+            "y speaker, from Ready at the level of the task file as launched (open_rigs.core." +
+            "task BackgroundNoise)")]
         public BackgroundNoise BackgroundNoise
         {
             get

@@ -57,6 +57,16 @@ public class RigTemplateTests
     }
 
     [TestMethod]
+    public void TheBackgroundNoiseIsTheSharedFileBesideTheRigsFolder()
+    {
+        // Pip, 16 Nov 2026: one background noise for every dome task, RigConfigs\shared\sounds\background_noise.wav,
+        // named by rig.yml's speakerArray.backgroundNoise from the rig's folder (RigConfigs\<RIG>).
+        var rig = TemplateRig(Template());
+        var expected = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(rig), "..", "shared", "sounds", "background_noise.wav"));
+        Assert.AreEqual(expected, SpeakerSet.Load(rig).BackgroundNoiseFile);
+    }
+
+    [TestMethod]
     public void EveryBufferHasTheTemplatesChannelCountAndPlaysOnlyOnItsSpeakers()
     {
         // Audit, 14 Nov 2026: the mixer's buffers are rig.yml's channelCount rows (32, as the Tile 32 they replace);
