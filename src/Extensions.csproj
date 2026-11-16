@@ -12,9 +12,9 @@
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="OpenCV.Net" Version="3.4.2" />
-    <PackageReference Include="OpenRigs.Core" Version="0.1.1-coen-lab.21" />
+    <PackageReference Include="OpenRigs.Core" Version="0.1.1-coen-lab.22" />
     <PackageReference Include="OpenRigs.Audio" Version="0.1.1-coen-lab.12" />
-    <PackageReference Include="OpenRigs.Devices" Version="0.1.1-coen-lab.25" />
+    <PackageReference Include="OpenRigs.Devices" Version="0.1.1-coen-lab.26" />
   </ItemGroup>
 
 </Project>
