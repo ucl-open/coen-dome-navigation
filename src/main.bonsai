@@ -932,6 +932,34 @@
           </Edges>
         </Workflow>
       </Expression>
+      <Expression xsi:type="GroupWorkflow">
+        <Name>Rewards</Name>
+        <Description>Each reward on RewardRequests (side, microlitres: the task's and ManualRewards') delivered through its valve's calibration (OpenRigs.Devices BehaviorBoard.DeliverReward, both reward lines from rig.yml at Start; a RewardDelivered row in BonsaiData_Async). Before ExperimentRecords, which records the experiment but gives no rewards.</Description>
+        <Workflow>
+          <Nodes>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>RewardRequests</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>RigFile</Name>
+            </Expression>
+            <Expression xsi:type="PropertyMapping">
+              <PropertyMappings>
+                <Property Name="RigFile" />
+              </PropertyMappings>
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai">
+              <RigFile>UNMAPPED</RigFile>
+              <CalibrationDirectory />
+            </Expression>
+          </Nodes>
+          <Edges>
+            <Edge From="0" To="3" Label="Source1" />
+            <Edge From="1" To="2" Label="Source1" />
+            <Edge From="2" To="3" Label="Source2" />
+          </Edges>
+        </Workflow>
+      </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:ExperimentRecords.bonsai">
         <Description>Each reward through its valve's calibration (DeliverReward: a RewardDelivered row in BonsaiData_Async, each calibrated valve's file as ValveCalibrationDO&lt;n&gt;), the controller's events (LogControlEvents), every Harp device in rig.yml checked at Start and recorded (RecordHarpDevices: the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits), and manifest.json (ExperimentManifest: rig.yml and every file it names and this mouse's spout positions by hash ({RigFiles}), schemas\trial-columns.yml, and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState), Zapit's logs in an optogenetics experiment). Last but LiveView, as it finds each device by the subjects published before it.</Description>
         <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>

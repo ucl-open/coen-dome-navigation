@@ -262,6 +262,7 @@ def test_spout_step_size_is_the_lick_spout_stage_s():
 
 def test_the_experiment_records_are_the_shared_include():
     assert lint.experiment_records_problems(WORKFLOW) == []
+    assert lint.reward_delivery_problems(WORKFLOW) == []  # DeliverReward is the task's own, in Rewards
 
 
 def test_the_launch_settings_are_the_shared_include():
