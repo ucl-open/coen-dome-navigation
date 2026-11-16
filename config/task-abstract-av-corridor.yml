@@ -47,8 +47,8 @@ taskParameters:
   # Rows by the Training Stage setting (a setting past the end stops the workflow at Go). The reward zones are
   # Tom's: centred on 18 kHz in log space, a 6 kHz window from stage 2 (task.py's old derivation).
   trainingStages:
-    - label: Stage 0 (Tom's 1)   # rewarded on reaching the zone, no lick; short tracks; the frequency drifts too
-      rewardFloorHz: 18000
+    # Stage 0 (Tom's 1): rewarded on reaching the zone, no lick; short tracks; the frequency drifts too
+    - rewardFloorHz: 18000
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
       lickToReward: false
@@ -62,8 +62,8 @@ taskParameters:
       trackLengthScale: 0.125
       frequencyDrift: true
       truncatedTrialFraction: 0.0
-    - label: Stage 1 (Tom's 2)   # as stage 0, no drift
-      rewardFloorHz: 18000
+    # Stage 1 (Tom's 2): as stage 0, no drift
+    - rewardFloorHz: 18000
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
       lickToReward: false
@@ -77,8 +77,8 @@ taskParameters:
       trackLengthScale: 0.125
       frequencyDrift: false
       truncatedTrialFraction: 0.0
-    - label: Stage 2 (Tom's 3)   # a lick anywhere above the floor; full tracks; the end of the track ends the trial
-      rewardFloorHz: 15248
+    # Stage 2 (Tom's 3): a lick anywhere above the floor; full tracks; the end of the track ends the trial
+    - rewardFloorHz: 15248
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
       lickToReward: true
@@ -92,8 +92,8 @@ taskParameters:
       trackLengthScale: 1.0
       frequencyDrift: false
       truncatedTrialFraction: 0.0
-    - label: Stage 3 (Tom's 4)   # the ceiling comes in; wrong licks and slowness penalised
-      rewardFloorHz: 15248
+    # Stage 3 (Tom's 4): the ceiling comes in; wrong licks and slowness penalised
+    - rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0
       lickToReward: true
@@ -107,8 +107,8 @@ taskParameters:
       trackLengthScale: 1.0
       frequencyDrift: false
       truncatedTrialFraction: 0.0
-    - label: Stage 4 (Tom's 5)   # fewer wrong licks allowed
-      rewardFloorHz: 15248
+    # Stage 4 (Tom's 5): fewer wrong licks allowed
+    - rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0
       lickToReward: true
@@ -122,7 +122,7 @@ taskParameters:
       trackLengthScale: 1.0
       frequencyDrift: false
       truncatedTrialFraction: 0.0
-    - label: Stage 5 (Tom's 6)   # stage 4 with 16% truncated trials; only ever chosen by hand
+    - label: Truncated   # stage 4 with 16% truncated trials; only ever chosen by hand
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0

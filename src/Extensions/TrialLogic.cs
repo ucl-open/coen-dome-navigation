@@ -281,7 +281,7 @@ public class TrialDraw
     {
         var problems = new List<string>();
         var w = Effective(task, stage);
-        var name = stage.TrialWeights != null ? "stage '" + stage.Label + "''s trialWeights" : "trialWeights";
+        var name = stage.TrialWeights != null ? "stage " + task.TrainingStages.IndexOf(stage) + "'s trialWeights" : "trialWeights";
         if (w == null) { problems.Add(name + " is missing"); return problems; }
         if (w.AudiovisualConflict > 0) problems.Add(name + ".audiovisualConflict must be 0: that trial is not defined in this task yet");
         if (w.Neutral > 0) problems.Add(name + ".neutral must be 0: that trial is not defined in this task yet");
@@ -334,10 +334,10 @@ public class TrialDraw
         number("penalty.timeoutSeconds", task.Penalty.TimeoutSeconds, false);
         // The quiet waits, the lab's one check (OpenRigs.Core QuietWait: finite, 0 or more, at most 10 s and 20 cm, the
         // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
-        foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage '" + row.Label + "': " + p);
-        number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
+        foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage " + stage + ": " + p);
+        number("stage " + stage + "'s trackLengthScale", row.TrackLengthScale, true);
         problems.AddRange(TrialDraw.WeightProblems(task, row));
-        if (row.ResponseWindowSeconds.HasValue) number("stage '" + row.Label + "''s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
+        if (row.ResponseWindowSeconds.HasValue) number("stage " + stage + "'s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
         // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
         // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
         // with Zapit's reply margin, and no later after it than the stage's response window.
@@ -348,12 +348,12 @@ public class TrialDraw
         var leadProblem = ZapitTrial.LeadProblem(lead, task.TrialStructure.ItiMinSeconds);
         if (leadProblem != null) problems.Add(leadProblem);
         var after = row.ResponseWindowSeconds ?? TrialRules.UnlimitedWindowTriggerAfterSeconds;
-        if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage '{2}''s {3}", lead, after, row.Label, row.ResponseWindowSeconds.HasValue ? "responseWindowSeconds" : "limit for a stage without responseWindowSeconds"));
+        if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage {2}'s {3}", lead, after, stage, row.ResponseWindowSeconds.HasValue ? "responseWindowSeconds" : "limit for a stage without responseWindowSeconds"));
         var hold = task.Optogenetics.TriggerHoldSeconds;
         var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;
         if (task.Optogenetics.Enabled && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitTrial.ReplyMarginSeconds));
-        if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage '" + row.Label + "' truncates trials but truncation.sweepFractions is empty");
-        if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage '{0}''s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", row.Label, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
+        if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage " + stage + " truncates trials but truncation.sweepFractions is empty");
+        if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage {0}'s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", stage, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
         var opto = task.Optogenetics;
         if (opto.Enabled)
         {

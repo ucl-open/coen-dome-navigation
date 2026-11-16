@@ -220,9 +220,13 @@
           "type": "number"
         },
         "label": {
-          "description": "The stage's name, for people",
+          "default": null,
+          "description": "The stage's name, shown on Setup after its number",
           "title": "Label",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "trialWeights": {
           "anyOf": [
@@ -313,7 +317,6 @@
         }
       },
       "required": [
-        "label",
         "rewardFloorHz",
         "rewardCeilingHz",
         "rewardSizeUl",

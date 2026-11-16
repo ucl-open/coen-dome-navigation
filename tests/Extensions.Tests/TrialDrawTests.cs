@@ -109,7 +109,7 @@ public class TrialDrawTests
         // As coen-dome-decision-making's, no public mutable fields, the checks in TrialDraw.CheckTask.
         Assert.AreEqual(0, typeof(TrialRules).GetFields(BindingFlags.Public | BindingFlags.Instance).Length);
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => TrialDraw.CheckTask(Fixture.Task(), 6, Fixture.Sweep())).Message, "TrainingStage is 6");
-        Assert.AreEqual(Fixture.Task().TrainingStages[2].Label, TrialDraw.CheckTask(Fixture.Task(), 2, Fixture.Sweep()).Label);
+        Assert.AreEqual(Fixture.Task().TrainingStages[2].RewardFloorHz, TrialDraw.CheckTask(Fixture.Task(), 2, Fixture.Sweep()).RewardFloorHz);
     }
 
     [TestMethod]
@@ -212,7 +212,7 @@ public class TrialDrawTests
             StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "trialWeights" + (c.Item2.StartsWith("needs") ? " " : ".") + c.Item2);
             task = Fixture.Task();
             task.TrainingStages[2].TrialWeights = c.Item1;
-            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "stage '" + task.TrainingStages[2].Label + "''s trialWeights");
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "stage 2's trialWeights");
             Fixture.Setup(task, 1);   // another stage, with the task's weights, still runs
         }
     }

@@ -925,11 +925,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The stage's name, for people
+        /// The stage's name, shown on Setup after its number
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("label", Required=Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonPropertyAttribute("label")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="label")]
-        [System.ComponentModel.DescriptionAttribute("The stage\'s name, for people")]
+        [System.ComponentModel.DescriptionAttribute("The stage\'s name, shown on Setup after its number")]
         public string Label
         {
             get

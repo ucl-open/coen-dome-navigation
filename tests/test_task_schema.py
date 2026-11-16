@@ -33,6 +33,11 @@ def test_the_task_file_validates():
     UclOpenCoenDomeNavigationTaskLogic.model_validate(task())
 
 
+def test_only_the_truncated_stage_has_a_name():
+    labels = [row.get("label") for row in task()["taskParameters"]["trainingStages"]]
+    assert labels == [None, None, None, None, None, "Truncated"]
+
+
 def test_the_stage_rows_keep_tom_s_reward_zones():
     # Tom Childs' zones: from 18 kHz to the sweep's end at his stages 1-2, then a window centred on 18 kHz in
     # log space (6 kHz wide), its floor from stage 3 and its ceiling from stage 4 (rows 0-5 are his 1-6).

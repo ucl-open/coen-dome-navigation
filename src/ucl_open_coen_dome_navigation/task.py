@@ -133,7 +133,7 @@ class TrialTypeWeights(TaskBlock):
 class TrainingStage(QuietWait):
     """One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting."""
 
-    label: String = Field(description="The stage's name, for people")
+    label: String | None = Field(default=None, description="The stage's name, shown on Setup after its number")
     trial_weights: TrialTypeWeights | None = Field(
         default=None,
         description="This stage's own trialWeights, replacing the task's (the mouse's) for this stage; null: the task's trialWeights apply",
