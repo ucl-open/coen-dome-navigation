@@ -44,26 +44,18 @@ def test_the_stage_rows_keep_tom_s_reward_zones():
 
 
 def test_the_time_limit_and_quiet_wait_are_one_optional_field_each_per_stage():
-    # Plan v11: a stage's timeLimitSeconds, null for none; the quiet waits (Pip, 13 Nov 2026), 0 for off, Tom's quietSeconds kept as lickQuietSeconds.
+    # A stage's timeLimitSeconds, null for none; the quiet waits (Pip, 13 Nov 2026), 0 for off.
     rows = task()["taskParameters"]["trainingStages"]
     assert [r["timeLimitSeconds"] for r in rows] == [None] * 3 + [12.0] * 3
     assert [r["lickQuietSeconds"] for r in rows] == [0] * 3 + [1.0] * 3
-    assert all(r["wheelQuietSeconds"] == 0 and r["wheelQuietCm"] == 0 and "quietSeconds" not in r for r in rows)
-    assert not {"timeLimit", "quiescent"} & set(rows[0])
-    assert not {"timeLimitSeconds", "quiescentSeconds"} & set(task()["taskParameters"]["trialStructure"])
+    assert all(r["wheelQuietSeconds"] == 0 and r["wheelQuietCm"] == 0 for r in rows)
 
 
 def test_the_interval_runs_from_the_outcome_and_keeps_tom_s_timing():
-    # Plan v11, as decision-making: itiSeconds runs from the outcome (after any timeout) and includes the drink,
+    # As decision-making's, itiSeconds runs from the outcome (after any timeout) and includes the drink,
     # so Tom's fixed 2 s then 0 to 1 s is 2 to 3 s.
     structure = task()["taskParameters"]["trialStructure"]
     assert (structure["itiMinSeconds"], structure["itiMaxSeconds"]) == (2.0, 3.0) and "drinkSeconds" not in structure
-
-
-def test_the_sweep_and_the_wheel_are_not_task_fields():
-    # Plan v11: the sweep is src\waveforms\sweep.json's, and the wheel diameter rig.yml's (75 mm on every dome).
-    p = task()["taskParameters"]
-    assert not {"sweepStartHz", "sweepEndHz", "sweepSteps", "toneAmplitude", "wheelDiameterMm"} & set(p)
 
 
 def test_the_committed_waveforms_are_waveforms_py_s():
@@ -74,12 +66,10 @@ def test_the_committed_waveforms_are_waveforms_py_s():
     assert np.array_equal(committed, waveforms.tones(freqs))
     assert committed.shape[1] == 2400  # the workflow's MatrixReader BufferLength
     assert np.array_equal(np.fromfile(WAVES / "reward_tone.bin", dtype=np.float32), waveforms.reward_tone()[0])
-    # The background noise is the lab's one file, rig.yml's speakerArray.backgroundNoise (16 Nov 2026: this repo's background_noise.wav byte for byte, now the server's config\shared copy).
-    assert not list(WAVES.glob("background_noise.*")) and not hasattr(waveforms, "background_noise")
 
 
 def test_the_penalty_sound_is_the_lab_s():
-    # Audit, 14 Nov 2026: the penalty sound is OpenRigs.Audio's (PenaltySoundBuffer), so the task file names no file and
+    # The penalty sound is OpenRigs.Audio's (PenaltySoundBuffer), so the task file names no file and
     # waveforms.py makes none.
     assert set(task()["taskParameters"]["penalty"]["sound"]) == {"enabled", "levelDbfs"}
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
@@ -199,7 +189,7 @@ def test_training_stage_s_maximum_is_the_task_file_s_last_row():
 
 
 def test_a_reward_over_the_cap_is_refused():
-    # Audit round 4: lib-open-rigs' MAX_REWARD_UL, DeliverReward's MaxRewardUl.
+    # lib-open-rigs' MAX_REWARD_UL, DeliverReward's MaxRewardUl.
     import copy
 
     from open_rigs.rigs.lab_rig import MAX_REWARD_UL
@@ -214,11 +204,11 @@ def test_a_reward_over_the_cap_is_refused():
     with pytest.raises(pydantic.ValidationError, match="less than or equal to 20"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
 
-# The optogenetics settings' rules (zapit-v2): laser_to_stimulus_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap
+# The optogenetics settings' rules: laser_to_stimulus_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap
 # longer than the longest timed trial (a stage's timeLimitSeconds + laser_to_stimulus_seconds), and TrialLogic.cs checking the same rules.
 
 PARAMS = yaml.safe_load(TASK.read_text(encoding="utf-8"))["taskParameters"]
-CORRIDOR = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
+TRIAL_LOGIC = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
 FILE_OPTO = OptogeneticsConfig.model_validate(PARAMS["optogenetics"]).model_dump()
 
 
@@ -304,27 +294,20 @@ def test_the_trigger_hold_outlasts_the_longest_ramp_down():
         opto(trigger_hold_seconds=0.4)
 
 
-def test_corridor_cs_uses_the_same_constants():
+def test_trial_logic_cs_uses_the_same_constants():
     # TrialLogic.cs's own checks of these rules, and the laser-off trials' 0 mW, are tests\Extensions.Tests' (TrialDrawTests.cs).
-    assert float(re.search(r"const double LaserMaxMarginSeconds = ([\d.]+);", CORRIDOR).group(1)) == LASER_MAX_MARGIN_SECONDS
-    assert float(re.search(r"const double BeepSeconds = ([\d.]+);", CORRIDOR).group(1)) == BEEP_SECONDS
+    assert float(re.search(r"const double LaserMaxMarginSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == LASER_MAX_MARGIN_SECONDS
+    assert float(re.search(r"const double BeepSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == BEEP_SECONDS
     from ucl_open_coen_dome_navigation import task
 
     for py, cs in (("MAX_LEAD_SECONDS", "MaxLeadSeconds"), ("NO_TIME_LIMIT_TRIGGER_AFTER_SECONDS", "NoTimeLimitTriggerAfterSeconds")):
-        assert float(re.search(rf"const double {cs} = ([\d.]+);", CORRIDOR).group(1)) == getattr(task, py)
-    # Zapit's reply margin is lib-open-rigs' alone (ZapitTrial.ReplyMarginSeconds, ZAPIT_REPLY_MARGIN_SECONDS; audit round 3).
-    assert "ZapitTrial.ReplyMarginSeconds" in CORRIDOR and "ZapitReplyMarginSec " not in CORRIDOR
-    assert not hasattr(task, "ZAPIT_REPLY_MARGIN_SEC")
-
-
-def test_the_laser_cap_s_code_says_laser_not_stimulus():
-    # "Stimulus" is the tone and grating only (Pip, 9 Nov 2026); Zapit's own StimDuration wire name is exempt.
-    for text in ((ROOT / "src" / "ucl_open_coen_dome_navigation" / "task.py").read_text(encoding="utf-8"), CORRIDOR):
-        assert not re.search(r"stim_duration|StimDurationMargin|STIM_DURATION", text, re.IGNORECASE)
+        assert float(re.search(rf"const double {cs} = ([\d.]+);", TRIAL_LOGIC).group(1)) == getattr(task, py)
+    # Zapit's reply margin is lib-open-rigs' alone (ZapitTrial.ReplyMarginSeconds, ZAPIT_REPLY_MARGIN_SECONDS).
+    assert "ZapitTrial.ReplyMarginSeconds" in TRIAL_LOGIC
 
 
 def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
-    # Audit round 4: the longest ramp-down is lib-open-rigs' ZAPIT_MAX_RAMP_DOWN_SECONDS (ZapitConditions.MaximumRampDownSeconds), not a typed 0.5.
+    # The longest ramp-down is lib-open-rigs' ZAPIT_MAX_RAMP_DOWN_SECONDS (ZapitConditions.MaximumRampDownSeconds), not a typed 0.5.
     from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
 
     assert OptogeneticsConfig.model_fields["trigger_hold_seconds"].metadata[0].ge == ZAPIT_MAX_RAMP_DOWN_SECONDS

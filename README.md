@@ -2,9 +2,9 @@
 
 Tom Childs' auditory (and visual) VR corridor task on the lab's open-rigs platform, run from rig-control. A head-fixed mouse runs on a wheel through a virtual track while a tone sweeps up in frequency (and a grating's spatial frequency changes) with its position; it licks in the reward zone for a reward. The stage is the Training Stage setting, a row of the task file's `trainingStages` from 0: Tom's shaping stages 1 to 6 are rows 0 to 5, each saying what its stage does (see `src\ucl_open_coen_dome_navigation\task.py`).
 
-Converted on 9 Nov 2026 from `ucl-open/auditory-vr-corridor` (`main` b67a1f6 with `zapit-integration` 1782543), which stays as it is: Tom's original, read only. Rebuilt on 13 Nov 2026 (plan v11) on the lab fork's shared dome blocks, with the task in tested C# and every task wait on the Harp clock.
+Converted on 9 Nov 2026 from `ucl-open/auditory-vr-corridor` (`main` b67a1f6 with `zapit-integration` 1782543), which stays as it is: Tom's original, read only. Rebuilt on 13 Nov 2026 on the lab fork's shared dome blocks, with the task in tested C# and every task wait on the Harp clock.
 
-## Running it
+## Running an experiment
 
 From rig-control: choose the rig and the mouse (launched by its lab ID, such as `TC001`), then this workflow and `config\task-abstract-av-corridor.yml`. The form shows the task's Modality and Training Stage; the stage is suggested from the mouse's earlier experiments of that modality (`uv run suggest-stage --subject <lab ID> --modality auditory`, Tom's rules from `gen_session.py`, reading this workflow's data on the rig, in staging and in Live-Data; the old TrialLogs are not read since 15 Nov 2026). Launch puts the rig in ready mode (hardware armed, cameras on, spouts homed, the background noise on from Ready at the launched task file's level, nothing recorded); Go reads the task file and starts the trials once the experiment folder exists.
 
@@ -39,7 +39,7 @@ Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `
 
 The dome's hardware, logging and reward come from the lab fork (lib-open-rigs; what each takes and gives: [Building Blocks](https://github.com/Coen-Lab/lib-open-rigs/blob/main/docs/articles/building-blocks.md)). `tests\test_workflow.py` fails when the workflow uses a block this table does not list.
 
-| Block | Its job in this task | File |
+| Block | Job in this task | File |
 |---|---|---|
 | `ReadLabRig` | this machine's rig.yml read once into the lab rig model (`RigConfigs`, `RigFile`, `ConfigRoot`), first | `OpenRigs.Devices:ReadLabRig.bonsai` |
 | `DomeHardware` | every dome device as a piece: the Harp clock (`Timestamp`), the wheel's distance (`WheelDistanceCm`), the left lick detector (`LickStateLeft`), the ZapitTrigger line, the spout stage and its commands, the three cameras, triggered once all three acquire, each logging itself; and Ready once the clock is set, the spouts are homed, each camera has sent a frame and the mixer has started (`PieceStages`; a stop naming what never came after 180 s) | `OpenRigs.Devices:DomeHardware.bonsai` |

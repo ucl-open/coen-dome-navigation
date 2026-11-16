@@ -1,18 +1,8 @@
 ﻿using Bonsai;
 using Bonsai.Harp;
-using Newtonsoft.Json.Linq;
-using OpenCV.Net;
-using OpenRigs.Core;
-using OpenRigs.Devices.Zapit;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using OpenRigs.Devices.Rigs;
-using UclOpenCoenDomeNavigationTask;
 
 /// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
 /// outcome). The fields up to laserTriggerTime are the lab's shared block, its core with the opto and quietWait blocks (lib-open-rigs

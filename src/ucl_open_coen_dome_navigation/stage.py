@@ -201,7 +201,7 @@ def main() -> None:
     unread: list[str] = []
     history = experiments(args.subject, args.summaries, args.expected, unread)
     if unread:
-        # The mouse's history may be there alone: no guess (audit, 9 Nov 2026, a trained mouse was offered Stage 1).
+        # The mouse's history may be there alone: no guess, or a trained mouse would be offered Stage 1.
         print(json.dumps({"value": None, "why": f"Could Not Read {' and '.join(unread)}: Choose the Stage by Hand"}))
         return
     stage, why = suggest(history, args.modality)

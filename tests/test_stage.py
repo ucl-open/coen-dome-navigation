@@ -99,7 +99,7 @@ def test_the_newest_experiment_comes_first_and_a_mouse_with_no_expected_runs_has
 
 
 def test_a_folder_that_does_not_answer_gives_no_stage(tmp_path, capsys, monkeypatch):
-    # Audit, 9 Nov 2026: an unreachable share read as no history, and a trained mouse was offered Stage 1.
+    # An unreachable share must not read as no history, which would offer a trained mouse Stage 1.
     from ucl_open_coen_dome_navigation import stage
 
     missing = tmp_path / "no-share"
@@ -150,8 +150,8 @@ def test_any_version_but_1_is_refused(tmp_path):
 
 
 def test_another_workflow_s_summary_never_decides_but_is_accounted_for(tmp_path):
-    # Audit, 10 Nov 2026, round 5: an av-dome experiment of the same mouse (80 visual Correct at stage 3)
-    # was read as this task's and suggested Stage 4.
+    # An av-dome experiment of the same mouse (80 visual Correct at stage 3) is not this task's and must not
+    # suggest Stage 4.
     other = "https://github.com/ucl-open/av-dome.git"
     put(tmp_path, summary("ses-010D1_2026-11-12T09-00-00", "r10", 3, [["visual", "Correct"]] * 80, repo=other))
     assert read(tmp_path, "r10") == ([], [])

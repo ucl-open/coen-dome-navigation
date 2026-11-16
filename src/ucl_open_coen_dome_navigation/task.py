@@ -1,11 +1,10 @@
 ﻿"""The task file's schema: config/task-abstract-av-corridor.yml, which rig-control copies at launch and again at Go with the
 form's edits; the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest. Ported from Tom Childs' auditory-vr-corridor task.py.
 
-Laid out as av-dome's (Pip, 9 Nov 2026): the stage is the TrainingStage experiment setting, a row of trainingStages
-from 0 (Tom's stages 1 to 6 are rows 0 to 5), and each row says what the stage does, where the workflow used to test
-the stage number; trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
+The stage is the TrainingStage experiment setting, a row of trainingStages from 0 (Tom's stages 1 to 6 are rows 0 to
+5), and each row says what the stage does; trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
 sound, and rngSeed seeds every draw. The sweep is src/waveforms/sweep.json's, made with the tone files
-(`uv run generate-waveforms`), not the task file's (plan v11); every sound's level is the task file's (levelDbfs, in dBFS
+(`uv run generate-waveforms`), not the task file's; every sound's level is the task file's (levelDbfs, in dBFS
 RMS: tonePips, rewardTone, backgroundNoise and penalty.sound)."""
 
 import json

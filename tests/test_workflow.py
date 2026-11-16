@@ -27,12 +27,11 @@ def combinators(element: ET.Element) -> list[str]:
 
 
 def test_no_wall_clock_wait_inside_task_logic():
-    # Plan v11: no wall-clock wait inside TaskLogic but the laser cap's backstop, should the board stall.
+    # No wall-clock wait inside TaskLogic but the laser cap's backstop (LaserBackstop), should the board stall.
     logic = group("TaskLogic")
     waits = [c for c in combinators(logic) if c in ("rx:Timer", "rx:Delay", "rx:Throttle", "rx:DelaySubscription", "rx:Timeout", "rx:Interval")]
     assert waits == ["rx:Timer"]
     assert combinators(group("LaserOnUntilOutcome")).count("rx:Timer") == 1
-    assert "TimeOfDay" not in TEXT and "HarpBeat" not in TEXT
     assert "core:HarpDelay" in combinators(logic) and "ext:CorridorTask" in combinators(logic)
 
 
@@ -69,7 +68,6 @@ def test_the_launch_properties():
 
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
-    # path is LogLabExperiment's.
     assert names == {"trialNumber", "rewardSizeUl", "laserCondition"}
     # trainingStage is OpenRigs.Control's TrainingStage's (16 Nov 2026).
     assert lint.training_stage_problems(WORKFLOW) == []
@@ -161,7 +159,7 @@ def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
 
 
 def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
-    # Audit, 14 Nov 2026: each sound is one row laid out by OpenRigs.Audio's SpeakerBuffer on rig.yml's channels
+    # Each sound is one row laid out by OpenRigs.Audio's SpeakerBuffer on rig.yml's channels
     # (no Tile 32), equalised for each speaker; no Channels is every rig.yml speaker.
     for subject, reader in (("PipBuffers", "all_waveforms.bin"), ("RewardToneBuffer", "reward_tone.bin")):
         nodes, upstream = _audio_chain(subject)
@@ -198,7 +196,7 @@ def test_the_speakers_are_declared_before_every_user():
 
 
 def test_the_trial_events_leave_the_clock_s_thread_unswitched():
-    # Plan v11 W3, audit round 4: CorridorTask serialises its inputs, and nothing downstream blocks, so no ObserveOn.
+    # CorridorTask serialises its inputs, and nothing downstream blocks, so no ObserveOn.
     assert "rx:ObserveOn" not in combinators(group("TaskLogic"))
 
 

@@ -2,17 +2,11 @@
 using Bonsai.Harp;
 using Newtonsoft.Json.Linq;
 using OpenCV.Net;
-using OpenRigs.Core;
-using OpenRigs.Devices.Zapit;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using OpenRigs.Devices.Rigs;
-using UclOpenCoenDomeNavigationTask;
 
 /// <summary>The sweep the committed tone files were made for, and the rate every waveform was made at
 /// (src\waveforms\sweep.json, ucl_open_coen_dome_navigation.waveforms).</summary>
@@ -21,7 +15,6 @@ public class Sweep
     public double StartHz;
     public double EndHz;
     public int Steps;
-    public double PipPeak;
     public int SampleRate;
 
     /// <summary>One pip's samples, a row of all_waveforms.bin: a beep at SampleRate.</summary>
@@ -41,7 +34,6 @@ public class Sweep
             StartHz = json.Value<double?>("sweepStartHz") ?? double.NaN,
             EndHz = json.Value<double?>("sweepEndHz") ?? double.NaN,
             Steps = json.Value<int?>("sweepSteps") ?? 0,
-            PipPeak = json.Value<double?>("pipPeak") ?? double.NaN,
             SampleRate = json.Value<int?>("sampleRate") ?? 0
         };
         if (!(sweep.StartHz > 0 && sweep.EndHz > sweep.StartHz && sweep.Steps > 1 && sweep.SampleRate > 0))

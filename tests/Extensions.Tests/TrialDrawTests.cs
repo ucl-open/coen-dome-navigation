@@ -164,7 +164,7 @@ public class TrialDrawTests
     [TestMethod]
     public void ASoftwareTriggeredRigIsNeverArmedAhead()
     {
-        // Only the test mouse runs there: lib-open-rigs' ConnectZapit refuses a real one (RequireZapitHardwareTrigger, audit round 3).
+        // Only the test mouse runs there: lib-open-rigs' ConnectZapit refuses a real one (RequireZapitHardwareTrigger).
         var task = Fixture.Task();
         Fixture.Opto(task);
         Assert.IsFalse(new TrialDraw(Fixture.Setup(task, 4, false)).Next().armZapit);
@@ -476,7 +476,7 @@ public class CorridorStateTests
         Assert.IsTrue(double.IsNaN(outcome.Row.laserTriggerTime), "answered before the trigger: laserTriggerTime NaN");
     }
 
-    // Audit, 14 Nov 2026: laserTriggerTime (the shared block's 16th column) is the trigger's Harp time when it came.
+    // laserTriggerTime (the shared block's 16th column) is the trigger's Harp time when it came.
     [TestMethod]
     public void LaserTriggerTimeIsTheTriggersTimeLaserOnOrOff()
     {
@@ -565,7 +565,7 @@ public class CorridorStateTests
         var pip = rig.Events.Last(e => e.Kind == CorridorEventKind.Pip).Frame;
         Assert.AreEqual(0.0, pip.ToneGain);
         Assert.IsFalse(pip.Row.stimulusActive);
-        // Audit, 14 Nov 2026: a bool, so BonsaiData_StimulusState says True or False, as the lab's other bool columns.
+        // A bool, so BonsaiData_StimulusState says True or False, as the lab's other bool columns.
         Assert.AreEqual(typeof(bool), typeof(StimulusStateRow).GetField("stimulusActive").FieldType);
     }
 
@@ -583,7 +583,7 @@ public class CorridorStateTests
         Assert.ThrowsException<InvalidOperationException>(() => wrong.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }).ToList());
     }
 
-    // Audit, 14 Nov 2026: the armed reply is checked by OpenRigs.Devices' ZapitTrial.CheckArmed, the dome tasks' one check:
+    // The armed reply is checked by OpenRigs.Devices' ZapitTrial.CheckArmed, the dome tasks' one check:
     // its words, and a refusal for an error reply, another condition or another laser state.
     [TestMethod]
     public void TheArmedReplyIsZapitTrialsCheckArmed()
@@ -613,7 +613,7 @@ public class CorridorStateTests
         rig.RunTo(CorridorEventKind.Trigger);   // armed: the trigger comes
     }
 
-    // Audit round 4: on a software-triggered rig the Trigger event sends the StartStimulus, so its reply is checked too.
+    // On a software-triggered rig the Trigger event sends the StartStimulus, so its reply is checked too.
     [TestMethod]
     public void ASoftwareTriggeredZapitsWrongReplyStopsTheTask()
     {

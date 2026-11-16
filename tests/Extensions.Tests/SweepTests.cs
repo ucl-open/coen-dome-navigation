@@ -19,7 +19,6 @@ public class SweepTests
         Assert.AreEqual(2000, sweep.StartHz);
         Assert.AreEqual(25000, sweep.EndHz);
         Assert.AreEqual(100, sweep.Steps);
-        Assert.AreEqual(0.0025, sweep.PipPeak, 1e-12);
         Assert.AreEqual(48000, sweep.SampleRate);
         Assert.AreEqual(2400, sweep.PipSamples);  // one row of all_waveforms.bin
         Assert.AreEqual(2000, sweep.FrequencyAt(-1), 1e-9);

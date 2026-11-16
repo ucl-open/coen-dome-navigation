@@ -14,7 +14,7 @@ using System.Reactive.Linq;
 using OpenRigs.Devices.Rigs;
 using UclOpenCoenDomeNavigationTask;
 
-// The corridor task in tested C# (plan v11, W3): each trial's draw, its interval, its run along the virtual track on
+// The corridor task in tested C#: each trial's draw, its interval, its run along the virtual track on
 // the Harp clock and its row. main.bonsai drives the hardware from the events CorridorTask gives; tests\Extensions.Tests
 // runs the same classes on stand-in clocks.
 

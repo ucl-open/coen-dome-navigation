@@ -17,7 +17,7 @@
   <Workflow>
     <Nodes>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="ConfigRoot" Description="The root under which each machine has its own configuration directory, &lt;ConfigRoot&gt;\&lt;MACHINE-NAME&gt;\rig.yml, read by ReadLabRig, which publishes it to every device piece; the launch's own. ExperimentRecords and LiveView keep their own, the lab's: an edge from here joins them to ReadLabRig in Bonsai's build order, so ExperimentManifest is built before ConnectForTask publishes Optogenetics, and StreamDevices before the devices." />
+        <Property Name="ConfigRoot" Description="The root under which each machine has its own configuration directory, &lt;ConfigRoot&gt;\&lt;MACHINE-NAME&gt;\rig.yml, read by ReadLabRig, which publishes it to every device piece; the launch's own, which rig-control always sets to C:\Coen-Lab-Local\RigConfigs. ExperimentRecords and LiveView are not mapped from here: each reads that root as its own ConfigRoot, as a mapping edge into LiveView's StreamDevices would build it before the devices it streams." />
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ReadLabRig.bonsai">
         <Description>This machine's rig.yml (ConfigRoot\MACHINE\rig.yml) read once into the lab rig model: RigConfigs, RigFile, RigConfigDirectory and ConfigRoot, which every device piece reads. First, before anything that reads them.</Description>
@@ -74,7 +74,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskFile</Name>
-        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\waveforms\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with the stage, rig.yml and the sweep (CreateCorridorSetup: a stage past the table, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is the Zapit group's refusal.</Description>
+        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\waveforms\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with the stage, rig.yml and the sweep (CheckTaskAtGo, CorridorSetup.Create: a stage past the table, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is the Zapit group's refusal.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -128,7 +128,7 @@
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>Sweep</Name>
-              <Description>sweep.json, read at Start (LoadSweep): the sweep the tone files were made for and the rate every waveform was made at, which must be rig.yml's speakerArray.device.sampleRate. The pips' reader takes its rate and pip length from it; CreateCorridorSetup its sweep.</Description>
+              <Description>sweep.json, read at Start (LoadSweep): the sweep the tone files were made for and the rate every waveform was made at, which must be rig.yml's speakerArray.device.sampleRate. The pips' reader takes its rate and pip length from it; CheckTaskAtGo its sweep.</Description>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>TaskConfig</Name>
@@ -414,7 +414,7 @@
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ConnectForTask.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), BonsaiData_Trial and Zapit's logs, ExperimentLogs the task's own BonsaiData_StimulusState; each device logs itself; ExperimentRecords, last but LiveView, delivers and logs rewards, takes the controller's events, records the Harp devices and writes the manifest.</Description>
+        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), BonsaiData_Trial and Zapit's logs, ExperimentLogs the task's own BonsaiData_StimulusState; each device logs itself; Rewards (DeliverReward) logs each reward and each calibrated valve's file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -593,7 +593,7 @@
             </Expression>
             <Expression xsi:type="rx:SelectMany">
               <Name>LaserOnUntilOutcome</Name>
-              <Description>From the trigger, stops Zapit once per optogenetics trial: at the outcome, at laserMaxSeconds on the Harp clock (LaserCap), or at laserMaxSeconds on the wall clock, a backstop should the board stall (the one wall-clock wait in TaskLogic). A trial that ends before its trigger has no laser; the next StartStimulus disarms it.</Description>
+              <Description>From the trigger, stops Zapit once per optogenetics trial: at the outcome, at laserMaxSeconds on the Harp clock (LaserCap), or at laserMaxSeconds on the wall clock (LaserBackstop), should the board stall (the one wall-clock wait in TaskLogic). A trial that ends before its trigger has no laser; the next StartStimulus disarms it.</Description>
               <Workflow>
                 <Nodes>
                   <Expression xsi:type="WorkflowInput">
@@ -625,6 +625,8 @@
                     </PropertyMappings>
                   </Expression>
                   <Expression xsi:type="Combinator">
+                    <Name>LaserBackstop</Name>
+                    <Description>Stops Zapit laserMaxSeconds after the trigger on the computer's clock, should the Harp board stall so that LaserCap never comes: the one wall-clock wait in TaskLogic. It logs nothing itself; whichever of the three comes first stops the laser.</Description>
                     <Combinator xsi:type="rx:Timer">
                       <rx:DueTime>PT12.5S</rx:DueTime>
                     </Combinator>
@@ -811,6 +813,8 @@
               <Name>Timestamp</Name>
             </Expression>
             <Expression xsi:type="Combinator">
+              <Name>TriggerHold</Name>
+              <Description>The trigger line held triggerHoldSeconds past the outcome, on the Harp clock, then cleared.</Description>
               <Combinator xsi:type="core:HarpDelay">
                 <core:DueSeconds>1</core:DueSeconds>
               </Combinator>
@@ -863,7 +867,7 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Name>OnNextTick</Name>
-              <Description>The setup, once the experiment folder exists and the tones are loaded, stamped with the next Harp clock tick and given from the clock's thread (lib-open-rigs' OpenRigs.Core OnNextTick), as in coen-dome-decision-making, where WithLatestTimestamp ran the first trial under a lock the clock needs and the clock stopped.</Description>
+              <Description>The setup, once the experiment folder exists and the tones are loaded, stamped with the next Harp clock tick and given from the clock's thread (lib-open-rigs' OpenRigs.Core OnNextTick), with no lock held, so trial 1 runs as every later one does.</Description>
               <Combinator xsi:type="core:OnNextTick" />
             </Expression>
           </Nodes>
@@ -934,7 +938,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Rewards</Name>
-        <Description>Each reward on RewardRequests (side, microlitres: the task's and ManualRewards') delivered through its valve's calibration (OpenRigs.Devices BehaviorBoard.DeliverReward, both reward lines from rig.yml at Start; a RewardDelivered row in BonsaiData_Async). Before ExperimentRecords, which records the experiment but gives no rewards.</Description>
+        <Description>Each reward on RewardRequests (side, microlitres: the task's and ManualRewards') delivered through its valve's calibration (OpenRigs.Devices BehaviorBoard.DeliverReward, both reward lines from rig.yml at Start; a RewardDelivered row in BonsaiData_Async, each calibrated valve's file as ValveCalibrationDO&lt;n&gt;). Before ExperimentRecords, which records the experiment but gives no rewards.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -961,7 +965,7 @@
         </Workflow>
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:ExperimentRecords.bonsai">
-        <Description>Each reward through its valve's calibration (DeliverReward: a RewardDelivered row in BonsaiData_Async, each calibrated valve's file as ValveCalibrationDO&lt;n&gt;), the controller's events (LogControlEvents), every Harp device in rig.yml checked at Start and recorded (RecordHarpDevices: the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits), and manifest.json (ExperimentManifest: rig.yml and every file it names and this mouse's spout positions by hash ({RigFiles}), schemas\trial-columns.yml, and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState), Zapit's logs in an optogenetics experiment). Last but LiveView, as it finds each device by the subjects published before it.</Description>
+        <Description>The controller's events (LogControlEvents), every Harp device in rig.yml checked at Start and recorded (RecordHarpDevices: the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits), and manifest.json (ExperimentManifest: rig.yml and every file it names and this mouse's spout positions by hash ({RigFiles}), schemas\trial-columns.yml, and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState), Zapit's logs in an optogenetics experiment). Last but LiveView, as it finds each device by the subjects published before it.</Description>
         <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
         <IngestScript>coen-dome-navigation</IngestScript>
         <ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/BonsaiData_Trial_;BonsaiData/BonsaiData_Async_;BonsaiData/BonsaiData_StimulusState_;BonsaiData/BonsaiData_ZapitReplies_?Optogenetics;Settings/Settings_ZapitConditions_?Optogenetics</ExpectedFiles>
