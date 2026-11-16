@@ -77,7 +77,7 @@ rewardSizeUl:
   description: Microlitres a reward on this trial gives (the stage's rewardSizeUl in trainingStages). What was delivered is RewardDelivered in BonsaiData_Async.
 penaltySound:
   type: bool
-  description: True when the penalty sound played (the task's penalty.sound enabled). A trial is penalised when it runs out of time or track with the end frequency in the reward zone, and on a stage with penaliseWrongZone when it ends outside the zone (Corridor.cs CorridorState.End); the timeout follows.
+  description: True when the penalty sound played (the task's penalty.sound enabled). A trial is penalised when it runs out of time or track with the end frequency in the reward zone, and on a stage with penaliseWrongZone when it ends outside the zone (TrialLogic.cs TrialRules.End); the timeout follows.
 penaltyTimeoutSeconds:
   type: double
   unit: s

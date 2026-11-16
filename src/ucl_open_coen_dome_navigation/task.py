@@ -178,7 +178,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
 
     @model_validator(mode="after")
     def _the_lead_fits(self):
-        # TrialLogic.cs CorridorSetup.Create's same rules (Pip, 13 Nov 2026).
+        # TrialLogic.cs TrialRules.Create's same rules (Pip, 13 Nov 2026).
         self.optogenetics.check_lead_fits(self.trial_structure.iti_min_seconds)
         lead = self.optogenetics.laser_to_stimulus_seconds
         # A negative lead puts the trigger after the first pip, at most the stage's timeLimitSeconds (any stage here; Go checks the one chosen).

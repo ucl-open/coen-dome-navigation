@@ -2,6 +2,7 @@
 using Bonsai.Harp;
 using Newtonsoft.Json.Linq;
 using OpenCV.Net;
+using OpenRigs.Devices;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,7 +19,7 @@ public class Sweep
     public int SampleRate;
 
     /// <summary>One pip's samples, a row of all_waveforms.bin: a beep at SampleRate.</summary>
-    public int PipSamples { get { return (int)Math.Round(SampleRate * CorridorSetup.BeepSeconds); } }
+    public int PipSamples { get { return (int)Math.Round(SampleRate * TrialRules.BeepSeconds); } }
 
     public static Sweep Load(string path)
     {
@@ -122,27 +123,27 @@ public class LoadSweep
 }
 
 [Combinator]
-[Description("A Pip event's BonsaiData_StimulusState row, stamped with its Harp time.")]
+[Description("A pip's BonsaiData_StimulusState row (an Update event of TrialEvents), stamped with its Harp time.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CreateStimulusRow
 {
-    public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<CorridorEvent> source)
+    public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, CorridorOutcome>> source)
     {
-        return source.Where(e => e.Kind == CorridorEventKind.Pip).Select(e => Timestamped.Create(e.Frame.Row, e.Seconds));
+        return source.Where(e => e.Kind == TrialEventKind.Update).Select(e => Timestamped.Create(e.Update.Row, e.Seconds));
     }
 }
 
 [Combinator]
-[Description("A pip's buffer for the mixer: the tone file's row for the pip's bin (input: the Pip event and the tone rows), silent when the pip's ToneGain is 0.")]
+[Description("A pip's buffer for the mixer: the tone file's row for the pip's bin (input: the pip's Update event and the tone rows), silent when the pip's ToneGain is 0.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class PipBuffer
 {
-    public IObservable<Mat> Process(IObservable<Tuple<CorridorEvent, IList<Mat>>> source)
+    public IObservable<Mat> Process(IObservable<Tuple<TrialEvent<Trial, StimulusFrame, CorridorOutcome>, IList<Mat>>> source)
     {
         return source.Select(x =>
         {
-            var tone = x.Item2[x.Item1.Frame.Bin];
-            if (x.Item1.Frame.ToneGain > 0) return tone;
+            var tone = x.Item2[x.Item1.Update.Bin];
+            if (x.Item1.Update.ToneGain > 0) return tone;
             var silent = new Mat(tone.Size, tone.Depth, tone.Channels);
             silent.SetZero();
             return silent;

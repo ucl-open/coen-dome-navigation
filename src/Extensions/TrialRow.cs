@@ -1,5 +1,6 @@
 ﻿using Bonsai;
 using Bonsai.Harp;
+using OpenRigs.Devices;
 using System;
 using System.ComponentModel;
 using System.Reactive.Linq;
@@ -34,12 +35,12 @@ public class TrialRow
 }
 
 [Combinator]
-[Description("An Outcome event's trial row, stamped with the Harp time the outcome was known, for LogTrial.")]
+[Description("An Outcome event's trial row (TrialEvents), stamped with the Harp time the outcome was known, for LogTrial.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CreateTrialRow
 {
-    public IObservable<Timestamped<TrialRow>> Process(IObservable<CorridorEvent> source)
+    public IObservable<Timestamped<TrialRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, CorridorOutcome>> source)
     {
-        return source.Where(e => e.Kind == CorridorEventKind.Outcome).Select(e => Timestamped.Create(e.Row, e.Seconds));
+        return source.Where(e => e.Kind == TrialEventKind.Outcome).Select(e => Timestamped.Create(e.Outcome.Row, e.Seconds));
     }
 }

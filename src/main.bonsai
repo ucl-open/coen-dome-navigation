@@ -4,6 +4,7 @@
                  xmlns:ext="clr-namespace:;assembly=Extensions"
                  xmlns:task="clr-namespace:UclOpenCoenDomeNavigationTask;assembly=Extensions"
                  xmlns:core="clr-namespace:OpenRigs.Core;assembly=OpenRigs.Core"
+                 xmlns:dev="clr-namespace:OpenRigs.Devices;assembly=OpenRigs.Devices"
                  xmlns:zap="clr-namespace:OpenRigs.Devices.Zapit;assembly=OpenRigs.Devices"
                  xmlns:orcl="clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control"
                  xmlns:lv="clr-namespace:OpenRigs.LiveView;assembly=OpenRigs.LiveView"
@@ -26,15 +27,17 @@
       <Expression xsi:type="ExternalizedMapping">
         <Property Name="SubjectId" Description="The mouse's lab ID; the launch's own, from rig-control." />
         <Property Name="SessionId" Description="The session number; the launch's own, from rig-control." />
+        <Property Name="LaunchId" Description="The launcher's run id; the launch's own, from rig-control." />
         <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Start for the background noise and again at Go with the form's edits; from the editor, config\task-abstract-av-corridor.yml." />
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test) and SessionId are the launch's; the parameter a controller may change until Go (TrainingStage; the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath); the pieces declare their own parameters and commands (16 Nov 2026). The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath) at Start and RunSettings (SubjectId, SessionId) at Go; TrainingStage (OpenRigs.Control) publishes TrainingStage at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardLeft and RewardRight each give 2.5 ul before and during a run through the valve's calibration (BehaviorBoard.ManualRewards: Pip's fixed manual drop, 15 Nov 2026).</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the parameter a controller may change until Go (TrainingStage; the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath); the pieces declare their own parameters and commands (16 Nov 2026). The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath) at Start and RunSettings (SubjectId, SessionId) at Go; TrainingStage (OpenRigs.Control) publishes TrainingStage at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardLeft and RewardRight each give 2.5 ul before and during a run through the valve's calibration (BehaviorBoard.Rewards includes ManualRewards: Pip's fixed manual drop, 15 Nov 2026).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
               <Property Name="SessionId" />
+              <Property Name="LaunchId" />
             </Expression>
             <Expression xsi:type="ExternalizedMapping">
               <Property Name="SubjectId" />
@@ -42,6 +45,7 @@
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:ExperimentControl.bonsai">
               <SubjectId />
               <SessionId />
+              <LaunchId />
               <ControlEndpoint>@tcp://127.0.0.1:5561</ControlEndpoint>
               <Parameters>
                 <Parameter>
@@ -74,7 +78,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskFile</Name>
-        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\waveforms\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with the stage, rig.yml and the sweep (CheckTaskAtGo, CorridorSetup.Create: a stage past the table, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is the Zapit group's refusal.</Description>
+        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\waveforms\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with the stage, rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create: a stage past the table, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is the Zapit group's refusal.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -149,7 +153,7 @@
               <Combinator xsi:type="ext:CheckTaskAtGo" />
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
-              <Name>CorridorSetup</Name>
+              <Name>TrialRules</Name>
             </Expression>
           </Nodes>
           <Edges>
@@ -177,16 +181,10 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Declarations</Name>
-        <Description>Subjects several groups share: Zapit's replies (ConnectZapit declares its commands), reward requests (side, microlitres) for DeliverReward, and the task's events (TrialEvents), the current trial (Trial), trial rows (TrialRow) and stimulus rows (StimulusRows).</Description>
+        <Description>Subjects several groups share: the trial loop's events (TrialEvents), the current trial (Trial), trial rows (TrialRow) and stimulus rows (StimulusRows). Zapit's commands and replies are ConnectZapit's, reward requests Rewards'.</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="zap:ZapitReply">
-              <rx:Name>ZapitReplies</rx:Name>
-            </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="sys:Tuple(sys:String,sys:Double)">
-              <rx:Name>RewardRequests</rx:Name>
-            </Expression>
-            <Expression xsi:type="rx:PublishSubject" TypeArguments="ext:CorridorEvent">
+            <Expression xsi:type="rx:PublishSubject" TypeArguments="dev:TrialEvent(ext:Trial,ext:StimulusFrame,ext:CorridorOutcome)">
               <rx:Name>TrialEvents</rx:Name>
             </Expression>
             <Expression xsi:type="rx:PublishSubject" TypeArguments="harp:Timestamped(ext:TrialRow)">
@@ -414,7 +412,7 @@
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:Zapit.ConnectForTask.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), BonsaiData_Trial and Zapit's logs, ExperimentLogs the task's own BonsaiData_StimulusState; each device logs itself; Rewards (DeliverReward) logs each reward and each calibrated valve's file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
+        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), BonsaiData_Trial and Zapit's logs, ExperimentLogs the task's own BonsaiData_StimulusState; each device logs itself; Rewards (its DeliverReward) logs each reward and each calibrated valve's file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -500,10 +498,10 @@
           </Edges>
         </Workflow>
       </Expression>
-      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai" />
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.Rewards.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests): once the experiment folder exists and the tones are loaded, the setup comes on the next Harp clock tick (OnNextTick); CorridorTask draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events drive the hardware here: Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), raises the ZapitTrigger line (BehaviorBoard.SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus) in an optogenetics experiment only, and CorridorTask stops the task if Zapit has not answered by then; Pip plays the pip and sets the grating; Outcome writes the trial row, rewards (DeliverReward, left spout) or plays the penalty sound (PlayPenaltySound), and in an optogenetics experiment clears the trigger line triggerHoldSeconds later (HarpDelay). Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold, the left spout's alone), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (BehaviorBoard.SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating; Outcome writes the trial row, rewards (RewardRequests, left spout) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="MemberSelector">
@@ -522,7 +520,7 @@
               <Name>ZapitReplies</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:CorridorTask" />
+              <Combinator xsi:type="ext:RunTrials" />
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>TrialEvents</Name>
@@ -531,8 +529,8 @@
               <Name>TrialEvents</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:CorridorEvents">
-                <ext:Kind>Arm</ext:Kind>
+              <Combinator xsi:type="dev:PickTrialEvents">
+                <dev:Kind>Arm</dev:Kind>
               </Combinator>
             </Expression>
             <Expression xsi:type="MemberSelector">
@@ -550,8 +548,8 @@
               <Name>TrialEvents</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:CorridorEvents">
-                <ext:Kind>Start</ext:Kind>
+              <Combinator xsi:type="dev:PickTrialEvents">
+                <dev:Kind>Start</dev:Kind>
               </Combinator>
             </Expression>
             <Expression xsi:type="MemberSelector">
@@ -559,24 +557,6 @@
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>Trial</Name>
-            </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>Optogenetics?</Name>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Trial.optogenetics</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.SetZapitTriggerLine.bonsai">
               <Set>true</Set>
@@ -603,16 +583,16 @@
                     <Name>TrialEvents</Name>
                   </Expression>
                   <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="ext:CorridorEvents">
-                      <ext:Kind>Outcome</ext:Kind>
+                    <Combinator xsi:type="dev:PickTrialEvents">
+                      <dev:Kind>Outcome</dev:Kind>
                     </Combinator>
                   </Expression>
                   <Expression xsi:type="SubscribeSubject">
                     <Name>TrialEvents</Name>
                   </Expression>
                   <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="ext:CorridorEvents">
-                      <ext:Kind>LaserCap</ext:Kind>
+                    <Combinator xsi:type="dev:PickTrialEvents">
+                      <dev:Kind>LaserCap</dev:Kind>
                     </Combinator>
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
@@ -640,7 +620,7 @@
                     </Combinator>
                   </Expression>
                   <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="ext:StopZapit" />
+                    <Combinator xsi:type="zap:StopZapit" />
                   </Expression>
                   <Expression xsi:type="MulticastSubject">
                     <Name>ZapitCommands</Name>
@@ -673,8 +653,8 @@
               <Name>TrialEvents</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:CorridorEvents">
-                <ext:Kind>Pip</ext:Kind>
+              <Combinator xsi:type="dev:PickTrialEvents">
+                <dev:Kind>Update</dev:Kind>
               </Combinator>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
@@ -690,13 +670,13 @@
               <Name>StimulusSounds</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>Frame.Row.visualSpatialFrequencyCpd</Selector>
+              <Selector>Update.Row.visualSpatialFrequencyCpd</Selector>
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>GratingSpatialFrequency</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>Frame.GratingOpacity</Selector>
+              <Selector>Update.GratingOpacity</Selector>
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>GratingOpacity</Name>
@@ -711,8 +691,8 @@
               <Name>TrialEvents</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:CorridorEvents">
-                <ext:Kind>Outcome</ext:Kind>
+              <Combinator xsi:type="dev:PickTrialEvents">
+                <dev:Kind>Outcome</dev:Kind>
               </Combinator>
             </Expression>
             <Expression xsi:type="Combinator">
@@ -737,7 +717,7 @@
                     <Name>Source1</Name>
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Rewarded</scr:Expression>
+                    <scr:Expression>Outcome.Rewarded</scr:Expression>
                   </Expression>
                   <Expression xsi:type="WorkflowOutput" />
                 </Nodes>
@@ -748,7 +728,7 @@
               </Workflow>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>Reward</Selector>
+              <Selector>Outcome.Reward</Selector>
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>RewardRequests</Name>
@@ -773,7 +753,7 @@
                     <Name>Source1</Name>
                   </Expression>
                   <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>PenaltySound</scr:Expression>
+                    <scr:Expression>Outcome.PenaltySound</scr:Expression>
                   </Expression>
                   <Expression xsi:type="WorkflowOutput" />
                 </Nodes>
@@ -784,39 +764,12 @@
               </Workflow>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:PlayPenaltySound.bonsai" />
-            <Expression xsi:type="rx:Condition">
-              <Name>OptogeneticsOutcome?</Name>
-              <Description>Only an optogenetics experiment clears the trigger line, as only one raises it (Pip, 13 Nov 2026).</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Trial.optogenetics</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="InputMapping">
-              <PropertyMappings>
-                <Property Name="DueSeconds" Selector="Trial.triggerHoldSeconds" />
-              </PropertyMappings>
-              <Selector>it</Selector>
-            </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>Timestamp</Name>
+              <Name>TrialEvents</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Name>TriggerHold</Name>
-              <Description>The trigger line held triggerHoldSeconds past the outcome, on the Harp clock, then cleared.</Description>
-              <Combinator xsi:type="core:HarpDelay">
-                <core:DueSeconds>1</core:DueSeconds>
+              <Combinator xsi:type="dev:PickTrialEvents">
+                <dev:Kind>TriggerOff</dev:Kind>
               </Combinator>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.SetZapitTriggerLine.bonsai">
@@ -827,16 +780,16 @@
               <Name>TrialEvents</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:CorridorEvents">
-                <ext:Kind>Trigger</ext:Kind>
+              <Combinator xsi:type="dev:PickTrialEvents">
+                <dev:Kind>Trigger</dev:Kind>
               </Combinator>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>TrialEvents</Name>
             </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:CorridorEvents">
-                <ext:Kind>Start</ext:Kind>
+              <Combinator xsi:type="dev:PickTrialEvents">
+                <dev:Kind>Start</dev:Kind>
               </Combinator>
             </Expression>
             <Expression xsi:type="MemberSelector">
@@ -851,7 +804,7 @@
               </PropertyMappings>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>CorridorSetup</Name>
+              <Name>TrialRules</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>PathPrefix</Name>
@@ -867,7 +820,7 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Name>OnNextTick</Name>
-              <Description>The setup, once the experiment folder exists and the tones are loaded, stamped with the next Harp clock tick and given from the clock's thread (lib-open-rigs' OpenRigs.Core OnNextTick), with no lock held, so trial 1 runs as every later one does.</Description>
+              <Description>The rules, once the experiment folder exists and the tones are loaded, stamped with the next Harp clock tick and given from the clock's thread (lib-open-rigs' OpenRigs.Core OnNextTick), with no lock held, so trial 1 runs as every later one does.</Description>
               <Combinator xsi:type="core:OnNextTick" />
             </Expression>
           </Nodes>
@@ -880,87 +833,55 @@
             <Edge From="5" To="6" Label="Source1" />
             <Edge From="7" To="8" Label="Source1" />
             <Edge From="11" To="12" Label="Source1" />
-            <Edge From="54" To="15" Label="Source1" />
-            <Edge From="15" To="20" Label="Source1" />
-            <Edge From="21" To="22" Label="Source1" />
-            <Edge From="22" To="24" Label="Source1" />
-            <Edge From="23" To="24" Label="Source2" />
+            <Edge From="51" To="15" Label="Source1" />
+            <Edge From="20" To="21" Label="Source1" />
+            <Edge From="21" To="23" Label="Source1" />
+            <Edge From="22" To="23" Label="Source2" />
+            <Edge From="23" To="24" Label="Source1" />
             <Edge From="24" To="25" Label="Source1" />
-            <Edge From="25" To="26" Label="Source1" />
-            <Edge From="22" To="27" Label="Source1" />
-            <Edge From="27" To="28" Label="Source1" />
-            <Edge From="22" To="29" Label="Source1" />
-            <Edge From="29" To="30" Label="Source1" />
-            <Edge From="22" To="31" Label="Source1" />
-            <Edge From="31" To="32" Label="Source1" />
+            <Edge From="21" To="26" Label="Source1" />
+            <Edge From="26" To="27" Label="Source1" />
+            <Edge From="21" To="28" Label="Source1" />
+            <Edge From="28" To="29" Label="Source1" />
+            <Edge From="21" To="30" Label="Source1" />
+            <Edge From="30" To="31" Label="Source1" />
+            <Edge From="32" To="33" Label="Source1" />
             <Edge From="33" To="34" Label="Source1" />
             <Edge From="34" To="35" Label="Source1" />
-            <Edge From="35" To="36" Label="Source1" />
-            <Edge From="34" To="37" Label="Source1" />
-            <Edge From="37" To="38" Label="Source1" />
-            <Edge From="34" To="39" Label="Source1" />
+            <Edge From="33" To="36" Label="Source1" />
+            <Edge From="36" To="37" Label="Source1" />
+            <Edge From="33" To="38" Label="Source1" />
+            <Edge From="38" To="39" Label="Source1" />
             <Edge From="39" To="40" Label="Source1" />
-            <Edge From="40" To="41" Label="Source1" />
-            <Edge From="39" To="43" Label="Source1" />
-            <Edge From="42" To="43" Label="Source2" />
+            <Edge From="38" To="42" Label="Source1" />
+            <Edge From="41" To="42" Label="Source2" />
+            <Edge From="42" To="43" Label="Source1" />
             <Edge From="43" To="44" Label="Source1" />
-            <Edge From="44" To="45" Label="Source1" />
-            <Edge From="34" To="46" Label="Source1" />
-            <Edge From="34" To="48" Label="Source1" />
+            <Edge From="33" To="45" Label="Source1" />
+            <Edge From="47" To="48" Label="Source1" />
             <Edge From="48" To="49" Label="Source1" />
-            <Edge From="49" To="51" Label="Source1" />
-            <Edge From="50" To="51" Label="Source2" />
+            <Edge From="50" To="51" Label="Source1" />
+            <Edge From="52" To="53" Label="Source1" />
             <Edge From="53" To="54" Label="Source1" />
-            <Edge From="55" To="56" Label="Source1" />
-            <Edge From="56" To="57" Label="Source1" />
-            <Edge From="15" To="16" Label="Source1" />
-            <Edge From="51" To="52" Label="Source1" />
-            <Edge From="46" To="47" Label="Source1" />
-            <Edge From="57" To="58" Label="Source1" />
+            <Edge From="51" To="19" Label="Source1" />
+            <Edge From="45" To="46" Label="Source1" />
+            <Edge From="54" To="55" Label="Source1" />
             <Edge From="8" To="9" Label="Source1" />
             <Edge From="9" To="10" Label="Source1" />
-            <Edge From="10" To="19" Label="Source1" />
+            <Edge From="10" To="18" Label="Source1" />
             <Edge From="12" To="13" Label="Source1" />
             <Edge From="13" To="14" Label="Source1" />
-            <Edge From="15" To="17" Label="Source1" />
-            <Edge From="17" To="10" Label="Source2" />
-            <Edge From="18" To="59" Label="Source1" />
-            <Edge From="59" To="10" Label="Source3" />
-            <Edge From="60" To="63" Label="Source1" />
-            <Edge From="61" To="63" Label="Source2" />
-            <Edge From="62" To="63" Label="Source3" />
-            <Edge From="63" To="64" Label="Source1" />
-            <Edge From="64" To="65" Label="Source1" />
-            <Edge From="1" To="65" Label="Source2" />
-            <Edge From="65" To="0" Label="Source1" />
-          </Edges>
-        </Workflow>
-      </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Rewards</Name>
-        <Description>Each reward on RewardRequests (side, microlitres: the task's and ManualRewards') delivered through its valve's calibration (OpenRigs.Devices BehaviorBoard.DeliverReward, both reward lines from rig.yml at Start; a RewardDelivered row in BonsaiData_Async, each calibrated valve's file as ValveCalibrationDO&lt;n&gt;). Before ExperimentRecords, which records the experiment but gives no rewards.</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RewardRequests</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RigFile</Name>
-            </Expression>
-            <Expression xsi:type="PropertyMapping">
-              <PropertyMappings>
-                <Property Name="RigFile" />
-              </PropertyMappings>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai">
-              <RigFile>UNMAPPED</RigFile>
-              <CalibrationDirectory />
-            </Expression>
-          </Nodes>
-          <Edges>
-            <Edge From="0" To="3" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="2" To="3" Label="Source2" />
+            <Edge From="51" To="16" Label="Source1" />
+            <Edge From="16" To="10" Label="Source2" />
+            <Edge From="17" To="56" Label="Source1" />
+            <Edge From="56" To="10" Label="Source3" />
+            <Edge From="57" To="60" Label="Source1" />
+            <Edge From="58" To="60" Label="Source2" />
+            <Edge From="59" To="60" Label="Source3" />
+            <Edge From="60" To="61" Label="Source1" />
+            <Edge From="61" To="62" Label="Source1" />
+            <Edge From="1" To="62" Label="Source2" />
+            <Edge From="62" To="0" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

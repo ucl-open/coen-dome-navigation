@@ -32,12 +32,12 @@ def test_no_wall_clock_wait_inside_task_logic():
     waits = [c for c in combinators(logic) if c in ("rx:Timer", "rx:Delay", "rx:Throttle", "rx:DelaySubscription", "rx:Timeout", "rx:Interval")]
     assert waits == ["rx:Timer"]
     assert combinators(group("LaserOnUntilOutcome")).count("rx:Timer") == 1
-    assert "core:HarpDelay" in combinators(logic) and "ext:CorridorTask" in combinators(logic)
+    assert "ext:RunTrials" in combinators(logic)
 
 
 def test_the_shared_blocks_replace_the_local_copies():
     includes = {e.get("Path") for e in MAIN.iter(W + "Expression") if e.get(XSI) == "IncludeWorkflow"}
-    assert {"OpenRigs.Devices:DomeHardware.bonsai", "OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai",
+    assert {"OpenRigs.Devices:DomeHardware.bonsai", lint.REWARDS,
             "OpenRigs.Devices:Zapit.ConnectForTask.bonsai", "OpenRigs.Logging:LogLabExperiment.bonsai",
             lint.LAUNCH_SETTINGS, lint.BACKGROUND_NOISE, lint.EXPERIMENT_RECORDS} <= includes
     # The speakers and the projector are DomeHardware's (Pip, 15 Nov 2026: every task has background noise and a screen).
@@ -63,7 +63,8 @@ def test_the_launch_properties():
     # No MissingCalibration: a reward valve without a calibration always stops the workflow (Pip, 15 Nov 2026).
     top = MAIN.find(W + "Workflow").find(W + "Nodes")
     exposed = {p.get("Name") for e in top if e.get(XSI) == "ExternalizedMapping" for p in e}
-    assert {"SubjectId", "SessionId", "TaskPath", "DisplayDevice", "ConfigRoot"} == exposed
+    assert {"SubjectId", "SessionId", "LaunchId", "TaskPath", "DisplayDevice", "ConfigRoot"} == exposed
+    assert lint.launch_id_problems(WORKFLOW) == []
 
 
 def test_the_metrics_are_the_view_s():
@@ -95,34 +96,44 @@ def _upstream(edges: list[tuple[int, int]], node: int) -> set[int]:
     return seen
 
 
-def test_the_trigger_line_rises_and_falls_only_in_an_optogenetics_experiment():
-    # BACKLOG (Decided; Pip, 13 Nov 2026): the trigger line and the masking LEDs on it only in optogenetics experiments.
+DEV_KIND = "{clr-namespace:OpenRigs.Devices;assembly=OpenRigs.Devices}Kind"
+
+
+def _picked(nodes: list[ET.Element], i: int) -> str | None:
+    """The TrialEvents kind node i picks (lib-open-rigs' PickTrialEvents), or None."""
+    return next(nodes[i].iter(DEV_KIND)).text if lint.kind(nodes[i]) == "dev:PickTrialEvents" else None
+
+
+def test_the_trigger_line_rises_at_the_trigger_and_falls_at_trigger_off():
+    # BACKLOG (Decided; Pip, 13 Nov 2026): the trigger line and the masking LEDs on it only in optogenetics experiments:
+    # TrialLoop gives Trigger and TriggerOff only for a laser trial (tests\Extensions.Tests), each straight to the line.
     nodes, edges = _scope(group("TaskLogic"))
     lines = [i for i, n in enumerate(nodes) if n.get("Path") == lint.SET_ZAPIT_TRIGGER_LINE]
     assert [nodes[i].findtext(W + "Set") for i in lines] == ["true", "false"]
-    for line in lines:
-        conditions = [nodes[a] for a in _upstream(edges, line) if nodes[a].get(XSI) == "rx:Condition"]
-        assert [c.findtext(".//{clr-namespace:Bonsai.Scripting.Expressions;assembly=Bonsai.Scripting.Expressions}Expression") for c in conditions] == ["Trial.optogenetics"]
+    assert [[_picked(nodes, a) for a, b in edges if b == line] for line in lines] == [["Trigger"], ["TriggerOff"]]
 
 
 def test_the_trigger_event_raises_the_line_and_starts_a_software_triggered_zapit():
-    # Pip, 13 Nov 2026: the trigger comes laserToStimulusSeconds before the first pip (CorridorTask's Trigger), not at Start.
+    # Pip, 13 Nov 2026: the trigger comes laserToStimulusSeconds before the first pip (TrialLoop's Trigger), not at Start;
+    # its trial is ArmZapit's second input, sent there on a rig without hardware triggering.
     nodes, edges = _scope(group("TaskLogic"))
-    kind = "{clr-namespace:;assembly=Extensions}Kind"
-    opto = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "Optogenetics?")
-    feeding = [nodes[a].find(W + "Combinator") for a, b in edges if b == opto]
-    assert [f.findtext(kind) for f in feeding if f is not None] == ["Trigger"]
+    (trigger,) = [i for i in range(len(nodes)) if _picked(nodes, i) == "Trigger"]
     arm = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "ArmZapit")
-    assert opto in _upstream(edges, arm)
+    inputs = {e.get("Label"): int(e.get("From")) for e in group("TaskLogic").find(W + "Workflow").find(W + "Edges") if int(e.get("To")) == arm}
+    assert trigger in _upstream(edges, inputs["Source2"]) and trigger not in _upstream(edges, inputs["Source1"])
 
 
 def test_the_trial_loop_starts_on_the_clock_thread():
-    # As coen-dome-decision-making (BLUE-OPTO-2, 14 Nov 2026): the setup reaches CorridorTask from lib-open-rigs' OnNextTick
-    # on the Harp clock's thread, not from a wall-clock Delay.
+    # The dome tasks' one TaskLogic shape (lib-open-rigs TrialLoop): TrialRules reaches RunTrials from lib-open-rigs'
+    # OnNextTick on the Harp clock's thread, not from a wall-clock Delay, and RunTrials' events go into TrialEvents.
     nodes, edges = _scope(group("TaskLogic"))
-    (task,) = [i for i, n in enumerate(nodes) if "ext:CorridorTask" in combinators(n)]
+    (task,) = [i for i, n in enumerate(nodes) if "ext:RunTrials" in combinators(n)]
     (tick,) = [i for i, n in enumerate(nodes) if "core:OnNextTick" in combinators(n)]
-    assert tick in _upstream(edges, task)
+    (rules,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "SubscribeSubject" and n.findtext(W + "Name") == "TrialRules"]
+    assert {tick, rules} <= _upstream(edges, task)
+    assert [nodes[b].findtext(W + "Name") for a, b in edges if a == task] == ["TrialEvents"]
+    (trial,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "Trial"]
+    assert [_picked(nodes, a) for a in _upstream(edges, trial) if _picked(nodes, a)] == ["Start"]   # the trial published at its Start
     assert "rx:Delay" not in TEXT
 
 
@@ -196,7 +207,7 @@ def test_the_speakers_are_declared_before_every_user():
 
 
 def test_the_trial_events_leave_the_clock_s_thread_unswitched():
-    # CorridorTask serialises its inputs, and nothing downstream blocks, so no ObserveOn.
+    # RunTrials (TrialLoop.Observe) serialises its inputs, and nothing downstream blocks, so no ObserveOn.
     assert "rx:ObserveOn" not in combinators(group("TaskLogic"))
 
 
@@ -215,8 +226,9 @@ WORKFLOW = lint.Workflow(ROOT)
 
 
 def test_every_harp_delay_runs_on_the_timestamp_clock():
-    count, off = lint.harp_delays_off_the_clock(WORKFLOW)
-    assert count >= 1 and off == []
+    # TrialLoop times every task wait itself (the trigger line's hold is its TriggerOff); a HarpDelay added must read Timestamp.
+    _, off = lint.harp_delays_off_the_clock(WORKFLOW)
+    assert off == []
 
 
 def test_no_async_event_sender_completes_async_events():
@@ -236,8 +248,9 @@ def test_zapit_is_the_shared_include_given_the_conditions_file():
     assert lint.zapit_include_problems(WORKFLOW) == []
 
 
-def test_the_manual_reward_is_the_fixed_drop():
-    assert lint.manual_reward_problems(WORKFLOW) == []
+def test_every_reward_goes_through_the_lab_s_rewards():
+    # OpenRigs.Devices' BehaviorBoard.Rewards: RewardRequests, ManualRewards' fixed drop and DeliverReward, before TaskLogic.
+    assert lint.reward_problems(WORKFLOW) == []
 
 
 def test_the_penalty_sound_is_the_lab_s_at_the_task_s_level():
@@ -260,7 +273,6 @@ def test_spout_step_size_is_the_lick_spout_stage_s():
 
 def test_the_experiment_records_are_the_shared_include():
     assert lint.experiment_records_problems(WORKFLOW) == []
-    assert lint.reward_delivery_problems(WORKFLOW) == []  # DeliverReward is the task's own, in Rewards
 
 
 def test_the_launch_settings_are_the_shared_include():
@@ -293,7 +305,15 @@ def test_the_rng_seed_is_logged_at_trial_1s_start():
     (seed,) = [a for a, b, _ in edges if b == log]
     (start,) = [a for a, b, _ in edges if b == seed]
     assert nodes[seed].findtext(W + "Selector") == "Trial.rngSeed"
-    assert lint.kind(nodes[start]) == "ext:CorridorEvents" and next(nodes[start].iter("{clr-namespace:;assembly=Extensions}Kind")).text == "Start"
+    assert _picked(nodes, start) == "Start"
+
+
+def test_every_device_is_opened_by_its_piece():
+    assert lint.hand_opened_devices(WORKFLOW) == []
+
+
+def test_the_live_view_is_last_and_fed_by_nothing():
+    assert lint.live_view_problems(WORKFLOW) == []
 
 
 def test_the_task_logs_are_the_shared_include():

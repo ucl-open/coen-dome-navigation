@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenRigs.Devices;
 using OpenRigs.Devices.Zapit;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.Serialization;
+using TrialEventOf = OpenRigs.Devices.TrialEvent<Trial, StimulusFrame, CorridorOutcome>;
 
 static class Fixture
 {
@@ -29,9 +31,9 @@ static class Fixture
         return global::Sweep.Load(Path.Combine(Repo(), "src", "waveforms", "sweep.json"));
     }
 
-    public static CorridorSetup Setup(UclOpenCoenDomeNavigationTaskParameters task, int stage, bool hardware = true)
+    public static TrialRules Setup(UclOpenCoenDomeNavigationTaskParameters task, int stage, bool hardware = true)
     {
-        return CorridorSetup.Create(task, stage, Sweep(), hardware, path => 4);
+        return TrialRules.Create(task, stage, Sweep(), hardware, path => 4);
     }
 
     public static void Opto(UclOpenCoenDomeNavigationTaskParameters task)
@@ -42,16 +44,17 @@ static class Fixture
     }
 }
 
-/// <summary>Runs CorridorState on a stand-in Harp clock, 1 ms a tick, the wheel and licks put in by the test.</summary>
+/// <summary>Runs lib-open-rigs' TrialLoop with the corridor's rules on a stand-in Harp clock, 1 ms a tick, the wheel,
+/// the left spout and Zapit's replies put in by the test (as RunTrials feeds it: no right spout).</summary>
 class Rig
 {
-    public readonly CorridorState State;
-    public readonly List<CorridorEvent> Events = new List<CorridorEvent>();
+    public readonly TrialLoop<Trial, StimulusFrame, CorridorOutcome> Loop;
+    public readonly List<TrialEventOf> Events = new List<TrialEventOf>();
     public double Now;
 
-    public Rig(CorridorSetup setup)
+    public Rig(TrialRules rules)
     {
-        State = new CorridorState(setup);
+        Loop = new TrialLoop<Trial, StimulusFrame, CorridorOutcome>(rules);
     }
 
     public void Until(double seconds, Func<bool> stop = null)
@@ -59,19 +62,20 @@ class Rig
         while (Now < seconds - 1e-9 && (stop == null || !stop()))
         {
             Now = Math.Round(Now + 0.001, 6);
-            Events.AddRange(State.OnClock(Now));
+            Events.AddRange(Loop.OnClock(Now));
         }
     }
 
-    public CorridorEvent RunTo(CorridorEventKind kind, double limit = 60)
+    public TrialEventOf RunTo(TrialEventKind kind, double limit = 60)
     {
         var seen = Events.Count;
         Until(Now + limit, () => Events.Skip(seen).Any(e => e.Kind == kind));
         return Events.Skip(seen).First(e => e.Kind == kind);
     }
 
-    public void Wheel(double cm) { Events.AddRange(State.OnWheel(cm)); }
-    public void Lick() { Events.AddRange(State.OnLick(true)); Events.AddRange(State.OnLick(false)); }
+    public void Wheel(double cm) { Events.AddRange(Loop.OnWheel(cm)); }
+    public void Touch(bool touched) { Events.AddRange(Loop.OnLick(0, touched)); }
+    public void Lick() { Touch(true); Touch(false); }
 }
 
 [TestClass]
@@ -158,7 +162,9 @@ public class TrialDrawTests
         Assert.IsTrue(trials.Where(t => !t.laserOn).All(t => t.laserPowerMw == 0));
         Assert.IsTrue(trials.Where(t => t.laserOn).All(t => t.laserPowerMw == 2.0));
         Assert.AreEqual(0.4, trials.Skip(20).Count(t => t.laserOn) / 480.0, 0.07);
-        Assert.IsTrue(trials.All(t => t.firstPipBeep == 2 && t.triggerBeep == 0 && t.armZapit));
+        var rules = Fixture.Setup(task, 4);
+        Assert.IsTrue(trials.All(t => t.firstPipBeep == 2 && rules.Timing(t).Laser && rules.Timing(t).LaserToStimulusSeconds == 0.1));
+        Assert.IsTrue(rules.Laser.HardwareTriggered);   // armed during the interval
     }
 
     [TestMethod]
@@ -167,7 +173,7 @@ public class TrialDrawTests
         // Only the test mouse runs there: lib-open-rigs' ConnectZapit refuses a real one (RequireZapitHardwareTrigger).
         var task = Fixture.Task();
         Fixture.Opto(task);
-        Assert.IsFalse(new TrialDraw(Fixture.Setup(task, 4, false)).Next().armZapit);
+        Assert.IsFalse(Fixture.Setup(task, 4, false).Laser.HardwareTriggered);
     }
 
     [TestMethod]
@@ -186,7 +192,7 @@ public class TrialDrawTests
         Assert.AreEqual(4, new TrialDraw(Fixture.Setup(ok, 4)).Next().firstPipBeep);
         ok.Optogenetics.LaserToStimulusSeconds = -0.5;   // after the first pip: the first pip at the trial start, the trigger 10 beeps later
         var late = new TrialDraw(Fixture.Setup(ok, 4)).Next();
-        Assert.IsTrue(late.firstPipBeep == 0 && late.triggerBeep == 10);
+        Assert.IsTrue(late.firstPipBeep == 0 && Fixture.Setup(ok, 4).Timing(late).LaserToStimulusSeconds == -0.5);
         ok.Optogenetics.LaserToStimulusSeconds = -12.05;  // past stage 4's 12 s limit
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok, 4)).Message, "timeLimitSeconds");
         ok.Optogenetics.LaserToStimulusSeconds = -2.05;   // past the 2 s on a stage without one
@@ -285,21 +291,22 @@ public class TrialDrawTests
     }
 }
 
+/// <summary>The corridor's trials: TrialLoop driven tick by tick with the corridor's rules.</summary>
 [TestClass]
-public class CorridorStateTests
+public class CorridorTrialTests
 {
     [TestMethod]
     public void TheFirstTrialWaitsItsIntervalAndPipsEvery50MsFromTheLead()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 1));
         rig.Now = 100;
-        var start = rig.RunTo(CorridorEventKind.Start);
+        var start = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(100.001 + start.Trial.itiSeconds - 0.1, start.Seconds, 1e-9);   // the trial start: the interval's end less the 0.1 s lead
         rig.Until(rig.Now + 1.0);
-        var pips = rig.Events.Where(e => e.Kind == CorridorEventKind.Pip).Select(e => e.Seconds).ToList();
+        var pips = rig.Events.Where(e => e.Kind == TrialEventKind.Update).Select(e => e.Seconds).ToList();
         Assert.AreEqual(100.001 + start.Trial.itiSeconds, pips[0], 0.0011);   // the first pip: exactly the interval after its start
         for (int i = 1; i < pips.Count; i++) Assert.AreEqual(0.05, pips[i] - pips[i - 1], 1e-6);
-        Assert.IsTrue(rig.Events.Where(e => e.Kind == CorridorEventKind.Pip).All(e => e.Frame.Row.toneFrequencyHz == 2000 && e.Frame.Bin == 0));
+        Assert.IsTrue(rig.Events.Where(e => e.Kind == TrialEventKind.Update).All(e => e.Update.Row.toneFrequencyHz == 2000 && e.Update.Bin == 0));
     }
 
     [TestMethod]
@@ -307,17 +314,17 @@ public class CorridorStateTests
     {
         var task = Fixture.Task();
         var rig = new Rig(Fixture.Setup(task, 1));
-        rig.RunTo(CorridorEventKind.Start);
+        rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);   // the end of a short track: the sweep's end
-        var outcome = rig.RunTo(CorridorEventKind.Outcome);
-        Assert.IsTrue(outcome.Rewarded);
-        Assert.AreEqual("Correct", outcome.Row.outcome);
-        Assert.AreEqual("FreqReached", outcome.Row.endReason);
-        Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Reward);   // the task file's rewardSizeUl (3 ul since 15 Nov 2026)
-        var next = rig.RunTo(CorridorEventKind.Start);
+        var outcome = rig.RunTo(TrialEventKind.Outcome);
+        Assert.IsTrue(outcome.Outcome.Rewarded);
+        Assert.AreEqual("Correct", outcome.Outcome.Row.outcome);
+        Assert.AreEqual("FreqReached", outcome.Outcome.Row.endReason);
+        Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's rewardSizeUl (3 ul since 15 Nov 2026)
+        var next = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(outcome.Seconds + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
         rig.Until(rig.Now + 0.2);
-        var firstPip = rig.Events.First(e => e.Kind == CorridorEventKind.Pip && e.Trial == next.Trial);
+        var firstPip = rig.Events.First(e => e.Kind == TrialEventKind.Update && e.Trial == next.Trial);
         Assert.AreEqual(outcome.Seconds + next.Trial.itiSeconds, firstPip.Seconds, 0.0011);
     }
 
@@ -325,11 +332,11 @@ public class CorridorStateTests
     public void Stage0DriftsIntoTheZoneWithoutRunning()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
-        var outcome = rig.RunTo(CorridorEventKind.Outcome);
-        Assert.AreEqual("FreqReached", outcome.Row.endReason);
-        Assert.IsTrue(outcome.Row.toneEndFrequencyHz >= 18000);
-        Assert.IsTrue(outcome.Seconds - outcome.Row.trialStartTime > 10 && outcome.Seconds - outcome.Row.trialStartTime < 25);
-        Assert.AreEqual(outcome.Seconds, outcome.Row.outcomeTime, "outcomeTime is the row's own time, harpTime");
+        var outcome = rig.RunTo(TrialEventKind.Outcome);
+        Assert.AreEqual("FreqReached", outcome.Outcome.Row.endReason);
+        Assert.IsTrue(outcome.Outcome.Row.toneEndFrequencyHz >= 18000);
+        Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.trialStartTime > 10 && outcome.Seconds - outcome.Outcome.Row.trialStartTime < 25);
+        Assert.AreEqual(outcome.Seconds, outcome.Outcome.Row.outcomeTime, "outcomeTime is the row's own time, harpTime");
     }
 
     [TestMethod]
@@ -337,36 +344,36 @@ public class CorridorStateTests
     {
         var task = Fixture.Task();
         var rig = new Rig(Fixture.Setup(task, 4));  // zone 15248-21248 Hz, 5 wrong licks
-        rig.RunTo(CorridorEventKind.Start);
+        rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.2);
         for (int i = 0; i < 4; i++) rig.Lick();
-        Assert.IsFalse(rig.Events.Any(e => e.Kind == CorridorEventKind.Outcome));
+        Assert.IsFalse(rig.Events.Any(e => e.Kind == TrialEventKind.Outcome));
         rig.Lick();
-        var outcome = rig.Events.Single(e => e.Kind == CorridorEventKind.Outcome);
-        Assert.AreEqual("Incorrect", outcome.Row.outcome);
-        Assert.AreEqual("WrongLickLimit", outcome.Row.endReason);
-        Assert.IsTrue(outcome.Row.penaltySound);
-        Assert.AreEqual(2.0, outcome.Row.penaltyTimeoutSeconds);
+        var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
+        Assert.AreEqual("Incorrect", outcome.Outcome.Row.outcome);
+        Assert.AreEqual("WrongLickLimit", outcome.Outcome.Row.endReason);
+        Assert.IsTrue(outcome.Outcome.Row.penaltySound);
+        Assert.AreEqual(2.0, outcome.Outcome.Row.penaltyTimeoutSeconds);
 
         // the next trial waits the timeout and its interval; the quiet second, counted from the interval's start, adds nothing
-        var next = rig.RunTo(CorridorEventKind.Start);
+        var next = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(outcome.Seconds + 2.0 + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
         rig.Until(rig.Now + 0.2);
         var track = next.Trial.trackLengthCm;
         rig.Wheel(track * 0.85);  // inside the zone
         rig.Until(rig.Now + 0.06);
         rig.Lick();
-        var rewarded = rig.Events.Last(e => e.Kind == CorridorEventKind.Outcome);
-        Assert.AreEqual("CorrectLick", rewarded.Row.endReason);
-        Assert.AreEqual(2.0, rewarded.Row.itiStartTime - outcome.Seconds, 0.0011);
-        Assert.AreEqual(next.Trial.itiSeconds, rewarded.Row.itiSeconds);
+        var rewarded = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome);
+        Assert.AreEqual("CorrectLick", rewarded.Outcome.Row.endReason);
+        Assert.AreEqual(2.0, rewarded.Outcome.Row.itiStartTime - outcome.Seconds, 0.0011);
+        Assert.AreEqual(next.Trial.itiSeconds, rewarded.Outcome.Row.itiSeconds);
     }
 
     [TestMethod]
     public void TheQuietWaitRestartsWithEachLick()
     {
         var quiet = new Rig(Fixture.Setup(Fixture.Task(), 4));
-        var start = quiet.RunTo(CorridorEventKind.Start);   // a quiet mouse: the start at the interval's end less the lead
+        var start = quiet.RunTo(TrialEventKind.Start);   // a quiet mouse: the start at the interval's end less the lead
         var iti = start.Trial.itiSeconds;
         Assert.AreEqual(0.001 + iti - 0.1, start.Seconds, 1e-9);
         var r = new Rig(Fixture.Setup(Fixture.Task(), 4));
@@ -374,17 +381,17 @@ public class CorridorStateTests
         r.Lick();                                           // licked late in the interval: the start a quiet second later
         r.Until(Math.Round(r.Now + 0.3, 3));
         r.Lick();                                           // and again
-        var started = r.RunTo(CorridorEventKind.Start);
+        var started = r.RunTo(TrialEventKind.Start);
         Assert.AreEqual(Math.Round(0.001 + iti - 0.5, 3) + 0.3 + 1.0, started.Seconds, 1e-9);
         rig_quiet_wait(r, started);
     }
 
-    static void rig_quiet_wait(Rig r, CorridorEvent started)
+    static void rig_quiet_wait(Rig r, TrialEventOf started)
     {
         r.Wheel(1000);   // the end of the track ends the trial
-        var outcome = r.Events.Single(e => e.Kind == CorridorEventKind.Outcome);
-        Assert.AreEqual(started.Seconds - (started.Trial.itiSeconds - 0.1 + 0.001), outcome.Row.quietWaitSeconds, 1e-9);
-        Assert.AreEqual(started.Seconds, outcome.Row.trialStartTime, 1e-12);
+        var outcome = r.Events.Single(e => e.Kind == TrialEventKind.Outcome);
+        Assert.AreEqual(started.Seconds - (started.Trial.itiSeconds - 0.1 + 0.001), outcome.Outcome.Row.quietWaitSeconds, 1e-9);
+        Assert.AreEqual(started.Seconds, outcome.Outcome.Row.trialStartTime, 1e-12);
     }
 
     [TestMethod]
@@ -395,7 +402,7 @@ public class CorridorStateTests
         task.TrainingStages[1].WheelQuietCm = 1.0;
         var still = new Rig(Fixture.Setup(task, 1));
         still.Wheel(50);
-        var start = still.RunTo(CorridorEventKind.Start);
+        var start = still.RunTo(TrialEventKind.Start);
         var iti = start.Trial.itiSeconds;
         Assert.AreEqual(0.001 + iti - 0.1, start.Seconds, 1e-9);
         var rock = new Rig(Fixture.Setup(task, 1));
@@ -404,7 +411,7 @@ public class CorridorStateTests
         rock.Wheel(50.6);                                   // 0.6 cm forward: within 1 cm
         rock.Until(Math.Round(iti - 0.3, 3));
         rock.Wheel(50.0);                                   // and back: net 0, 1.2 cm within a second, so the start a second after the first swing
-        var started = rock.RunTo(CorridorEventKind.Start);
+        var started = rock.RunTo(TrialEventKind.Start);
         Assert.AreEqual(Math.Round(iti - 0.5, 3) + 1.0, started.Seconds, 1e-9);
 
         // 0.3 cm every 0.4 s up to the start: past 1 cm in all, never more than 0.9 cm within a second, so no delay.
@@ -415,40 +422,40 @@ public class CorridorStateTests
             fidget.Until(Math.Round(iti - 1.7 + 0.4 * i, 3));
             fidget.Wheel(50 + 0.3 * i);
         }
-        Assert.AreEqual(0.001 + iti - 0.1, fidget.RunTo(CorridorEventKind.Start).Seconds, 1e-9);
+        Assert.AreEqual(0.001 + iti - 0.1, fidget.RunTo(TrialEventKind.Start).Seconds, 1e-9);
     }
 
     [TestMethod]
     public void AHeldContactHoldsTheTrialStartUntilReleased()
     {
         var r = new Rig(Fixture.Setup(Fixture.Task(), 4));  // lickQuietSeconds 1
-        var iti = new Rig(Fixture.Setup(Fixture.Task(), 4)).RunTo(CorridorEventKind.Start).Trial.itiSeconds;
+        var iti = new Rig(Fixture.Setup(Fixture.Task(), 4)).RunTo(TrialEventKind.Start).Trial.itiSeconds;
         r.Until(0.5);
-        r.Events.AddRange(r.State.OnLick(true));            // a paw on the spout, held past the interval's end
+        r.Touch(true);            // a paw on the spout, held past the interval's end
         r.Until(Math.Round(iti + 2, 3));
-        Assert.IsFalse(r.Events.Any(e => e.Kind == CorridorEventKind.Start), "no trial start while the spout is held");
-        r.Events.AddRange(r.State.OnLick(false));
-        Assert.AreEqual(Math.Round(iti + 2, 3) + 1.0, r.RunTo(CorridorEventKind.Start).Seconds, 1e-9);
+        Assert.IsFalse(r.Events.Any(e => e.Kind == TrialEventKind.Start), "no trial start while the spout is held");
+        r.Touch(false);
+        Assert.AreEqual(Math.Round(iti + 2, 3) + 1.0, r.RunTo(TrialEventKind.Start).Seconds, 1e-9);
     }
 
     [TestMethod]
     public void ZapitAddsNoTimeAndTheTriggerIsSignedFromTheFirstPip()
     {
-        var plain = new Rig(Fixture.Setup(Fixture.Task(), 1)).RunTo(CorridorEventKind.Start);
+        var plain = new Rig(Fixture.Setup(Fixture.Task(), 1)).RunTo(TrialEventKind.Start);
         foreach (var lead in new[] { 0.1, 0.0, -0.5 })
         {
             var task = Fixture.Task();
             Fixture.Opto(task);
             task.Optogenetics.LaserToStimulusSeconds = lead;
             var rig = new Rig(Fixture.Setup(task, 1));
-            var arm = rig.RunTo(CorridorEventKind.Arm);
+            var arm = rig.RunTo(TrialEventKind.Arm);
             Assert.AreEqual(0.001, arm.Seconds, 1e-9);       // armed at the interval's start
-            rig.Events.AddRange(rig.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 }));
-            var start = rig.RunTo(CorridorEventKind.Start);
+            rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 });
+            var start = rig.RunTo(TrialEventKind.Start);
             Assert.AreEqual(0.001 + start.Trial.itiSeconds - Math.Max(lead, 0), start.Seconds, 1e-9);
             rig.Until(rig.Now + 0.7);
-            var pip = rig.Events.First(e => e.Kind == CorridorEventKind.Pip).Seconds;
-            var trigger = rig.Events.Single(e => e.Kind == CorridorEventKind.Trigger).Seconds;
+            var pip = rig.Events.First(e => e.Kind == TrialEventKind.Update).Seconds;
+            var trigger = rig.Events.Single(e => e.Kind == TrialEventKind.Trigger).Seconds;
             Assert.AreEqual(0.001 + start.Trial.itiSeconds, pip, 0.0011, "the first pip: the interval after its start, Zapit or not");
             Assert.AreEqual(pip - lead, trigger, 0.0011, "the trigger: the first pip less laserToStimulusSeconds");
             if (lead == 0.1) Assert.AreEqual(plain.Seconds, start.Seconds, 1e-9, "the same start as without optogenetics");
@@ -464,16 +471,16 @@ public class CorridorStateTests
         task.Optogenetics.TrialsBeforeLaser = 0;
         task.Optogenetics.LaserOnProbability = 1;
         var rig = new Rig(Fixture.Setup(task, 4));
-        var arm = rig.RunTo(CorridorEventKind.Arm);
-        rig.Events.AddRange(rig.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = 1 }));
-        rig.RunTo(CorridorEventKind.Start);
+        var arm = rig.RunTo(TrialEventKind.Arm);
+        rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = 1 });
+        rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.1);
         rig.Wheel(1000);                                    // the end of the track ends the trial before the trigger
-        var outcome = rig.Events.Single(e => e.Kind == CorridorEventKind.Outcome);
+        var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
         Assert.IsTrue(arm.Trial.laserOn);
-        Assert.AreEqual(0, outcome.Row.laserPowerMw, "no laser came, so none is logged");
-        Assert.IsFalse(rig.Events.Any(e => e.Kind == CorridorEventKind.Trigger));
-        Assert.IsTrue(double.IsNaN(outcome.Row.laserTriggerTime), "answered before the trigger: laserTriggerTime NaN");
+        Assert.AreEqual(0, outcome.Outcome.Row.laserPowerMw, "no laser came, so none is logged");
+        Assert.IsFalse(rig.Events.Any(e => e.Kind == TrialEventKind.Trigger));
+        Assert.IsTrue(double.IsNaN(outcome.Outcome.Row.laserTriggerTime), "answered before the trigger: laserTriggerTime NaN");
     }
 
     // laserTriggerTime (the shared block's 16th column) is the trigger's Harp time when it came.
@@ -487,14 +494,14 @@ public class CorridorStateTests
             task.Optogenetics.TrialsBeforeLaser = 0;
             task.Optogenetics.LaserOnProbability = probability;
             var rig = new Rig(Fixture.Setup(task, 4));
-            var arm = rig.RunTo(CorridorEventKind.Arm);
-            rig.Events.AddRange(rig.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 }));
-            var trigger = rig.RunTo(CorridorEventKind.Trigger);
+            var arm = rig.RunTo(TrialEventKind.Arm);
+            rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 });
+            var trigger = rig.RunTo(TrialEventKind.Trigger);
             rig.Until(rig.Now + 0.2);
             rig.Wheel(1000);                                // the end of the track ends the trial after the trigger
-            var outcome = rig.Events.Single(e => e.Kind == CorridorEventKind.Outcome);
-            Assert.AreEqual(trigger.Seconds, outcome.Row.laserTriggerTime, 1e-12);
-            Assert.AreEqual(probability > 0 ? 2.0 : 0.0, outcome.Row.laserPowerMw, "laser off: a trigger time, 0 mW");
+            var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
+            Assert.AreEqual(trigger.Seconds, outcome.Outcome.Row.laserTriggerTime, 1e-12);
+            Assert.AreEqual(probability > 0 ? 2.0 : 0.0, outcome.Outcome.Row.laserPowerMw, "laser off: a trigger time, 0 mW");
         }
     }
 
@@ -502,11 +509,11 @@ public class CorridorStateTests
     public void LaserTriggerTimeIsNaNWithoutOptogenetics()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 1));
-        rig.RunTo(CorridorEventKind.Start);
+        rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);
-        var outcome = rig.RunTo(CorridorEventKind.Outcome);
-        Assert.IsTrue(double.IsNaN(outcome.Row.laserTriggerTime));
-        Assert.AreEqual(0, outcome.Row.laserCondition);
+        var outcome = rig.RunTo(TrialEventKind.Outcome);
+        Assert.IsTrue(double.IsNaN(outcome.Outcome.Row.laserTriggerTime));
+        Assert.AreEqual(0, outcome.Outcome.Row.laserCondition);
     }
 
     [TestMethod]
@@ -527,12 +534,12 @@ public class CorridorStateTests
     public void ATimeOutInTheZoneIsPenalised()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 4));
-        var start = rig.RunTo(CorridorEventKind.Start);
+        var start = rig.RunTo(TrialEventKind.Start);
         rig.Wheel(start.Trial.trackLengthCm * 0.85);
-        var outcome = rig.RunTo(CorridorEventKind.Outcome);
-        Assert.AreEqual("Timeout", outcome.Row.endReason);
-        Assert.AreEqual("NoResponse", outcome.Row.outcome);
-        Assert.IsTrue(outcome.Row.penaltySound);
+        var outcome = rig.RunTo(TrialEventKind.Outcome);
+        Assert.AreEqual("Timeout", outcome.Outcome.Row.endReason);
+        Assert.AreEqual("NoResponse", outcome.Outcome.Row.outcome);
+        Assert.IsTrue(outcome.Outcome.Row.penaltySound);
         Assert.AreEqual(start.Seconds + 0.1 + 12.0, outcome.Seconds, 0.0011);
     }
 
@@ -540,12 +547,12 @@ public class CorridorStateTests
     public void TheEndOfTheTrackEndsTheTrial()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 2));
-        var start = rig.RunTo(CorridorEventKind.Start);
+        var start = rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.1);
         rig.Wheel(start.Trial.trackLengthCm + 5);
-        var outcome = rig.Events.Single(e => e.Kind == CorridorEventKind.Outcome);
-        Assert.AreEqual("EndOfTrack", outcome.Row.endReason);
-        Assert.AreEqual(start.Trial.trackLengthCm, outcome.Row.endPositionCm, 1e-9);
+        var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
+        Assert.AreEqual("EndOfTrack", outcome.Outcome.Row.endReason);
+        Assert.AreEqual(start.Trial.trackLengthCm, outcome.Outcome.Row.endPositionCm, 1e-9);
     }
 
     [TestMethod]
@@ -553,16 +560,16 @@ public class CorridorStateTests
     {
         var setup = Fixture.Setup(Fixture.Task(), 3);
         var rig = new Rig(setup);
-        var start = rig.RunTo(CorridorEventKind.Start);
+        var start = rig.RunTo(TrialEventKind.Start);
         start.Trial.truncationFraction = 0.5;
         rig.Wheel(start.Trial.trackLengthCm * 0.3);
         rig.Until(rig.Now + 0.1);
-        var before = rig.Events.Last(e => e.Kind == CorridorEventKind.Pip).Frame;
+        var before = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(1.0, before.ToneGain);
         Assert.IsTrue(before.Row.stimulusActive);
         rig.Wheel(start.Trial.trackLengthCm * 0.7);
         rig.Until(rig.Now + 0.1);
-        var pip = rig.Events.Last(e => e.Kind == CorridorEventKind.Pip).Frame;
+        var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(0.0, pip.ToneGain);
         Assert.IsFalse(pip.Row.stimulusActive);
         // A bool, so BonsaiData_StimulusState says True or False, as the lab's other bool columns.
@@ -575,12 +582,12 @@ public class CorridorStateTests
         var task = Fixture.Task();
         Fixture.Opto(task);
         var rig = new Rig(Fixture.Setup(task, 4));
-        rig.RunTo(CorridorEventKind.Arm);
-        var error = Assert.ThrowsException<InvalidOperationException>(() => rig.RunTo(CorridorEventKind.Trigger));
+        rig.RunTo(TrialEventKind.Arm);
+        var error = Assert.ThrowsException<InvalidOperationException>(() => rig.RunTo(TrialEventKind.Trigger));
         StringAssert.Contains(error.Message, "had not answered trial 1's StartStimulus by its trigger");
         var wrong = new Rig(Fixture.Setup(task, 4));
-        wrong.RunTo(CorridorEventKind.Arm);
-        Assert.ThrowsException<InvalidOperationException>(() => wrong.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }).ToList());
+        wrong.RunTo(TrialEventKind.Arm);
+        Assert.ThrowsException<InvalidOperationException>(() => wrong.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }));
     }
 
     // The armed reply is checked by OpenRigs.Devices' ZapitTrial.CheckArmed, the dome tasks' one check:
@@ -592,9 +599,9 @@ public class CorridorStateTests
         Fixture.Opto(task);
         task.Optogenetics.TrialsBeforeLaser = 0;
         task.Optogenetics.LaserOnProbability = 1;
-        Func<Rig> armed = () => { var r = new Rig(Fixture.Setup(task, 4)); r.RunTo(CorridorEventKind.Arm); return r; };
+        Func<Rig> armed = () => { var r = new Rig(Fixture.Setup(task, 4)); r.RunTo(TrialEventKind.Arm); return r; };
         var rig = armed();
-        var trial = rig.State.Trial;
+        var trial = rig.Loop.Trial;
         Assert.IsTrue(trial.laserOn);
         var replies = new[]
         {
@@ -604,13 +611,13 @@ public class CorridorStateTests
         };
         foreach (var reply in replies)
         {
-            var mine = Assert.ThrowsException<InvalidOperationException>(() => armed().State.OnZapitReply(reply).ToList()).Message;
+            var mine = Assert.ThrowsException<InvalidOperationException>(() => armed().Loop.OnZapitReply(reply)).Message;
             var lib = Assert.ThrowsException<InvalidOperationException>(() => ZapitTrial.CheckArmed(reply, trial.trialNumber, trial.laserCondition, true)).Message;
             Assert.AreEqual(lib, mine);
             StringAssert.Contains(mine, "is the DAQ working?");
         }
-        rig.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trial.laserCondition, LaserOn = 1 }).ToList();
-        rig.RunTo(CorridorEventKind.Trigger);   // armed: the trigger comes
+        rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trial.laserCondition, LaserOn = 1 });
+        rig.RunTo(TrialEventKind.Trigger);   // armed: the trigger comes
     }
 
     // On a software-triggered rig the Trigger event sends the StartStimulus, so its reply is checked too.
@@ -620,12 +627,12 @@ public class CorridorStateTests
         var task = Fixture.Task();
         Fixture.Opto(task);
         var rig = new Rig(Fixture.Setup(task, 4, false));
-        rig.RunTo(CorridorEventKind.Trigger);
-        Assert.IsFalse(rig.Events.Any(e => e.Kind == CorridorEventKind.Arm));
-        Assert.ThrowsException<InvalidOperationException>(() => rig.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }).ToList());
+        rig.RunTo(TrialEventKind.Trigger);
+        Assert.IsFalse(rig.Events.Any(e => e.Kind == TrialEventKind.Arm));
+        Assert.ThrowsException<InvalidOperationException>(() => rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }));
         var right = new Rig(Fixture.Setup(task, 4, false));
-        var trigger = right.RunTo(CorridorEventKind.Trigger);
-        right.State.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trigger.Trial.laserCondition, LaserOn = trigger.Trial.laserOn ? 1 : 0 }).ToList();
+        var trigger = right.RunTo(TrialEventKind.Trigger);
+        right.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trigger.Trial.laserCondition, LaserOn = trigger.Trial.laserOn ? 1 : 0 });
     }
 
     [TestMethod]
@@ -634,17 +641,9 @@ public class CorridorStateTests
         var task = Fixture.Task();
         Fixture.Opto(task);
         var rig = new Rig(Fixture.Setup(task, 2, false));
-        var start = rig.RunTo(CorridorEventKind.Start);
-        var cap = rig.RunTo(CorridorEventKind.LaserCap);
+        var start = rig.RunTo(TrialEventKind.Start);
+        var cap = rig.RunTo(TrialEventKind.LaserCap);
         Assert.AreEqual(start.Seconds + 12.5, cap.Seconds, 0.0011);   // from the trigger, at the trial start with the 0.1 s lead
-    }
-
-    [TestMethod]
-    public void AClockGoingBackwardsStopsTheTask()
-    {
-        var state = new CorridorState(Fixture.Setup(Fixture.Task(), 0));
-        state.OnClock(10).ToList();
-        Assert.ThrowsException<InvalidOperationException>(() => state.OnClock(9).ToList());
     }
 
     [TestMethod]
@@ -652,37 +651,37 @@ public class CorridorStateTests
     {
         // 6 s of drift, then 2 cm a beep: the beep that crosses the floor is above the ceiling (the sweep's end, 25000 Hz).
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
-        rig.RunTo(CorridorEventKind.Start);
+        rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 6.0);
         double cm = 0;
-        CorridorEvent outcome = null;
+        TrialEventOf outcome = null;
         for (int i = 0; i < 200 && outcome == null; i++)
         {
             cm += 2.0;
             rig.Wheel(cm);
             var seen = rig.Events.Count;
             rig.Until(rig.Now + 0.05);
-            outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == CorridorEventKind.Outcome);
+            outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == TrialEventKind.Outcome);
         }
-        Assert.AreEqual("FreqReached", outcome.Row.endReason);
-        Assert.IsTrue(outcome.Row.toneEndFrequencyHz > 25000, outcome.Row.toneEndFrequencyHz.ToString());
-        Assert.IsTrue(outcome.Rewarded);
-        Assert.AreEqual("Correct", outcome.Row.outcome);
-        Assert.IsFalse(outcome.Row.penaltySound);
+        Assert.AreEqual("FreqReached", outcome.Outcome.Row.endReason);
+        Assert.IsTrue(outcome.Outcome.Row.toneEndFrequencyHz > 25000, outcome.Outcome.Row.toneEndFrequencyHz.ToString());
+        Assert.IsTrue(outcome.Outcome.Rewarded);
+        Assert.AreEqual("Correct", outcome.Outcome.Row.outcome);
+        Assert.IsFalse(outcome.Outcome.Row.penaltySound);
     }
 
     [TestMethod]
     public void AfterAGapInTheHarpClockOnlyTheLatestBeepPips()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 3));
-        var start = rig.RunTo(CorridorEventKind.Start);
+        var start = rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.2);
         var seen = rig.Events.Count;
         rig.Now = Math.Round(rig.Now + 0.2, 6);
-        rig.Events.AddRange(rig.State.OnClock(rig.Now));
-        Assert.AreEqual(1, rig.Events.Skip(seen).Count(e => e.Kind == CorridorEventKind.Pip));
+        rig.Events.AddRange(rig.Loop.OnClock(rig.Now));
+        Assert.AreEqual(1, rig.Events.Skip(seen).Count(e => e.Kind == TrialEventKind.Update));
         rig.Until(rig.Now + 0.2);
-        var pips = rig.Events.Where(e => e.Kind == CorridorEventKind.Pip).Select(e => e.Seconds).ToList();
+        var pips = rig.Events.Where(e => e.Kind == TrialEventKind.Update).Select(e => e.Seconds).ToList();
         for (int i = 1; i < pips.Count; i++) Assert.IsTrue(pips[i] - pips[i - 1] > 0.049, pips[i].ToString());
         Assert.AreEqual(start.Seconds + 0.6, pips.Last(), 0.0011);   // back on the 50 ms grid
     }
@@ -690,14 +689,38 @@ public class CorridorStateTests
     [TestMethod]
     public void TheTriggerLineIsHeldOnlyInAnOptogeneticsExperiment()
     {
-        var off = new TrialDraw(Fixture.Setup(Fixture.Task(), 3)).Next();
-        Assert.IsFalse(off.optogenetics);
-        Assert.AreEqual(0.0, off.triggerHoldSeconds);
+        var off = Fixture.Setup(Fixture.Task(), 3);
+        Assert.IsFalse(new TrialDraw(off).Next().optogenetics);
+        Assert.IsNull(off.Laser);
+        var plain = new Rig(off);
+        var ended = plain.RunTo(TrialEventKind.Outcome);
+        plain.Until(ended.Seconds + 2.0);
+        Assert.IsFalse(plain.Events.Any(e => e.Kind == TrialEventKind.Trigger || e.Kind == TrialEventKind.TriggerOff || e.Kind == TrialEventKind.Arm));
         var task = Fixture.Task();
         Fixture.Opto(task);
-        var on = new TrialDraw(Fixture.Setup(task, 3)).Next();
-        Assert.IsTrue(on.optogenetics);
-        Assert.AreEqual(1.0, on.triggerHoldSeconds);
+        var on = Fixture.Setup(task, 3);
+        Assert.IsTrue(new TrialDraw(on).Next().optogenetics);
+        Assert.AreEqual(1.0, on.Laser.TriggerHoldSeconds);
+    }
+
+    // The line falls triggerHoldSeconds after the outcome, on the Harp clock (TrialLoop's TriggerOff, which replaced
+    // TaskLogic's HarpDelay), and the next trial is armed then.
+    [TestMethod]
+    public void TheTriggerLineFallsTriggerHoldSecondsAfterTheOutcomeAndTheNextIsArmedThen()
+    {
+        var task = Fixture.Task();
+        Fixture.Opto(task);
+        task.Penalty.TimeoutSeconds = 0;   // the next interval from the outcome: armed once the line falls, not at its start
+        var rig = new Rig(Fixture.Setup(task, 4));
+        var arm = rig.RunTo(TrialEventKind.Arm);
+        rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 });
+        rig.RunTo(TrialEventKind.Trigger);
+        rig.Wheel(1000);   // the end of the track ends the trial
+        var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
+        var off = rig.RunTo(TrialEventKind.TriggerOff);
+        Assert.AreEqual(outcome.Seconds + 1.0, off.Seconds, 0.0011);
+        var next = rig.Events.Single(e => e.Kind == TrialEventKind.Arm && e.Trial.trialNumber == 2);   // on the line's tick
+        Assert.AreEqual(off.Seconds, next.Seconds, 1e-9);
     }
 
     [TestMethod]
