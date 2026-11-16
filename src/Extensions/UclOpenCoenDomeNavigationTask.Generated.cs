@@ -217,6 +217,28 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
+    /// What a trial shows.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+    public enum Modality
+    {
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="auditory")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
+        Auditory = 0,
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="visual")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visual")]
+        Visual = 1,
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="audiovisual")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisual")]
+        Audiovisual = 2,
+    }
+
+
+    /// <summary>
     /// Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.
     ///
     ///The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
@@ -1405,7 +1427,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double? _rngSeed;
     
-        private UclOpenCoenDomeNavigationTaskParametersModality _modality;
+        private Modality _modality;
     
         private StimulusSound _tonePips;
     
@@ -1427,7 +1449,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         public UclOpenCoenDomeNavigationTaskParameters()
         {
-            _modality = UclOpenCoenDomeNavigationTaskParametersModality.Auditory;
+            _modality = Modality.Auditory;
             _tonePips = new StimulusSound();
             _rewardTone = new RewardTone();
             _backgroundNoise = new BackgroundNoise();
@@ -1479,7 +1501,7 @@ namespace UclOpenCoenDomeNavigationTask
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="modality")]
         [System.ComponentModel.DescriptionAttribute("What the trial shows: the tone sweep (auditory), the grating (visual) or both (au" +
             "diovisual)")]
-        public UclOpenCoenDomeNavigationTaskParametersModality Modality
+        public Modality Modality
         {
             get
             {
@@ -1705,25 +1727,6 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("}");
             return stringBuilder.ToString();
         }
-    }
-
-
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-    public enum UclOpenCoenDomeNavigationTaskParametersModality
-    {
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="auditory")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
-        Auditory = 0,
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="visual")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visual")]
-        Visual = 1,
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="audiovisual")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisual")]
-        Audiovisual = 2,
     }
 
 

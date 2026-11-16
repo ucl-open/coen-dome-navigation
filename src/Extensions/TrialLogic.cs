@@ -188,8 +188,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             rules.laser = LaserTiming.UntilOutcome(hardwareTriggered, opto.TriggerHoldSeconds, opto.LaserMaxSeconds);
         }
         rules.Seed = RngSeed.Resolve(task.RngSeed);
-        rules.Auditory = task.Modality != UclOpenCoenDomeNavigationTaskParametersModality.Visual;
-        rules.Visual = task.Modality != UclOpenCoenDomeNavigationTaskParametersModality.Auditory;
+        rules.Auditory = task.Modality != Modality.Visual;
+        rules.Visual = task.Modality != Modality.Auditory;
         rules.draw = new TrialDraw(rules);
         return rules;
     }
@@ -398,7 +398,7 @@ public class CheckTaskAtGo
 {
     public IObservable<TrialRules> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, LabRig, Sweep>> source)
     {
-        return source.Select(x => TrialRules.Create(x.Item1.TaskParameters, x.Item2, x.Item4, x.Item3.Zapit.HardwareTriggered, null));
+        return source.Select(x => TrialRules.Create(x.Item1.TaskParameters, x.Item2, x.Item4, x.Item3.Zapit != null && x.Item3.Zapit.HardwareTriggered, null));
     }
 }
 

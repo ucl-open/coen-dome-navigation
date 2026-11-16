@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenRigs.Devices;
+using OpenRigs.Devices.Rigs;
 using OpenRigs.Devices.Zapit;
 using System;
 using System.Collections.Generic;
@@ -101,6 +102,16 @@ public class TrialDrawTests
     {
         var error = Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.Task(), 6));
         StringAssert.Contains(error.Message, "rows 0 to 5");
+    }
+
+    [TestMethod]
+    public void ARigWithoutAZapitBlockMakesTheRulesWhenTheLaserIsOff()
+    {
+        var logic = new UclOpenCoenDomeNavigationTaskLogic { TaskParameters = Fixture.Task() };
+        var rig = new LabRig();   // rig.yml with no zapit block: Zapit is null
+        Assert.IsNull(rig.Zapit);
+        var rules = new CheckTaskAtGo().Process(Observable.Return(Tuple.Create(logic, 0, rig, Fixture.Sweep()))).Wait();
+        Assert.IsNull(rules.Laser);
     }
 
     [TestMethod]

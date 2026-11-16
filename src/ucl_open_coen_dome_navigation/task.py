@@ -8,6 +8,7 @@ sound, and rngSeed seeds every draw. The sweep is src/waveforms/sweep.json's, ma
 RMS: tonePips, rewardTone, backgroundNoise and penalty.sound)."""
 
 import json
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
@@ -105,6 +106,14 @@ class OptogeneticsConfig(Optogenetics):
         return self
 
 
+class Modality(StrEnum):
+    """What a trial shows."""
+
+    AUDITORY = "auditory"
+    VISUAL = "visual"
+    AUDIOVISUAL = "audiovisual"
+
+
 class TrainingStage(QuietWait):
     """One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting."""
 
@@ -139,8 +148,8 @@ class TrainingStage(QuietWait):
 class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     """Task params."""
 
-    modality: Literal["auditory", "visual", "audiovisual"] = Field(
-        default="auditory", description="What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)"
+    modality: Modality = Field(
+        default=Modality.AUDITORY, description="What the trial shows: the tone sweep (auditory), the grating (visual) or both (audiovisual)"
     )
     tone_pips: StimulusSound = Field(
         default=StimulusSound(), description="The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"

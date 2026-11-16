@@ -116,11 +116,25 @@ def test_the_trigger_line_rises_at_the_trigger_and_falls_at_trigger_off():
 def test_the_trigger_event_raises_the_line_and_starts_a_software_triggered_zapit():
     # Pip, 13 Nov 2026: the trigger comes laserToStimulusSeconds before the first pip (TrialLoop's Trigger), not at Start;
     # its trial is ArmZapit's second input, sent there on a rig without hardware triggering.
-    nodes, edges = _scope(group("TaskLogic"))
+    nodes, edges = _scope(group("Zapit"))
     (trigger,) = [i for i in range(len(nodes)) if _picked(nodes, i) == "Trigger"]
     arm = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "ArmZapit")
-    inputs = {e.get("Label"): int(e.get("From")) for e in group("TaskLogic").find(W + "Workflow").find(W + "Edges") if int(e.get("To")) == arm}
+    inputs = {e.get("Label"): int(e.get("From")) for e in group("Zapit").find(W + "Workflow").find(W + "Edges") if int(e.get("To")) == arm}
     assert trigger in _upstream(edges, inputs["Source2"]) and trigger not in _upstream(edges, inputs["Source1"])
+
+
+def test_zapit_runs_only_in_an_optogenetics_experiment_so_a_rig_yml_without_a_zapit_block_works():
+    # A task with useZapit false on a rig.yml with no zapit block must build and run: the arm, the laser's stop and the
+    # rig.yml HardwareTriggered mapping (Zapit is null there) sit under the Optogenetics? gate, as in coen-dome-decision-making.
+    nodes, edges = _scope(group("TaskLogic"))
+    (gate,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "Optogenetics?"]
+    (zapit,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "Zapit"]
+    assert zapit in {b for a, b in edges if a == gate}
+    outer = {n.findtext(W + "Name") for n in nodes}
+    assert not outer & {"ArmZapit", "LaserOnUntilOutcome"}
+    assert not [n for n in nodes if n.get(XSI) == "PropertyMapping" and "Zapit.HardwareTriggered" in ET.tostring(n, encoding="unicode")]
+    inner = {n.findtext(W + "Name") for n in group("Zapit").iter(W + "Expression")}
+    assert {"ArmZapit", "LaserOnUntilOutcome"} <= inner
 
 
 def test_the_trial_loop_starts_on_the_clock_thread():
@@ -129,8 +143,8 @@ def test_the_trial_loop_starts_on_the_clock_thread():
     nodes, edges = _scope(group("TaskLogic"))
     (task,) = [i for i, n in enumerate(nodes) if "ext:RunTrials" in combinators(n)]
     (tick,) = [i for i, n in enumerate(nodes) if "core:OnNextTick" in combinators(n)]
-    (rules,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "SubscribeSubject" and n.findtext(W + "Name") == "TrialRules"]
-    assert {tick, rules} <= _upstream(edges, task)
+    rules = [i for i, n in enumerate(nodes) if n.get(XSI) == "SubscribeSubject" and n.findtext(W + "Name") == "TrialRules"]
+    assert tick in _upstream(edges, task) and set(rules) & _upstream(edges, task)
     assert [nodes[b].findtext(W + "Name") for a, b in edges if a == task] == ["TrialEvents"]
     (trial,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "Trial"]
     assert [_picked(nodes, a) for a in _upstream(edges, trial) if _picked(nodes, a)] == ["Start"]   # the trial published at its Start
