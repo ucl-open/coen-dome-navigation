@@ -70,7 +70,9 @@ def test_the_launch_properties():
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
     # path is LogLabExperiment's.
-    assert names == {"trialNumber", "trainingStage", "rewardSizeUl", "laserCondition"}
+    assert names == {"trialNumber", "rewardSizeUl", "laserCondition"}
+    # trainingStage is OpenRigs.Control's TrainingStage's (16 Nov 2026).
+    assert lint.training_stage_problems(WORKFLOW) == []
 
 
 def test_stimulus_state_reaches_disk_row_by_row():
@@ -98,8 +100,8 @@ def _upstream(edges: list[tuple[int, int]], node: int) -> set[int]:
 def test_the_trigger_line_rises_and_falls_only_in_an_optogenetics_experiment():
     # BACKLOG (Decided; Pip, 13 Nov 2026): the trigger line and the masking LEDs on it only in optogenetics experiments.
     nodes, edges = _scope(group("TaskLogic"))
-    lines = [i for i, n in enumerate(nodes) if (n.find(W + "Combinator") is not None and n.find(W + "Combinator").get(XSI) == "zap:ZapitLineMessage")]
-    assert len(lines) == 2
+    lines = [i for i, n in enumerate(nodes) if n.get("Path") == lint.SET_ZAPIT_TRIGGER_LINE]
+    assert [nodes[i].findtext(W + "Set") for i in lines] == ["true", "false"]
     for line in lines:
         conditions = [nodes[a] for a in _upstream(edges, line) if nodes[a].get(XSI) == "rx:Condition"]
         assert [c.findtext(".//{clr-namespace:Bonsai.Scripting.Expressions;assembly=Bonsai.Scripting.Expressions}Expression") for c in conditions] == ["Trial.optogenetics"]
@@ -174,7 +176,7 @@ def test_the_speakers_are_declared_before_every_user():
     declared = next(i for i, n in enumerate(top) if n.findtext(W + "Name") == "Hardware")
     users = [i for i, n in enumerate(top) for s in n.iter(W + "Expression")
              if s.get(XSI) == "SubscribeSubject" and s.findtext(W + "Name") == "Speakers"]
-    users += [i for i, n in enumerate(top) if n.get("Path") == lint.BACKGROUND_NOISE]
+    users += [i for i, n in enumerate(top) for s in n.iter(W + "Expression") if s.get("Path") in (lint.BACKGROUND_NOISE, lint.PLAY_PENALTY_SOUND)]
     assert len(users) == 4 and min(users) > declared
 
 
@@ -204,7 +206,7 @@ def test_every_harp_delay_runs_on_the_timestamp_clock():
 
 def test_no_async_event_sender_completes_async_events():
     senders, finite = lint.finite_async_event_senders(WORKFLOW)
-    assert senders == 1 and finite == []  # RngSeed; LogControlEvents sends Control and DeliverReward RewardDelivered
+    assert senders == 0 and finite == []  # LogRngSeed sends RngSeed, LogControlEvents Control and DeliverReward RewardDelivered
 
 
 def test_no_trial_graph_closes_a_shared_subject():
@@ -268,12 +270,18 @@ def test_no_fixed_width_pulse_reaches_a_reward_valve():
 
 
 def test_the_rng_seed_is_logged_at_trial_1s_start():
-    # Once, at TaskLogic's top level from the first trial's Start, as coen-dome-decision-making; the Take after the multicast.
+    # OpenRigs.Logging's LogRngSeed at TaskLogic's top level, given each trial's seed from its Start.
+    assert lint.rng_seed_problems(WORKFLOW) == []
     nodes, edges = lint.scope(WORKFLOW.named("TaskLogic"))
-    (seed,) = [i for i, n in enumerate(nodes) if n.findtext(lint.W + "Name") == "RngSeed"]
+    (log,) = [i for i, n in enumerate(nodes) if n.get("Path") == lint.LOG_RNG_SEED]
+    (seed,) = [a for a, b, _ in edges if b == log]
     (start,) = [a for a, b, _ in edges if b == seed]
+    assert nodes[seed].findtext(W + "Selector") == "Trial.rngSeed"
     assert lint.kind(nodes[start]) == "ext:CorridorEvents" and next(nodes[start].iter("{clr-namespace:;assembly=Extensions}Kind")).text == "Start"
-    assert WORKFLOW.text.count("<Name>RngSeed</Name>") == 1
+
+
+def test_the_task_logs_are_the_shared_include():
+    assert lint.task_logs_problems(WORKFLOW) == []
 
 
 def test_the_pips_carry_their_sync_copy():

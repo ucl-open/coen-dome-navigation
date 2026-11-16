@@ -2,6 +2,11 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-16 Shared chains as includes (lib-open-rigs 069e4f3; Audio .13, Control .14, Devices .28, Logging .19)
+
+- What both dome tasks built the same way is a lib-open-rigs include, each linted: `TrainingStage` (OpenRigs.Control: the parameter at Go and the metric `trainingStage`), `PlayPenaltySound` (OpenRigs.Audio: the penalty buffer at `penalty.sound.levelDbfs`, played on each penalty), `BehaviorBoard.SetZapitTriggerLine` (the trigger line's set and clear, `Set`, `BoardCommandsSubjectName`), `LogRngSeed` (the RngSeed row once) and `TaskLogs` (Settings_Task from the task's own SerializeToJson, BonsaiData_Trial, Zapit's logs); `Zapit.ConnectForTask` publishes `Optogenetics`. The task's copies are deleted. Reading the task file stays here (its type is the task's).
+- Nothing written changes: same files, columns, async events and ExpectedFiles; the task keeps its own BonsaiData_StimulusState log. Checked by tests/test_workflow.py, check-workflow and check-workflow-builds; not yet run on a rig.
+
 ## 2026-11-16 Pieces declare their own commands and parameters (lib-open-rigs def14f6; Control .13, Devices .27)
 
 - ExperimentControl declares only `TrainingStage`: `SpoutStepSize` and the 14 spout commands are DomeHardware's `LickSpoutStage`'s, `RewardLeft` and `RewardRight` `ManualRewards'`, each declared by its piece (`DeclareControls`), and ControlServer stops at Start on a name declared twice. `tests\test_workflow.py` holds the task to `undeclared_commands` and `declared_twice`.
