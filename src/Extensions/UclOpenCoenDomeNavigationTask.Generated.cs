@@ -849,7 +849,6 @@ namespace UclOpenCoenDomeNavigationTask
             _lickQuietSeconds = 0D;
             _wheelQuietSeconds = 0D;
             _wheelQuietCm = 0D;
-            _trialWeights = new TrialTypeWeights();
         }
     
         protected TrainingStage(TrainingStage other)
@@ -947,14 +946,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Relative draw weight per trial type: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)
+        /// This stage's own trialWeights, replacing the task's (the mouse's) for this stage; null: the task's trialWeights apply
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("trialWeights", Required=Newtonsoft.Json.Required.Always)]
+        [Newtonsoft.Json.JsonPropertyAttribute("trialWeights")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialWeights")]
-        [System.ComponentModel.DescriptionAttribute("Relative draw weight per trial type: each trial draws what it shows at random wit" +
-            "h these as relative chances, independently of every other trial (trialType in th" +
-            "e trial row)")]
+        [System.ComponentModel.DescriptionAttribute("This stage\'s own trialWeights, replacing the task\'s (the mouse\'s) for this stage;" +
+            " null: the task\'s trialWeights apply")]
         public TrialTypeWeights TrialWeights
         {
             get
@@ -1340,22 +1338,26 @@ namespace UclOpenCoenDomeNavigationTask
 
     /// <summary>
     /// Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),
-    ///as coen-dome-decision-making's TrialTypeWeights (Pip, 16 Nov 2026).
+    ///coen-dome-decision-making's names (Pip, 16 Nov 2026).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("Relative draw weight of each trial type, by the name the trial log gives it (tria" +
-        "lType: what the trial showed),\nas coen-dome-decision-making\'s TrialTypeWeights (" +
-        "Pip, 16 Nov 2026).")]
+        "lType: what the trial showed),\ncoen-dome-decision-making\'s names (Pip, 16 Nov 20" +
+        "26).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrialTypeWeights
     {
     
-        private int _auditory;
-    
         private int _visual;
     
-        private int _audiovisual;
+        private int _auditory;
+    
+        private int _audiovisualCoherent;
+    
+        private int _audiovisualConflict;
+    
+        private int _neutral;
     
         public TrialTypeWeights()
         {
@@ -1363,27 +1365,11 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected TrialTypeWeights(TrialTypeWeights other)
         {
-            _auditory = other._auditory;
             _visual = other._visual;
-            _audiovisual = other._audiovisual;
-        }
-    
-        /// <summary>
-        /// The tone sweep alone
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("auditory", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
-        [System.ComponentModel.DescriptionAttribute("The tone sweep alone")]
-        public int Auditory
-        {
-            get
-            {
-                return _auditory;
-            }
-            set
-            {
-                _auditory = value;
-            }
+            _auditory = other._auditory;
+            _audiovisualCoherent = other._audiovisualCoherent;
+            _audiovisualConflict = other._audiovisualConflict;
+            _neutral = other._neutral;
         }
     
         /// <summary>
@@ -1405,20 +1391,74 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The tone sweep and the grating together
+        /// The tone sweep alone
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("audiovisual", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisual")]
-        [System.ComponentModel.DescriptionAttribute("The tone sweep and the grating together")]
-        public int Audiovisual
+        [Newtonsoft.Json.JsonPropertyAttribute("auditory", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
+        [System.ComponentModel.DescriptionAttribute("The tone sweep alone")]
+        public int Auditory
         {
             get
             {
-                return _audiovisual;
+                return _auditory;
             }
             set
             {
-                _audiovisual = value;
+                _auditory = value;
+            }
+        }
+    
+        /// <summary>
+        /// The tone sweep and the grating together
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("audiovisualCoherent", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisualCoherent")]
+        [System.ComponentModel.DescriptionAttribute("The tone sweep and the grating together")]
+        public int AudiovisualCoherent
+        {
+            get
+            {
+                return _audiovisualCoherent;
+            }
+            set
+            {
+                _audiovisualCoherent = value;
+            }
+        }
+    
+        /// <summary>
+        /// Not defined in this task yet: must be 0
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("audiovisualConflict", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisualConflict")]
+        [System.ComponentModel.DescriptionAttribute("Not defined in this task yet: must be 0")]
+        public int AudiovisualConflict
+        {
+            get
+            {
+                return _audiovisualConflict;
+            }
+            set
+            {
+                _audiovisualConflict = value;
+            }
+        }
+    
+        /// <summary>
+        /// Not defined in this task yet: must be 0
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("neutral", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="neutral")]
+        [System.ComponentModel.DescriptionAttribute("Not defined in this task yet: must be 0")]
+        public int Neutral
+        {
+            get
+            {
+                return _neutral;
+            }
+            set
+            {
+                _neutral = value;
             }
         }
     
@@ -1434,9 +1474,11 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Auditory = " + _auditory + ", ");
             stringBuilder.Append("Visual = " + _visual + ", ");
-            stringBuilder.Append("Audiovisual = " + _audiovisual);
+            stringBuilder.Append("Auditory = " + _auditory + ", ");
+            stringBuilder.Append("AudiovisualCoherent = " + _audiovisualCoherent + ", ");
+            stringBuilder.Append("AudiovisualConflict = " + _audiovisualConflict + ", ");
+            stringBuilder.Append("Neutral = " + _neutral);
             return true;
         }
     
@@ -1548,6 +1590,8 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double? _rngSeed;
     
+        private TrialTypeWeights _trialWeights;
+    
         private StimulusSound _tonePips;
     
         private RewardTone _rewardTone;
@@ -1568,6 +1612,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         public UclOpenCoenDomeNavigationTaskParameters()
         {
+            _trialWeights = new TrialTypeWeights();
             _tonePips = new StimulusSound();
             _rewardTone = new RewardTone();
             _backgroundNoise = new BackgroundNoise();
@@ -1582,6 +1627,7 @@ namespace UclOpenCoenDomeNavigationTask
         protected UclOpenCoenDomeNavigationTaskParameters(UclOpenCoenDomeNavigationTaskParameters other)
         {
             _rngSeed = other._rngSeed;
+            _trialWeights = other._trialWeights;
             _tonePips = other._tonePips;
             _rewardTone = other._rewardTone;
             _backgroundNoise = other._backgroundNoise;
@@ -1608,6 +1654,25 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _rngSeed = value;
+            }
+        }
+    
+        /// <summary>
+        /// Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("trialWeights")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialWeights")]
+        [System.ComponentModel.DescriptionAttribute(@"Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead")]
+        public TrialTypeWeights TrialWeights
+        {
+            get
+            {
+                return _trialWeights;
+            }
+            set
+            {
+                _trialWeights = value;
             }
         }
     
@@ -1800,6 +1865,7 @@ namespace UclOpenCoenDomeNavigationTask
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
             stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
+            stringBuilder.Append("TrialWeights = " + _trialWeights + ", ");
             stringBuilder.Append("TonePips = " + _tonePips + ", ");
             stringBuilder.Append("RewardTone = " + _rewardTone + ", ");
             stringBuilder.Append("BackgroundNoise = " + _backgroundNoise + ", ");

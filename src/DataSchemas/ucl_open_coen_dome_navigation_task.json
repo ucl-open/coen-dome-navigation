@@ -225,8 +225,16 @@
           "type": "string"
         },
         "trialWeights": {
-          "$ref": "#/$defs/TrialTypeWeights",
-          "description": "Relative draw weight per trial type: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrialTypeWeights"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "This stage's own trialWeights, replacing the task's (the mouse's) for this stage; null: the task's trialWeights apply",
           "title": "TrialWeights"
         },
         "rewardFloorHz": {
@@ -306,7 +314,6 @@
       },
       "required": [
         "label",
-        "trialWeights",
         "rewardFloorHz",
         "rewardCeilingHz",
         "rewardSizeUl",
@@ -357,31 +364,45 @@
       "type": "object"
     },
     "TrialTypeWeights": {
-      "description": "Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),\nas coen-dome-decision-making's TrialTypeWeights (Pip, 16 Nov 2026).",
+      "description": "Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),\ncoen-dome-decision-making's names (Pip, 16 Nov 2026).",
       "properties": {
-        "auditory": {
-          "description": "The tone sweep alone",
-          "minimum": 0,
-          "title": "Auditory",
-          "type": "integer"
-        },
         "visual": {
           "description": "The grating alone",
           "minimum": 0,
           "title": "Visual",
           "type": "integer"
         },
-        "audiovisual": {
+        "auditory": {
+          "description": "The tone sweep alone",
+          "minimum": 0,
+          "title": "Auditory",
+          "type": "integer"
+        },
+        "audiovisualCoherent": {
           "description": "The tone sweep and the grating together",
           "minimum": 0,
-          "title": "Audiovisual",
+          "title": "AudiovisualCoherent",
+          "type": "integer"
+        },
+        "audiovisualConflict": {
+          "description": "Not defined in this task yet: must be 0",
+          "minimum": 0,
+          "title": "AudiovisualConflict",
+          "type": "integer"
+        },
+        "neutral": {
+          "description": "Not defined in this task yet: must be 0",
+          "minimum": 0,
+          "title": "Neutral",
           "type": "integer"
         }
       },
       "required": [
-        "auditory",
         "visual",
-        "audiovisual"
+        "auditory",
+        "audiovisualCoherent",
+        "audiovisualConflict",
+        "neutral"
       ],
       "title": "TrialTypeWeights",
       "type": "object"
@@ -444,6 +465,18 @@
             "number",
             "null"
           ]
+        },
+        "trialWeights": {
+          "$ref": "#/$defs/TrialTypeWeights",
+          "default": {
+            "visual": 0,
+            "auditory": 1,
+            "audiovisualCoherent": 0,
+            "audiovisualConflict": 0,
+            "neutral": 0
+          },
+          "description": "Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead",
+          "title": "TrialWeights"
         },
         "tonePips": {
           "$ref": "#/$defs/StimulusSound",

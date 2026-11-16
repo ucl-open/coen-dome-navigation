@@ -51,24 +51,47 @@ def test_the_response_window_and_quiet_wait_are_one_optional_field_each_per_stag
     assert all(r["wheelQuietSeconds"] == 0 and r["wheelQuietCm"] == 0 for r in rows)
 
 
-def test_every_stage_draws_auditory_trials_alone_and_no_session_modality_is_left():
-    # Pip, 16 Nov 2026: trialWeights per stage replace the session-wide modality; the task file runs mice as before.
+def test_the_mouse_s_weights_are_auditory_alone_and_no_stage_sets_its_own():
+    # Pip, 16 Nov 2026: top-level trialWeights, set per mouse on Setup and carried (a stage may set its own; none does).
     params = task()["taskParameters"]
     assert "modality" not in params
-    assert [r["trialWeights"] for r in params["trainingStages"]] == [{"auditory": 1, "visual": 0, "audiovisual": 0}] * 6
-    assert "modality" not in UclOpenCoenDomeNavigationTaskParameters.model_fields
+    assert params["trialWeights"] == {"visual": 0, "auditory": 1, "audiovisualCoherent": 0, "audiovisualConflict": 0, "neutral": 0}
+    assert all("trialWeights" not in row for row in params["trainingStages"])
+    model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+    assert all(stage.trial_weights is None for stage in model.training_stages)
     assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
 
 
-def test_a_stage_whose_trial_weights_are_all_zero_or_negative_is_refused():
-    for weights, match in (({"auditory": 0, "visual": 0, "audiovisual": 0}, "weight above 0"), ({"auditory": 1, "visual": -1, "audiovisual": 0}, "greater than or equal")):
-        params = task()["taskParameters"]
-        params["trainingStages"][2]["trialWeights"] = weights
-        with pytest.raises(pydantic.ValidationError, match=match):
-            UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+WEIGHTS = {"visual": 0, "auditory": 1, "audiovisualCoherent": 0, "audiovisualConflict": 0, "neutral": 0}
+
+
+@pytest.mark.parametrize(
+    "change, match",
+    [
+        ({"auditory": 0}, "weight above 0"),
+        ({"visual": -1}, "greater than or equal"),
+        ({"audiovisualConflict": 1}, "audiovisual_conflict must be 0: that trial is not defined in this task yet"),
+        ({"neutral": 2}, "neutral must be 0: that trial is not defined in this task yet"),
+    ],
+)
+@pytest.mark.parametrize("where", ["task", "stage"])
+def test_weights_all_zero_negative_or_for_an_undefined_trial_are_refused(change, match, where):
     params = task()["taskParameters"]
-    del params["trainingStages"][0]["trialWeights"]
-    with pytest.raises(pydantic.ValidationError, match="trialWeights"):
+    weights = {**WEIGHTS, **change}
+    if where == "task":
+        params["trialWeights"] = weights
+    else:
+        params["trainingStages"][2]["trialWeights"] = weights
+    with pytest.raises(pydantic.ValidationError, match=match):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+
+
+def test_a_stage_may_set_its_own_weights_and_a_missing_key_is_refused():
+    params = task()["taskParameters"]
+    params["trainingStages"][2]["trialWeights"] = {**WEIGHTS, "auditory": 0, "audiovisualCoherent": 1}
+    assert UclOpenCoenDomeNavigationTaskParameters.model_validate(params).training_stages[2].trial_weights.audiovisual_coherent == 1
+    del params["trainingStages"][2]["trialWeights"]["neutral"]
+    with pytest.raises(pydantic.ValidationError, match="neutral"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 

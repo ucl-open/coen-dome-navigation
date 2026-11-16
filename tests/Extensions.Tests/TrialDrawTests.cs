@@ -138,19 +138,24 @@ public class TrialDrawTests
         }
     }
 
-    [TestMethod]
-    public void EachTrialsTypeIsDrawnFromItsStagesWeights()
+    static TrialTypeWeights Weights(int visual, int auditory, int coherent, int conflict = 0, int neutral = 0)
     {
-        // The task file: every stage auditory alone (Pip, 16 Nov 2026), so mice run as before trialWeights
-        var file = new TrialDraw(Fixture.Setup(Fixture.Task(), 3));
-        for (int i = 0; i < 100; i++) Assert.AreEqual("auditory", file.Next().trialType);
+        return new TrialTypeWeights { Visual = visual, Auditory = auditory, AudiovisualCoherent = coherent, AudiovisualConflict = conflict, Neutral = neutral };
+    }
+
+    [TestMethod]
+    public void EachTrialsTypeIsDrawnFromTheTasksWeights()
+    {
+        // The task file: auditory alone, no stage with its own weights (Pip, 16 Nov 2026), so mice run as before trialWeights
         var task = Fixture.Task();
-        var w = task.TrainingStages[3].TrialWeights;
-        w.Auditory = 1; w.Visual = 0; w.Audiovisual = 3;
+        Assert.IsTrue(task.TrainingStages.All(s => s.TrialWeights == null));
+        var file = new TrialDraw(Fixture.Setup(task, 3));
+        for (int i = 0; i < 100; i++) Assert.AreEqual("auditory", file.Next().trialType);
+        task.TrialWeights = Weights(0, 1, 3);   // a mouse's weights, edited on Setup
         var draw = new TrialDraw(Fixture.Setup(task, 3));
         var types = Enumerable.Range(0, 4000).Select(i => draw.Next().trialType).ToList();
         Assert.AreEqual(0, types.Count(t => t == "visual"));   // weight 0: never
-        Assert.AreEqual(0.75, types.Count(t => t == "audiovisual") / 4000.0, 0.03);
+        Assert.AreEqual(0.75, types.Count(t => t == "audiovisualCoherent") / 4000.0, 0.03);
         Assert.AreEqual(1000, types.Count(t => t == "auditory"), 120);
         var again = new TrialDraw(Fixture.Setup(task, 3));   // the same seed: the same types
         CollectionAssert.AreEqual(types, Enumerable.Range(0, 4000).Select(i => again.Next().trialType).ToList());
@@ -160,14 +165,50 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void AStageWhoseWeightsAreAllZeroIsRefused()
+    public void AStagesOwnWeightsReplaceTheTasksForThatStageAlone()
     {
         var task = Fixture.Task();
-        task.TrainingStages[2].TrialWeights.Auditory = 0;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "trialWeights");
-        task.TrainingStages[2].TrialWeights.Visual = -1;
-        task.TrainingStages[2].TrialWeights.Audiovisual = 2;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "trialWeights");
+        task.TrialWeights = Weights(1, 0, 0);   // the mouse's: visual
+        task.TrainingStages[2].TrialWeights = Weights(0, 0, 1);
+        var staged = new TrialDraw(Fixture.Setup(task, 2));
+        for (int i = 0; i < 100; i++) Assert.AreEqual("audiovisualCoherent", staged.Next().trialType);
+        // A stage without its own keeps the mouse's edited weights, at any stage it moves to.
+        foreach (var stage in new[] { 1, 3, 4 })
+        {
+            var draw = new TrialDraw(Fixture.Setup(task, stage));
+            for (int i = 0; i < 100; i++) Assert.AreEqual("visual", draw.Next().trialType);
+        }
+    }
+
+    [TestMethod]
+    public void WeightsAllZeroNegativeOrForAnUndefinedTrialAreRefused()
+    {
+        var cases = new[]
+        {
+            Tuple.Create(Weights(0, 0, 0), "needs every weight 0 or more and one above 0"),
+            Tuple.Create(Weights(-1, 2, 0), "needs every weight 0 or more and one above 0"),
+            Tuple.Create(Weights(0, 1, 0, conflict: 1), "audiovisualConflict must be 0: that trial is not defined in this task yet"),
+            Tuple.Create(Weights(0, 1, 0, neutral: 1), "neutral must be 0: that trial is not defined in this task yet"),
+        };
+        foreach (var c in cases)
+        {
+            var task = Fixture.Task();
+            task.TrialWeights = c.Item1;
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "trialWeights" + (c.Item2.StartsWith("needs") ? " " : ".") + c.Item2);
+            task = Fixture.Task();
+            task.TrainingStages[2].TrialWeights = c.Item1;
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "stage '" + task.TrainingStages[2].Label + "''s trialWeights");
+            Fixture.Setup(task, 1);   // another stage, with the task's weights, still runs
+        }
+    }
+
+    [TestMethod]
+    public void TheTaskFilesWeightsAreReadByTheirYamlNames()
+    {
+        var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-av-corridor.yml"))
+            .Replace("trialWeights: { visual: 0, auditory: 1, audiovisualCoherent: 0,", "trialWeights: { visual: 2, auditory: 1, audiovisualCoherent: 3,");
+        var task = new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
+        CollectionAssert.AreEqual(new[] { 2, 1, 3 }, TrialDraw.Weights(task, task.TrainingStages[0]));
     }
 
     [TestMethod]
@@ -176,8 +217,7 @@ public class TrialDrawTests
         foreach (var type in TrialDraw.TypeNames)
         {
             var task = Fixture.Task();
-            var w = task.TrainingStages[1].TrialWeights;
-            w.Auditory = type == "auditory" ? 1 : 0; w.Visual = type == "visual" ? 1 : 0; w.Audiovisual = type == "audiovisual" ? 1 : 0;
+            task.TrialWeights = Weights(type == "visual" ? 1 : 0, type == "auditory" ? 1 : 0, type == "audiovisualCoherent" ? 1 : 0);
             var rig = new Rig(Fixture.Setup(task, 1));
             rig.RunTo(TrialEventKind.Start);
             var pip = rig.RunTo(TrialEventKind.Update).Update;

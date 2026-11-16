@@ -52,7 +52,7 @@ public class Trial : IZapitTrial
     double IZapitTrial.LaserPowerMw { get { return laserPowerMw; } }
 
     public int trialNumber;
-    public string trialType;            // TrialDraw.TypeNames: what the trial shows, drawn from the stage's trialWeights
+    public string trialType;            // TrialDraw.TypeNames: what the trial shows, drawn from the trialWeights (the stage's, else the task's)
     public double itiSeconds;           // the interval before this trial: the last outcome (after any timeout; trial 1: the first clock tick) to the first pip, with a quiet mouse
     public double lickQuietSeconds;     // the stage's quiet waits, from the interval's start (QuietWait); 0: off
     public double wheelQuietSeconds;
@@ -146,8 +146,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
         foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage '" + row.Label + "': " + p);
         number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
-        var weights = TrialDraw.Weights(row);
-        if (weights.Any(w => w < 0) || weights.Sum() <= 0) problems.Add("stage '" + row.Label + "''s trialWeights needs every weight 0 or more and one above 0");
+        problems.AddRange(TrialDraw.WeightProblems(task, row));
         if (row.ResponseWindowSeconds.HasValue) number("stage '" + row.Label + "''s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
         // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
         // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
@@ -324,17 +323,37 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 /// <summary>Draws every trial of an experiment from one random stream seeded with the task's rngSeed.</summary>
 public class TrialDraw
 {
-    public const string Auditory = "auditory";       // the tone sweep alone
-    public const string Visual = "visual";           // the grating alone
-    public const string Audiovisual = "audiovisual"; // both
-    /// <summary>The trial types, the keys of a stage's trialWeights and the trial row's trialType (coen-dome-decision-making's names where they overlap).</summary>
-    public static readonly string[] TypeNames = { Auditory, Visual, Audiovisual };
+    public const string Visual = "visual";                           // the grating alone
+    public const string Auditory = "auditory";                       // the tone sweep alone
+    public const string AudiovisualCoherent = "audiovisualCoherent"; // both
+    /// <summary>The trial types the corridor shows, the trial row's trialType and the trialWeights' first keys (coen-dome-decision-making's names).</summary>
+    public static readonly string[] TypeNames = { Visual, Auditory, AudiovisualCoherent };
 
-    /// <summary>A stage's trialWeights in TypeNames' order.</summary>
-    public static int[] Weights(TrainingStage stage)
+    /// <summary>The weights a stage draws with: its own trialWeights, else the task's (the mouse's).</summary>
+    public static TrialTypeWeights Effective(UclOpenCoenDomeNavigationTaskParameters task, TrainingStage stage)
     {
-        var w = stage.TrialWeights;
-        return w == null ? new int[TypeNames.Length] : new[] { w.Auditory, w.Visual, w.Audiovisual };
+        return stage.TrialWeights ?? task.TrialWeights;
+    }
+
+    /// <summary>The effective trialWeights in TypeNames' order.</summary>
+    public static int[] Weights(UclOpenCoenDomeNavigationTaskParameters task, TrainingStage stage)
+    {
+        var w = Effective(task, stage);
+        return w == null ? new int[TypeNames.Length] : new[] { w.Visual, w.Auditory, w.AudiovisualCoherent };
+    }
+
+    /// <summary>What is wrong with the weights a stage draws with (task.py's TrialTypeWeights rules).</summary>
+    public static List<string> WeightProblems(UclOpenCoenDomeNavigationTaskParameters task, TrainingStage stage)
+    {
+        var problems = new List<string>();
+        var w = Effective(task, stage);
+        var name = stage.TrialWeights != null ? "stage '" + stage.Label + "''s trialWeights" : "trialWeights";
+        if (w == null) { problems.Add(name + " is missing"); return problems; }
+        if (w.AudiovisualConflict > 0) problems.Add(name + ".audiovisualConflict must be 0: that trial is not defined in this task yet");
+        if (w.Neutral > 0) problems.Add(name + ".neutral must be 0: that trial is not defined in this task yet");
+        var all = new[] { w.Visual, w.Auditory, w.AudiovisualCoherent, w.AudiovisualConflict, w.Neutral };
+        if (all.Any(x => x < 0) || all.Sum() <= 0) problems.Add(name + " needs every weight 0 or more and one above 0");
+        return problems;
     }
 
     readonly TrialRules rules;
@@ -386,14 +405,14 @@ public class TrialDraw
                 out t.laserCondition, out t.laserOn, out t.laserPowerMw);
             t.laserMaxSeconds = opto.LaserMaxSeconds;
         }
-        t.trialType = TypeNames[WeightedType(stage)];   // drawn last, so the draws above are as before trialWeights
+        t.trialType = TypeNames[WeightedType(task, stage)];   // drawn last, so the draws above are as before trialWeights
         return t;
     }
 
-    /// <summary>A trial type drawn with the stage's trialWeights as relative chances (TrialRules.Create refuses all 0).</summary>
-    int WeightedType(TrainingStage stage)
+    /// <summary>A trial type drawn with the effective trialWeights as relative chances (TrialRules.Create refuses all 0).</summary>
+    int WeightedType(UclOpenCoenDomeNavigationTaskParameters task, TrainingStage stage)
     {
-        var weights = Weights(stage);
+        var weights = Weights(task, stage);
         int draw = random.Next(weights.Sum());
         for (int type = 0; type < weights.Length; type++)
         {

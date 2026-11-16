@@ -1,5 +1,5 @@
 """The training stage to suggest for a mouse's next experiment, from its earlier ones of this workflow, whatever
-trial types they drew (each stage's trialWeights, Pip, 16 Nov 2026; by the session's modality until then): Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
+trial types they drew (the trialWeights, Pip, 16 Nov 2026; by the session's modality until then): Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
 unchanged, reading the mouse's session summaries (jacuzzi-ingest's `sub-<lab ID>/<ses folder>.json`, version 1:
 claude-tools records.md, "Session summaries"). The old workflow's TrialLog files (ShapingStage,
 WasRewarded) and folders named by eartag are not read: their readers were deleted on 15 Nov 2026 (Pip).

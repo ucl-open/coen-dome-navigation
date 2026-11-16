@@ -105,16 +105,24 @@ class OptogeneticsConfig(Optogenetics):
         return self
 
 
+UNDEFINED_TYPES = ("audiovisual_conflict", "neutral")  # decision-making's trial types the corridor has no trial for yet
+
+
 class TrialTypeWeights(TaskBlock):
     """Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),
-    as coen-dome-decision-making's TrialTypeWeights (Pip, 16 Nov 2026)."""
+    coen-dome-decision-making's names (Pip, 16 Nov 2026)."""
 
-    auditory: int = Field(ge=0, description="The tone sweep alone")
     visual: int = Field(ge=0, description="The grating alone")
-    audiovisual: int = Field(ge=0, description="The tone sweep and the grating together")
+    auditory: int = Field(ge=0, description="The tone sweep alone")
+    audiovisual_coherent: int = Field(ge=0, description="The tone sweep and the grating together")
+    audiovisual_conflict: int = Field(ge=0, description="Not defined in this task yet: must be 0")
+    neutral: int = Field(ge=0, description="Not defined in this task yet: must be 0")
 
     @model_validator(mode="after")
-    def _some_weight(self) -> "TrialTypeWeights":
+    def _some_defined_weight(self) -> "TrialTypeWeights":
+        for name in UNDEFINED_TYPES:
+            if getattr(self, name) > 0:
+                raise ValueError(f"trial_weights.{name} must be 0: that trial is not defined in this task yet")
         if not any(self.model_dump().values()):
             raise ValueError("trial_weights needs a trial type with a weight above 0")
         return self
@@ -124,8 +132,9 @@ class TrainingStage(QuietWait):
     """One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting."""
 
     label: str = Field(description="The stage's name, for people")
-    trial_weights: TrialTypeWeights = Field(
-        description="Relative draw weight per trial type: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)"
+    trial_weights: TrialTypeWeights | None = Field(
+        default=None,
+        description="This stage's own trialWeights, replacing the task's (the mouse's) for this stage; null: the task's trialWeights apply",
     )
     reward_floor_hz: float = Field(ge=1, le=25000, description="Lower frequency of the reward zone, in Hz")
     reward_ceiling_hz: float = Field(ge=1, le=25000, description="Upper frequency of the reward zone, in Hz")
@@ -157,6 +166,10 @@ class TrainingStage(QuietWait):
 class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     """Task params."""
 
+    trial_weights: TrialTypeWeights = Field(
+        default=TrialTypeWeights(visual=0, auditory=1, audiovisual_coherent=0, audiovisual_conflict=0, neutral=0),
+        description="Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead",
+    )
     tone_pips: StimulusSound = Field(
         default=StimulusSound(), description="The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"
     )

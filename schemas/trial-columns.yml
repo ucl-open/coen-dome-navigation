@@ -32,9 +32,9 @@ trialNumber:
   description: The trial's number in the experiment, from 1.
 trialType:
   type: string
-  values: [auditory, visual, audiovisual]
-  description: What the trial showed, in words (TrialDraw.TypeNames, also the keys of the stage's trialWeights; coen-dome-decision-making's names where they overlap) - auditory (the tone sweep alone), visual (the grating alone) or audiovisual (both), drawn for each trial with the stage's trialWeights as relative chances.
-  history: Until 16 Nov 2026 the task file's session-wide modality, the same on every trial.
+  values: [visual, auditory, audiovisualCoherent]
+  description: What the trial showed, in words (TrialDraw.TypeNames; coen-dome-decision-making's names and the task file's trialWeights keys) - visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both together), drawn for each trial with the trialWeights as relative chances (the stage's own if it has them, else the task's, set per mouse). The weights' audiovisualConflict and neutral are not defined in this task yet and must be 0.
+  history: Until 16 Nov 2026 the task file's session-wide modality, the same on every trial; audiovisual (both) is audiovisualCoherent from 16 Nov 2026.
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
