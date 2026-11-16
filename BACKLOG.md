@@ -2,6 +2,12 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-16 Device-pieces test on BLUE-OPTO-2 (runs 001E3, 001E4; lib eccf28a, this repo 1ba43e4)
+
+- Passed, 40 s test runs, no mouse: launch accepted, Ready 20-21 s, expected files, camera k 0 and 0 gaps, CSV closed, RewardLeft row, DO1-DO3 low at Start, Bonsai exit 1.6 s after Stop, no ffmpeg left. Camera USB serials are rig.yml's serialNumber in hex.
+- Fixed on the way in lib: the projector window deadlocked the start, so an error could not end headless Bonsai (5c44e45); the Harp clock timeout counts from the first heartbeat (48c8297).
+- Open: background noise not yet heard at Ready; `config\main.layout` not yet saved (both need Pip at the rig). One StepperDriver-A homing timeout in about 104 launches (001DB), likely a switch or cable.
+
 ## 2026-11-16 One background noise for every dome task (lib-open-rigs a5120a4; Audio .12, Devices .24; Pip: "It should be literally the same file")
 
 - The background noise is rig.yml's `speakerArray.backgroundNoise`, `../shared/sounds/background_noise.wav` from the rig's folder: the server's `K:\config\shared\sounds\background_noise.wav`, which app-rig-control's upkeep copies down to `RigConfigs\shared\`. That file is this repo's `src\waveforms\background_noise.wav` byte for byte (SHA-256 762999848f9152e400e2ac7c452a729a2cf980056a59c34d44e148681b177704), so the mice hear the same noise at the same level (`backgroundNoise.levelDbfs` -64.1). The manifest hashes it with rig.yml's other files (`{RigFiles}`).
