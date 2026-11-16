@@ -55,22 +55,31 @@ public class Sweep
         return sweep;
     }
 
-    /// <summary>The frequency a fraction (0 to 1, clamped) of the way along the sweep, on a log scale.</summary>
+    /// <summary>The track's sweep ratio, sweepEndHz / sweepStartHz in whole numbers (25000 / 2000 = 12), as Tom Childs' workflow
+    /// divided them: the tone runs 2 to 24 kHz along the track, which his mice learned (Pip, 16 Nov 2026). Position, drift and
+    /// truncation use it; the tone files span the full sweep, so BinOf does not.</summary>
+    public double TrackRatio { get { return Math.Floor(EndHz / StartHz); } }
+
+    /// <summary>The highest tone the track plays: StartHz * TrackRatio (24 kHz).</summary>
+    public double TrackEndHz { get { return StartHz * TrackRatio; } }
+
+    /// <summary>The frequency a fraction (0 to 1, clamped) of the way along the track, on a log scale.</summary>
     public double FrequencyAt(double fraction)
     {
-        return StartHz * Math.Pow(EndHz / StartHz, Math.Max(0, Math.Min(1, fraction)));
+        return StartHz * Math.Pow(TrackRatio, Math.Max(0, Math.Min(1, fraction)));
     }
 
-    /// <summary>How far along the sweep a frequency is, on a log scale.</summary>
+    /// <summary>How far along the track a frequency is, on a log scale.</summary>
     public double FractionOf(double hz)
     {
-        return hz <= 0 ? 0 : Math.Log(hz / StartHz) / Math.Log(EndHz / StartHz);
+        return hz <= 0 ? 0 : Math.Log(hz / StartHz) / Math.Log(TrackRatio);
     }
 
-    /// <summary>The tone file's row (0 to Steps - 1) nearest a frequency.</summary>
+    /// <summary>The tone file's row (0 to Steps - 1) nearest a frequency, over the files' full sweep (StartHz to EndHz).</summary>
     public int BinOf(double hz)
     {
-        return (int)Math.Max(0, Math.Min(Steps - 1, Math.Round(FractionOf(hz) * (Steps - 1))));
+        var fraction = hz <= 0 ? 0 : Math.Log(hz / StartHz) / Math.Log(EndHz / StartHz);
+        return (int)Math.Max(0, Math.Min(Steps - 1, Math.Round(fraction * (Steps - 1))));
     }
 }
 

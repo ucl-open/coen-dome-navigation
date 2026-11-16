@@ -21,11 +21,25 @@ public class SweepTests
         Assert.AreEqual(100, sweep.Steps);
         Assert.AreEqual(48000, sweep.SampleRate);
         Assert.AreEqual(2400, sweep.PipSamples);  // one row of all_waveforms.bin
-        Assert.AreEqual(2000, sweep.FrequencyAt(-1), 1e-9);
-        Assert.AreEqual(25000, sweep.FrequencyAt(2), 1e-6);
         Assert.AreEqual(0, sweep.BinOf(2000));
         Assert.AreEqual(99, sweep.BinOf(25000));
         Assert.AreEqual(99, sweep.BinOf(40000));
+    }
+
+    [TestMethod]
+    public void TheTrackRunsTwoToTwentyFourKilohertzAsTomsWorkflowDid()
+    {
+        // Tom Childs' 'cm to Hz' divided sweepEndHz / sweepStartHz as whole numbers (25000 / 2000 = 12): his mice learned 2 to 24 kHz
+        // along the track, so the reward zones sit where they did (Pip, 16 Nov 2026). The tone files still span 2 to 25 kHz.
+        var sweep = Fixture.Sweep();
+        Assert.AreEqual(12, sweep.TrackRatio);
+        Assert.AreEqual(24000, sweep.TrackEndHz);
+        Assert.AreEqual(2000, sweep.FrequencyAt(-1), 1e-9);
+        Assert.AreEqual(24000, sweep.FrequencyAt(2), 1e-6);
+        Assert.AreEqual(2000 * Math.Sqrt(12), sweep.FrequencyAt(0.5), 1e-6);
+        Assert.AreEqual(0.817, Math.Round(sweep.FractionOf(15248), 3));  // stage 3-5 reward floor: 98.1 cm of a 120 cm track
+        Assert.AreEqual(0.951, Math.Round(sweep.FractionOf(21248), 3));  // and its ceiling: 114.1 cm
+        Assert.AreEqual(97, sweep.BinOf(sweep.FrequencyAt(1)));           // the track's top tone is file row 97, as Tom's
     }
 
     [TestMethod]

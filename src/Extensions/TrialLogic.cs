@@ -418,7 +418,7 @@ public class CorridorState
         if (trial.frequencyDrift)
         {
             var drift = (double)beep / CorridorSetup.DriftBeeps;
-            tone += sweep.StartHz * Math.Pow(sweep.EndHz / sweep.StartHz, drift) - sweep.StartHz;
+            tone += sweep.StartHz * Math.Pow(sweep.TrackRatio, drift) - sweep.StartHz;
             grating += CorridorSetup.GratingStartCpd * Math.Pow(CorridorSetup.GratingEndCpd / CorridorSetup.GratingStartCpd, drift) - CorridorSetup.GratingStartCpd;
         }
         var active = trial.truncationFraction >= 1 || Math.Round(sweep.FractionOf(tone), 3) < trial.truncationFraction;
