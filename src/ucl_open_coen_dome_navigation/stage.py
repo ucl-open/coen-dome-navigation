@@ -64,12 +64,12 @@ def _when(folder: str) -> str:
     return m.group(1) if m else ""
 
 
-def read_new(summary: dict) -> Experiment | None:
-    """An experiment of this workflow from its summary: outcome Correct is rewarded, its
-    stage the TrainingStage setting in Settings_Experiment (fixed for the experiment, so not a trial column).
-    None without trials or without a trialType column."""
+def read_experiment(summary: dict) -> Experiment | None:
+    """An experiment of this workflow from its summary: its trials' rewarded column, its stage the TrainingStage setting
+    in Settings_Experiment (fixed for the experiment, so not a trial column). None without trials; a summary without
+    the rewarded column raises KeyError, so it is reported as unreadable, never passed over."""
     columns, rows = summary["trials"]["columns"], summary["trials"]["rows"]
-    if not rows or "trialType" not in columns:
+    if not rows:
         return None
     settings = summary["Settings_Experiment"]
     if settings is None:
@@ -78,7 +78,7 @@ def read_new(summary: dict) -> Experiment | None:
     rows = [dict(zip(columns, row)) for row in rows]
     name = summary["session"]
     return Experiment(name, _when(name), [stage] * len(rows),
-                      [r.get("outcome") == "Correct" for r in rows],
+                      [r["rewarded"] is True for r in rows],
                       [float(r.get("laserPowerMw") or 0) > 0 for r in rows],
                       any(int(float(r.get("laserCondition") or 0)) > 0 for r in rows))
 
@@ -134,7 +134,7 @@ def experiments(subject: str, folder: Path, expected: Path, unread: list[str]) -
     found = []
     for s in summaries_of(subject, folder, expected, unread):
         try:
-            e = read_new(s)
+            e = read_experiment(s)
         except (OSError, ValueError, KeyError, TypeError) as error:
             # Never passed over unseen: it may be the experiment that decides (fail loudly)
             unread.append(f"{s['session']} (Unreadable: {type(error).__name__})")
@@ -150,10 +150,10 @@ def _rate(rewarded: list[bool]) -> float:
 
 def suggest(history: list[Experiment]) -> tuple[int, str]:
     """(stage, why) for the next experiment, from the mouse's experiments newest first."""
-    same = [e for e in history if e.rewarded]
-    if not same:
+    with_trials = [e for e in history if e.rewarded]
+    if not with_trials:
         return 0, "No Earlier Experiment With Trials: Stage 0"
-    last = same[0]
+    last = with_trials[0]
     stage = last.stage[-1]
     if last.optogenetics:
         # An optogenetics experiment never changes the stage (zapit-v2): the laser is meant to change behaviour
@@ -171,7 +171,7 @@ def suggest(history: list[Experiment]) -> tuple[int, str]:
         return stage, f"Under {MIN_TRIALS} Trials ({where}): Stage {stage} Again"
     if stage == TWO_IN_A_ROW_STAGE:
         s2, n = TWO_IN_A_ROW_STAGE, TWO_IN_A_ROW_REWARDED
-        before = [r for r, s, l in zip(same[1].rewarded, same[1].stage, _laser(same[1])) if s == s2 and not l] if len(same) > 1 else []
+        before = [r for r, s, l in zip(with_trials[1].rewarded, with_trials[1].stage, _laser(with_trials[1])) if s == s2 and not l] if len(with_trials) > 1 else []
         if sum(rewarded) >= n and sum(before) >= n:
             return s2 + 1, f"{n}+ Rewarded in Two Experiments in a Row ({where}): Stage {s2 + 1}"
         if rate < REGRESS_RATE:

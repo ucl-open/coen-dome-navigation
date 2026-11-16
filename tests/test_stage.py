@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from ucl_open_coen_dome_navigation.stage import Experiment, experiments, read_new, suggest
+from ucl_open_coen_dome_navigation.stage import Experiment, experiments, read_experiment, suggest
 
 STAGE_PY = Path(__file__).parents[1] / "src" / "ucl_open_coen_dome_navigation" / "stage.py"
 
@@ -54,10 +54,10 @@ def test_the_rate_counts_every_trial_but_rewards_only_at_the_last_stage():
 
 REPO = "https://github.com/ucl-open/coen-dome-navigation.git"
 DROPPED = ("itiStartTime", "trialStartTime", "laserTriggerTime")  # jacuzzi-ingest's drop list (records.md, "Session summaries")
-ROWS = [["auditory", "Correct"]] * 60
+ROWS = [["auditory", True]] * 60
 
 
-def summary(session: str, run: str, stage: int | None, rows: list[list], columns=("trialType", "outcome"), repo=REPO, **extra) -> dict:
+def summary(session: str, run: str, stage: int | None, rows: list[list], columns=("trialType", "rewarded"), repo=REPO, **extra) -> dict:
     """A session summary as records.md v1 describes it, in the keys stage.py reads."""
     s = {"version": 1, "run": run, "subject": "TC9", "session": session, "source": {"repo": repo, "commit": "abc"},
          "trials": {"columns": list(columns), "rows": rows},
@@ -153,9 +153,9 @@ def test_another_workflow_s_summary_never_decides_but_is_accounted_for(tmp_path)
     # An av-dome experiment of the same mouse (80 visual Correct at stage 3) is not this task's and must not
     # suggest Stage 4.
     other = "https://github.com/ucl-open/av-dome.git"
-    put(tmp_path, summary("ses-010D1_2026-11-12T09-00-00", "r10", 3, [["visual", "Correct"]] * 80, repo=other))
+    put(tmp_path, summary("ses-010D1_2026-11-12T09-00-00", "r10", 3, [["visual", True]] * 80, repo=other))
     assert read(tmp_path, "r10") == ([], [])
-    put(tmp_path, summary("ses-011D1_2026-11-13T09-00-00", "r11", 3, [["visual", "Correct"]] * 80))
+    put(tmp_path, summary("ses-011D1_2026-11-13T09-00-00", "r11", 3, [["visual", True]] * 80))
     assert [e.name for e in read(tmp_path, "r10", "r11")[0]] == ["ses-011D1_2026-11-13T09-00-00"]
 
 
@@ -174,23 +174,32 @@ def test_a_name_that_only_contains_ours_is_another_workflow_and_no_repo_gives_no
     assert read(tmp_path, "r2", "r3")[1] == ["ses-003D1_2026-11-11T09-00-00.json (Unreadable: KeyError)"]
 
 
-def test_a_summary_with_no_trials_or_no_trial_type_is_not_an_experiment(tmp_path):
+def test_a_summary_with_no_trials_is_not_an_experiment_and_one_without_rewarded_is_unreadable(tmp_path):
+    # Round 3 F15: rewarded is read from its own column; a summary without it (an older format) is named, never
+    # passed over, as passing it over offered a trained mouse Stage 0.
     put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, []))
-    put(tmp_path, summary("ses-003D1_2026-11-11T09-00-00", "r3", 2, [[1]], columns=("trialNumber",)))
-    assert read(tmp_path, "r2", "r3") == ([], [])
+    assert read(tmp_path, "r2") == ([], [])
+    put(tmp_path, summary("ses-003D1_2026-11-11T09-00-00", "r3", 2, [["auditory", "Correct"]], columns=("trialType", "outcome")))
+    assert read(tmp_path, "r2", "r3") == ([], ["ses-003D1_2026-11-11T09-00-00 (Unreadable: KeyError)"])
+
+
+def test_rewarded_is_the_rewarded_column():
+    s = summary("ses-005D1_2026-11-04T10-00-00", "r5", 4, [["auditory", "Correct", False], ["auditory", "Incorrect", True]],
+                columns=("trialType", "outcome", "rewarded"))
+    assert read_experiment(s).rewarded == [False, True]
 
 
 def test_the_opto_columns_are_read():
     # NaN is written as null
-    s = summary("ses-005D1_2026-11-04T10-00-00", "r5", 4, [["auditory", "Correct", 2.5, 3], ["auditory", "Incorrect", None, None]],
-                columns=("trialType", "outcome", "laserPowerMw", "laserCondition"))
-    e = read_new(s)
+    s = summary("ses-005D1_2026-11-04T10-00-00", "r5", 4, [["auditory", True, 2.5, 3], ["auditory", False, None, None]],
+                columns=("trialType", "rewarded", "laserPowerMw", "laserCondition"))
+    e = read_experiment(s)
     assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]
 
 
 def test_the_script_runs_with_the_standard_library_alone(tmp_path):
     # rig-control runs it with its own Python, -I, outside this project: no package import.
-    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, [["auditory", "Correct"]] * 100))
+    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, [["auditory", True]] * 100))
     done = subprocess.run([sys.executable, "-I", str(STAGE_PY), "--subject=TC9",
                            f"--summaries={tmp_path}", f"--expected={expect(tmp_path, 'r2')}"],
                           capture_output=True, text=True, check=True)

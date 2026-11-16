@@ -14,7 +14,7 @@
 # defined once in lib-open-rigs open_rigs.rigs.trials: coen-dome-decision-making and
 # coen-dome-navigation list them in this order with these types, units and descriptions, word for word
 # (tests/test_trial_columns.py holds both), so one analysis reads both tasks.
-# trialType, outcome and penaltySound are described per task, and which trials are rewarded and penalised in those columns' notes. This task's own columns follow.
+# trialType and outcome are described per task, and which trials are rewarded and penalised in those columns' notes. This task's own columns follow.
 #
 # Only what changes from trial to trial (Pip, 9 Nov 2026): the task file's values fixed for the
 # experiment (the stage's row, the sound levels) are in Settings\Settings_Task_*.json and the stage itself
@@ -85,7 +85,7 @@ rewarded:
   history: From 16 Nov 2026; until then outcome Correct.
 penaltySound:
   type: bool
-  description: True when the penalty sound played (the task's penalty.sound enabled). A trial is penalised when it runs out of time or track with the end frequency in the reward zone, and on a stage with penaliseWrongZone when it ends outside the zone (TrialLogic.cs TrialRules.End); the timeout follows.
+  description: "True when the trial was penalised and the task's penalty sound is enabled."
 penaltyTimeoutSeconds:
   type: double
   unit: s
