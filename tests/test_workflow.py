@@ -1,4 +1,4 @@
-﻿"""src\\main.bonsai's rules: shared blocks, every task wait on the Harp clock, the logs' completion rules and the names
+"""src\\main.bonsai's rules: shared blocks, every task wait on the Harp clock, the logs' completion rules and the names
 the stage and README depend on."""
 
 import json
@@ -308,7 +308,7 @@ def test_every_file_the_workflow_writes_is_in_the_manifest_s_expected_files():
 
 def test_no_fixed_width_pulse_reaches_a_reward_valve():
     # Every reward is DeliverReward's calibrated pulse; checked against the lab's rig template's valve lines.
-    rig = LabRig.model_validate(yaml.safe_load((Path(open_rigs.rigs.__file__).parent / "rig-template.yml").read_text(encoding="utf-8")))
+    rig = LabRig.model_validate(yaml.safe_load((Path(open_rigs.rigs.__file__).parent / "rig-template.yml").read_text(encoding="utf-8").replace("CHANGE-ME", "X")))
     assert rig.reward_valve_lines() and lint.fixed_width_pulses_on_reward_valves(WORKFLOW, rig.reward_valve_lines()) == []
 
 
@@ -362,7 +362,7 @@ def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
 
 def test_the_waveforms_are_at_the_lab_rig_s_rate():
     # The committed waveforms' rate (sweep.json) is the rig template's audio device's, as every dome's rig.yml.
-    rig = LabRig.model_validate(yaml.safe_load((Path(open_rigs.rigs.__file__).parent / "rig-template.yml").read_text(encoding="utf-8")))
+    rig = LabRig.model_validate(yaml.safe_load((Path(open_rigs.rigs.__file__).parent / "rig-template.yml").read_text(encoding="utf-8").replace("CHANGE-ME", "X")))
     sweep = json.loads((ROOT / "src" / "waveforms" / "sweep.json").read_text(encoding="utf-8"))
     assert sweep["sampleRate"] == rig.speaker_array.device.sample_rate == 48000
 
