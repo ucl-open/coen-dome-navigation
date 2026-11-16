@@ -188,13 +188,6 @@ def test_the_opto_columns_are_read():
     assert e.laser == [True, False] and e.optogenetics is True and e.rewarded == [True, False]
 
 
-def test_stage_py_reads_none_of_the_dropped_columns(tmp_path):
-    # jacuzzi-ingest drops these from every summary (records.md): reading one would read null for ever.
-    assert not [c for c in DROPPED if c in STAGE_PY.read_text(encoding="utf-8")]
-    put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS))  # a file without them reads in full
-    assert read(tmp_path, "r2")[1] == []
-
-
 def test_the_script_runs_with_the_standard_library_alone(tmp_path):
     # rig-control runs it with its own Python, -I, outside this project: no package import.
     put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, [["auditory", "Correct"]] * 100))

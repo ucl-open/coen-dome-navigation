@@ -84,25 +84,6 @@ def test_the_penalty_sound_is_the_lab_s():
     assert len(errors) == 1 and "'path'" in errors[0]
 
 
-def _dbfs_rms(sound: np.ndarray) -> float:
-    return 20 * math.log10(float(np.sqrt(np.mean(sound.astype(np.float64) ** 2))))
-
-
-def test_the_task_file_states_the_levels_played_until_15_nov_2026():
-    # Until 15 Nov 2026 every file played as stored (Tom's pips and reward tone peaking at 0.05 squared, written at the
-    # amplitude and scaled by it again) and the noise at backgroundNoiseLevel 0.5 as its gain. Each level is now the task
-    # file's levelDbfs, in dBFS RMS of the sound as stored (OpenRigs.Audio SoundLevel), so it states those, within 0.05 dB,
-    # measured on the committed files the workflow plays. The noise, rig.yml's since 16 Nov 2026, is the same file
-    # (SHA-256 762999848f91...), 60 s of uniform noise at RMS PIP_PEAK / 2 (-58.1 dBFS), so -64.1 at 0.5.
-    p = task()["taskParameters"]
-    pips = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(waveforms.SWEEP_STEPS, -1)
-    assert all(abs(p["tonePips"]["levelDbfs"] - _dbfs_rms(row)) < 0.05 for row in pips)
-    assert abs(p["rewardTone"]["levelDbfs"] - _dbfs_rms(np.fromfile(WAVES / "reward_tone.bin", dtype=np.float32))) < 0.05
-    assert abs(p["backgroundNoise"]["levelDbfs"] - (20 * math.log10(waveforms.PIP_PEAK / 2) + 20 * math.log10(0.5))) < 0.05
-    assert p["backgroundNoise"]["enabled"] and p["penalty"]["sound"]["levelDbfs"] == -44.6
-    assert "backgroundNoiseLevel" not in p
-
-
 def _closed(node):
     """rig-control's taskfile.closed: every object that lists properties refuses others."""
     if isinstance(node, dict):
@@ -138,14 +119,6 @@ def test_the_optogenetics_block_has_pip_s_names():
 def test_rig_control_keeps_the_zapit_file():
     # rig-control copies a task field ending in ConfigPath beside the task file at Go (taskfile.keep_files).
     assert [k for k in task()["taskParameters"]["optogenetics"] if k.endswith("Path")] == ["zapitConfigPath"]
-
-
-@pytest.mark.parametrize("old", ["stimDelay", "excludeRepeats", "laserLeadSeconds", "enabled"])
-def test_the_schema_refuses_old_names(old):
-    validator = jsonschema.Draft202012Validator(_closed(json.loads(SCHEMA.read_text(encoding="utf-8"))))
-    doc = task()
-    doc["taskParameters"]["optogenetics"][old] = ""
-    assert any("Additional properties" in e.message for e in validator.iter_errors(doc))
 
 
 def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():

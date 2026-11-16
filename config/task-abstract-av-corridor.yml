@@ -5,7 +5,7 @@
 # From the editor, the workflow reads this file as it is.
 #
 # Laid out as av-dome's (Pip, 9 Nov 2026): each trainingStages row says what its stage does; Tom
-# Childs' stages 1 to 6 are rows 0 to 5. Not every rule is in the schema: tests\test_task_file.py
+# Childs' stages 1 to 6 are rows 0 to 5. Not every rule is in the schema: tests\test_task_schema.py
 # checks this file against the pydantic model (src\ucl_open_coen_dome_navigation\task.py), which
 # also says what each field does.
 version: 0.0.0-rc1
