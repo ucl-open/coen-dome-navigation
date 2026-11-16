@@ -214,7 +214,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             WheelQuietCm = trial.wheelQuietCm,
             // Every trial of an optogenetics experiment sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
             Laser = trial.optogenetics,
-            ResponseSeconds = double.IsNaN(trial.responseWindowSeconds) ? double.PositiveInfinity : trial.responseWindowSeconds
+            ResponseWindowSeconds = double.IsNaN(trial.responseWindowSeconds) ? double.PositiveInfinity : trial.responseWindowSeconds
         };
     }
 
