@@ -46,7 +46,7 @@ static class Fixture
 }
 
 /// <summary>Runs lib-open-rigs' TrialLoop with the task's rules on a stand-in Harp clock, 1 ms a tick, the wheel,
-/// the left spout and Zapit's replies put in by the test (as RunTrials feeds it: no right spout).</summary>
+/// both spouts and Zapit's replies put in by the test (as RunTrials feeds it).</summary>
 class Rig
 {
     public readonly TrialLoop<Trial, StimulusFrame, TrialOutcome> Loop;
@@ -75,8 +75,8 @@ class Rig
     }
 
     public void Wheel(double cm) { Events.AddRange(Loop.OnWheel(cm)); }
-    public void Touch(bool touched) { Events.AddRange(Loop.OnLick(0, touched)); }
-    public void Lick() { Touch(true); Touch(false); }
+    public void Touch(bool touched, int spout = 0) { Events.AddRange(Loop.OnLick(spout, touched)); }
+    public void Lick(int spout = 0) { Touch(true, spout); Touch(false, spout); }
 }
 
 [TestClass]
@@ -472,6 +472,21 @@ public class TrialRulesTests
         Assert.AreEqual("CorrectLick", rewarded.Outcome.Row.endReason);
         Assert.AreEqual(2.0, rewarded.Outcome.Row.itiStartTime - outcome.Seconds, 0.0011);
         Assert.AreEqual(next.Trial.itiSeconds, rewarded.Outcome.Row.itiSeconds);
+    }
+
+    [TestMethod]
+    public void ARightLickHoldsTheStartAndNeverAnswers()
+    {
+        var iti = new Rig(Fixture.Setup(Fixture.Task(), 4)).RunTo(TrialEventKind.Start).Trial.itiSeconds;
+        var r = new Rig(Fixture.Setup(Fixture.Task(), 4));
+        var at = Math.Round(0.001 + iti - 0.5, 3);
+        r.Until(at);
+        r.Lick(1);                                          // the right spout, late in the interval: the start a quiet second later
+        var started = r.RunTo(TrialEventKind.Start);
+        Assert.AreEqual(at + 1.0, started.Seconds, 1e-9);
+        r.Lick(1);                                          // and a right lick in the trial is no answer
+        r.Until(Math.Round(r.Now + 0.5, 3));
+        Assert.IsFalse(r.Events.Any(e => e.Kind == TrialEventKind.Outcome));
     }
 
     [TestMethod]

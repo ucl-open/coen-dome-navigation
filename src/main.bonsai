@@ -501,7 +501,7 @@
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.Rewards.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold, the left spout's alone), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (BehaviorBoard.SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating; Outcome writes the trial row, rewards (RewardRequests, left spout) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, beep 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the stage's quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (BehaviorBoard.SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating; Outcome writes the trial row, rewards (RewardRequests, left spout) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="MemberSelector">
@@ -878,13 +878,17 @@
               <Description>The rules, once the experiment folder exists and the tones are loaded, stamped with the next Harp clock tick and given from the clock's thread (lib-open-rigs' OpenRigs.Core OnNextTick), with no lock held, so trial 1 runs as every later one does.</Description>
               <Combinator xsi:type="core:OnNextTick" />
             </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>LickStateRight</Name>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="5" Label="Source1" />
             <Edge From="1" To="5" Label="Source2" />
             <Edge From="2" To="5" Label="Source3" />
             <Edge From="3" To="5" Label="Source4" />
-            <Edge From="4" To="5" Label="Source5" />
+            <Edge From="57" To="5" Label="Source5" />
+            <Edge From="4" To="5" Label="Source6" />
             <Edge From="5" To="6" Label="Source1" />
             <Edge From="10" To="11" Label="Source1" />
             <Edge From="46" To="14" Label="Source1" />

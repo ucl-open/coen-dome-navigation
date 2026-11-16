@@ -364,3 +364,16 @@ def test_the_waveforms_are_at_the_lab_rig_s_rate():
     rig = LabRig.model_validate(yaml.safe_load((Path(open_rigs.rigs.__file__).parent / "rig-template.yml").read_text(encoding="utf-8")))
     sweep = json.loads((ROOT / "src" / "waveforms" / "sweep.json").read_text(encoding="utf-8"))
     assert sweep["sampleRate"] == rig.speaker_array.device.sample_rate == 48000
+
+
+def test_run_trials_reads_both_lick_streams():
+    # The quiet wait before a trial starts holds for a lick on either spout (as coen-dome-decision-making's): RunTrials takes
+    # LickStateLeft as Source4 and LickStateRight as Source5, Zapit's replies Source6.
+    logic = group("TaskLogic")
+    nodes = [e for e in logic.find(W + "Workflow").find(W + "Nodes")]
+    names = {i: (e.findtext(W + "Name") or "") for i, e in enumerate(nodes)}
+    run = next(i for i, e in enumerate(nodes) if e.find(W + "Combinator") is not None and e.find(W + "Combinator").get(XSI) == "ext:RunTrials")
+    feeds = {edge.get("Label"): names[int(edge.get("From"))] for edge in logic.find(W + "Workflow").find(W + "Edges") if int(edge.get("To")) == run}
+    assert feeds["Source4"] == "LickStateLeft"
+    assert feeds["Source5"] == "LickStateRight"
+    assert feeds["Source6"] == "ZapitReplies"

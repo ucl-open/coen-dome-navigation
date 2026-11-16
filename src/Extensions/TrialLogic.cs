@@ -434,13 +434,13 @@ public class CheckTaskAtGo
 }
 
 [Combinator]
-[Description("Runs the trials (lib-open-rigs TrialLoop) by the task's rules. Inputs: the rules, the Harp clock in seconds, the wheel in cm, the left lick state, Zapit's replies. The right spout is not the task's: it neither answers nor holds the trial start.")]
+[Description("Runs the trials (lib-open-rigs TrialLoop) by the task's rules. Inputs: the rules, the Harp clock in seconds, the wheel in cm, the left and right lick states, Zapit's replies. The right spout is not the task's answer, but a lick on it holds the trial start, as the left's does.")]
 [WorkflowElementCategory(ElementCategory.Combinator)]
 public class RunTrials
 {
     public IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> Process(IObservable<TrialRules> rules, IObservable<double> clock,
-        IObservable<double> wheelCm, IObservable<bool> lickLeft, IObservable<ZapitReply> zapitReplies)
+        IObservable<double> wheelCm, IObservable<bool> lickLeft, IObservable<bool> lickRight, IObservable<ZapitReply> zapitReplies)
     {
-        return TrialLoop.Observe<Trial, StimulusFrame, TrialOutcome>(rules, clock, wheelCm, lickLeft, Observable.Never<bool>(), zapitReplies);
+        return TrialLoop.Observe<Trial, StimulusFrame, TrialOutcome>(rules, clock, wheelCm, lickLeft, lickRight, zapitReplies);
     }
 }
