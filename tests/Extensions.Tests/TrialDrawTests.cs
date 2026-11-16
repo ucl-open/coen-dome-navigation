@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using UclOpenCoenDomeNavigationTask;
@@ -35,6 +36,11 @@ static class Fixture
     public static TrialRules Setup(UclOpenCoenDomeNavigationTaskParameters task, int stage, bool hardware = true)
     {
         return TrialRules.Create(task, stage, Sweep(), hardware, path => 4);
+    }
+
+    public static TrialDraw Draw(UclOpenCoenDomeNavigationTaskParameters task, int stage)
+    {
+        return new TrialDraw(task, stage, Sweep(), path => 4);
     }
 
     public static void Opto(UclOpenCoenDomeNavigationTaskParameters task)
@@ -98,6 +104,15 @@ public class VirtualTrackTests
 public class TrialDrawTests
 {
     [TestMethod]
+    public void TheRulesAreReadOnlyAndTheDrawChecksTheTask()
+    {
+        // Round 3 F11: as coen-dome-decision-making's, no public mutable fields, the checks in TrialDraw.CheckTask.
+        Assert.AreEqual(0, typeof(TrialRules).GetFields(BindingFlags.Public | BindingFlags.Instance).Length);
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => TrialDraw.CheckTask(Fixture.Task(), 6, Fixture.Sweep())).Message, "TrainingStage is 6");
+        Assert.AreEqual(Fixture.Task().TrainingStages[2].Label, TrialDraw.CheckTask(Fixture.Task(), 2, Fixture.Sweep()).Label);
+    }
+
+    [TestMethod]
     public void AStagePastTheTableIsRefused()
     {
         var error = Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.Task(), 6));
@@ -125,8 +140,8 @@ public class TrialDrawTests
     [TestMethod]
     public void TheSameSeedDrawsTheSameTrials()
     {
-        var a = new TrialDraw(Fixture.Setup(Fixture.Task(), 5));
-        var b = new TrialDraw(Fixture.Setup(Fixture.Task(), 5));
+        var a = Fixture.Draw(Fixture.Task(), 5);
+        var b = Fixture.Draw(Fixture.Task(), 5);
         for (int i = 0; i < 50; i++)
         {
             var x = a.Next();
@@ -149,18 +164,18 @@ public class TrialDrawTests
         // The task file: auditory alone, no stage with its own weights (Pip, 16 Nov 2026), so mice run as before trialWeights
         var task = Fixture.Task();
         Assert.IsTrue(task.TrainingStages.All(s => s.TrialWeights == null));
-        var file = new TrialDraw(Fixture.Setup(task, 3));
+        var file = Fixture.Draw(task, 3);
         for (int i = 0; i < 100; i++) Assert.AreEqual("auditory", file.Next().trialType);
         task.TrialWeights = Weights(0, 1, 3);   // a mouse's weights, edited on Setup
-        var draw = new TrialDraw(Fixture.Setup(task, 3));
+        var draw = Fixture.Draw(task, 3);
         var types = Enumerable.Range(0, 4000).Select(i => draw.Next().trialType).ToList();
         Assert.AreEqual(0, types.Count(t => t == "visual"));   // weight 0: never
         Assert.AreEqual(0.75, types.Count(t => t == "audiovisualCoherent") / 4000.0, 0.03);
         Assert.AreEqual(1000, types.Count(t => t == "auditory"), 120);
-        var again = new TrialDraw(Fixture.Setup(task, 3));   // the same seed: the same types
+        var again = Fixture.Draw(task, 3);   // the same seed: the same types
         CollectionAssert.AreEqual(types, Enumerable.Range(0, 4000).Select(i => again.Next().trialType).ToList());
         task.RngSeed = 2;
-        var other = new TrialDraw(Fixture.Setup(task, 3));
+        var other = Fixture.Draw(task, 3);
         CollectionAssert.AreNotEqual(types, Enumerable.Range(0, 4000).Select(i => other.Next().trialType).ToList());
     }
 
@@ -170,12 +185,12 @@ public class TrialDrawTests
         var task = Fixture.Task();
         task.TrialWeights = Weights(1, 0, 0);   // the mouse's: visual
         task.TrainingStages[2].TrialWeights = Weights(0, 0, 1);
-        var staged = new TrialDraw(Fixture.Setup(task, 2));
+        var staged = Fixture.Draw(task, 2);
         for (int i = 0; i < 100; i++) Assert.AreEqual("audiovisualCoherent", staged.Next().trialType);
         // A stage without its own keeps the mouse's edited weights, at any stage it moves to.
         foreach (var stage in new[] { 1, 3, 4 })
         {
-            var draw = new TrialDraw(Fixture.Setup(task, stage));
+            var draw = Fixture.Draw(task, stage);
             for (int i = 0; i < 100; i++) Assert.AreEqual("visual", draw.Next().trialType);
         }
     }
@@ -231,7 +246,7 @@ public class TrialDrawTests
     [TestMethod]
     public void TheIntervalIsDrawnBeforeEveryTrialTheFirstToo()
     {
-        var draw = new TrialDraw(Fixture.Setup(Fixture.Task(), 0));
+        var draw = Fixture.Draw(Fixture.Task(), 0);
         for (int i = 0; i < 100; i++)
         {
             var iti = draw.Next().itiSeconds;
@@ -242,10 +257,10 @@ public class TrialDrawTests
     [TestMethod]
     public void TracksAreScaledByTheStageAndTruncationFollowsItsFraction()
     {
-        var draw = new TrialDraw(Fixture.Setup(Fixture.Task(), 0));
+        var draw = Fixture.Draw(Fixture.Task(), 0);
         var lengths = Enumerable.Range(0, 200).Select(_ => draw.Next()).Select(t => t.trackLengthCm).Distinct().OrderBy(l => l).ToList();
         CollectionAssert.AreEqual(new[] { 10.0, 12.5, 15.0 }, lengths);
-        draw = new TrialDraw(Fixture.Setup(Fixture.Task(), 5));
+        draw = Fixture.Draw(Fixture.Task(), 5);
         var trials = Enumerable.Range(0, 2000).Select(_ => draw.Next()).ToList();
         var truncated = trials.Where(t => t.truncationFraction < 1).ToList();
         Assert.AreEqual(0.16, truncated.Count / 2000.0, 0.03);
@@ -257,7 +272,7 @@ public class TrialDrawTests
     {
         var task = Fixture.Task();
         Fixture.Opto(task);
-        var draw = new TrialDraw(Fixture.Setup(task, 4));
+        var draw = Fixture.Draw(task, 4);
         var trials = Enumerable.Range(0, 500).Select(_ => draw.Next()).ToList();
         Assert.IsTrue(trials.All(t => t.laserCondition >= 1 && t.laserCondition <= 4));
         Assert.IsTrue(trials.Take(20).All(t => !t.laserOn));
@@ -291,9 +306,9 @@ public class TrialDrawTests
         var ok = Fixture.Task();
         Fixture.Opto(ok);
         ok.Optogenetics.LaserToStimulusSeconds = 0.2;
-        Assert.AreEqual(4, new TrialDraw(Fixture.Setup(ok, 4)).Next().firstPipBeep);
+        Assert.AreEqual(4, Fixture.Draw(ok, 4).Next().firstPipBeep);
         ok.Optogenetics.LaserToStimulusSeconds = -0.5;   // after the first pip: the first pip at the trial start, the trigger 10 beeps later
-        var late = new TrialDraw(Fixture.Setup(ok, 4)).Next();
+        var late = Fixture.Draw(ok, 4).Next();
         Assert.IsTrue(late.firstPipBeep == 0 && Fixture.Setup(ok, 4).Timing(late).LaserToStimulusSeconds == -0.5);
         ok.Optogenetics.LaserToStimulusSeconds = -12.05;  // past stage 4's 12 s limit
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok, 4)).Message, "responseWindowSeconds");
@@ -811,7 +826,7 @@ public class TrialRulesTests
     public void TheTriggerLineIsHeldOnlyInAnOptogeneticsExperiment()
     {
         var off = Fixture.Setup(Fixture.Task(), 3);
-        Assert.IsFalse(new TrialDraw(off).Next().optogenetics);
+        Assert.IsFalse(Fixture.Draw(Fixture.Task(), 3).Next().optogenetics);
         Assert.IsNull(off.Laser);
         var plain = new Rig(off);
         var ended = plain.RunTo(TrialEventKind.Outcome);
@@ -820,7 +835,7 @@ public class TrialRulesTests
         var task = Fixture.Task();
         Fixture.Opto(task);
         var on = Fixture.Setup(task, 3);
-        Assert.IsTrue(new TrialDraw(on).Next().optogenetics);
+        Assert.IsTrue(Fixture.Draw(task, 3).Next().optogenetics);
         Assert.AreEqual(1.0, on.Laser.TriggerHoldSeconds);
     }
 

@@ -69,7 +69,8 @@ def test_the_launch_properties():
 
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
-    assert names == {"trialNumber", "rewardOfferedUl", "laserCondition"}
+    # trialType as coen-dome-decision-making reports it (round 3 F7): the view's type_metric.
+    assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition"}
     # trainingStage is OpenRigs.Control's TrainingStage's (16 Nov 2026).
     assert lint.training_stage_problems(WORKFLOW) == []
 
@@ -377,3 +378,14 @@ def test_run_trials_reads_both_lick_streams():
     assert feeds["Source4"] == "LickStateLeft"
     assert feeds["Source5"] == "LickStateRight"
     assert feeds["Source6"] == "ZapitReplies"
+
+
+def test_the_extensions_readme_names_every_public_class():
+    # Round 3 F18: the README had fallen behind the code (classes left out, the lick inputs misdescribed).
+    import re
+
+    folder = Path(__file__).parents[1] / "src" / "Extensions"
+    readme = (folder / "README.md").read_text(encoding="utf-8-sig")
+    code = "".join(f.read_text(encoding="utf-8-sig") for f in folder.glob("*.cs") if not f.name.endswith(".Generated.cs"))
+    classes = set(re.findall(r"^public (?:static )?class (\w+)", code, re.M))
+    assert sorted(c for c in classes if f"`{c}`" not in readme) == []

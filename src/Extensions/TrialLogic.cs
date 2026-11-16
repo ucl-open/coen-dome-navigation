@@ -107,88 +107,30 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     public const double GratingStartCpd = 0.03;   // the grating's spatial frequency at the track's start
     public const double GratingEndCpd = 0.3;      // and at its end
 
-    public UclOpenCoenDomeNavigationTaskParameters Task;
-    public TrainingStage Stage;
-    public int TrainingStage;
-    public Sweep Sweep;
-    public int ConditionCount;
-    public bool HardwareTriggered;
-    public int Seed;
-
-    TrialDraw draw;
-    LaserTiming laser;
+    readonly UclOpenCoenDomeNavigationTaskParameters task;
+    readonly Sweep sweep;
+    readonly TrialDraw draw;
+    readonly LaserTiming laser;
     VirtualTrack track;
     StimulusFrame last;
     int nextBeep, wrongLicks;
 
-    /// <summary>Checks what pydantic would (Bonsai reads the task file without it) and what only the rig and the files
-    /// can say; throws naming every problem.</summary>
+    public TrialRules(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
+    {
+        this.task = task;
+        this.sweep = sweep;
+        draw = new TrialDraw(task, stage, sweep, zapitConditionCount);
+        var opto = task.Optogenetics;
+        // Every StartStimulus continuous: the laser on from the trigger until the outcome or LaserCap, the trigger line
+        // (and the masking light on it) held triggerHoldSeconds past the outcome, the next trial armed once it falls.
+        laser = opto.UseZapit ? LaserTiming.UntilOutcome(hardwareTriggered, opto.TriggerHoldSeconds, opto.LaserMaxSeconds) : null;
+    }
+
+    /// <summary>The rules for a task file's stage with the sweep and Zapit's hardware triggering; throws naming every
+    /// problem (TrialDraw.CheckTask).</summary>
     public static TrialRules Create(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
     {
-        if (stage < 0 || stage >= task.TrainingStages.Count)
-        {
-            throw new InvalidOperationException(string.Format("TrainingStage is {0}, but the task file's trainingStages has rows 0 to {1}.", stage, task.TrainingStages.Count - 1));
-        }
-        var rules = new TrialRules { Task = task, TrainingStage = stage, Stage = task.TrainingStages[stage], Sweep = sweep, HardwareTriggered = hardwareTriggered };
-        var row = rules.Stage;
-        var problems = new List<string>();
-        // A NaN or infinite value (YAML's .nan or .inf) would hold the trial start or a penalty timeout for ever, with no error.
-        Action<string, double, bool> number = (name, value, aboveZero) =>
-        {
-            if (!(aboveZero ? value > 0 : value >= 0) || double.IsInfinity(value)) problems.Add(name + (aboveZero ? " must be a finite number above 0" : " must be a finite number, 0 or more"));
-        };
-        if (task.TrialStructure.TrackLengthsCm == null || task.TrialStructure.TrackLengthsCm.Count == 0 || task.TrialStructure.TrackLengthsCm.Any(l => !(l > 0) || double.IsInfinity(l))) problems.Add("trialStructure.trackLengthsCm needs at least one length, each a finite number above 0");
-        number("trialStructure.itiMinSeconds", task.TrialStructure.ItiMinSeconds, false);
-        number("trialStructure.itiMaxSeconds", task.TrialStructure.ItiMaxSeconds, false);
-        if (task.TrialStructure.ItiMaxSeconds < task.TrialStructure.ItiMinSeconds) problems.Add("trialStructure.itiMaxSeconds is below itiMinSeconds");
-        number("penalty.timeoutSeconds", task.Penalty.TimeoutSeconds, false);
-        // The quiet waits, the lab's one check (OpenRigs.Core QuietWait: finite, 0 or more, at most 10 s and 20 cm, the
-        // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
-        foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage '" + row.Label + "': " + p);
-        number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
-        problems.AddRange(TrialDraw.WeightProblems(task, row));
-        if (row.ResponseWindowSeconds.HasValue) number("stage '" + row.Label + "''s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
-        // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
-        // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
-        // with Zapit's reply margin, and no later after it than the stage's response window.
-        var lead = task.Optogenetics.LaserToStimulusSeconds;
-        var leadBeeps = lead / BeepSeconds;
-        if (!(Math.Abs(leadBeeps - Math.Round(leadBeeps)) < 1e-6)) problems.Add("optogenetics.laserToStimulusSeconds must be a whole number of 0.05 s beeps");
-        if (lead > MaxLeadSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, MaxLeadSeconds));
-        var leadProblem = ZapitTrial.LeadProblem(lead, task.TrialStructure.ItiMinSeconds);
-        if (leadProblem != null) problems.Add(leadProblem);
-        var after = row.ResponseWindowSeconds ?? UnlimitedWindowTriggerAfterSeconds;
-        if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage '{2}''s {3}", lead, after, row.Label, row.ResponseWindowSeconds.HasValue ? "responseWindowSeconds" : "limit for a stage without responseWindowSeconds"));
-        var hold = task.Optogenetics.TriggerHoldSeconds;
-        var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;
-        if (task.Optogenetics.UseZapit && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitTrial.ReplyMarginSeconds));
-        if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage '" + row.Label + "' truncates trials but truncation.sweepFractions is empty");
-        if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage '{0}''s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", row.Label, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
-        var opto = task.Optogenetics;
-        if (opto.UseZapit)
-        {
-            if (!(opto.LaserPowerMw > 0)) problems.Add("optogenetics.laserPowerMw must be a power in mW above 0 with optogenetics on");
-            number("optogenetics.laserMaxSeconds", opto.LaserMaxSeconds, true);
-            number("optogenetics.triggerHoldSeconds", opto.TriggerHoldSeconds, false);
-            // The laser runs from the trigger (the first pip less laserToStimulusSeconds) to the outcome, at the latest the
-            // first pip plus responseWindowSeconds: responseWindowSeconds + laserToStimulusSeconds.
-            var limits = task.TrainingStages.Where(s => s.ResponseWindowSeconds.HasValue).Select(s => s.ResponseWindowSeconds.Value).ToList();
-            if (limits.Count > 0 && opto.LaserMaxSeconds < limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSeconds - 1e-9)
-            {
-                problems.Add(string.Format("optogenetics.laserMaxSeconds must be at least {0} s (the longest responseWindowSeconds plus laserToStimulusSeconds plus {1} s)", limits.Max() + opto.LaserToStimulusSeconds + LaserMaxMarginSeconds, LaserMaxMarginSeconds));
-            }
-        }
-        if (problems.Count > 0) throw new InvalidOperationException("The task cannot be run: " + string.Join("; ", problems) + ".");
-        if (opto.UseZapit)
-        {
-            rules.ConditionCount = zapitConditionCount != null ? zapitConditionCount(opto.ZapitConfigPath) : ZapitConditions.Check(opto.ZapitConfigPath);
-            // Every StartStimulus continuous: the laser on from the trigger until the outcome or LaserCap, the trigger line
-            // (and the masking light on it) held triggerHoldSeconds past the outcome, the next trial armed once it falls.
-            rules.laser = LaserTiming.UntilOutcome(hardwareTriggered, opto.TriggerHoldSeconds, opto.LaserMaxSeconds);
-        }
-        rules.Seed = RngSeed.Resolve(task.RngSeed);
-        rules.draw = new TrialDraw(rules);
-        return rules;
+        return new TrialRules(task, stage, sweep, hardwareTriggered, zapitConditionCount);
     }
 
     /// <summary>The laser in an optogenetics experiment (the trigger line only rises in one, Pip, 13 Nov 2026); null without.</summary>
@@ -205,7 +147,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         {
             ItiSeconds = trial.itiSeconds,
             // The lead applies in every experiment, so timing never reveals Zapit (Pip, 13 Nov 2026).
-            LaserToStimulusSeconds = Task.Optogenetics.LaserToStimulusSeconds,
+            LaserToStimulusSeconds = task.Optogenetics.LaserToStimulusSeconds,
             LickQuietSeconds = trial.lickQuietSeconds,
             WheelQuietSeconds = trial.wheelQuietSeconds,
             WheelQuietCm = trial.wheelQuietCm,
@@ -266,22 +208,22 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 
     StimulusFrame Frame(Trial trial, int beep)
     {
-        var step = Math.Max(1, Task.PositionStepCm);
+        var step = Math.Max(1, task.PositionStepCm);
         var position = Math.Round(track.Position / step) * step;
         var fraction = trial.trackLengthCm > 0 ? position / trial.trackLengthCm : 0;
-        var tone = Sweep.FrequencyAt(fraction);
+        var tone = sweep.FrequencyAt(fraction);
         var grating = GratingStartCpd * Math.Pow(GratingEndCpd / GratingStartCpd, Math.Max(0, Math.Min(1, fraction)));
         if (trial.frequencyDrift)
         {
             var drift = (double)beep / DriftBeeps;
-            tone += Sweep.StartHz * Math.Pow(Sweep.TrackRatio, drift) - Sweep.StartHz;
+            tone += sweep.StartHz * Math.Pow(sweep.TrackRatio, drift) - sweep.StartHz;
             grating += GratingStartCpd * Math.Pow(GratingEndCpd / GratingStartCpd, drift) - GratingStartCpd;
         }
-        var active = trial.truncationFraction >= 1 || Math.Round(Sweep.FractionOf(tone), 3) < trial.truncationFraction;
+        var active = trial.truncationFraction >= 1 || Math.Round(sweep.FractionOf(tone), 3) < trial.truncationFraction;
         return new StimulusFrame
         {
             Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, toneFrequencyHz = tone, stimulusActive = active, visualSpatialFrequencyCpd = grating },
-            Bin = Sweep.BinOf(tone),
+            Bin = sweep.BinOf(tone),
             ToneGain = active && trial.trialType != TrialDraw.Visual ? 1 : 0,
             GratingOpacity = active && trial.trialType != TrialDraw.Auditory ? 1 : 0
         };
@@ -314,7 +256,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             toneEndFrequencyHz = tone,
             visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             truncationFraction = trial.truncationFraction
-        }, trial, times, trial.rewardOfferedUl, rewarded, penalised, Task.Penalty.TimeoutSeconds, Task.Penalty.Sound.Enabled);
+        }, trial, times, trial.rewardOfferedUl, rewarded, penalised, task.Penalty.TimeoutSeconds, task.Penalty.Sound.Enabled);
         return new TrialOutcome { Row = row, Rewarded = row.rewarded, PenaltySound = row.penaltySound, Reward = Tuple.Create("left", row.rewardOfferedUl) };
     }
 }
@@ -355,23 +297,93 @@ public class TrialDraw
         return problems;
     }
 
-    readonly TrialRules rules;
+    readonly UclOpenCoenDomeNavigationTaskParameters task;
+    readonly TrainingStage stage;
     readonly Random random;
+    readonly int conditionCount;
     int drawn;
 
-    public TrialDraw(TrialRules rules)
+    /// <summary>The seed the random stream started from: the task's rngSeed, or one drawn when it is null.</summary>
+    public int Seed { get; private set; }
+
+    /// <summary>The stage's row of the task file's trainingStages.</summary>
+    public TrainingStage Stage { get { return stage; } }
+
+    public TrialDraw(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, Func<string, int> zapitConditionCount)
     {
-        this.rules = rules;
-        random = new Random(rules.Seed);
+        this.task = task;
+        this.stage = CheckTask(task, stage, sweep);
+        var opto = task.Optogenetics;
+        if (opto.UseZapit) conditionCount = zapitConditionCount != null ? zapitConditionCount(opto.ZapitConfigPath) : ZapitConditions.Check(opto.ZapitConfigPath);
+        Seed = RngSeed.Resolve(task.RngSeed);
+        random = new Random(Seed);
+    }
+
+    /// <summary>The stage's row, once the stage is in the table and the task can be run with the sweep: what pydantic
+    /// would check (Bonsai reads the task file without it) and what only the sweep can say; throws naming every problem.</summary>
+    public static TrainingStage CheckTask(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep)
+    {
+        if (stage < 0 || stage >= task.TrainingStages.Count)
+        {
+            throw new InvalidOperationException(string.Format("TrainingStage is {0}, but the task file's trainingStages has rows 0 to {1}.", stage, task.TrainingStages.Count - 1));
+        }
+        var row = task.TrainingStages[stage];
+        var problems = new List<string>();
+        // A NaN or infinite value (YAML's .nan or .inf) would hold the trial start or a penalty timeout for ever, with no error.
+        Action<string, double, bool> number = (name, value, aboveZero) =>
+        {
+            if (!(aboveZero ? value > 0 : value >= 0) || double.IsInfinity(value)) problems.Add(name + (aboveZero ? " must be a finite number above 0" : " must be a finite number, 0 or more"));
+        };
+        if (task.TrialStructure.TrackLengthsCm == null || task.TrialStructure.TrackLengthsCm.Count == 0 || task.TrialStructure.TrackLengthsCm.Any(l => !(l > 0) || double.IsInfinity(l))) problems.Add("trialStructure.trackLengthsCm needs at least one length, each a finite number above 0");
+        number("trialStructure.itiMinSeconds", task.TrialStructure.ItiMinSeconds, false);
+        number("trialStructure.itiMaxSeconds", task.TrialStructure.ItiMaxSeconds, false);
+        if (task.TrialStructure.ItiMaxSeconds < task.TrialStructure.ItiMinSeconds) problems.Add("trialStructure.itiMaxSeconds is below itiMinSeconds");
+        number("penalty.timeoutSeconds", task.Penalty.TimeoutSeconds, false);
+        // The quiet waits, the lab's one check (OpenRigs.Core QuietWait: finite, 0 or more, at most 10 s and 20 cm, the
+        // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
+        foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage '" + row.Label + "': " + p);
+        number("stage '" + row.Label + "''s trackLengthScale", row.TrackLengthScale, true);
+        problems.AddRange(TrialDraw.WeightProblems(task, row));
+        if (row.ResponseWindowSeconds.HasValue) number("stage '" + row.Label + "''s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
+        // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
+        // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
+        // with Zapit's reply margin, and no later after it than the stage's response window.
+        var lead = task.Optogenetics.LaserToStimulusSeconds;
+        var leadBeeps = lead / TrialRules.BeepSeconds;
+        if (!(Math.Abs(leadBeeps - Math.Round(leadBeeps)) < 1e-6)) problems.Add("optogenetics.laserToStimulusSeconds must be a whole number of 0.05 s beeps");
+        if (lead > TrialRules.MaxLeadSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, TrialRules.MaxLeadSeconds));
+        var leadProblem = ZapitTrial.LeadProblem(lead, task.TrialStructure.ItiMinSeconds);
+        if (leadProblem != null) problems.Add(leadProblem);
+        var after = row.ResponseWindowSeconds ?? TrialRules.UnlimitedWindowTriggerAfterSeconds;
+        if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past stage '{2}''s {3}", lead, after, row.Label, row.ResponseWindowSeconds.HasValue ? "responseWindowSeconds" : "limit for a stage without responseWindowSeconds"));
+        var hold = task.Optogenetics.TriggerHoldSeconds;
+        var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;
+        if (task.Optogenetics.UseZapit && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitTrial.ReplyMarginSeconds));
+        if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage '" + row.Label + "' truncates trials but truncation.sweepFractions is empty");
+        if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage '{0}''s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", row.Label, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
+        var opto = task.Optogenetics;
+        if (opto.UseZapit)
+        {
+            if (!(opto.LaserPowerMw > 0)) problems.Add("optogenetics.laserPowerMw must be a power in mW above 0 with optogenetics on");
+            number("optogenetics.laserMaxSeconds", opto.LaserMaxSeconds, true);
+            number("optogenetics.triggerHoldSeconds", opto.TriggerHoldSeconds, false);
+            // The laser runs from the trigger (the first pip less laserToStimulusSeconds) to the outcome, at the latest the
+            // first pip plus responseWindowSeconds: responseWindowSeconds + laserToStimulusSeconds.
+            var limits = task.TrainingStages.Where(s => s.ResponseWindowSeconds.HasValue).Select(s => s.ResponseWindowSeconds.Value).ToList();
+            if (limits.Count > 0 && opto.LaserMaxSeconds < limits.Max() + opto.LaserToStimulusSeconds + TrialRules.LaserMaxMarginSeconds - 1e-9)
+            {
+                problems.Add(string.Format("optogenetics.laserMaxSeconds must be at least {0} s (the longest responseWindowSeconds plus laserToStimulusSeconds plus {1} s)", limits.Max() + opto.LaserToStimulusSeconds + TrialRules.LaserMaxMarginSeconds, TrialRules.LaserMaxMarginSeconds));
+            }
+        }
+        if (problems.Count > 0) throw new InvalidOperationException("The task cannot be run: " + string.Join("; ", problems) + ".");
+        return row;
     }
 
     public Trial Next()
     {
-        var task = rules.Task;
-        var stage = rules.Stage;
         var t = new Trial();
         t.trialNumber = ++drawn;
-        t.rngSeed = rules.Seed;
+        t.rngSeed = Seed;
         var iti = task.TrialStructure.ItiMinSeconds + (task.TrialStructure.ItiMaxSeconds - task.TrialStructure.ItiMinSeconds) * random.NextDouble();
         t.itiSeconds = iti;  // trial 1 too, from the first clock tick, so Zapit is armed before its trigger
         var lengths = task.TrialStructure.TrackLengthsCm;
@@ -400,7 +412,7 @@ public class TrialDraw
         if (opto.UseZapit)
         {
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
-            ZapitTrial.Draw(random, t.trialNumber, rules.ConditionCount, opto.TrialsBeforeLaser, opto.LaserOnProbability, opto.LaserPowerMw.Value,
+            ZapitTrial.Draw(random, t.trialNumber, conditionCount, opto.TrialsBeforeLaser, opto.LaserOnProbability, opto.LaserPowerMw.Value,
                 out t.laserCondition, out t.laserOn, out t.laserPowerMw);
             t.laserMaxSeconds = opto.LaserMaxSeconds;
         }

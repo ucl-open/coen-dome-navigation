@@ -457,7 +457,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Status</Name>
-        <Description>The current trial's facts as metrics, named as BonsaiData_Trial's columns (trialNumber, rewardOfferedUl, laserCondition; the trainingStage is TrainingStage's), at each trial's start; rig-control computes counts and performance from the trial rows.</Description>
+        <Description>The current trial's facts as metrics, named as BonsaiData_Trial's columns (trialNumber, trialType, rewardOfferedUl, laserCondition; the trainingStage is TrainingStage's), at each trial's start; rig-control computes counts and performance from the trial rows.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -487,6 +487,14 @@
                 <orcl:Name>laserCondition</orcl:Name>
               </Combinator>
             </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>trialType</Selector>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ReportMetric">
+                <orcl:Name>trialType</orcl:Name>
+              </Combinator>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
@@ -495,6 +503,8 @@
             <Edge From="3" To="4" Label="Source1" />
             <Edge From="0" To="5" Label="Source1" />
             <Edge From="5" To="6" Label="Source1" />
+            <Edge From="0" To="7" Label="Source1" />
+            <Edge From="7" To="8" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
