@@ -38,9 +38,9 @@ def test_every_task_wait_is_on_the_harp_clock():
 
 def test_the_shared_blocks_replace_the_local_copies():
     includes = {e.get("Path") for e in MAIN.iter(W + "Expression") if e.get(XSI) == "IncludeWorkflow"}
-    assert {"OpenRigs.Devices:DomeHardware.bonsai", "OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai",
-            "OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai", "OpenRigs.Devices:Zapit.ConnectForTask.bonsai",
-            "OpenRigs.Logging:LogLabExperiment.bonsai", "OpenRigs.Logging:LogControlEvents.bonsai"} <= includes
+    assert {"OpenRigs.Devices:DomeHardware.bonsai", "OpenRigs.Devices:BehaviorBoard.ManualRewards.bonsai",
+            "OpenRigs.Devices:Zapit.ConnectForTask.bonsai", "OpenRigs.Logging:LogLabExperiment.bonsai",
+            lint.LAUNCH_SETTINGS, lint.BACKGROUND_NOISE, lint.EXPERIMENT_RECORDS} <= includes
     # The speakers and the projector are DomeHardware's (Pip, 15 Nov 2026: every task has background noise and a screen).
     assert not includes & {lint.SPEAKER_MIXER, lint.PROJECTOR_DISPLAY}
     assert not [p for p in includes if p.startswith("Extensions")]
@@ -50,7 +50,7 @@ def test_the_shared_blocks_replace_the_local_copies():
 
 
 def test_every_config_root_is_the_lab_s():
-    # check-workflow holds every node that reads rig.yml to one root (4 nodes); this holds that root to the lab's.
+    # check-workflow holds every node that reads rig.yml to one root (3 nodes: ReadLabRig, ExperimentRecords, LiveView); this holds that root to the lab's.
     assert set(re.findall(r"<(?:\w+:)?ConfigRoot>([^<]*)</", TEXT)) == {r"C:\Coen-Lab-Local\RigConfigs"}
 
 
@@ -157,33 +157,13 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     assert "TaskParameters.TonePips.LevelDbfs" in _labels(nodes, upstream)
 
 
-def test_the_background_noise_plays_unequalised_on_every_speaker():
-    nodes, edges = _scope(group("Audio"))
-    sent = next(i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "BackgroundNoise")
-    upstream = _upstream(edges, sent)
-    assert {"Speakers", "BackgroundNoiseEnabled?", "TaskParameters.BackgroundNoise.LevelDbfs"} <= set(_labels(nodes, upstream))
-    buffer = _speaker_buffer(nodes, upstream)
-    assert buffer.findtext(AUD + "Equalise") == "false" and not (buffer.findtext(AUD + "Channels") or "").strip()
-
-
-def test_the_background_noise_starts_at_ready_at_the_launch_s_level():
-    # Pip, 15 Nov 2026: the noise starts at Ready, not Go, at the level of the task file as launched (LaunchTaskConfig);
-    # its Ready is ReadyGate's (DomeHardware), the stages its ReadyWaitsFor names (hardware_problems).
-    nodes, edges = _scope(group("Audio"))
-    sent = next(i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "BackgroundNoise")
-    upstream = _upstream(edges, sent)
-    names = {nodes[i].findtext(W + "Name") for i in upstream}
-    assert {"LaunchTaskConfig", "Ready"} <= names and "TaskConfig" not in names
-    assert [n for n in names if n in ("HarpClockSet", "LickSpoutStage.Homed", "ReadyStages")] == []
-
-
-def test_go_stops_on_a_background_noise_changed_after_launch():
-    nodes, edges = _scope(group("Task"))
-    (stop,) = [i for i, n in enumerate(nodes) if "core:ThrowError" in combinators(n)]
-    labels = _labels(nodes, _upstream(edges, stop))
-    assert {"TaskConfig", "LaunchTaskConfig", "BackgroundNoiseChanged?"} <= set(labels)
-    read_at_go = next(i for i, n in enumerate(nodes) if n.get(XSI) == "rx:AsyncSubject" and n.findtext(W + "Name") == "TaskConfig")
-    assert "ExperimentGo" in _labels(nodes, _upstream(edges, read_at_go))
+def test_the_background_noise_is_the_shared_include():
+    # OpenRigs.Audio's BackgroundNoise (16 Nov 2026): the noise unequalised on every speaker at the launched task file's
+    # level from Ready, Go stopping on a backgroundNoise changed after launch; it reads the committed 32-bit float WAV.
+    assert lint.background_noise_problems(WORKFLOW) == []
+    (noise,) = [e for e in MAIN.iter(W + "Expression") if e.get("Path") == lint.BACKGROUND_NOISE]
+    assert noise.findtext(W + "FileName") == r"waveforms\background_noise.wav"
+    assert (ROOT / "src" / "waveforms" / "background_noise.wav").is_file()
 
 
 def test_the_speakers_are_declared_before_every_user():
@@ -192,6 +172,7 @@ def test_the_speakers_are_declared_before_every_user():
     declared = next(i for i, n in enumerate(top) if n.findtext(W + "Name") == "Hardware")
     users = [i for i, n in enumerate(top) for s in n.iter(W + "Expression")
              if s.get(XSI) == "SubscribeSubject" and s.findtext(W + "Name") == "Speakers"]
+    users += [i for i, n in enumerate(top) if n.get("Path") == lint.BACKGROUND_NOISE]
     assert len(users) == 4 and min(users) > declared
 
 
@@ -250,6 +231,18 @@ def test_the_readme_lists_every_open_rigs_block():
 
 def test_the_workflow_declares_every_command_it_handles():
     assert lint.undeclared_commands(WORKFLOW) == []
+
+
+def test_spout_step_size_is_the_lick_spout_stage_s():
+    assert lint.spout_step_size_problems(WORKFLOW) == []
+
+
+def test_the_experiment_records_are_the_shared_include():
+    assert lint.experiment_records_problems(WORKFLOW) == []
+
+
+def test_the_launch_settings_are_the_shared_include():
+    assert lint.launch_settings_problems(WORKFLOW) == []
 
 
 def test_the_layout_is_tracked():

@@ -67,7 +67,11 @@ def test_the_committed_waveforms_are_waveforms_py_s():
     assert np.array_equal(committed, waveforms.tones(freqs))
     assert committed.shape[1] == 2400  # the workflow's MatrixReader BufferLength
     assert np.array_equal(np.fromfile(WAVES / "reward_tone.bin", dtype=np.float32), waveforms.reward_tone()[0])
-    assert np.array_equal(np.fromfile(WAVES / "background_noise.bin", dtype=np.float32), waveforms.background_noise())
+    # The noise is a 32-bit float WAV (OpenRigs.Audio BackgroundNoise reads it with ReadWave, samples as stored), at the rate
+    # every waveform is made at; until 16 Nov 2026 the same samples were background_noise.bin.
+    rate, noise = waveforms.read_wave(WAVES / "background_noise.wav")
+    assert rate == waveforms.SAMPLE_RATE and np.array_equal(noise, waveforms.background_noise())
+    assert not (WAVES / "background_noise.bin").exists()
 
 
 def test_the_penalty_sound_is_the_lab_s():
@@ -96,7 +100,7 @@ def test_the_task_file_states_the_levels_played_until_15_nov_2026():
     pips = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(waveforms.SWEEP_STEPS, -1)
     assert all(abs(p["tonePips"]["levelDbfs"] - _dbfs_rms(row)) < 0.05 for row in pips)
     assert abs(p["rewardTone"]["levelDbfs"] - _dbfs_rms(np.fromfile(WAVES / "reward_tone.bin", dtype=np.float32))) < 0.05
-    noise = np.fromfile(WAVES / "background_noise.bin", dtype=np.float32)
+    noise = waveforms.read_wave(WAVES / "background_noise.wav")[1]
     assert abs(p["backgroundNoise"]["levelDbfs"] - (_dbfs_rms(noise) + 20 * math.log10(0.5))) < 0.05
     assert p["backgroundNoise"]["enabled"] and p["penalty"]["sound"]["levelDbfs"] == -44.6
     assert "backgroundNoiseLevel" not in p

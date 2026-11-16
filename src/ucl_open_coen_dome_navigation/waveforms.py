@@ -10,6 +10,7 @@ tone equalised for each speaker, the noise as it is); the penalty sound is the l
 """
 
 import json
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -56,6 +57,23 @@ def background_noise(peak: float = PIP_PEAK) -> np.ndarray:
     return (unit * (0.5 * peak * np.sqrt(3))).astype(np.float32)
 
 
+def write_wave(path: Path, samples: np.ndarray, sample_rate: int = SAMPLE_RATE) -> None:
+    """A mono 32-bit float WAV (format 3) of samples as stored, as OpenRigs.Audio's ReadWave reads it."""
+    data = np.asarray(samples, dtype="<f4").tobytes()
+    fmt = struct.pack("<HHIIHH", 3, 1, sample_rate, sample_rate * 4, 4, 32)
+    body = b"WAVE" + b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + data
+    path.write_bytes(b"RIFF" + struct.pack("<I", len(body)) + body)
+
+
+def read_wave(path: Path) -> tuple[int, np.ndarray]:
+    """write_wave's file back: (its rate, its samples), refusing any other format."""
+    raw = path.read_bytes()
+    audio_format, channels, rate, _, _, bits = struct.unpack("<HHIIHH", raw[20:36])
+    if raw[:4] != b"RIFF" or raw[8:16] != b"WAVEfmt " or (audio_format, channels, bits) != (3, 1, 32) or raw[36:40] != b"data":
+        raise ValueError(f"{path} is not a mono 32-bit float WAV as write_wave makes")
+    return rate, np.frombuffer(raw[44:44 + struct.unpack("<I", raw[40:44])[0]], dtype="<f4")
+
+
 def sweep() -> dict:
     """sweep.json: what the workflow and task.py read, with the rate every waveform was made at."""
     return {"sweepStartHz": SWEEP_START_HZ, "sweepEndHz": SWEEP_END_HZ, "sweepSteps": SWEEP_STEPS, "pipPeak": PIP_PEAK, "sampleRate": SAMPLE_RATE}
@@ -63,13 +81,13 @@ def sweep() -> dict:
 
 def write(out_dir: Path = OUT_DIR) -> None:
     """Write all_waveforms.bin (n x 2400 float32, row-major, no header), frequencies.txt, reward_tone.bin (float32),
-    background_noise.bin (float32 mono, no header) and sweep.json. The penalty sound is the lab's (OpenRigs.Audio)."""
+    background_noise.wav (mono 32-bit float, which the BackgroundNoise include reads) and sweep.json. The penalty sound is the lab's (OpenRigs.Audio)."""
     out_dir.mkdir(parents=True, exist_ok=True)
     frequencies = tone_frequencies()
     tones(frequencies).tofile(out_dir / "all_waveforms.bin")
     (out_dir / "frequencies.txt").write_text("".join(f"{f}\n" for f in frequencies), encoding="utf-8")
     reward_tone().tofile(out_dir / "reward_tone.bin")
-    background_noise().tofile(out_dir / "background_noise.bin")
+    write_wave(out_dir / "background_noise.wav", background_noise())
     (out_dir / "sweep.json").write_text(json.dumps(sweep(), indent=2) + "\n", encoding="utf-8")
 
 

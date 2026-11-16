@@ -2,6 +2,14 @@
 
 Open work first, then what has been decided. The conversion from `ucl-open/auditory-vr-corridor` is in `git log`. The repo was `coen-av-corridor` until 9 Nov 2026 (renamed on Pip's word); the task file is `config\task-abstract-av-corridor.yml` (Pip).
 
+## 2026-11-16 Task-side includes (lib-open-rigs 5ea5729; Audio .11, Control .12, Core .19, Devices .22, Logging .15, Manifest .23, Video .17)
+
+- `LaunchSettings` (OpenRigs.Control) publishes `SubjectId`, `TaskFilePath` and `RunSettings`; Initialization keeps ExperimentControl and the training stage. One inner `ExternalizedMapping` maps `SubjectId` onto ExperimentControl and LaunchSettings (ExperimentControl was subscribed once `SubjectId` came; it now takes the launch property directly).
+- `SpoutStepSize`: DomeHardware's `LickSpoutStage` takes the parameter live and shows its default (150); the task's subject, `OnParameterSet`, `ParameterDefault` and the mapping onto DomeHardware are gone. The parameter's declaration stays on ExperimentControl.
+- `BackgroundNoise` (OpenRigs.Audio) after Audio plays the noise and stops Go on a changed `backgroundNoise`. It reads `src\waveforms\background_noise.wav`, a 32-bit float WAV with the samples of the old `background_noise.bin` bit for bit (48 kHz, checked by `tests\test_task_file.py`), which `generate-waveforms` now writes; the `.bin` is deleted.
+- `ExperimentRecords` (OpenRigs.Logging), last before LiveView, holds `DeliverReward`, `LogControlEvents`, `RecordHarpDevices` and `ExperimentManifest`, with the same `ConfigRoot`, `IngestScript` and `ExpectedFiles`.
+- Nothing written changes: trial columns, `ExpectedFiles`, async events, `Settings_*` and device log names are as before (checked against the old workflow). `tests\test_workflow.py` calls `launch_settings_problems`, `spout_step_size_problems`, `background_noise_problems` and `experiment_records_problems`.
+
 ## Audit of the device-pieces cut (16 Nov 2026): not changed
 
 - Rig lists are registered in the lint: deliberate, documented and tested; an unregistered list fails loudly.

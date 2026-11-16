@@ -34,38 +34,17 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, SpoutStepSize settable live (its subject's one default, shown to the controller by ParameterDefault a second after Start), RewardLeft and RewardRight (2.5 ul through the valve's calibration before and during a run, BehaviorBoard.ManualRewards: Pip's fixed manual drop, 15 Nov 2026), the spout commands (handled by DomeHardware's LickSpoutStage) at any time; at Start TaskFilePath (TaskPath, the task file rig-control wrote at launch and writes again at Go with the form's edits), and at Go RunSettings (subject, session) and TrainingStage are published.</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl): SubjectId and SessionId from the launch, SpoutStepSize settable live (DomeHardware's LickSpoutStage takes it and shows its default), RewardLeft and RewardRight (2.5 ul through the valve's calibration before and during a run, BehaviorBoard.ManualRewards: Pip's fixed manual drop, 15 Nov 2026), the spout commands (handled by DomeHardware's LickSpoutStage) at any time; LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskFilePath (TaskPath, the task file rig-control wrote at launch and writes again at Go with the form's edits) at Start and RunSettings (subject, session) at Go, and TrainingStage is published at Go.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
-              <Property Name="Value" DisplayName="SubjectId" Description="The subject (mouse) lab ID." />
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="StringProperty">
-                <Value></Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:AsyncSubject">
-              <Name>SubjectId</Name>
-            </Expression>
-            <Expression xsi:type="ExternalizedMapping">
               <Property Name="SessionId" />
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>SubjectId</Name>
-            </Expression>
-            <Expression xsi:type="PropertyMapping">
-              <PropertyMappings>
-                <Property Name="SubjectId" />
-              </PropertyMappings>
+            <Expression xsi:type="ExternalizedMapping">
+              <Property Name="SubjectId" />
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:ExperimentControl.bonsai">
-              <SubjectId>UNMAPPED</SubjectId>
+              <SubjectId />
               <SessionId />
               <ControlEndpoint>@tcp://127.0.0.1:5561</ControlEndpoint>
               <Parameters>
@@ -80,7 +59,7 @@
                 <Parameter>
                   <Name>SpoutStepSize</Name>
                   <Value />
-                  <Description>Motor steps each spout nudge command moves, taken live while ready; until set, the SpoutStepSize subject's default (Initialization).</Description>
+                  <Description>Motor steps each spout nudge command moves, taken live while ready (DomeHardware's LickSpoutStage); until set, its default, 150.</Description>
                   <Minimum>1</Minimum>
                   <WholeNumber>true</WholeNumber>
                 </Parameter>
@@ -152,72 +131,12 @@
                 </Command>
               </Commands>
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>SubjectId</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:SubscribeWhen" />
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ExperimentGo</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>SubjectId</Selector>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ExperimentGo</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>SessionId</Selector>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Zip" />
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>RunSettingsValid</Name>
-              <Description>Subject and session given.</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Item1.Trim().Length &gt; 0 &amp;&amp; Item2.Trim().Length &gt; 0</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:First" />
-            </Expression>
-            <Expression xsi:type="rx:AsyncSubject">
-              <Name>RunSettings</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="StringProperty">
-                <Value>..\config\task-abstract-av-corridor.yml</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:AsyncSubject">
-              <Name>TaskFilePath</Name>
-            </Expression>
             <Expression xsi:type="ExternalizedMapping">
-              <Property Name="Value" DisplayName="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Start for the background noise and again at Go with the form's edits; from the editor, config\task-abstract-av-corridor.yml." />
+              <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Start for the background noise and again at Go with the form's edits; from the editor, config\task-abstract-av-corridor.yml." />
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:LaunchSettings.bonsai">
+              <SubjectId />
+              <TaskPath>..\config\task-abstract-av-corridor.yml</TaskPath>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>ExperimentGo</Name>
@@ -241,79 +160,16 @@
                 <orcl:Name>trainingStage</orcl:Name>
               </Combinator>
             </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="IntProperty">
-                <Value>150</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:BehaviorSubject">
-              <Name>SpoutStepSize</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>ControlEvents</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:OnParameterSet">
-                <orcl:Name>SpoutStepSize</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="scr:ExpressionTransform">
-              <scr:Name>StepSizeToInt</scr:Name>
-              <scr:Expression>Convert.ToInt32(it)</scr:Expression>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>SpoutStepSize</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>SpoutStepSize</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:DelaySubscription">
-                <rx:DueTime>PT1S</rx:DueTime>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ParameterDefault">
-                <orcl:Name>SpoutStepSize</orcl:Name>
-              </Combinator>
-            </Expression>
           </Nodes>
           <Edges>
-            <Edge From="0" To="1" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="2" To="3" Label="Source1" />
+            <Edge From="0" To="2" Label="Source1" />
             <Edge From="5" To="6" Label="Source1" />
-            <Edge From="4" To="7" Label="Source1" />
-            <Edge From="6" To="7" Label="Source2" />
-            <Edge From="7" To="9" Label="Source1" />
-            <Edge From="8" To="9" Label="Source2" />
-            <Edge From="10" To="11" Label="Source1" />
-            <Edge From="12" To="13" Label="Source1" />
-            <Edge From="11" To="14" Label="Source1" />
-            <Edge From="13" To="14" Label="Source2" />
-            <Edge From="14" To="15" Label="Source1" />
-            <Edge From="15" To="16" Label="Source1" />
-            <Edge From="16" To="17" Label="Source1" />
-            <Edge From="17" To="18" Label="Source1" />
-            <Edge From="19" To="20" Label="Source1" />
-            <Edge From="20" To="21" Label="Source1" />
-            <Edge From="22" To="19" Label="Source1" />
-            <Edge From="23" To="24" Label="Source1" />
-            <Edge From="24" To="25" Label="Source1" />
-            <Edge From="25" To="26" Label="Source1" />
-            <Edge From="27" To="28" Label="Source1" />
-            <Edge From="29" To="30" Label="Source1" />
-            <Edge From="31" To="32" Label="Source1" />
-            <Edge From="32" To="33" Label="Source1" />
-            <Edge From="33" To="34" Label="Source1" />
-            <Edge From="35" To="36" Label="Source1" />
-            <Edge From="36" To="37" Label="Source1" />
-            <Edge From="37" To="38" Label="Source1" />
+            <Edge From="6" To="7" Label="Source1" />
+            <Edge From="7" To="8" Label="Source1" />
+            <Edge From="9" To="10" Label="Source1" />
+            <Edge From="1" To="2" Label="Source2" />
+            <Edge From="1" To="4" Label="Source1" />
+            <Edge From="3" To="4" Label="Source2" />
           </Edges>
         </Workflow>
       </Expression>
@@ -325,14 +181,6 @@
         <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, the speakers and their mixer and the projector included, and Ready once the Harp clock is set, the spouts are homed, every camera has sent a frame and the mixer has started).</Description>
         <Workflow>
           <Nodes>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>SpoutStepSize</Name>
-            </Expression>
-            <Expression xsi:type="PropertyMapping">
-              <PropertyMappings>
-                <Property Name="SpoutStepSize" />
-              </PropertyMappings>
-            </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
               <Description>Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage, the three cameras, which start triggering once all three acquire, the speakers (SpeakerMixer) and the projector (ProjectorDisplay, stimuli on DrawStimuli).</Description>
             </Expression>
@@ -341,9 +189,7 @@
             </Expression>
           </Nodes>
           <Edges>
-            <Edge From="0" To="1" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="3" To="2" Label="Source2" />
+            <Edge From="1" To="0" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -374,7 +220,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Task</Name>
-        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\waveforms\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with the stage, rig.yml and the sweep (CreateCorridorSetup: a stage past the table, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). Go stops the workflow if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is the Zapit group's refusal.</Description>
+        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\waveforms\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with the stage, rig.yml and the sweep (CreateCorridorSetup: a stage past the table, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is the Zapit group's refusal.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -434,41 +280,6 @@
               <Name>TaskConfig</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>LaunchTaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Zip" />
-            </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>BackgroundNoiseChanged?</Name>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Item1.TaskParameters.BackgroundNoise.Enabled != Item2.TaskParameters.BackgroundNoise.Enabled || Item1.TaskParameters.BackgroundNoise.LevelDbfs != Item2.TaskParameters.BackgroundNoise.LevelDbfs</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="StringProperty">
-                <Value>The background noise plays from Ready at the task file's backgroundNoise as launched, so it cannot be changed before Go: launch again to play it at another level.</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="core:ThrowError" />
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
               <Name>TrainingStage</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
@@ -508,22 +319,17 @@
             <Edge From="8" To="9" Label="Source1" />
             <Edge From="9" To="10" Label="Source1" />
             <Edge From="10" To="11" Label="Source1" />
-            <Edge From="16" To="18" Label="Source1" />
-            <Edge From="17" To="18" Label="Source2" />
-            <Edge From="18" To="19" Label="Source1" />
-            <Edge From="19" To="20" Label="Source1" />
+            <Edge From="16" To="20" Label="Source1" />
+            <Edge From="17" To="20" Label="Source2" />
+            <Edge From="18" To="20" Label="Source3" />
             <Edge From="20" To="21" Label="Source1" />
-            <Edge From="22" To="26" Label="Source1" />
-            <Edge From="23" To="26" Label="Source2" />
-            <Edge From="24" To="26" Label="Source3" />
-            <Edge From="26" To="27" Label="Source1" />
-            <Edge From="27" To="28" Label="Source1" />
-            <Edge From="29" To="30" Label="Source1" />
-            <Edge From="30" To="31" Label="Source1" />
+            <Edge From="21" To="22" Label="Source1" />
+            <Edge From="23" To="24" Label="Source1" />
+            <Edge From="24" To="25" Label="Source1" />
             <Edge From="12" To="13" Label="Source1" />
             <Edge From="13" To="14" Label="Source1" />
             <Edge From="14" To="15" Label="Source1" />
-            <Edge From="25" To="26" Label="Source4" />
+            <Edge From="19" To="20" Label="Source4" />
           </Edges>
         </Workflow>
       </Expression>
@@ -582,7 +388,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, tonePips.levelDbfs; read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound (PenaltySoundBuffer) on rig.yml's penaltySoundChannel alone at penalty.sound.levelDbfs. The background noise is on every speaker as it is, at the launch's task file's backgroundNoise.levelDbfs (LaunchTaskConfig), laid out at Start and sent to the mixer at Ready, which loops it and fades it in over 2 s. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, tonePips.levelDbfs; read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound (PenaltySoundBuffer) on rig.yml's penaltySoundChannel alone at penalty.sound.levelDbfs. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -712,80 +518,6 @@
             <Expression xsi:type="rx:AsyncSubject">
               <Name>PenaltySoundBuffer</Name>
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>LaunchTaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>BackgroundNoiseEnabled?</Name>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="MemberSelector">
-                    <Selector>TaskParameters.BackgroundNoise.Enabled</Selector>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.BackgroundNoise.LevelDbfs</Selector>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>Speakers</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="dsp:MatrixReader">
-                <dsp:Path>./waveforms/background_noise.bin</dsp:Path>
-                <dsp:Offset>0</dsp:Offset>
-                <dsp:SampleRate>0</dsp:SampleRate>
-                <dsp:ChannelCount>1</dsp:ChannelCount>
-                <dsp:BufferLength>0</dsp:BufferLength>
-                <dsp:Depth>F32</dsp:Depth>
-                <dsp:Layout>RowMajor</dsp:Layout>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Zip" />
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Zip" />
-            </Expression>
-            <Expression xsi:type="InputMapping">
-              <PropertyMappings>
-                <Property Name="LevelDbfs" Selector="Item1" />
-              </PropertyMappings>
-              <Selector>Item2</Selector>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="aud:SpeakerBuffer">
-                <aud:LevelDbfs>-50</aud:LevelDbfs>
-                <aud:Equalise>false</aud:Equalise>
-                <aud:SyncCopy>false</aud:SyncCopy>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>BackgroundNoise</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>Ready</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Zip" />
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>Item1</Selector>
-            </Expression>
           </Nodes>
           <Edges>
             <Edge From="3" To="4" Label="Source1" />
@@ -814,21 +546,12 @@
             <Edge From="25" To="26" Label="Source1" />
             <Edge From="26" To="27" Label="Source1" />
             <Edge From="27" To="28" Label="Source1" />
-            <Edge From="29" To="30" Label="Source1" />
-            <Edge From="30" To="31" Label="Source1" />
-            <Edge From="33" To="34" Label="Source1" />
-            <Edge From="32" To="35" Label="Source1" />
-            <Edge From="34" To="35" Label="Source2" />
-            <Edge From="31" To="36" Label="Source1" />
-            <Edge From="35" To="36" Label="Source2" />
-            <Edge From="36" To="37" Label="Source1" />
-            <Edge From="37" To="38" Label="Source1" />
-            <Edge From="38" To="41" Label="Source1" />
-            <Edge From="40" To="41" Label="Source2" />
-            <Edge From="41" To="42" Label="Source1" />
-            <Edge From="42" To="39" Label="Source1" />
           </Edges>
         </Workflow>
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:BackgroundNoise.bonsai">
+        <Description>The background noise, waveforms\background_noise.wav (60 s of white noise, 32-bit float, made by generate-waveforms), unequalised on every speaker at the launched task file's backgroundNoise.levelDbfs from Ready; Go stops if the task file changed backgroundNoise after launch.</Description>
+        <FileName>waveforms\background_noise.wav</FileName>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>StartTrials</Name>
@@ -1370,7 +1093,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): ExperimentLogs holds the task's own logs; each device logs itself; DeliverReward delivers and logs rewards; LogControlEvents takes the controller's events; RecordHarpDevices and ExperimentManifest come last.</Description>
+        <Description>Everything else written to the experiment folder (LogLabExperiment, before Hardware, makes the folder): ExperimentLogs holds the task's own logs; each device logs itself; ExperimentRecords, last but LiveView, delivers and logs rewards, takes the controller's events, records the Harp devices and writes the manifest.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -1417,43 +1140,17 @@
                 </Edges>
               </Workflow>
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RewardRequests</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RigFile</Name>
-            </Expression>
-            <Expression xsi:type="PropertyMapping">
-              <PropertyMappings>
-                <Property Name="RigFile" />
-              </PropertyMappings>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:BehaviorBoard.DeliverReward.bonsai">
-              <Description>Each reward (side, microlitres), planned from that side's valve calibration and fired on the Harp clock at the calibration's pulseGapMs; a RewardDelivered row in BonsaiData_Async and each calibrated valve's file as ValveCalibrationDO&lt;n&gt;.</Description>
-              <RigFile>UNMAPPED</RigFile>
-              <CalibrationDirectory />
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogControlEvents.bonsai" />
-            <Expression xsi:type="hd:RecordHarpDevices">
-              <Name>RecordHarpDevices</Name>
-              <Description>Checks every Harp device in rig.yml at Start and records it into each experiment (OpenRigs.HarpDevices): the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits (each a rig.yml entry with a portName whose data the workflow publishes as &lt;Name&gt;.Data) must be on their portName with their usbSerial, or the workflow stops saying which board is where; 0.5 s after the experiment folder appears it asks each for a register dump on &lt;Name&gt;.Commands, which its log records; and it writes &lt;Name&gt;\&lt;Name&gt;_device.json and the register map &lt;Name&gt;\&lt;Name&gt;.yml, which ExperimentManifest expects (harp).</Description>
-              <hd:ConfigRoot>C:\Coen-Lab-Local\RigConfigs</hd:ConfigRoot>
-            </Expression>
-            <Expression xsi:type="mf:ExperimentManifest">
-              <Name>ExperimentManifest</Name>
-              <Description>Writes manifest.json into the experiment folder (OpenRigs.Manifest), as av-dome's: the machine, this repo's commit, who launched it and sent Go, rig.yml and every file it names (MeshMap.csv, gammalut.bmp, the speakers' filters, the valve calibrations) and this mouse's spout positions by hash ({RigFiles}), what each BonsaiData_Trial column means (schemas\trial-columns.yml), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState); DeliverReward copies each calibrated valve's file in as ValveCalibrationDO&lt;n&gt;.</Description>
-              <mf:IngestScript>coen-dome-navigation</mf:IngestScript>
-              <mf:ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/BonsaiData_Trial_;BonsaiData/BonsaiData_Async_;BonsaiData/BonsaiData_StimulusState_;BonsaiData/BonsaiData_ZapitReplies_?Optogenetics;Settings/Settings_ZapitConditions_?Optogenetics</mf:ExpectedFiles>
-              <mf:TrialColumns>schemas\trial-columns.yml</mf:TrialColumns>
-            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
-            <Edge From="3" To="4" Label="Source1" />
-            <Edge From="2" To="5" Label="Source1" />
-            <Edge From="4" To="5" Label="Source2" />
           </Edges>
         </Workflow>
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:ExperimentRecords.bonsai">
+        <Description>Each reward through its valve's calibration (DeliverReward: a RewardDelivered row in BonsaiData_Async, each calibrated valve's file as ValveCalibrationDO&lt;n&gt;), the controller's events (LogControlEvents), every Harp device in rig.yml checked at Start and recorded (RecordHarpDevices: the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits), and manifest.json (ExperimentManifest: rig.yml and every file it names and this mouse's spout positions by hash ({RigFiles}), schemas\trial-columns.yml, and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files and BonsaiData (Trial, Async and StimulusState), Zapit's logs in an optogenetics experiment). Last but LiveView, as it finds each device by the subjects published before it.</Description>
+        <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
+        <IngestScript>coen-dome-navigation</IngestScript>
+        <ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;BonsaiData/BonsaiData_Trial_;BonsaiData/BonsaiData_Async_;BonsaiData/BonsaiData_StimulusState_;BonsaiData/BonsaiData_ZapitReplies_?Optogenetics;Settings/Settings_ZapitConditions_?Optogenetics</ExpectedFiles>
       </Expression>
       <Expression xsi:type="lv:StreamDevices">
         <Name>LiveView</Name>
