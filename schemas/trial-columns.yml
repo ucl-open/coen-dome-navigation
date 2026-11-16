@@ -8,13 +8,13 @@
 # before it launches the workflow.
 #
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a duration or other quantity ends in its
-# unit (itiSeconds, rewardSizeUl); never a stored latency.
+# unit (itiSeconds, rewardOfferedUl); never a stored latency.
 #
-# The first 16 columns, harpTime to laserTriggerTime, are the lab's shared block, its core with the opto and quietWait blocks (Pip, 14 Nov 2026),
+# The first 18 columns, harpTime to laserTriggerTime, are the lab's shared block, its core with the opto and quietWait blocks (Pip, 14 Nov 2026),
 # defined once in lib-open-rigs open_rigs.rigs.trials: coen-dome-decision-making and
 # coen-dome-navigation list them in this order with these types, units and descriptions, word for word
 # (tests/test_trial_columns.py holds both), so one analysis reads both tasks.
-# trialType, outcome, rewardSizeUl and penaltySound are described per task. This task's own columns follow.
+# trialType, outcome and penaltySound are described per task, and which trials are rewarded and penalised in those columns' notes. This task's own columns follow.
 #
 # Only what changes from trial to trial (Pip, 9 Nov 2026): the task file's values fixed for the
 # experiment (the stage's row, the sound levels) are in Settings\Settings_Task_*.json and the stage itself
@@ -72,10 +72,17 @@ outcomeTime:
   description: Harp time the workflow knew the outcome, the same time as harpTime, as its own column so that every moment of a trial is named; the reward, the penalty sound and the timeout are timed from it. On a lick it is the Harp clock's latest tick when the workflow saw the lick, a few ms after it; each lick's own Harp time is in the lick detectors' logs.
   note: Why the trial ended is endReason - a lick in the reward zone, the wrong-lick limit, the end of the response window, the end of the track or the reward frequency reached.
   history: A column of this name held the same until 13 Nov 2026; from then to 14 Nov 2026 only the row's time column did.
-rewardSizeUl:
+rewardOfferedUl:
   type: double
   unit: ul
-  description: Microlitres a reward on this trial gives (the stage's rewardSizeUl in trainingStages). What was delivered is RewardDelivered in BonsaiData_Async.
+  description: "Microlitres a reward on this trial gives, on every trial whether or not it was rewarded: the size the task drew for it (its stage's rewardSizeUl, or a larger reward where the task has one); 0 on a trial that offers none. rewarded says whether it was given; what was delivered is RewardDelivered in BonsaiData_Async."
+  note: The stage's rewardSizeUl in trainingStages, on every trial.
+  history: rewardSizeUl until 16 Nov 2026, the same value.
+rewarded:
+  type: bool
+  description: "True when the trial's outcome delivered its reward (rewardOfferedUl, at outcomeTime): the value the workflow's reward command is made from. Which outcomes are rewarded is the task's (its note)."
+  note: A trial that ends on a lick in the reward zone or with the zone reached (endReason CorrectLick or FreqReached, outcome Correct), rewarded at the left spout.
+  history: From 16 Nov 2026; until then outcome Correct.
 penaltySound:
   type: bool
   description: True when the penalty sound played (the task's penalty.sound enabled). A trial is penalised when it runs out of time or track with the end frequency in the reward zone, and on a stage with penaliseWrongZone when it ends outside the zone (TrialLogic.cs TrialRules.End); the timeout follows.
@@ -83,6 +90,11 @@ penaltyTimeoutSeconds:
   type: double
   unit: s
   description: "The timeout after this trial: the task's penalty.timeoutSeconds when the trial was penalised, else 0. The next interval starts after it (itiStartTime)."
+penalised:
+  type: bool
+  description: "True when the trial was penalised: the task's penalty timeout (penaltyTimeoutSeconds) and, with its penalty.sound enabled, the penalty sound (penaltySound) followed its outcome. Which outcomes are penalised is the task's (its note)."
+  note: A trial that runs out of time or track with the end frequency in the reward zone, and on a stage with penaliseWrongZone one that ends outside the zone (TrialLogic.cs TrialRules.End).
+  history: From 16 Nov 2026; until then penaltyTimeoutSeconds above 0.
 laserCondition:
   type: int
   description: "The Zapit condition sent to Zapit this trial (its conditions file's number, from 1), laser on or off: every trial of an optogenetics experiment has one, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics."

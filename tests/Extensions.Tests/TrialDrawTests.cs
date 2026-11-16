@@ -423,6 +423,7 @@ public class TrialRulesTests
         Assert.AreEqual("Correct", outcome.Outcome.Row.outcome);
         Assert.AreEqual("FreqReached", outcome.Outcome.Row.endReason);
         Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's rewardSizeUl (3 ul since 15 Nov 2026)
+        Assert.IsTrue(outcome.Outcome.Row.rewarded && !outcome.Outcome.Row.penalised && outcome.Outcome.Row.rewardOfferedUl == 3, "the row says what the valve did");
         var next = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(outcome.Seconds + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
         rig.Until(rig.Now + 0.2);
@@ -455,6 +456,8 @@ public class TrialRulesTests
         Assert.AreEqual("Incorrect", outcome.Outcome.Row.outcome);
         Assert.AreEqual("WrongLickLimit", outcome.Outcome.Row.endReason);
         Assert.IsTrue(outcome.Outcome.Row.penaltySound);
+        Assert.IsTrue(outcome.Outcome.Row.penalised && !outcome.Outcome.Row.rewarded && !outcome.Outcome.Rewarded, "penalised, unrewarded");
+        Assert.AreEqual(3.0, outcome.Outcome.Row.rewardOfferedUl, "the offer kept on a trial not rewarded");
         Assert.AreEqual(2.0, outcome.Outcome.Row.penaltyTimeoutSeconds);
 
         // the next trial waits the timeout and its interval; the quiet second, counted from the interval's start, adds nothing
@@ -642,6 +645,7 @@ public class TrialRulesTests
         Assert.AreEqual("ResponseWindowEnd", outcome.Outcome.Row.endReason);
         Assert.AreEqual("NoResponse", outcome.Outcome.Row.outcome);
         Assert.IsTrue(outcome.Outcome.Row.penaltySound);
+        Assert.IsTrue(outcome.Outcome.Row.penalised && !outcome.Outcome.Row.rewarded);
         Assert.AreEqual(start.Seconds + 0.1 + 12.0, outcome.Seconds, 0.0011);
     }
 

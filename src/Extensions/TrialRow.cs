@@ -20,9 +20,11 @@ public class TrialRow
     public double trialStartTime;
     public double stimulusOnsetTime;
     public double outcomeTime;
-    public double rewardSizeUl;
+    public double rewardOfferedUl;
+    public bool rewarded;
     public bool penaltySound;
     public double penaltyTimeoutSeconds;
+    public bool penalised;
     public int laserCondition;
     public double laserPowerMw;
     public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger

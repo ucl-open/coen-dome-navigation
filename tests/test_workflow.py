@@ -69,7 +69,7 @@ def test_the_launch_properties():
 
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
-    assert names == {"trialNumber", "rewardSizeUl", "laserCondition"}
+    assert names == {"trialNumber", "rewardOfferedUl", "laserCondition"}
     # trainingStage is OpenRigs.Control's TrainingStage's (16 Nov 2026).
     assert lint.training_stage_problems(WORKFLOW) == []
 

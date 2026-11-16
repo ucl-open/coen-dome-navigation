@@ -61,7 +61,7 @@ public class Trial : IZapitTrial
     public double truncationFraction;   // 1: not truncated
     public double rewardFloorHz;
     public double rewardCeilingHz;
-    public double rewardSizeUl;
+    public double rewardOfferedUl;     // the stage's rewardSizeUl: what a reward on this trial gives
     public bool lickToReward;
     public int wrongLickLimit;
     public bool penaliseWrongZone;
@@ -83,7 +83,7 @@ public class TrialOutcome : ITrialOutcome
     public TrialRow Row;
     public bool Rewarded;
     public bool PenaltySound;                 // the penalty sound plays
-    public Tuple<string, double> Reward;      // (side, microlitres) for Rewards: the left spout, the trial's rewardSizeUl
+    public Tuple<string, double> Reward;      // (side, microlitres) for Rewards: the left spout, the row's rewardOfferedUl
 
     public double PenaltyTimeoutSeconds { get { return Row.penaltyTimeoutSeconds; } }
 }
@@ -303,20 +303,19 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var ranOut = reason == "ResponseWindowEnd" || reason == "EndOfTrack";
         var rewarded = onTarget && (reason == "Lick" || reason == "FreqReached");
         var penalised = onTarget ? ranOut : trial.penaliseWrongZone;
-        // The shared block (trialNumber, the times, penaltySound, penaltyTimeoutSeconds, the laser) is lib-open-rigs'.
+        // The shared block (trialNumber, the times, rewardOfferedUl, rewarded, the penalty, the laser) is lib-open-rigs'.
         var row = SharedTrialColumns.Fill(new TrialRow
         {
             trialType = trial.trialType,
             outcome = rewarded ? "Correct" : ranOut || !trial.lickToReward ? "NoResponse" : "Incorrect",
-            rewardSizeUl = trial.rewardSizeUl,
             endReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
             endPositionCm = track.Position,
             toneEndFrequencyHz = tone,
             visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             truncationFraction = trial.truncationFraction
-        }, trial, times, penalised, Task.Penalty.TimeoutSeconds, Task.Penalty.Sound.Enabled);
-        return new TrialOutcome { Row = row, Rewarded = rewarded, PenaltySound = row.penaltySound, Reward = Tuple.Create("left", trial.rewardSizeUl) };
+        }, trial, times, trial.rewardOfferedUl, rewarded, penalised, Task.Penalty.TimeoutSeconds, Task.Penalty.Sound.Enabled);
+        return new TrialOutcome { Row = row, Rewarded = row.rewarded, PenaltySound = row.penaltySound, Reward = Tuple.Create("left", row.rewardOfferedUl) };
     }
 }
 
@@ -387,7 +386,7 @@ public class TrialDraw
         t.wheelQuietCm = stage.WheelQuietCm;
         t.rewardFloorHz = stage.RewardFloorHz;
         t.rewardCeilingHz = stage.RewardCeilingHz;
-        t.rewardSizeUl = stage.RewardSizeUl;
+        t.rewardOfferedUl = stage.RewardSizeUl;
         t.lickToReward = stage.LickToReward;
         t.wrongLickLimit = stage.WrongLickLimit;
         t.penaliseWrongZone = stage.PenaliseWrongZone;
