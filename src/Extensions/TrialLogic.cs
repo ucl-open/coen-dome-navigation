@@ -320,9 +320,10 @@ public class TrialDraw
     public static void CheckTask(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep)
     {
         var pipeline = task.TrainingPipeline;
-        if (pipeline == null || !pipeline.Id.HasValue)
+        // No id or no sha256: not filled by rig-control, so the summary could not say which pipeline ran (as decision-making)
+        if (pipeline == null || !pipeline.Id.HasValue || string.IsNullOrEmpty(pipeline.Sha256))
         {
-            throw new InvalidOperationException(string.Format("TrainingStage is {0}, but the task file's trainingPipeline names no stage: rig-control fills it from the training pipeline at launch.", stage));
+            throw new InvalidOperationException(string.Format("TrainingStage is {0}, but the task file's trainingPipeline names no stage or no pipeline sha256: rig-control fills it from the training pipeline at launch.", stage));
         }
         if (pipeline.Id.Value != stage)
         {
@@ -443,7 +444,7 @@ public class TrialDraw
 }
 
 [Combinator]
-[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (task file, TrainingStage, rig.yml, sweep). Stops the workflow on a task whose trainingPipeline.id is missing or is not the TrainingStage, a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
+[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (task file, TrainingStage, rig.yml, sweep). Stops the workflow on a task whose trainingPipeline.id or sha256 is missing or whose id is not the TrainingStage, a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CheckTaskAtGo
 {

@@ -159,6 +159,9 @@ public class TrialDrawTests
         var noId = Fixture.Task(0);
         noId.TrainingPipeline.Id = null;
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(noId, 0)).Message, "trainingPipeline names no stage");
+        var noSha = Fixture.Task(0);  // the summary could not say which pipeline ran (audit 17 Nov 2026, as decision-making)
+        noSha.TrainingPipeline.Sha256 = null;
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(noSha, 0)).Message, "trainingPipeline names no stage");
         var task = Fixture.Task(0);
         task.TrainingPipeline.Id = 42;   // an id past the old rows: the pipeline's ids are never reused
         Fixture.Setup(task, 42);
