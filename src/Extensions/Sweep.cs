@@ -57,8 +57,8 @@ public class Sweep
     }
 
     /// <summary>The track's sweep ratio, sweepEndHz / sweepStartHz in whole numbers (25000 / 2000 = 12), as Tom Childs' workflow
-    /// divided them: the tone runs 2 to 24 kHz along the track, which his mice learned. Position, drift and
-    /// truncation use it; the tone files span the full sweep, so BinOf does not.</summary>
+    /// divided them: the tone runs 2 to 24 kHz along the track, which his mice learned. Position and drift
+    /// use it; the tone files span the full sweep, so BinOf does not.</summary>
     public double TrackRatio { get { return Math.Floor(EndHz / StartHz); } }
 
     /// <summary>The highest tone the track plays: StartHz * TrackRatio (24 kHz).</summary>
@@ -89,8 +89,8 @@ public class StimulusFrame
 {
     public StimulusStateRow Row;
     public int Bin;              // the tone file's row
-    public double ToneGain;      // 1, or 0 when truncated or not auditory
-    public double GratingOpacity; // 1, or 0 when truncated or not visual
+    public double ToneGain;      // 1, or 0 when switched off (StimulusStateRow.auditoryOn) or not auditory
+    public double GratingOpacity; // 1, or 0 when switched off (StimulusStateRow.visualOn) or not visual
 }
 
 /// <summary>A WorkflowData_StimulusState row, one per pip while a trial runs.</summary>
@@ -99,8 +99,9 @@ public class StimulusStateRow
     public int trialNumber;
     public double positionCm;
     public double auditoryFrequencyHz;
-    public bool stimulusActive;
+    public bool auditoryOn;          // false once a stimulus-off trial has switched the tone off
     public double visualSpatialFrequencyCpd;
+    public bool visualOn;            // false once a stimulus-off trial has switched the grating off
 }
 
 [Combinator]

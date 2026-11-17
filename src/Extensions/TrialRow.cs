@@ -21,11 +21,12 @@ public class TrialRow
     public int laserCondition;
     public double laserPowerMw;
     public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
-    public string endReason;
+    public string outcomeReason;
     public double trackLengthCm;
-    public double endPositionCm;
-    public double auditoryEndFrequencyHz;
-    public double visualEndSpatialFrequencyCpd;
-    public double truncationFraction;
+    public double outcomePositionCm;
+    public double outcomeAuditoryFrequencyHz;
+    public double outcomeVisualSpatialFrequencyCpd;
+    public double auditoryOffPositionCm;  // NaN when the tone never switched off
+    public double visualOffPositionCm;    // NaN when the grating never switched off
     public bool autoRewarded;
 }

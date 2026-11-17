@@ -58,7 +58,9 @@ public class Trial : IZapitTrial
     public double wheelQuietSeconds;
     public double wheelQuietCm;
     public double trackLengthCm;
-    public double truncationFraction;   // 1: not truncated
+    public double stimulusOffFraction;  // a stimulus-off trial's track fraction (stimulusOff.trackFractions); NaN: every stimulus stays on
+    public bool auditoryOff;            // on a stimulus-off trial, whether the tone switches off (stimulusOff.stimuli)
+    public bool visualOff;              // and the grating
     public double rewardFloorHz;
     public double rewardCeilingHz;
     public double rewardOfferedUl;     // the stage's rewardSizeUl: what a reward on this trial gives
@@ -102,6 +104,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     VirtualTrack track;
     StimulusFrame last;
     int nextStep, wrongLicks;
+    double auditoryOffPositionCm, visualOffPositionCm;  // where each switched off this trial; NaN: it never did
 
     public TrialRules(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
     {
@@ -153,6 +156,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         nextStep = trial.firstPipStep;
         wrongLicks = 0;
         last = null;
+        auditoryOffPositionCm = double.NaN;
+        visualOffPositionCm = double.NaN;
     }
 
     public void Stimulus(Trial trial, TrialTimes times, ICollection<StimulusFrame> updates)
@@ -213,13 +218,18 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             tone += sweep.StartHz * Math.Pow(sweep.TrackRatio, drift) - sweep.StartHz;
             grating += gratingStart * Math.Pow(gratingRatio, drift) - gratingStart;
         }
-        var active = trial.truncationFraction >= 1 || Math.Round(sweep.FractionOf(tone), 3) < trial.truncationFraction;
+        // A stimulus-off trial's listed stimuli switch off once the mouse has run its fraction of the track.
+        var off = !double.IsNaN(trial.stimulusOffFraction) && Math.Round(fraction, 3) >= trial.stimulusOffFraction;
+        var auditoryOn = !(off && trial.auditoryOff);
+        var visualOn = !(off && trial.visualOff);
+        if (!auditoryOn && double.IsNaN(auditoryOffPositionCm)) auditoryOffPositionCm = position;
+        if (!visualOn && double.IsNaN(visualOffPositionCm)) visualOffPositionCm = position;
         return new StimulusFrame
         {
-            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, auditoryFrequencyHz = tone, stimulusActive = active, visualSpatialFrequencyCpd = grating },
+            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, auditoryFrequencyHz = tone, auditoryOn = auditoryOn, visualSpatialFrequencyCpd = grating, visualOn = visualOn },
             Bin = sweep.BinOf(tone),
-            ToneGain = active && trial.trialType != TrialDraw.Visual ? 1 : 0,
-            GratingOpacity = active && trial.trialType != TrialDraw.Auditory ? 1 : 0
+            ToneGain = auditoryOn && trial.trialType != TrialDraw.Visual ? 1 : 0,
+            GratingOpacity = visualOn && trial.trialType != TrialDraw.Auditory ? 1 : 0
         };
     }
 
@@ -244,12 +254,13 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         {
             trialType = trial.trialType,
             outcome = rewarded ? TrialOutcomes.Correct : ranOut ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
-            endReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
+            outcomeReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
-            endPositionCm = track.Position,
-            auditoryEndFrequencyHz = tone,
-            visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
-            truncationFraction = trial.truncationFraction,
+            outcomePositionCm = track.Position,
+            outcomeAuditoryFrequencyHz = tone,
+            outcomeVisualSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
+            auditoryOffPositionCm = auditoryOffPositionCm,
+            visualOffPositionCm = visualOffPositionCm,
             autoRewarded = trial.autoReward && rewarded
         }, trial, times, trial.rewardOfferedUl, rewarded, penalised, task.Penalty.TimeoutSeconds, task.Penalty.Sound.Enabled);
         return new TrialOutcome(row);
@@ -357,7 +368,12 @@ public class TrialDraw
         var hold = task.Optogenetics.TriggerHoldSeconds;
         var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;
         if (task.Optogenetics.Enabled && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitTrial.ReplyMarginSeconds));
-        if (row.TruncatedTrialProbability > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage " + stage + " truncates trials but truncation.sweepFractions is empty");
+        if (row.StimulusOffProbability > 0)
+        {
+            var off = task.StimulusOff;
+            if (off.TrackFractions == null || off.TrackFractions.Count == 0 || off.TrackFractions.Any(f => !(f > 0 && f < 1))) problems.Add("stage " + stage + " has stimulus-off trials but stimulusOff.trackFractions is empty or not all between 0 and 1");
+            if (off.Stimuli == null || off.Stimuli.Count == 0 || off.Stimuli.Distinct().Count() != off.Stimuli.Count) problems.Add("stage " + stage + " has stimulus-off trials but stimulusOff.stimuli is empty or repeats a stimulus");
+        }
         if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage {0}'s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", stage, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
         var opto = task.Optogenetics;
         if (opto.Enabled)
@@ -387,10 +403,11 @@ public class TrialDraw
         var lengths = task.TrialStructure.TrackLengthsCm;
         t.trackLengthCm = lengths[random.Next(lengths.Count)] * stage.TrackLengthScale;
         var u = random.NextDouble();
-        var fractions = task.Truncation.SweepFractions;
-        t.truncationFraction = stage.TruncatedTrialProbability > 0 && u < stage.TruncatedTrialProbability
-            ? fractions[(int)Math.Floor(u / stage.TruncatedTrialProbability * fractions.Count)]
-            : 1.0;
+        var fractions = task.StimulusOff.TrackFractions;
+        var p = stage.StimulusOffProbability;
+        t.stimulusOffFraction = p > 0 && u < p ? fractions[(int)Math.Floor(u / p * fractions.Count)] : double.NaN;
+        t.auditoryOff = !double.IsNaN(t.stimulusOffFraction) && task.StimulusOff.Stimuli.Contains(Stimuli.Auditory);
+        t.visualOff = !double.IsNaN(t.stimulusOffFraction) && task.StimulusOff.Stimuli.Contains(Stimuli.Visual);
         t.lickQuietSeconds = stage.LickQuietSeconds;
         t.wheelQuietSeconds = stage.WheelQuietSeconds;
         t.wheelQuietCm = stage.WheelQuietCm;

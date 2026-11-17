@@ -177,6 +177,43 @@
       "title": "RewardTone",
       "type": "object"
     },
+    "StimulusOff": {
+      "description": "Where the stimulus switches off on a stimulus-off trial (a stage's stimulusOffProbability says how often).\n\nOn a stimulus-off trial each listed stimulus switches off once the mouse has run a track fraction of the trial's\ntrack (position / trackLengthCm); an unlisted stimulus stays on. Everything else about the trial is unchanged, so\nit is still rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.",
+      "properties": {
+        "trackFractions": {
+          "default": [
+            0.4,
+            0.6
+          ],
+          "description": "Where the stimulus switches off, as a fraction of the trial's track length, split evenly over stimulus-off trials",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "title": "TrackFractions",
+          "type": "array"
+        },
+        "stimuli": {
+          "default": [
+            "auditory",
+            "visual"
+          ],
+          "description": "The stimuli that switch off on a stimulus-off trial: auditory (the tone), visual (the grating) or both",
+          "items": {
+            "enum": [
+              "auditory",
+              "visual"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Stimuli",
+          "type": "array"
+        }
+      },
+      "title": "StimulusOff",
+      "type": "object"
+    },
     "StimulusSound": {
       "description": "A task's stimulus sounds, each played at levelDbfs (OpenRigs.Audio SpeakerBuffer or SpeakerSet.Buffer).",
       "properties": {
@@ -193,7 +230,7 @@
       "type": "object"
     },
     "TrainingStage": {
-      "description": "One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
+      "description": "One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
       "properties": {
         "rewardSizeUl": {
           "description": "Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for",
@@ -298,11 +335,11 @@
           "title": "FrequencyDrift",
           "type": "boolean"
         },
-        "truncatedTrialProbability": {
-          "description": "Probability that a trial's stimulus switches off early (truncation.sweepFractions); 0: never, 1: every trial",
+        "stimulusOffProbability": {
+          "description": "Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial",
           "maximum": 1,
           "minimum": 0,
-          "title": "TruncatedTrialProbability",
+          "title": "StimulusOffProbability",
           "type": "number"
         }
       },
@@ -314,7 +351,7 @@
         "wrongLickLimit",
         "trackLengthScale",
         "frequencyDrift",
-        "truncatedTrialProbability"
+        "stimulusOffProbability"
       ],
       "title": "TrainingStage",
       "type": "object"
@@ -400,26 +437,6 @@
       "title": "TrialTypeWeights",
       "type": "object"
     },
-    "Truncation": {
-      "description": "Where the stimulus switches off on a truncated trial (a stage's truncatedTrialProbability says how often).\n\nOn a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the stimulus.",
-      "properties": {
-        "sweepFractions": {
-          "default": [
-            0.4,
-            0.6
-          ],
-          "description": "Where the stimulus switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 1,
-          "title": "SweepFractions",
-          "type": "array"
-        }
-      },
-      "title": "Truncation",
-      "type": "object"
-    },
     "UclOpenCoenDomeNavigationTaskLogic": {
       "description": "Top-level task logic schema.",
       "properties": {
@@ -448,7 +465,7 @@
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskParameters": {
-      "description": "Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, truncation, optogenetics and the training stages.",
+      "description": "Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.",
       "properties": {
         "rngSeed": {
           "default": null,
@@ -524,15 +541,19 @@
           "$ref": "#/$defs/Penalty",
           "description": "The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)"
         },
-        "truncation": {
-          "$ref": "#/$defs/Truncation",
+        "stimulusOff": {
+          "$ref": "#/$defs/StimulusOff",
           "default": {
-            "sweepFractions": [
+            "trackFractions": [
               0.4,
               0.6
+            ],
+            "stimuli": [
+              "auditory",
+              "visual"
             ]
           },
-          "description": "Where the stimulus switches off on a truncated trial"
+          "description": "Where and which stimuli switch off on a stimulus-off trial"
         },
         "optogenetics": {
           "$ref": "#/$defs/OptogeneticsSettings",

@@ -12,11 +12,11 @@ def test_the_trial_columns_start_with_the_shared_block():
     columns = yaml.safe_load((Path(__file__).parents[1] / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))
     assert shared_block_problems(columns, ("optogenetics", "quietWait")) == []
 
-def test_every_end_reason_the_rules_write_is_listed():
-    # The endReason values trial-columns.yml lists are the ones TrialLogic.cs writes: an outcome's reason, a lick's
+def test_every_outcome_reason_the_rules_write_is_listed():
+    # The outcomeReason values trial-columns.yml lists are the ones TrialLogic.cs writes: an outcome's reason, a lick's
     # split into CorrectLick and WrongLickLimit (the response window's end is ResponseWindowEnd).
     root = Path(__file__).parents[1]
-    listed = yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))["endReason"]["values"]
+    listed = yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))["outcomeReason"]["values"]
     code = (root / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8")
     written = set(re.findall(r'End\(trial, "(\w+)"', code)) - {"Lick"} | {"CorrectLick", "WrongLickLimit"}
     assert sorted(listed) == sorted(written)

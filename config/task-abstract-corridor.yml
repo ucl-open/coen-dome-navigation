@@ -36,8 +36,9 @@ taskParameters:
     sound:                    # the lab's penalty sound (OpenRigs.Audio), on a penalised trial
       enabled: true
       levelDbfs: -44.6        # dBFS RMS, on rig.yml's penaltySoundChannel alone
-  truncation:                 # on a stage's truncated trials
-    sweepFractions: [0.4, 0.6]
+  stimulusOff:                # on a stage's stimulus-off trials
+    trackFractions: [0.4, 0.6]   # of the trial's track length
+    stimuli: [auditory, visual]   # the stimuli that switch off
   optogenetics:               # Zapit; the laser runs from the trigger to the outcome (or laserMaxSeconds), laser-off trials laser off
     enabled: false
     zapitConditionsPath: ''   # the Zapit conditions file loaded in Zapit
@@ -63,7 +64,7 @@ taskParameters:
       responseWindowSeconds: null   # the window never closes
       trackLengthScale: 0.125
       frequencyDrift: true
-      truncatedTrialProbability: 0.0
+      stimulusOffProbability: 0.0
     # Stage 1: as stage 0, no drift
     - label: Zone Reward
       rewardFloorHz: 18000
@@ -77,7 +78,7 @@ taskParameters:
       responseWindowSeconds: null   # the window never closes
       trackLengthScale: 0.125
       frequencyDrift: false
-      truncatedTrialProbability: 0.0
+      stimulusOffProbability: 0.0
     # Stage 2: a lick anywhere above the floor; full tracks
     - label: Lick to Report
       rewardFloorHz: 15248
@@ -91,7 +92,7 @@ taskParameters:
       responseWindowSeconds: null   # the window never closes
       trackLengthScale: 1.0
       frequencyDrift: false
-      truncatedTrialProbability: 0.0
+      stimulusOffProbability: 0.0
     # Stage 3: the ceiling comes in; wrong licks and slowness penalised
     - label: Ceiling In
       rewardFloorHz: 15248
@@ -105,7 +106,7 @@ taskParameters:
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
       trackLengthScale: 1.0
       frequencyDrift: false
-      truncatedTrialProbability: 0.0
+      stimulusOffProbability: 0.0
     # Stage 4: fewer wrong licks allowed
     - label: Fewer Wrong Licks
       rewardFloorHz: 15248
@@ -119,8 +120,8 @@ taskParameters:
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
       trackLengthScale: 1.0
       frequencyDrift: false
-      truncatedTrialProbability: 0.0
-    - label: Truncated   # stage 4 with 16% truncated trials; only ever chosen by hand
+      stimulusOffProbability: 0.0
+    - label: Stimulus Off   # stage 4 with 16% stimulus-off trials; only ever chosen by hand
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0
@@ -132,4 +133,4 @@ taskParameters:
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
       trackLengthScale: 1.0
       frequencyDrift: false
-      truncatedTrialProbability: 0.16
+      stimulusOffProbability: 0.16

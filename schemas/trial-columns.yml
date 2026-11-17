@@ -36,7 +36,7 @@ trialType:
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
-  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the end of the response window or of the track (endReason says which). rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
+  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the end of the response window or of the track (outcomeReason says which). rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
 itiStartTime:
   type: double
   unit: s
@@ -64,7 +64,7 @@ outcomeTime:
   type: double
   unit: s
   description: Harp time the workflow knew the outcome, the same time as harpTime, as its own column so that every moment of a trial is named; the reward, the penalty sound and the timeout are timed from it. On a lick it is the Harp clock's latest tick when the workflow saw the lick, a few ms after it; each lick's own Harp time is in the lick detectors' logs.
-  note: Why the trial ended is endReason - a lick in the reward zone, the wrong-lick limit, the end of the response window, the end of the track or the reward frequency reached.
+  note: Why the trial ended is outcomeReason - a lick in the reward zone, the wrong-lick limit, the end of the response window, the end of the track or the reward frequency reached.
 rewardOfferedUl:
   type: double
   unit: ul
@@ -73,7 +73,7 @@ rewardOfferedUl:
 rewarded:
   type: bool
   description: "True when the trial's outcome delivered its reward (rewardOfferedUl, at outcomeTime): the value the workflow's reward command is made from. Which outcomes are rewarded is the task's (its note)."
-  note: A trial that ends on a lick in the reward zone or with the zone reached (endReason CorrectLick or FrequencyReached, outcome Correct), rewarded at the left spout.
+  note: A trial that ends on a lick in the reward zone or with the zone reached (outcomeReason CorrectLick or FrequencyReached, outcome Correct), rewarded at the left spout.
 penaltySoundOn:
   type: bool
   description: "True when the trial was penalised and the task's penalty sound is enabled."
@@ -84,7 +84,7 @@ penaltyTimeoutSeconds:
 penalised:
   type: bool
   description: "True when the trial was penalised: the task's penalty timeout (penaltyTimeoutSeconds) and, with its penalty.sound enabled, the penalty sound (penaltySoundOn) followed its outcome. Which outcomes are penalised is the task's (its note)."
-  note: A trial that runs out of time or track with the end frequency in the reward zone, or ends outside the zone (TrialLogic.cs TrialRules.End).
+  note: A trial that runs out of time or track with the outcome frequency in the reward zone, or ends outside the zone (TrialLogic.cs TrialRules.End).
 laserCondition:
   type: int
   description: "The Zapit condition sent to Zapit this trial (its conditions file's number, from 1), laser on or off: every trial of an optogenetics experiment has one, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics."
@@ -96,7 +96,7 @@ laserTriggerTime:
   type: double
   unit: s
   description: "Harp time the workflow raised the Zapit trigger line (the laser, or at 0 mW the galvos and masking light alone): the first tick of the 1 ms Harp clock at or after laserToStimulusSeconds before the stimulus was due. NaN without optogenetics and on a trial that ended before its trigger, so a laser-off trial (a time, laserPowerMw 0) and one answered first (NaN) differ."
-endReason:
+outcomeReason:
   type: string
   values: [FrequencyReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]
   description: Why the trial ended - the reward frequency reached (on an auto-reward trial, drawn with the stage's autoRewardProbability, every trial of stages 0 and 1), a lick in the reward zone, too many wrong licks, the end of the stage's response window (responseWindowSeconds after the first pip), or the end of the track.
@@ -104,21 +104,26 @@ trackLengthCm:
   type: double
   unit: cm
   description: The trial's track length, one of trialStructure.trackLengthsCm, drawn per trial, times the stage's trackLengthScale. Distances are at rig.yml's wheelDiameterMm (75 mm on every dome).
-endPositionCm:
+outcomePositionCm:
   type: double
   unit: cm
   description: Position along the track at the outcome (outcomeTime), behind the start never counted and capped at the track's length. Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
-auditoryEndFrequencyHz:
+outcomeAuditoryFrequencyHz:
   type: double
   unit: Hz
-  description: The tone sweep's frequency when the trial ended.
-visualEndSpatialFrequencyCpd:
+  description: The tone sweep's frequency at the outcome (outcomeTime).
+outcomeVisualSpatialFrequencyCpd:
   type: double
   unit: cycles/deg
-  description: The grating's spatial frequency when the trial ended.
-truncationFraction:
+  description: The grating's spatial frequency at the outcome (outcomeTime).
+auditoryOffPositionCm:
   type: double
-  description: Where the stimulus switched off, as a fraction of the sweep (one of truncation.sweepFractions, on a trial drawn with the stage's truncatedTrialProbability); 1 on an untruncated trial.
+  unit: cm
+  description: Position along the track where the tone switched off on a stimulus-off trial (drawn with the stage's stimulusOffProbability, at one of stimulusOff.trackFractions of trackLengthCm, with auditory in stimulusOff.stimuli); NaN when it never did.
+visualOffPositionCm:
+  type: double
+  unit: cm
+  description: Position along the track where the grating switched off on a stimulus-off trial (drawn with the stage's stimulusOffProbability, at one of stimulusOff.trackFractions of trackLengthCm, with visual in stimulusOff.stimuli); NaN when it never did.
 autoRewarded:
   type: bool
-  description: True when an auto-reward trial (drawn with the stage's autoRewardProbability) was rewarded, on reaching the reward zone's floor with no lick needed (endReason FrequencyReached).
+  description: True when an auto-reward trial (drawn with the stage's autoRewardProbability) was rewarded, on reaching the reward zone's floor with no lick needed (outcomeReason FrequencyReached).

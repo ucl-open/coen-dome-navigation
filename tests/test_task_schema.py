@@ -35,7 +35,7 @@ def test_the_task_file_validates():
 
 def test_every_stage_has_a_name():
     labels = [row.get("label") for row in task()["taskParameters"]["trainingStages"]]
-    assert labels == ["Zone Reward, Drift", "Zone Reward", "Lick to Report", "Ceiling In", "Fewer Wrong Licks", "Truncated"]
+    assert labels == ["Zone Reward, Drift", "Zone Reward", "Lick to Report", "Ceiling In", "Fewer Wrong Licks", "Stimulus Off"]
 
 
 def test_the_stage_rows_keep_tom_s_reward_zones():
@@ -207,13 +207,24 @@ def test_a_trigger_hold_as_long_as_the_shortest_interval_is_refused():
 
 @pytest.mark.parametrize(
     "block, key, value",
-    [("trialStructure", "itiMaxSeconds", math.inf), ("truncation", "sweepFractions", [math.nan]), ("optogenetics", "laserMaxSeconds", math.inf)],
+    [("trialStructure", "itiMaxSeconds", math.inf), ("stimulusOff", "trackFractions", [math.nan]), ("optogenetics", "laserMaxSeconds", math.inf)],
 )
 def test_the_task_s_own_blocks_refuse_inf_and_nan(block, key, value):
     # Each is a lib-open-rigs TaskBlock (allow_inf_nan off), as the lab's blocks are.
     doc = task()
     doc["taskParameters"][block][key] = value
     with pytest.raises(pydantic.ValidationError, match="finite number"):
+        UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
+
+
+@pytest.mark.parametrize(
+    "key, value, match",
+    [("stimuli", [], "at least 1"), ("stimuli", ["auditory", "auditory"], "must not repeat"), ("stimuli", ["tone"], "auditory"), ("trackFractions", [1.0], "between 0 and 1"), ("trackFractions", [], "at least 1")],
+)
+def test_a_bad_stimulus_off_block_is_refused(key, value, match):
+    doc = task()
+    doc["taskParameters"]["stimulusOff"][key] = value
+    with pytest.raises(pydantic.ValidationError, match=match):
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 
 

@@ -62,25 +62,37 @@ class VisualStimulus(TaskBlock):
     spatial_frequency_end_cpd: Double = Field(default=0.3, gt=0, description="The grating's spatial frequency at the track's end, in cycles per degree")
 
 
-class Truncation(TaskBlock):
-    """Where the stimulus switches off on a truncated trial (a stage's truncatedTrialProbability says how often).
+class StimulusOff(TaskBlock):
+    """Where the stimulus switches off on a stimulus-off trial (a stage's stimulusOffProbability says how often).
 
-    On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
-    the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
-    zone without the stimulus.
+    On a stimulus-off trial each listed stimulus switches off once the mouse has run a track fraction of the trial's
+    track (position / trackLengthCm); an unlisted stimulus stays on. Everything else about the trial is unchanged, so
+    it is still rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.
     """
 
-    sweep_fractions: list[Double] = Field(
+    track_fractions: list[Double] = Field(
         default=[0.4, 0.6],
         min_length=1,
-        description="Where the stimulus switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8",
+        description="Where the stimulus switches off, as a fraction of the trial's track length, split evenly over stimulus-off trials",
+    )
+    stimuli: list[Literal["auditory", "visual"]] = Field(
+        default=["auditory", "visual"],
+        min_length=1,
+        description="The stimuli that switch off on a stimulus-off trial: auditory (the tone), visual (the grating) or both",
     )
 
-    @field_validator("sweep_fractions")
+    @field_validator("track_fractions")
     @classmethod
     def _fractions_inside(cls, value: list[float]) -> list[float]:
         if any(not 0 < fraction < 1 for fraction in value):
-            raise ValueError("Truncation sweep fractions must be between 0 and 1")
+            raise ValueError("stimulusOff track fractions must be between 0 and 1")
+        return value
+
+    @field_validator("stimuli")
+    @classmethod
+    def _stimuli_unique(cls, value: list[str]) -> list[str]:
+        if len(set(value)) != len(value):
+            raise ValueError("stimulusOff stimuli must not repeat")
         return value
 
 
@@ -142,7 +154,7 @@ class TrialTypeWeights(TaskBlock):
 class TrainingStage(QuietWait, ResponseWindow, AutoReward, RewardSize):
     """One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
 
-    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
+    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
     label: String | None = Field(default=None, description="The stage's name, shown on Setup after its number")
     trial_weights: TrialTypeWeights | None = Field(
@@ -154,7 +166,7 @@ class TrainingStage(QuietWait, ResponseWindow, AutoReward, RewardSize):
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
     track_length_scale: Double = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: Bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
-    truncated_trial_probability: Double = Field(ge=0, le=1, description="Probability that a trial's stimulus switches off early (truncation.sweepFractions); 0: never, 1: every trial")
+    stimulus_off_probability: Double = Field(ge=0, le=1, description="Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial")
 
     @model_validator(mode="after")
     def _zone_ordered(self) -> "TrainingStage":
@@ -164,7 +176,7 @@ class TrainingStage(QuietWait, ResponseWindow, AutoReward, RewardSize):
 
 
 class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
-    """Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, truncation, optogenetics and the training stages."""
+    """Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages."""
 
     trial_weights: TrialTypeWeights = Field(
         default=TrialTypeWeights(visual=0, auditory=1, audiovisual_coherent=0, audiovisual_conflict=0, neutral=0),
@@ -188,7 +200,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     )
     trial_structure: TrialStructure = Field(description="Timing of each trial")
     penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
-    truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
+    stimulus_off: StimulusOff = Field(default=StimulusOff(), description="Where and which stimuli switch off on a stimulus-off trial")
     optogenetics: OptogeneticsSettings = Field(description="Zapit optogenetic stimulation")
     training_stages: list[TrainingStage] = Field(
         description="Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go"

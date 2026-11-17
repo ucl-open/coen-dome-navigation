@@ -726,6 +726,112 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
+    /// Where the stimulus switches off on a stimulus-off trial (a stage's stimulusOffProbability says how often).
+    ///
+    ///On a stimulus-off trial each listed stimulus switches off once the mouse has run a track fraction of the trial's
+    ///track (position / trackLengthCm); an unlisted stimulus stays on. Everything else about the trial is unchanged, so
+    ///it is still rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute(@"Where the stimulus switches off on a stimulus-off trial (a stage's stimulusOffProbability says how often).
+
+    On a stimulus-off trial each listed stimulus switches off once the mouse has run a track fraction of the trial's
+    track (position / trackLengthCm); an unlisted stimulus stays on. Everything else about the trial is unchanged, so
+    it is still rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class StimulusOff
+    {
+    
+        private System.Collections.Generic.List<double> _trackFractions;
+    
+        private System.Collections.Generic.List<Stimuli> _stimuli;
+    
+        public StimulusOff()
+        {
+            _trackFractions = new System.Collections.Generic.List<double>();
+            _stimuli = new System.Collections.Generic.List<Stimuli>();
+        }
+    
+        protected StimulusOff(StimulusOff other)
+        {
+            _trackFractions = other._trackFractions;
+            _stimuli = other._stimuli;
+        }
+    
+        /// <summary>
+        /// Where the stimulus switches off, as a fraction of the trial's track length, split evenly over stimulus-off trials
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("trackFractions")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackFractions")]
+        [System.ComponentModel.DescriptionAttribute("Where the stimulus switches off, as a fraction of the trial\'s track length, split" +
+            " evenly over stimulus-off trials")]
+        public System.Collections.Generic.List<double> TrackFractions
+        {
+            get
+            {
+                return _trackFractions;
+            }
+            set
+            {
+                _trackFractions = value;
+            }
+        }
+    
+        /// <summary>
+        /// The stimuli that switch off on a stimulus-off trial: auditory (the tone), visual (the grating) or both
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("stimuli")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimuli")]
+        [System.ComponentModel.DescriptionAttribute("The stimuli that switch off on a stimulus-off trial: auditory (the tone), visual " +
+            "(the grating) or both")]
+        public System.Collections.Generic.List<Stimuli> Stimuli
+        {
+            get
+            {
+                return _stimuli;
+            }
+            set
+            {
+                _stimuli = value;
+            }
+        }
+    
+        public System.IObservable<StimulusOff> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new StimulusOff(this)));
+        }
+    
+        public System.IObservable<StimulusOff> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new StimulusOff(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("TrackFractions = " + _trackFractions + ", ");
+            stringBuilder.Append("Stimuli = " + _stimuli);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
     /// A task's stimulus sounds, each played at levelDbfs (OpenRigs.Audio SpeakerBuffer or SpeakerSet.Buffer).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
@@ -800,12 +906,12 @@ namespace UclOpenCoenDomeNavigationTask
     /// <summary>
     /// One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
     ///
-    ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
+    ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute(@"One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
 
-    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
+    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrainingStage
@@ -837,7 +943,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _frequencyDrift;
     
-        private double _truncatedTrialProbability;
+        private double _stimulusOffProbability;
     
         public TrainingStage()
         {
@@ -861,7 +967,7 @@ namespace UclOpenCoenDomeNavigationTask
             _wrongLickLimit = other._wrongLickLimit;
             _trackLengthScale = other._trackLengthScale;
             _frequencyDrift = other._frequencyDrift;
-            _truncatedTrialProbability = other._truncatedTrialProbability;
+            _stimulusOffProbability = other._stimulusOffProbability;
         }
     
         /// <summary>
@@ -1109,21 +1215,21 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Probability that a trial's stimulus switches off early (truncation.sweepFractions); 0: never, 1: every trial
+        /// Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("truncatedTrialProbability", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncatedTrialProbability")]
-        [System.ComponentModel.DescriptionAttribute("Probability that a trial\'s stimulus switches off early (truncation.sweepFractions" +
-            "); 0: never, 1: every trial")]
-        public double TruncatedTrialProbability
+        [Newtonsoft.Json.JsonPropertyAttribute("stimulusOffProbability", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulusOffProbability")]
+        [System.ComponentModel.DescriptionAttribute("Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimul" +
+            "i switch off part way along the track; 0: never, 1: every trial")]
+        public double StimulusOffProbability
         {
             get
             {
-                return _truncatedTrialProbability;
+                return _stimulusOffProbability;
             }
             set
             {
-                _truncatedTrialProbability = value;
+                _stimulusOffProbability = value;
             }
         }
     
@@ -1152,7 +1258,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
             stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");
-            stringBuilder.Append("TruncatedTrialProbability = " + _truncatedTrialProbability);
+            stringBuilder.Append("StimulusOffProbability = " + _stimulusOffProbability);
             return true;
         }
     
@@ -1452,93 +1558,12 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Where the stimulus switches off on a truncated trial (a stage's truncatedTrialProbability says how often).
-    ///
-    ///On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
-    ///the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
-    ///zone without the stimulus.
-    /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Where the stimulus switches off on a truncated trial (a stage's truncatedTrialProbability says how often).
-
-    On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
-    the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
-    zone without the stimulus.")]
-    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
-    [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class Truncation
-    {
-    
-        private System.Collections.Generic.List<double> _sweepFractions;
-    
-        public Truncation()
-        {
-            _sweepFractions = new System.Collections.Generic.List<double>();
-        }
-    
-        protected Truncation(Truncation other)
-        {
-            _sweepFractions = other._sweepFractions;
-        }
-    
-        /// <summary>
-        /// Where the stimulus switches off, as a fraction of the sweep on a log scale, split evenly over truncated trials. The reward floor is at about 0.8
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("sweepFractions")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sweepFractions")]
-        [System.ComponentModel.DescriptionAttribute("Where the stimulus switches off, as a fraction of the sweep on a log scale, split" +
-            " evenly over truncated trials. The reward floor is at about 0.8")]
-        public System.Collections.Generic.List<double> SweepFractions
-        {
-            get
-            {
-                return _sweepFractions;
-            }
-            set
-            {
-                _sweepFractions = value;
-            }
-        }
-    
-        public System.IObservable<Truncation> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Truncation(this)));
-        }
-    
-        public System.IObservable<Truncation> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new Truncation(this));
-        }
-    
-        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
-        {
-            stringBuilder.Append("SweepFractions = " + _sweepFractions);
-            return true;
-        }
-    
-        public override string ToString()
-        {
-            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
-            stringBuilder.Append(GetType().Name);
-            stringBuilder.Append(" { ");
-            if (PrintMembers(stringBuilder))
-            {
-                stringBuilder.Append(" ");
-            }
-            stringBuilder.Append("}");
-            return stringBuilder.ToString();
-        }
-    }
-
-
-    /// <summary>
-    /// Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, truncation, optogenetics and the training stages.
+    /// Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds," +
-        " the trial structure, the penalty, truncation, optogenetics and the training sta" +
-        "ges.")]
+        " the trial structure, the penalty, stimulus off, optogenetics and the training s" +
+        "tages.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class UclOpenCoenDomeNavigationTaskParameters
@@ -1564,7 +1589,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private Penalty _penalty;
     
-        private Truncation _truncation;
+        private StimulusOff _stimulusOff;
     
         private OptogeneticsSettings _optogenetics;
     
@@ -1581,7 +1606,7 @@ namespace UclOpenCoenDomeNavigationTask
             _driftSeconds = 25D;
             _trialStructure = new TrialStructure();
             _penalty = new Penalty();
-            _truncation = new Truncation();
+            _stimulusOff = new StimulusOff();
             _optogenetics = new OptogeneticsSettings();
             _trainingStages = new System.Collections.Generic.List<TrainingStage>();
         }
@@ -1598,7 +1623,7 @@ namespace UclOpenCoenDomeNavigationTask
             _driftSeconds = other._driftSeconds;
             _trialStructure = other._trialStructure;
             _penalty = other._penalty;
-            _truncation = other._truncation;
+            _stimulusOff = other._stimulusOff;
             _optogenetics = other._optogenetics;
             _trainingStages = other._trainingStages;
         }
@@ -1799,21 +1824,21 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Where the stimulus switches off on a truncated trial
+        /// Where and which stimuli switch off on a stimulus-off trial
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("truncation")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncation")]
-        [System.ComponentModel.DescriptionAttribute("Where the stimulus switches off on a truncated trial")]
-        public Truncation Truncation
+        [Newtonsoft.Json.JsonPropertyAttribute("stimulusOff")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulusOff")]
+        [System.ComponentModel.DescriptionAttribute("Where and which stimuli switch off on a stimulus-off trial")]
+        public StimulusOff StimulusOff
         {
             get
             {
-                return _truncation;
+                return _stimulusOff;
             }
             set
             {
-                _truncation = value;
+                _stimulusOff = value;
             }
         }
     
@@ -1878,7 +1903,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("DriftSeconds = " + _driftSeconds + ", ");
             stringBuilder.Append("TrialStructure = " + _trialStructure + ", ");
             stringBuilder.Append("Penalty = " + _penalty + ", ");
-            stringBuilder.Append("Truncation = " + _truncation + ", ");
+            stringBuilder.Append("StimulusOff = " + _stimulusOff + ", ");
             stringBuilder.Append("Optogenetics = " + _optogenetics + ", ");
             stringBuilder.Append("TrainingStages = " + _trainingStages);
             return true;
@@ -1994,6 +2019,21 @@ namespace UclOpenCoenDomeNavigationTask
     }
 
 
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+    public enum Stimuli
+    {
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="auditory")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
+        Auditory = 0,
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="visual")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visual")]
+        Visual = 1,
+    }
+
+
     /// <summary>
     /// Serializes a sequence of data model objects into JSON strings.
     /// </summary>
@@ -2042,6 +2082,11 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<RewardTone>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<StimulusOff> source)
+        {
+            return Process<StimulusOff>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<StimulusSound> source)
         {
             return Process<StimulusSound>(source);
@@ -2060,11 +2105,6 @@ namespace UclOpenCoenDomeNavigationTask
         public System.IObservable<string> Process(System.IObservable<TrialTypeWeights> source)
         {
             return Process<TrialTypeWeights>(source);
-        }
-
-        public System.IObservable<string> Process(System.IObservable<Truncation> source)
-        {
-            return Process<Truncation>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
@@ -2092,11 +2132,11 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialTypeWeights>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<VisualStimulus>))]
     public partial class DeserializeFromJson : Bonsai.Expressions.SingleArgumentExpressionBuilder
@@ -2178,6 +2218,11 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<RewardTone>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<StimulusOff> source)
+        {
+            return Process<StimulusOff>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<StimulusSound> source)
         {
             return Process<StimulusSound>(source);
@@ -2196,11 +2241,6 @@ namespace UclOpenCoenDomeNavigationTask
         public System.IObservable<string> Process(System.IObservable<TrialTypeWeights> source)
         {
             return Process<TrialTypeWeights>(source);
-        }
-
-        public System.IObservable<string> Process(System.IObservable<Truncation> source)
-        {
-            return Process<Truncation>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
@@ -2228,11 +2268,11 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialTypeWeights>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<VisualStimulus>))]
     public partial class DeserializeFromYaml : Bonsai.Expressions.SingleArgumentExpressionBuilder
