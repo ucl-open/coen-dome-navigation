@@ -330,20 +330,19 @@ public class TrialDraw
             if (!(aboveZero ? value > 0 : value >= 0) || double.IsInfinity(value)) problems.Add(name + (aboveZero ? " must be a finite number above 0" : " must be a finite number, 0 or more"));
         };
         if (task.TrialStructure.TrackLengthsCm == null || task.TrialStructure.TrackLengthsCm.Count == 0 || task.TrialStructure.TrackLengthsCm.Any(l => !(l > 0) || double.IsInfinity(l))) problems.Add("trialStructure.trackLengthsCm needs at least one length, each a finite number above 0");
-        number("trialStructure.itiMinSeconds", task.TrialStructure.ItiMinSeconds, false);
-        number("trialStructure.itiMaxSeconds", task.TrialStructure.ItiMaxSeconds, false);
-        if (task.TrialStructure.ItiMaxSeconds < task.TrialStructure.ItiMinSeconds) problems.Add("trialStructure.itiMaxSeconds is below itiMinSeconds");
+        // The lab's blocks, checked by their one C# check each (OpenRigs.Core TaskBlocks, QuietWait).
+        foreach (var p in TaskBlocks.ItiProblems(task.TrialStructure.ItiMinSeconds, task.TrialStructure.ItiMaxSeconds)) problems.Add("trialStructure." + p);
         number("penalty.timeoutSeconds", task.Penalty.TimeoutSeconds, false);
         // The quiet waits, the lab's one check (OpenRigs.Core QuietWait: finite, 0 or more, at most 10 s and 20 cm, the
         // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
         foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage " + stage + ": " + p);
         number("stage " + stage + "'s trackLengthScale", row.TrackLengthScale, true);
-        if (!(row.AutoRewardProbability >= 0 && row.AutoRewardProbability <= 1)) problems.Add("stage " + stage + "'s autoRewardProbability must be 0 to 1");
+        foreach (var p in TaskBlocks.AutoRewardProblems(row.AutoRewardProbability)) problems.Add("stage " + stage + ": " + p);
         number("driftSeconds", task.DriftSeconds, true);
         number("visualStimulus.spatialFrequencyStartCpd", task.VisualStimulus.SpatialFrequencyStartCpd, true);
         number("visualStimulus.spatialFrequencyEndCpd", task.VisualStimulus.SpatialFrequencyEndCpd, true);
         problems.AddRange(TrialDraw.WeightProblems(task, row));
-        if (row.ResponseWindowSeconds.HasValue) number("stage " + stage + "'s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
+        foreach (var p in TaskBlocks.ResponseWindowProblems(row.ResponseWindowSeconds)) problems.Add("stage " + stage + ": " + p);
         // The lead: the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
         // trigger laserToStimulusSeconds before the first pip; whole steps, at most 0.2 s before it, inside the shortest interval
         // with Zapit's reply margin, and no later after it than the stage's response window.

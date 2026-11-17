@@ -484,7 +484,18 @@ public class TrialRulesTests
         var never = Fixture.Draw(Fixture.Task(), 4);
         Assert.IsFalse(Enumerable.Range(0, 50).Any(i => never.Next().autoReward));
         task.TrainingStages[4].AutoRewardProbability = 1.5;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message, "autoRewardProbability");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message, "stage 4: autoRewardProbability is 1.5, not from 0 to 1");
+    }
+
+    [TestMethod]
+    public void TheIntervalAndResponseWindowAreCheckedByTheLabsBlocks()
+    {
+        var task = Fixture.Task();
+        task.TrialStructure.ItiMaxSeconds = task.TrialStructure.ItiMinSeconds - 0.5;
+        task.TrainingStages[4].ResponseWindowSeconds = 0;
+        var message = Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message;
+        StringAssert.Contains(message, "trialStructure.itiMaxSeconds (");
+        StringAssert.Contains(message, "stage 4: responseWindowSeconds is 0, not a finite number above 0");
     }
 
     [TestMethod]
