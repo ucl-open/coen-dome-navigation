@@ -179,8 +179,14 @@ class TrainingStage(LickQuietWait, ResponseWindow, AutoReward):
         return self
 
 
-class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, RewardSize):
-    """Task parameters for the coen-dome-navigation corridor: the reward size (open_rigs.core.task RewardSize, on the left spout's valve), the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages."""
+class RewardSettings(RewardSize):
+    """Reward delivery: the reward size on the left spout's valve (the lab's RewardSize block), as coen-dome-decision-making's reward block."""
+
+
+class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
+    """Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages."""
+
+    reward: RewardSettings = Field(description="Reward delivery parameters")
 
     trial_weights: TrialTypeWeights = Field(
         default=TrialTypeWeights(visual=0, auditory=1, audiovisual_coherent=0, audiovisual_conflict=0, neutral=0),

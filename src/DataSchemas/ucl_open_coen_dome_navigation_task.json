@@ -162,6 +162,23 @@
       "title": "PenaltySound",
       "type": "object"
     },
+    "RewardSettings": {
+      "description": "Reward delivery: the reward size on the left spout's valve (the lab's RewardSize block), as coen-dome-decision-making's reward block.",
+      "properties": {
+        "rewardSizeUl": {
+          "description": "Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for",
+          "exclusiveMinimum": 0,
+          "maximum": 20,
+          "title": "RewardSizeUl",
+          "type": "number"
+        }
+      },
+      "required": [
+        "rewardSizeUl"
+      ],
+      "title": "RewardSettings",
+      "type": "object"
+    },
     "RewardTone": {
       "description": "A task's reward tone, played at levelDbfs.",
       "properties": {
@@ -458,15 +475,8 @@
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskParameters": {
-      "description": "Task parameters for the coen-dome-navigation corridor: the reward size (open_rigs.core.task RewardSize, on the left spout's valve), the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.",
+      "description": "Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.",
       "properties": {
-        "rewardSizeUl": {
-          "description": "Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for",
-          "exclusiveMinimum": 0,
-          "maximum": 20,
-          "title": "RewardSizeUl",
-          "type": "number"
-        },
         "rngSeed": {
           "default": null,
           "description": "Seed of the random number generator for these task parameters",
@@ -475,6 +485,11 @@
             "number",
             "null"
           ]
+        },
+        "reward": {
+          "$ref": "#/$defs/RewardSettings",
+          "description": "Reward delivery parameters",
+          "title": "Reward"
         },
         "trialWeights": {
           "$ref": "#/$defs/TrialTypeWeights",
@@ -556,7 +571,7 @@
         }
       },
       "required": [
-        "rewardSizeUl",
+        "reward",
         "trialStructure",
         "penalty",
         "optogenetics",

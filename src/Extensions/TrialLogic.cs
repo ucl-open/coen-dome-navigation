@@ -63,7 +63,7 @@ public class Trial : IZapitTrial
     public bool visualOff;              // and the grating
     public double rewardFloorHz;
     public double rewardCeilingHz;
-    public double rewardOfferedUl;     // the task file's rewardSizeUl: what a reward on this trial gives
+    public double rewardOfferedUl;     // the task file's reward.rewardSizeUl: what a reward on this trial gives
     public bool autoReward;             // drawn with the stage's autoRewardProbability: rewarded on reaching the floor, licks ignored
     public int wrongLickLimit;
     public double responseWindowSeconds;     // from the first pip; NaN: none
@@ -412,7 +412,7 @@ public class TrialDraw
         t.wheelQuietCm = task.TrialStructure.WheelQuietCm;
         t.rewardFloorHz = stage.RewardFloorHz;
         t.rewardCeilingHz = stage.RewardCeilingHz;
-        t.rewardOfferedUl = task.RewardSizeUl;
+        t.rewardOfferedUl = task.Reward.RewardSizeUl;
         t.wrongLickLimit = stage.WrongLickLimit;
         t.responseWindowSeconds = stage.ResponseWindowSeconds ?? double.NaN;
         t.wheelGain = stage.WheelGain;

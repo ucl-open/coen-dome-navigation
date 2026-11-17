@@ -12,7 +12,8 @@ taskParameters:
   # Relative chances of what a trial shows, per mouse (Setup): the grating, the tone sweep or both; conflict and neutral
   # trials are not defined here yet. A trainingStages row may set its own trialWeights for that stage (none does).
   trialWeights: { visual: 0, auditory: 1, audiovisualCoherent: 0, audiovisualConflict: 0, neutral: 0 }
-  rewardSizeUl: 3.0           # ul on the left spout's valve, planned from its calibration
+  reward:
+    rewardSizeUl: 3.0         # ul on the left spout's valve, planned from its calibration
   # The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms); each sound's level is here,
   # in dBFS RMS of the sound as stored, before equalisation: the levels mice have always had (Tom Childs' pips were
   # scaled by 0.05 twice, hence quiet; the lab's defaults are lib-open-rigs' OpenRigs.Audio SoundLevel).

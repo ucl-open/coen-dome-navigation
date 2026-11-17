@@ -441,7 +441,7 @@ public class TrialRulesTests
         Assert.IsTrue(outcome.Outcome.Rewarded);
         Assert.AreEqual("Correct", outcome.Outcome.Row.Value.outcome);
         Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.outcomeReason);
-        Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's rewardSizeUl, 3 ul
+        Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's reward.rewardSizeUl, 3 ul
         Assert.IsTrue(outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Row.Value.penalised && outcome.Outcome.Row.Value.rewardOfferedUl == 3, "the row says what the valve did");
         Assert.IsTrue(outcome.Outcome.Row.Value.autoRewarded, "stage 1 auto-rewards every trial");
         var next = rig.RunTo(TrialEventKind.Start);

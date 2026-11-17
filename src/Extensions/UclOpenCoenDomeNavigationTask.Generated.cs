@@ -655,6 +655,78 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
+    /// Reward delivery: the reward size on the left spout's valve (the lab's RewardSize block), as coen-dome-decision-making's reward block.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("Reward delivery: the reward size on the left spout\'s valve (the lab\'s RewardSize " +
+        "block), as coen-dome-decision-making\'s reward block.")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class RewardSettings
+    {
+    
+        private double _rewardSizeUl;
+    
+        public RewardSettings()
+        {
+        }
+    
+        protected RewardSettings(RewardSettings other)
+        {
+            _rewardSizeUl = other._rewardSizeUl;
+        }
+    
+        /// <summary>
+        /// Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
+        [System.ComponentModel.DescriptionAttribute("Reward size, in microlitres, planned into valve pulses from the valve\'s calibrati" +
+            "on; at most 20, the most one reward may ask for")]
+        public double RewardSizeUl
+        {
+            get
+            {
+                return _rewardSizeUl;
+            }
+            set
+            {
+                _rewardSizeUl = value;
+            }
+        }
+    
+        public System.IObservable<RewardSettings> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new RewardSettings(this)));
+        }
+    
+        public System.IObservable<RewardSettings> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new RewardSettings(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
     /// A task's reward tone, played at levelDbfs.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
@@ -1539,21 +1611,20 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Task parameters for the coen-dome-navigation corridor: the reward size (open_rigs.core.task RewardSize, on the left spout's valve), the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.
+    /// Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Task parameters for the coen-dome-navigation corridor: the reward size (open_rigs" +
-        ".core.task RewardSize, on the left spout\'s valve), the trial mix, the sounds, th" +
-        "e trial structure, the penalty, stimulus off, optogenetics and the training stag" +
-        "es.")]
+    [System.ComponentModel.DescriptionAttribute("Task parameters for the coen-dome-navigation corridor: the reward, the trial mix," +
+        " the sounds, the trial structure, the penalty, stimulus off, optogenetics and th" +
+        "e training stages.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class UclOpenCoenDomeNavigationTaskParameters
     {
     
-        private double _rewardSizeUl;
-    
         private double? _rngSeed;
+    
+        private RewardSettings _reward;
     
         private TrialTypeWeights _trialWeights;
     
@@ -1577,6 +1648,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         public UclOpenCoenDomeNavigationTaskParameters()
         {
+            _reward = new RewardSettings();
             _trialWeights = new TrialTypeWeights();
             _auditoryStimulus = new StimulusSound();
             _rewardTone = new RewardTone();
@@ -1591,8 +1663,8 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected UclOpenCoenDomeNavigationTaskParameters(UclOpenCoenDomeNavigationTaskParameters other)
         {
-            _rewardSizeUl = other._rewardSizeUl;
             _rngSeed = other._rngSeed;
+            _reward = other._reward;
             _trialWeights = other._trialWeights;
             _auditoryStimulus = other._auditoryStimulus;
             _rewardTone = other._rewardTone;
@@ -1603,25 +1675,6 @@ namespace UclOpenCoenDomeNavigationTask
             _stimulusOff = other._stimulusOff;
             _optogenetics = other._optogenetics;
             _trainingStages = other._trainingStages;
-        }
-    
-        /// <summary>
-        /// Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
-        [System.ComponentModel.DescriptionAttribute("Reward size, in microlitres, planned into valve pulses from the valve\'s calibrati" +
-            "on; at most 20, the most one reward may ask for")]
-        public double RewardSizeUl
-        {
-            get
-            {
-                return _rewardSizeUl;
-            }
-            set
-            {
-                _rewardSizeUl = value;
-            }
         }
     
         /// <summary>
@@ -1639,6 +1692,25 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _rngSeed = value;
+            }
+        }
+    
+        /// <summary>
+        /// Reward delivery parameters
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("reward", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="reward")]
+        [System.ComponentModel.DescriptionAttribute("Reward delivery parameters")]
+        public RewardSettings Reward
+        {
+            get
+            {
+                return _reward;
+            }
+            set
+            {
+                _reward = value;
             }
         }
     
@@ -1850,8 +1922,8 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl + ", ");
             stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
+            stringBuilder.Append("Reward = " + _reward + ", ");
             stringBuilder.Append("TrialWeights = " + _trialWeights + ", ");
             stringBuilder.Append("AuditoryStimulus = " + _auditoryStimulus + ", ");
             stringBuilder.Append("RewardTone = " + _rewardTone + ", ");
@@ -2033,6 +2105,11 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<PenaltySound>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<RewardSettings> source)
+        {
+            return Process<RewardSettings>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<RewardTone> source)
         {
             return Process<RewardTone>(source);
@@ -2087,6 +2164,7 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
@@ -2169,6 +2247,11 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<PenaltySound>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<RewardSettings> source)
+        {
+            return Process<RewardSettings>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<RewardTone> source)
         {
             return Process<RewardTone>(source);
@@ -2223,6 +2306,7 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]

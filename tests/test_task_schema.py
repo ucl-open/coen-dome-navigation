@@ -200,7 +200,7 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
     params = task()["taskParameters"]
     opto = params["optogenetics"]
     assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserToStimulusSeconds"], opto["laserMaxSeconds"], opto["triggerHoldSeconds"]) == (0.4, 20, 0.1, 12.5, 1.0)
-    assert params["rewardSizeUl"] == 3.0
+    assert params["reward"]["rewardSizeUl"] == 3.0
 
 
 def test_a_trigger_hold_as_long_as_the_shortest_interval_is_refused():
@@ -290,9 +290,9 @@ def test_a_reward_over_the_cap_is_refused():
 
     params = yaml.safe_load((ROOT / "config" / "task-abstract-corridor.yml").read_text(encoding="utf-8"))["taskParameters"]
     ok = copy.deepcopy(params)
-    ok["rewardSizeUl"] = MAX_REWARD_UL
+    ok["reward"]["rewardSizeUl"] = MAX_REWARD_UL
     UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
-    ok["rewardSizeUl"] = MAX_REWARD_UL + 1
+    ok["reward"]["rewardSizeUl"] = MAX_REWARD_UL + 1
     with pytest.raises(pydantic.ValidationError, match="less than or equal to 20"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
 
@@ -410,7 +410,7 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
 @pytest.mark.parametrize("where, key, value", [
     (("trainingStages", 0), "wheelGain", 0), (("trainingStages", 0), "autoProgressPerSecond", -0.1), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
     (("trainingStages", 0), "autoRewardProbability", 1.5), (("trainingStages", 0), "autoRewardProbability", -0.1),
-    (("trainingStages", 0), "wrongLickLimit", -1), ((), "rewardSizeUl", 0),
+    (("trainingStages", 0), "wrongLickLimit", -1), (("reward",), "rewardSizeUl", 0),
     (("trialWeights",), "visual", -1)])
 def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
     # The task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
