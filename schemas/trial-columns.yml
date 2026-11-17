@@ -36,7 +36,7 @@ trialType:
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
-  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the end of the response window or of the track (endReason says which), or unrewarded on a stage without lickToReward. rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
+  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the end of the response window or of the track (endReason says which). rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
 itiStartTime:
   type: double
   unit: s
@@ -84,7 +84,7 @@ penaltyTimeoutSeconds:
 penalised:
   type: bool
   description: "True when the trial was penalised: the task's penalty timeout (penaltyTimeoutSeconds) and, with its penalty.sound enabled, the penalty sound (penaltySoundOn) followed its outcome. Which outcomes are penalised is the task's (its note)."
-  note: A trial that runs out of time or track with the end frequency in the reward zone, and on a stage with penaliseWrongZone one that ends outside the zone (TrialLogic.cs TrialRules.End).
+  note: A trial that runs out of time or track with the end frequency in the reward zone, or ends outside the zone (TrialLogic.cs TrialRules.End).
 laserCondition:
   type: int
   description: "The Zapit condition sent to Zapit this trial (its conditions file's number, from 1), laser on or off: every trial of an optogenetics experiment has one, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics."
@@ -99,7 +99,7 @@ laserTriggerTime:
 endReason:
   type: string
   values: [FrequencyReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]
-  description: Why the trial ended - the reward frequency reached (on a stage without lickToReward, stages 0 and 1), a lick in the reward zone, too many wrong licks, the end of the stage's response window (responseWindowSeconds after the first pip), or the end of the track.
+  description: Why the trial ended - the reward frequency reached (on an auto-reward trial, drawn with the stage's autoRewardProbability, every trial of stages 0 and 1), a lick in the reward zone, too many wrong licks, the end of the stage's response window (responseWindowSeconds after the first pip), or the end of the track.
 trackLengthCm:
   type: double
   unit: cm
@@ -108,7 +108,7 @@ endPositionCm:
   type: double
   unit: cm
   description: Position along the track at the outcome (outcomeTime), behind the start never counted and capped at the track's length. Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
-toneEndFrequencyHz:
+auditoryEndFrequencyHz:
   type: double
   unit: Hz
   description: The tone sweep's frequency when the trial ended.

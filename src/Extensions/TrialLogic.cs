@@ -62,11 +62,9 @@ public class Trial : IZapitTrial
     public double rewardFloorHz;
     public double rewardCeilingHz;
     public double rewardOfferedUl;     // the stage's rewardSizeUl: what a reward on this trial gives
-    public bool lickToReward;
+    public bool autoReward;             // drawn with the stage's autoRewardProbability: rewarded on reaching the floor, licks ignored
     public int wrongLickLimit;
-    public bool penaliseWrongZone;
     public double responseWindowSeconds;     // from the first pip; NaN: none
-    public bool trackEndEndsTrial;
     public bool frequencyDrift;
     public int firstPipStep;            // the lead, max(laserToStimulusSeconds, 0), in steps after the trial start (step 0), in every experiment
     public bool optogenetics;
@@ -96,9 +94,6 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     public const double LaserMaxMarginSeconds = 0.25; // task.py LASER_MAX_MARGIN_SECONDS
     public const double MaxLeadSeconds = 0.2;            // task.py MAX_LEAD_SECONDS: the furthest the trigger may come before the first pip
     public const double UnlimitedWindowTriggerAfterSeconds = 2.0; // task.py UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS: the furthest after the first pip it may come on a stage without responseWindowSeconds
-    public const int DriftSteps = 500;           // a drift stage's frequency reaches the sweep's end on its own after this many steps (25 s)
-    public const double GratingStartCpd = 0.03;   // the grating's spatial frequency at the track's start
-    public const double GratingEndCpd = 0.3;      // and at its end
 
     readonly UclOpenCoenDomeNavigationTaskParameters task;
     readonly Sweep sweep;
@@ -166,7 +161,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     }
 
     /// <summary>A pip every 50 ms on the trial start's grid; after a gap in the Harp clock only the latest step due, the
-    /// missed pips not played at once. A stage without lickToReward ends on the pip that reaches the reward floor.</summary>
+    /// missed pips not played at once. An auto-reward trial ends on the pip that reaches the reward floor.</summary>
     public TrialOutcome Tick(Trial trial, TrialTimes times, ICollection<StimulusFrame> updates)
     {
         var due = Math.Max((int)Math.Floor((times.Now - times.TrialStartTime + 1e-9) / StepSeconds), trial.firstPipStep);
@@ -174,23 +169,26 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         nextStep = due + 1;
         last = Frame(trial, due);
         updates.Add(last);
-        return !trial.lickToReward && last.Row.toneFrequencyHz >= trial.rewardFloorHz ? End(trial, "FrequencyReached", times) : null;
+        return trial.autoReward && last.Row.auditoryFrequencyHz >= trial.rewardFloorHz ? End(trial, "FrequencyReached", times) : null;
     }
 
-    /// <summary>The left spout's licks count from the first pip: in the zone rewarded, outside toward wrongLickLimit.</summary>
+    /// <summary>The left spout's licks count from the first pip: in the zone rewarded, outside toward wrongLickLimit;
+    /// an auto-reward trial's licks are ignored.</summary>
     public TrialOutcome Lick(Trial trial, int spout, TrialTimes times, ICollection<StimulusFrame> updates)
     {
-        if (spout != 0 || last == null || !trial.lickToReward) return null;
-        if (OnTarget(trial, last.Row.toneFrequencyHz)) return End(trial, "Lick", times);
+        if (spout != 0 || last == null || trial.autoReward) return null;
+        if (OnTarget(trial, last.Row.auditoryFrequencyHz)) return End(trial, "Lick", times);
         wrongLicks++;
         return trial.wrongLickLimit > 0 && wrongLicks >= trial.wrongLickLimit ? End(trial, "WrongLickLimit", times) : null;
     }
 
-    /// <summary>The track's position from the trial start, and the trial's end at the end of the track (during the lead too).</summary>
+    /// <summary>The track's position from the trial start, and the trial's end at the end of the track (during the lead too).
+    /// On an auto-reward trial the next pip ends it instead: the track's end is the sweep's end, above every reward floor,
+    /// so that pip reaches the zone (FrequencyReached), as a mouse running past the floor between two pips expects.</summary>
     public TrialOutcome Wheel(Trial trial, double cm, TrialTimes times, ICollection<StimulusFrame> updates)
     {
         track.Update(cm);
-        return trial.trackEndEndsTrial && track.AtEnd ? End(trial, "TrackEnd", times) : null;
+        return !trial.autoReward && track.AtEnd ? End(trial, "TrackEnd", times) : null;
     }
 
     /// <summary>responseWindowSeconds from the first pip.</summary>
@@ -205,17 +203,20 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var position = Math.Round(track.Position / positionStep) * positionStep;
         var fraction = trial.trackLengthCm > 0 ? position / trial.trackLengthCm : 0;
         var tone = sweep.FrequencyAt(fraction);
-        var grating = GratingStartCpd * Math.Pow(GratingEndCpd / GratingStartCpd, Math.Max(0, Math.Min(1, fraction)));
+        var visual = task.VisualStimulus;
+        var gratingStart = visual.SpatialFrequencyStartCpd;
+        var gratingRatio = visual.SpatialFrequencyEndCpd / gratingStart;
+        var grating = gratingStart * Math.Pow(gratingRatio, Math.Max(0, Math.Min(1, fraction)));
         if (trial.frequencyDrift)
         {
-            var drift = (double)step / DriftSteps;
+            var drift = step * StepSeconds / task.DriftSeconds;
             tone += sweep.StartHz * Math.Pow(sweep.TrackRatio, drift) - sweep.StartHz;
-            grating += GratingStartCpd * Math.Pow(GratingEndCpd / GratingStartCpd, drift) - GratingStartCpd;
+            grating += gratingStart * Math.Pow(gratingRatio, drift) - gratingStart;
         }
         var active = trial.truncationFraction >= 1 || Math.Round(sweep.FractionOf(tone), 3) < trial.truncationFraction;
         return new StimulusFrame
         {
-            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, toneFrequencyHz = tone, stimulusActive = active, visualSpatialFrequencyCpd = grating },
+            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, auditoryFrequencyHz = tone, stimulusActive = active, visualSpatialFrequencyCpd = grating },
             Bin = sweep.BinOf(tone),
             ToneGain = active && trial.trialType != TrialDraw.Visual ? 1 : 0,
             GratingOpacity = active && trial.trialType != TrialDraw.Auditory ? 1 : 0
@@ -228,25 +229,25 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     }
 
     /// <summary>The outcome (Tom Childs' ProcessTrialEnd): a trial that ends on a lick in the zone or the zone reached
-    /// is rewarded; one that runs out of time or track in the zone is penalised, as is one ending outside it on a stage
-    /// with penaliseWrongZone. Reaching the zone is the floor alone, as in Tom's FreqAboveThreshold: a drifting stage's
-    /// tone can pass the ceiling (and the sweep's end) on the step it crosses the floor, and is rewarded.</summary>
+    /// is rewarded; one that runs out of time or track in the zone is penalised, as is one ending outside it. Reaching the
+    /// zone is the floor alone, as in Tom's FreqAboveThreshold: a drifting stage's tone can pass the ceiling (and the
+    /// sweep's end) on the step it crosses the floor, and is rewarded.</summary>
     TrialOutcome End(Trial trial, string reason, TrialTimes times)
     {
-        var tone = last != null ? last.Row.toneFrequencyHz : 0;
+        var tone = last != null ? last.Row.auditoryFrequencyHz : 0;
         var onTarget = reason == "FrequencyReached" || OnTarget(trial, tone);
         var ranOut = reason == "ResponseWindowEnd" || reason == "TrackEnd";
         var rewarded = onTarget && (reason == "Lick" || reason == "FrequencyReached");
-        var penalised = onTarget ? ranOut : trial.penaliseWrongZone;
+        var penalised = !onTarget || ranOut;
         // The shared block (trialNumber, the times, rewardOfferedUl, rewarded, the penalty, the laser) is lib-open-rigs'.
         var row = SharedTrialColumns.Fill(new TrialRow
         {
             trialType = trial.trialType,
-            outcome = rewarded ? TrialOutcomes.Correct : ranOut || !trial.lickToReward ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
+            outcome = rewarded ? TrialOutcomes.Correct : ranOut ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
             endReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
             endPositionCm = track.Position,
-            toneEndFrequencyHz = tone,
+            auditoryEndFrequencyHz = tone,
             visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             truncationFraction = trial.truncationFraction
         }, trial, times, trial.rewardOfferedUl, rewarded, penalised, task.Penalty.TimeoutSeconds, task.Penalty.Sound.Enabled);
@@ -336,6 +337,10 @@ public class TrialDraw
         // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
         foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage " + stage + ": " + p);
         number("stage " + stage + "'s trackLengthScale", row.TrackLengthScale, true);
+        if (!(row.AutoRewardProbability >= 0 && row.AutoRewardProbability <= 1)) problems.Add("stage " + stage + "'s autoRewardProbability must be 0 to 1");
+        number("driftSeconds", task.DriftSeconds, true);
+        number("visualStimulus.spatialFrequencyStartCpd", task.VisualStimulus.SpatialFrequencyStartCpd, true);
+        number("visualStimulus.spatialFrequencyEndCpd", task.VisualStimulus.SpatialFrequencyEndCpd, true);
         problems.AddRange(TrialDraw.WeightProblems(task, row));
         if (row.ResponseWindowSeconds.HasValue) number("stage " + stage + "'s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
         // The lead: the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
@@ -392,11 +397,8 @@ public class TrialDraw
         t.rewardFloorHz = stage.RewardFloorHz;
         t.rewardCeilingHz = stage.RewardCeilingHz;
         t.rewardOfferedUl = stage.RewardSizeUl;
-        t.lickToReward = stage.LickToReward;
         t.wrongLickLimit = stage.WrongLickLimit;
-        t.penaliseWrongZone = stage.PenaliseWrongZone;
         t.responseWindowSeconds = stage.ResponseWindowSeconds ?? double.NaN;
-        t.trackEndEndsTrial = stage.TrackEndEndsTrial;
         t.frequencyDrift = stage.FrequencyDrift;
         var opto = task.Optogenetics;
         t.optogenetics = opto.Enabled;
@@ -409,7 +411,8 @@ public class TrialDraw
                 out t.laserCondition, out t.laserOn, out t.laserPowerMw);
             t.laserMaxSeconds = opto.LaserMaxSeconds;
         }
-        t.trialType = TypeNames[WeightedType(task, stage)];   // drawn last, so the draws above are as before trialWeights
+        t.trialType = TypeNames[WeightedType(task, stage)];
+        t.autoReward = random.NextDouble() < stage.AutoRewardProbability;   // so 1 is every trial and 0 none
         return t;
     }
 

@@ -242,15 +242,13 @@
           "title": "TrialWeights"
         },
         "rewardFloorHz": {
-          "description": "Lower frequency of the reward zone, in Hz",
-          "maximum": 25000,
+          "description": "Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)",
           "minimum": 1,
           "title": "RewardFloorHz",
           "type": "number"
         },
         "rewardCeilingHz": {
-          "description": "Upper frequency of the reward zone, in Hz",
-          "maximum": 25000,
+          "description": "Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)",
           "minimum": 1,
           "title": "RewardCeilingHz",
           "type": "number"
@@ -262,21 +260,18 @@
           "title": "RewardSizeUl",
           "type": "number"
         },
-        "lickToReward": {
-          "description": "Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed",
-          "title": "LickToReward",
-          "type": "boolean"
+        "autoRewardProbability": {
+          "description": "The chance a trial is rewarded without a correct response, drawn per trial: such a trial ends rewarded on the pip whose tone reaches the reward floor, no lick needed, and its licks are ignored (endReason FrequencyReached); on the others only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "AutoRewardProbability",
+          "type": "number"
         },
         "wrongLickLimit": {
           "description": "Licks outside the zone that end the trial; 0: wrong licks never end it",
           "minimum": 0,
           "title": "WrongLickLimit",
           "type": "integer"
-        },
-        "penaliseWrongZone": {
-          "description": "Whether a trial that ends outside the reward zone is penalised. A trial that runs out of time or track with the frequency in the zone is penalised on every stage",
-          "title": "PenaliseWrongZone",
-          "type": "boolean"
         },
         "responseWindowSeconds": {
           "anyOf": [
@@ -291,11 +286,6 @@
           "default": null,
           "description": "The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes",
           "title": "ResponseWindowSeconds"
-        },
-        "trackEndEndsTrial": {
-          "description": "Whether reaching the end of the track ends the trial",
-          "title": "TrackEndEndsTrial",
-          "type": "boolean"
         },
         "trackLengthScale": {
           "description": "The drawn track length is multiplied by this",
@@ -320,10 +310,8 @@
         "rewardFloorHz",
         "rewardCeilingHz",
         "rewardSizeUl",
-        "lickToReward",
+        "autoRewardProbability",
         "wrongLickLimit",
-        "penaliseWrongZone",
-        "trackEndEndsTrial",
         "trackLengthScale",
         "frequencyDrift",
         "truncatedTrialFraction"
@@ -367,7 +355,7 @@
       "type": "object"
     },
     "TrialTypeWeights": {
-      "description": "Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),\ncoen-dome-decision-making's names.",
+      "description": "Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed).\naudiovisualCoherent, audiovisualConflict and neutral are coen-dome-decision-making's names, kept so one analysis reads both tasks.",
       "properties": {
         "visual": {
           "description": "The grating alone",
@@ -481,13 +469,13 @@
           "description": "Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead",
           "title": "TrialWeights"
         },
-        "tonePips": {
+        "auditoryStimulus": {
           "$ref": "#/$defs/StimulusSound",
           "default": {
             "levelDbfs": -30.0
           },
           "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)",
-          "title": "TonePips"
+          "title": "AuditoryStimulus"
         },
         "rewardTone": {
           "$ref": "#/$defs/RewardTone",
@@ -504,12 +492,27 @@
           },
           "description": "The lab's background white noise (rig.yml's speakerArray.backgroundNoise) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)"
         },
+        "visualStimulus": {
+          "$ref": "#/$defs/VisualStimulus",
+          "default": {
+            "spatialFrequencyStartCpd": 0.03,
+            "spatialFrequencyEndCpd": 0.3
+          },
+          "description": "The grating's spatial frequencies along the track"
+        },
         "positionStepCm": {
           "default": 1,
           "description": "The distance run is rounded to this before it sets the frequency, in cm",
           "minimum": 1,
           "title": "PositionStepCm",
           "type": "integer"
+        },
+        "driftSeconds": {
+          "default": 25.0,
+          "description": "On a stage with frequencyDrift, the time from the trial start over which the tone and grating drift on their own from the sweep's start to its end, in seconds, added to what the distance run sets. One value for every drift stage, as there is one sweep",
+          "exclusiveMinimum": 0,
+          "title": "DriftSeconds",
+          "type": "number"
         },
         "trialStructure": {
           "$ref": "#/$defs/TrialStructure",
@@ -558,6 +561,27 @@
         "trainingStages"
       ],
       "title": "UclOpenCoenDomeNavigationTaskParameters",
+      "type": "object"
+    },
+    "VisualStimulus": {
+      "description": "The grating: its spatial frequency runs from start to end along the track on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame).",
+      "properties": {
+        "spatialFrequencyStartCpd": {
+          "default": 0.03,
+          "description": "The grating's spatial frequency at the track's start, in cycles per degree",
+          "exclusiveMinimum": 0,
+          "title": "SpatialFrequencyStartCpd",
+          "type": "number"
+        },
+        "spatialFrequencyEndCpd": {
+          "default": 0.3,
+          "description": "The grating's spatial frequency at the track's end, in cycles per degree",
+          "exclusiveMinimum": 0,
+          "title": "SpatialFrequencyEndCpd",
+          "type": "number"
+        }
+      },
+      "title": "VisualStimulus",
       "type": "object"
     }
   },

@@ -825,15 +825,11 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _rewardSizeUl;
     
-        private bool _lickToReward;
+        private double _autoRewardProbability;
     
         private int _wrongLickLimit;
     
-        private bool _penaliseWrongZone;
-    
         private double? _responseWindowSeconds;
-    
-        private bool _trackEndEndsTrial;
     
         private double _trackLengthScale;
     
@@ -858,11 +854,9 @@ namespace UclOpenCoenDomeNavigationTask
             _rewardFloorHz = other._rewardFloorHz;
             _rewardCeilingHz = other._rewardCeilingHz;
             _rewardSizeUl = other._rewardSizeUl;
-            _lickToReward = other._lickToReward;
+            _autoRewardProbability = other._autoRewardProbability;
             _wrongLickLimit = other._wrongLickLimit;
-            _penaliseWrongZone = other._penaliseWrongZone;
             _responseWindowSeconds = other._responseWindowSeconds;
-            _trackEndEndsTrial = other._trackEndEndsTrial;
             _trackLengthScale = other._trackLengthScale;
             _frequencyDrift = other._frequencyDrift;
             _truncatedTrialFraction = other._truncatedTrialFraction;
@@ -963,11 +957,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Lower frequency of the reward zone, in Hz
+        /// Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("rewardFloorHz", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardFloorHz")]
-        [System.ComponentModel.DescriptionAttribute("Lower frequency of the reward zone, in Hz")]
+        [System.ComponentModel.DescriptionAttribute("Lower frequency of the reward zone, in Hz, above the sweep\'s start (src/sounds/sw" +
+            "eep.json)")]
         public double RewardFloorHz
         {
             get
@@ -981,11 +976,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Upper frequency of the reward zone, in Hz
+        /// Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("rewardCeilingHz", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardCeilingHz")]
-        [System.ComponentModel.DescriptionAttribute("Upper frequency of the reward zone, in Hz")]
+        [System.ComponentModel.DescriptionAttribute("Upper frequency of the reward zone, in Hz, at most the sweep\'s end (src/sounds/sw" +
+            "eep.json)")]
         public double RewardCeilingHz
         {
             get
@@ -1019,21 +1015,20 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed
+        /// The chance a trial is rewarded without a correct response, drawn per trial: such a trial ends rewarded on the pip whose tone reaches the reward floor, no lick needed, and its licks are ignored (endReason FrequencyReached); on the others only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("lickToReward", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickToReward")]
-        [System.ComponentModel.DescriptionAttribute("Whether a lick in the zone earns the reward; false rewards reaching the zone, no " +
-            "lick needed")]
-        public bool LickToReward
+        [Newtonsoft.Json.JsonPropertyAttribute("autoRewardProbability", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoRewardProbability")]
+        [System.ComponentModel.DescriptionAttribute(@"The chance a trial is rewarded without a correct response, drawn per trial: such a trial ends rewarded on the pip whose tone reaches the reward floor, no lick needed, and its licks are ignored (endReason FrequencyReached); on the others only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised")]
+        public double AutoRewardProbability
         {
             get
             {
-                return _lickToReward;
+                return _autoRewardProbability;
             }
             set
             {
-                _lickToReward = value;
+                _autoRewardProbability = value;
             }
         }
     
@@ -1056,26 +1051,6 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Whether a trial that ends outside the reward zone is penalised. A trial that runs out of time or track with the frequency in the zone is penalised on every stage
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("penaliseWrongZone", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="penaliseWrongZone")]
-        [System.ComponentModel.DescriptionAttribute("Whether a trial that ends outside the reward zone is penalised. A trial that runs" +
-            " out of time or track with the frequency in the zone is penalised on every stage" +
-            "")]
-        public bool PenaliseWrongZone
-        {
-            get
-            {
-                return _penaliseWrongZone;
-            }
-            set
-            {
-                _penaliseWrongZone = value;
-            }
-        }
-    
-        /// <summary>
         /// The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("responseWindowSeconds")]
@@ -1092,24 +1067,6 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _responseWindowSeconds = value;
-            }
-        }
-    
-        /// <summary>
-        /// Whether reaching the end of the track ends the trial
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("trackEndEndsTrial", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackEndEndsTrial")]
-        [System.ComponentModel.DescriptionAttribute("Whether reaching the end of the track ends the trial")]
-        public bool TrackEndEndsTrial
-        {
-            get
-            {
-                return _trackEndEndsTrial;
-            }
-            set
-            {
-                _trackEndEndsTrial = value;
             }
         }
     
@@ -1187,11 +1144,9 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("RewardFloorHz = " + _rewardFloorHz + ", ");
             stringBuilder.Append("RewardCeilingHz = " + _rewardCeilingHz + ", ");
             stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl + ", ");
-            stringBuilder.Append("LickToReward = " + _lickToReward + ", ");
+            stringBuilder.Append("AutoRewardProbability = " + _autoRewardProbability + ", ");
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
-            stringBuilder.Append("PenaliseWrongZone = " + _penaliseWrongZone + ", ");
             stringBuilder.Append("ResponseWindowSeconds = " + _responseWindowSeconds + ", ");
-            stringBuilder.Append("TrackEndEndsTrial = " + _trackEndEndsTrial + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
             stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");
             stringBuilder.Append("TruncatedTrialFraction = " + _truncatedTrialFraction);
@@ -1334,12 +1289,14 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),
-    ///coen-dome-decision-making's names.
+    /// Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed).
+    ///audiovisualCoherent, audiovisualConflict and neutral are coen-dome-decision-making's names, kept so one analysis reads both tasks.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("Relative draw weight of each trial type, by the name the trial log gives it (tria" +
-        "lType: what the trial showed),\ncoen-dome-decision-making\'s names.")]
+        "lType: what the trial showed).\naudiovisualCoherent, audiovisualConflict and neut" +
+        "ral are coen-dome-decision-making\'s names, kept so one analysis reads both tasks" +
+        ".")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrialTypeWeights
@@ -1590,13 +1547,17 @@ namespace UclOpenCoenDomeNavigationTask
     
         private TrialTypeWeights _trialWeights;
     
-        private StimulusSound _tonePips;
+        private StimulusSound _auditoryStimulus;
     
         private RewardTone _rewardTone;
     
         private BackgroundNoise _backgroundNoise;
     
+        private VisualStimulus _visualStimulus;
+    
         private int _positionStepCm;
+    
+        private double _driftSeconds;
     
         private TrialStructure _trialStructure;
     
@@ -1611,10 +1572,12 @@ namespace UclOpenCoenDomeNavigationTask
         public UclOpenCoenDomeNavigationTaskParameters()
         {
             _trialWeights = new TrialTypeWeights();
-            _tonePips = new StimulusSound();
+            _auditoryStimulus = new StimulusSound();
             _rewardTone = new RewardTone();
             _backgroundNoise = new BackgroundNoise();
+            _visualStimulus = new VisualStimulus();
             _positionStepCm = 1;
+            _driftSeconds = 25D;
             _trialStructure = new TrialStructure();
             _penalty = new Penalty();
             _truncation = new Truncation();
@@ -1626,10 +1589,12 @@ namespace UclOpenCoenDomeNavigationTask
         {
             _rngSeed = other._rngSeed;
             _trialWeights = other._trialWeights;
-            _tonePips = other._tonePips;
+            _auditoryStimulus = other._auditoryStimulus;
             _rewardTone = other._rewardTone;
             _backgroundNoise = other._backgroundNoise;
+            _visualStimulus = other._visualStimulus;
             _positionStepCm = other._positionStepCm;
+            _driftSeconds = other._driftSeconds;
             _trialStructure = other._trialStructure;
             _penalty = other._penalty;
             _truncation = other._truncation;
@@ -1678,19 +1643,19 @@ namespace UclOpenCoenDomeNavigationTask
         /// The tone sweep's pips (src/sounds/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("tonePips")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="tonePips")]
+        [Newtonsoft.Json.JsonPropertyAttribute("auditoryStimulus")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditoryStimulus")]
         [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/sounds/all_waveforms.bin), each played at levelDbfs (o" +
             "pen_rigs.core.task StimulusSound)")]
-        public StimulusSound TonePips
+        public StimulusSound AuditoryStimulus
         {
             get
             {
-                return _tonePips;
+                return _auditoryStimulus;
             }
             set
             {
-                _tonePips = value;
+                _auditoryStimulus = value;
             }
         }
     
@@ -1736,6 +1701,25 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
+        /// The grating's spatial frequencies along the track
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("visualStimulus")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visualStimulus")]
+        [System.ComponentModel.DescriptionAttribute("The grating\'s spatial frequencies along the track")]
+        public VisualStimulus VisualStimulus
+        {
+            get
+            {
+                return _visualStimulus;
+            }
+            set
+            {
+                _visualStimulus = value;
+            }
+        }
+    
+        /// <summary>
         /// The distance run is rounded to this before it sets the frequency, in cm
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("positionStepCm")]
@@ -1750,6 +1734,27 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _positionStepCm = value;
+            }
+        }
+    
+        /// <summary>
+        /// On a stage with frequencyDrift, the time from the trial start over which the tone and grating drift on their own from the sweep's start to its end, in seconds, added to what the distance run sets. One value for every drift stage, as there is one sweep
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("driftSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="driftSeconds")]
+        [System.ComponentModel.DescriptionAttribute("On a stage with frequencyDrift, the time from the trial start over which the tone" +
+            " and grating drift on their own from the sweep\'s start to its end, in seconds, a" +
+            "dded to what the distance run sets. One value for every drift stage, as there is" +
+            " one sweep")]
+        public double DriftSeconds
+        {
+            get
+            {
+                return _driftSeconds;
+            }
+            set
+            {
+                _driftSeconds = value;
             }
         }
     
@@ -1864,15 +1869,112 @@ namespace UclOpenCoenDomeNavigationTask
         {
             stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
             stringBuilder.Append("TrialWeights = " + _trialWeights + ", ");
-            stringBuilder.Append("TonePips = " + _tonePips + ", ");
+            stringBuilder.Append("AuditoryStimulus = " + _auditoryStimulus + ", ");
             stringBuilder.Append("RewardTone = " + _rewardTone + ", ");
             stringBuilder.Append("BackgroundNoise = " + _backgroundNoise + ", ");
+            stringBuilder.Append("VisualStimulus = " + _visualStimulus + ", ");
             stringBuilder.Append("PositionStepCm = " + _positionStepCm + ", ");
+            stringBuilder.Append("DriftSeconds = " + _driftSeconds + ", ");
             stringBuilder.Append("TrialStructure = " + _trialStructure + ", ");
             stringBuilder.Append("Penalty = " + _penalty + ", ");
             stringBuilder.Append("Truncation = " + _truncation + ", ");
             stringBuilder.Append("Optogenetics = " + _optogenetics + ", ");
             stringBuilder.Append("TrainingStages = " + _trainingStages);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// The grating: its spatial frequency runs from start to end along the track on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("The grating: its spatial frequency runs from start to end along the track on a lo" +
+        "g scale, as the tone does (TrialLogic.cs TrialRules.Frame).")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class VisualStimulus
+    {
+    
+        private double _spatialFrequencyStartCpd;
+    
+        private double _spatialFrequencyEndCpd;
+    
+        public VisualStimulus()
+        {
+            _spatialFrequencyStartCpd = 0.03D;
+            _spatialFrequencyEndCpd = 0.3D;
+        }
+    
+        protected VisualStimulus(VisualStimulus other)
+        {
+            _spatialFrequencyStartCpd = other._spatialFrequencyStartCpd;
+            _spatialFrequencyEndCpd = other._spatialFrequencyEndCpd;
+        }
+    
+        /// <summary>
+        /// The grating's spatial frequency at the track's start, in cycles per degree
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("spatialFrequencyStartCpd")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="spatialFrequencyStartCpd")]
+        [System.ComponentModel.DescriptionAttribute("The grating\'s spatial frequency at the track\'s start, in cycles per degree")]
+        public double SpatialFrequencyStartCpd
+        {
+            get
+            {
+                return _spatialFrequencyStartCpd;
+            }
+            set
+            {
+                _spatialFrequencyStartCpd = value;
+            }
+        }
+    
+        /// <summary>
+        /// The grating's spatial frequency at the track's end, in cycles per degree
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("spatialFrequencyEndCpd")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="spatialFrequencyEndCpd")]
+        [System.ComponentModel.DescriptionAttribute("The grating\'s spatial frequency at the track\'s end, in cycles per degree")]
+        public double SpatialFrequencyEndCpd
+        {
+            get
+            {
+                return _spatialFrequencyEndCpd;
+            }
+            set
+            {
+                _spatialFrequencyEndCpd = value;
+            }
+        }
+    
+        public System.IObservable<VisualStimulus> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new VisualStimulus(this)));
+        }
+    
+        public System.IObservable<VisualStimulus> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new VisualStimulus(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("SpatialFrequencyStartCpd = " + _spatialFrequencyStartCpd + ", ");
+            stringBuilder.Append("SpatialFrequencyEndCpd = " + _spatialFrequencyEndCpd);
             return true;
         }
     
@@ -1968,6 +2070,11 @@ namespace UclOpenCoenDomeNavigationTask
         {
             return Process<UclOpenCoenDomeNavigationTaskParameters>(source);
         }
+
+        public System.IObservable<string> Process(System.IObservable<VisualStimulus> source)
+        {
+            return Process<VisualStimulus>(source);
+        }
     }
 
 
@@ -1990,6 +2097,7 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialTypeWeights>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<VisualStimulus>))]
     public partial class DeserializeFromJson : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {
     
@@ -2098,6 +2206,11 @@ namespace UclOpenCoenDomeNavigationTask
         {
             return Process<UclOpenCoenDomeNavigationTaskParameters>(source);
         }
+
+        public System.IObservable<string> Process(System.IObservable<VisualStimulus> source)
+        {
+            return Process<VisualStimulus>(source);
+        }
     }
 
 
@@ -2120,6 +2233,7 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialTypeWeights>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Truncation>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<VisualStimulus>))]
     public partial class DeserializeFromYaml : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {
     

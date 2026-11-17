@@ -423,7 +423,7 @@ public class TrialRulesTests
         var pips = rig.Events.Where(e => e.Kind == TrialEventKind.Update).Select(e => e.Seconds).ToList();
         Assert.AreEqual(100.001 + start.Trial.itiSeconds, pips[0], 0.0011);   // the first pip: exactly the interval after its start
         for (int i = 1; i < pips.Count; i++) Assert.AreEqual(0.05, pips[i] - pips[i - 1], 1e-6);
-        Assert.IsTrue(rig.Events.Where(e => e.Kind == TrialEventKind.Update).All(e => e.Update.Row.toneFrequencyHz == 2000 && e.Update.Bin == 0));
+        Assert.IsTrue(rig.Events.Where(e => e.Kind == TrialEventKind.Update).All(e => e.Update.Row.auditoryFrequencyHz == 2000 && e.Update.Bin == 0));
     }
 
     [TestMethod]
@@ -452,9 +452,54 @@ public class TrialRulesTests
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
-        Assert.IsTrue(outcome.Outcome.Row.Value.toneEndFrequencyHz >= 18000);
+        Assert.IsTrue(outcome.Outcome.Row.Value.auditoryEndFrequencyHz >= 18000);
         Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime > 10 && outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime < 25);
         Assert.AreEqual(outcome.Seconds, outcome.Outcome.Row.Value.outcomeTime, "outcomeTime is the row's own time, harpTime");
+    }
+
+    [TestMethod]
+    public void DriftSecondsAndTheGratingsFrequenciesAreTheTaskFiles()
+    {
+        var task = Fixture.Task();
+        task.DriftSeconds = 5;
+        task.VisualStimulus.SpatialFrequencyStartCpd = 0.05;
+        var rig = new Rig(Fixture.Setup(task, 0));
+        var outcome = rig.RunTo(TrialEventKind.Outcome);
+        var first = rig.Events.First(e => e.Kind == TrialEventKind.Update).Update.Row;
+        Assert.AreEqual(0.05, first.visualSpatialFrequencyCpd, 0.005);   // drifted a little by the first pip, after the lead
+        Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
+        Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime < 5);
+    }
+
+    [TestMethod]
+    public void AutoRewardIsDrawnPerTrialWithTheStagesProbability()
+    {
+        var task = Fixture.Task();
+        task.TrainingStages[4].AutoRewardProbability = 0.5;
+        var draw = Fixture.Draw(task, 4);
+        var auto = Enumerable.Range(0, 400).Count(i => draw.Next().autoReward);
+        Assert.IsTrue(auto > 150 && auto < 250, auto.ToString());
+        Assert.IsTrue(Enumerable.Range(0, 50).All(i => Fixture.Draw(Fixture.Task(), 1).Next().autoReward));
+        var never = Fixture.Draw(Fixture.Task(), 4);
+        Assert.IsFalse(Enumerable.Range(0, 50).Any(i => never.Next().autoReward));
+        task.TrainingStages[4].AutoRewardProbability = 1.5;
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message, "autoRewardProbability");
+    }
+
+    [TestMethod]
+    public void AnAutoRewardTrialAtTheTracksEndEndsRewardedOnTheNextPip()
+    {
+        var task = Fixture.Task();
+        task.TrainingStages[4].AutoRewardProbability = 1;
+        var rig = new Rig(Fixture.Setup(task, 4));
+        var start = rig.RunTo(TrialEventKind.Start);
+        rig.Until(rig.Now + 0.1);
+        rig.Lick();                                         // ignored on an auto-reward trial
+        rig.Wheel(start.Trial.trackLengthCm + 5);
+        Assert.IsFalse(rig.Events.Any(e => e.Kind == TrialEventKind.Outcome));
+        var outcome = rig.RunTo(TrialEventKind.Outcome);
+        Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
+        Assert.IsTrue(outcome.Outcome.Rewarded && !outcome.Outcome.Row.Value.penalised);
     }
 
     [TestMethod]
@@ -800,7 +845,7 @@ public class TrialRulesTests
             outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == TrialEventKind.Outcome);
         }
         Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
-        Assert.IsTrue(outcome.Outcome.Row.Value.toneEndFrequencyHz > 25000, outcome.Outcome.Row.Value.toneEndFrequencyHz.ToString());
+        Assert.IsTrue(outcome.Outcome.Row.Value.auditoryEndFrequencyHz > 25000, outcome.Outcome.Row.Value.auditoryEndFrequencyHz.ToString());
         Assert.IsTrue(outcome.Outcome.Rewarded);
         Assert.AreEqual("Correct", outcome.Outcome.Row.Value.outcome);
         Assert.IsFalse(outcome.Outcome.Row.Value.penaltySoundOn);

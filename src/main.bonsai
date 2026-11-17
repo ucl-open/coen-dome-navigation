@@ -278,14 +278,14 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, tonePips.levelDbfs; read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound is OpenRigs.Audio's PlayPenaltySound, in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, auditoryStimulus.levelDbfs; read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound is OpenRigs.Audio's PlayPenaltySound, in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
               <Name>TaskConfig</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.TonePips.LevelDbfs</Selector>
+              <Selector>TaskParameters.AuditoryStimulus.LevelDbfs</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Speakers</Name>

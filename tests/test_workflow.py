@@ -197,7 +197,7 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
         assert not (buffer.findtext(AUD + "Channels") or "").strip()
     nodes, upstream = _audio_chain("PipBuffers")
     assert _labels(nodes, upstream)[-3:] == ["rx:Zip", "Item2", "aud:SpeakerBuffer"] and "rx:ToList" in _labels(nodes, upstream)
-    assert "TaskParameters.TonePips.LevelDbfs" in _labels(nodes, upstream)
+    assert "TaskParameters.AuditoryStimulus.LevelDbfs" in _labels(nodes, upstream)
 
 
 def test_the_background_noise_is_the_shared_include():

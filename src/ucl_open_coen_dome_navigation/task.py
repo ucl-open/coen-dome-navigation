@@ -5,7 +5,7 @@ The stage is the TrainingStage experiment setting, a row of trainingStages from 
 says what the stage does; trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
 sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made with the tone files
 (`uv run generate-waveforms`), not the task file's; every sound's level is the task file's (levelDbfs, in dBFS
-RMS: tonePips, rewardTone, backgroundNoise and penalty.sound)."""
+RMS: auditoryStimulus, rewardTone, backgroundNoise and penalty.sound)."""
 
 import json
 from pathlib import Path
@@ -51,6 +51,13 @@ class TrialStructure(TaskBlock):
         if self.iti_max_seconds < self.iti_min_seconds:
             raise ValueError("iti_max_seconds must be >= iti_min_seconds")
         return self
+
+
+class VisualStimulus(TaskBlock):
+    """The grating: its spatial frequency runs from start to end along the track on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame)."""
+
+    spatial_frequency_start_cpd: Double = Field(default=0.03, gt=0, description="The grating's spatial frequency at the track's start, in cycles per degree")
+    spatial_frequency_end_cpd: Double = Field(default=0.3, gt=0, description="The grating's spatial frequency at the track's end, in cycles per degree")
 
 
 class Truncation(TaskBlock):
@@ -111,8 +118,8 @@ UNDEFINED_TYPES = ("audiovisual_conflict", "neutral")  # decision-making's trial
 
 
 class TrialTypeWeights(TaskBlock):
-    """Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),
-    coen-dome-decision-making's names."""
+    """Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed).
+    audiovisualCoherent, audiovisualConflict and neutral are coen-dome-decision-making's names, kept so one analysis reads both tasks."""
 
     visual: int = Field(ge=0, description="The grating alone")
     auditory: int = Field(ge=0, description="The tone sweep alone")
@@ -138,22 +145,22 @@ class TrainingStage(QuietWait):
         default=None,
         description="This stage's own trialWeights, replacing the task's (the mouse's) for this stage; null: the task's trialWeights apply",
     )
-    reward_floor_hz: Double = Field(ge=1, le=25000, description="Lower frequency of the reward zone, in Hz")
-    reward_ceiling_hz: Double = Field(ge=1, le=25000, description="Upper frequency of the reward zone, in Hz")
+    reward_floor_hz: Double = Field(ge=1, description="Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)")
+    reward_ceiling_hz: Double = Field(ge=1, description="Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)")
     reward_size_ul: Double = Field(
         gt=0,
         le=MAX_REWARD_UL,
         description=f"Microlitres each reward gives, at most {MAX_REWARD_UL} (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json). An uncalibrated valve stops the workflow at Start",
     )
-    lick_to_reward: Bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
-    wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
-    penalise_wrong_zone: Bool = Field(
-        description="Whether a trial that ends outside the reward zone is penalised. A trial that runs out of time or track with the frequency in the zone is penalised on every stage"
+    auto_reward_probability: Double = Field(
+        ge=0,
+        le=1,
+        description="The chance a trial is rewarded without a correct response, drawn per trial: such a trial ends rewarded on the pip whose tone reaches the reward floor, no lick needed, and its licks are ignored (endReason FrequencyReached); on the others only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised",
     )
+    wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
     response_window_seconds: Double | None = Field(
         default=None, gt=0, description="The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes"
     )
-    track_end_ends_trial: Bool = Field(description="Whether reaching the end of the track ends the trial")
     track_length_scale: Double = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: Bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
     truncated_trial_fraction: Double = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")
@@ -172,7 +179,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         default=TrialTypeWeights(visual=0, auditory=1, audiovisual_coherent=0, audiovisual_conflict=0, neutral=0),
         description="Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead",
     )
-    tone_pips: StimulusSound = Field(
+    auditory_stimulus: StimulusSound = Field(
         default=StimulusSound(), description="The tone sweep's pips (src/sounds/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"
     )
     reward_tone: RewardTone = Field(
@@ -181,7 +188,13 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
     background_noise: BackgroundNoise = Field(
         default=BackgroundNoise(), description="The lab's background white noise (rig.yml's speakerArray.backgroundNoise) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)"
     )
+    visual_stimulus: VisualStimulus = Field(default=VisualStimulus(), description="The grating's spatial frequencies along the track")
     position_step_cm: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
+    drift_seconds: Double = Field(
+        default=25.0,
+        gt=0,
+        description="On a stage with frequencyDrift, the time from the trial start over which the tone and grating drift on their own from the sweep's start to its end, in seconds, added to what the distance run sets. One value for every drift stage, as there is one sweep",
+    )
     trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
     penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
     truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")

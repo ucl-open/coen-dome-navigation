@@ -98,7 +98,7 @@ public class StimulusStateRow
 {
     public int trialNumber;
     public double positionCm;
-    public double toneFrequencyHz;
+    public double auditoryFrequencyHz;
     public bool stimulusActive;
     public double visualSpatialFrequencyCpd;
 }

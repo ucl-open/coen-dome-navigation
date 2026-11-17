@@ -24,7 +24,7 @@ public class TrialRow
     public string endReason;
     public double trackLengthCm;
     public double endPositionCm;
-    public double toneEndFrequencyHz;
+    public double auditoryEndFrequencyHz;
     public double visualEndSpatialFrequencyCpd;
     public double truncationFraction;
 }

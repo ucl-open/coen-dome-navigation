@@ -15,14 +15,18 @@ taskParameters:
   # The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms); each sound's level is here,
   # in dBFS RMS of the sound as stored, before equalisation: the levels mice have always had (Tom Childs' pips were
   # scaled by 0.05 twice, hence quiet; the lab's defaults are lib-open-rigs' OpenRigs.Audio SoundLevel).
-  tonePips:
+  auditoryStimulus:           # the tone sweep's pips
     levelDbfs: -58.1
   rewardTone:
     levelDbfs: -55.1
   backgroundNoise:            # white noise on every speaker, unequalised, faded in at Ready at the level launched
     enabled: true
     levelDbfs: -64.1
+  visualStimulus:             # the grating's spatial frequency, from the track's start to its end on a log scale
+    spatialFrequencyStartCpd: 0.03
+    spatialFrequencyEndCpd: 0.3
   positionStepCm: 1           # the distance run is rounded to this before it sets the frequency
+  driftSeconds: 25.0          # a frequencyDrift stage's tone and grating reach the sweep's end on their own after this long from the trial start
   trialStructure:
     itiMinSeconds: 2.0        # from the outcome (after any timeout) to the first pip, drinking included:
     itiMaxSeconds: 3.0        # Tom's 2 s then 0 or 1 s, now drawn evenly between
@@ -51,14 +55,12 @@ taskParameters:
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
-      lickToReward: false
+      autoRewardProbability: 1.0   # every trial rewarded on reaching the floor, no lick needed
       wrongLickLimit: 0
-      penaliseWrongZone: false
       lickQuietSeconds: 0
       wheelQuietSeconds: 0
       wheelQuietCm: 0
       responseWindowSeconds: null   # the window never closes
-      trackEndEndsTrial: false
       trackLengthScale: 0.125
       frequencyDrift: true
       truncatedTrialFraction: 0.0
@@ -67,30 +69,26 @@ taskParameters:
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
-      lickToReward: false
+      autoRewardProbability: 1.0   # every trial rewarded on reaching the floor, no lick needed
       wrongLickLimit: 0
-      penaliseWrongZone: false
       lickQuietSeconds: 0
       wheelQuietSeconds: 0
       wheelQuietCm: 0
       responseWindowSeconds: null   # the window never closes
-      trackEndEndsTrial: false
       trackLengthScale: 0.125
       frequencyDrift: false
       truncatedTrialFraction: 0.0
-    # Stage 2: a lick anywhere above the floor; full tracks; the end of the track ends the trial
+    # Stage 2: a lick anywhere above the floor; full tracks
     - label: Lick to Report
       rewardFloorHz: 15248
       rewardCeilingHz: 25000
       rewardSizeUl: 3.0
-      lickToReward: true
+      autoRewardProbability: 0.0
       wrongLickLimit: 0
-      penaliseWrongZone: false
       lickQuietSeconds: 0
       wheelQuietSeconds: 0
       wheelQuietCm: 0
       responseWindowSeconds: null   # the window never closes
-      trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
       truncatedTrialFraction: 0.0
@@ -99,14 +97,12 @@ taskParameters:
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0
-      lickToReward: true
+      autoRewardProbability: 0.0
       wrongLickLimit: 8
-      penaliseWrongZone: true
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       wheelQuietSeconds: 0
       wheelQuietCm: 0
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
       truncatedTrialFraction: 0.0
@@ -115,14 +111,12 @@ taskParameters:
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0
-      lickToReward: true
+      autoRewardProbability: 0.0
       wrongLickLimit: 5
-      penaliseWrongZone: true
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       wheelQuietSeconds: 0
       wheelQuietCm: 0
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
       truncatedTrialFraction: 0.0
@@ -130,14 +124,12 @@ taskParameters:
       rewardFloorHz: 15248
       rewardCeilingHz: 21248
       rewardSizeUl: 3.0
-      lickToReward: true
+      autoRewardProbability: 0.0
       wrongLickLimit: 5
-      penaliseWrongZone: true
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       wheelQuietSeconds: 0
       wheelQuietCm: 0
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      trackEndEndsTrial: true
       trackLengthScale: 1.0
       frequencyDrift: false
       truncatedTrialFraction: 0.16

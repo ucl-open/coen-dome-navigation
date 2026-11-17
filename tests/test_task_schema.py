@@ -48,6 +48,18 @@ def test_the_stage_rows_keep_tom_s_reward_zones():
     assert zones == [(18000, 25000)] * 2 + [(floor, 25000)] + [(floor, ceiling)] * 3
 
 
+def test_stages_0_and_1_reward_every_trial_on_reaching_the_zone():
+    rows = task()["taskParameters"]["trainingStages"]
+    assert [r["autoRewardProbability"] for r in rows] == [1.0] * 2 + [0.0] * 4
+
+
+def test_a_reward_zone_past_the_sweep_s_end_is_refused():
+    doc = task()
+    doc["taskParameters"]["trainingStages"][2]["rewardCeilingHz"] = 25001
+    with pytest.raises(pydantic.ValidationError, match="not inside the sweep"):
+        UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
+
+
 def test_the_response_window_and_quiet_wait_are_one_optional_field_each_per_stage():
     # A stage's responseWindowSeconds, null for none; the quiet waits, 0 for off.
     rows = task()["taskParameters"]["trainingStages"]
@@ -365,7 +377,9 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
 
 
 @pytest.mark.parametrize("where, key, value", [
-    ((), "positionStepCm", 0), (("trainingStages", 0), "wrongLickLimit", -1), (("trainingStages", 0), "rewardSizeUl", 0),
+    ((), "positionStepCm", 0), ((), "driftSeconds", 0), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
+    (("trainingStages", 0), "autoRewardProbability", 1.5), (("trainingStages", 0), "autoRewardProbability", -0.1),
+    (("trainingStages", 0), "wrongLickLimit", -1), (("trainingStages", 0), "rewardSizeUl", 0),
     (("trialWeights",), "visual", -1)])
 def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
     # The task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
