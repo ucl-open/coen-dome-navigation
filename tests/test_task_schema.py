@@ -14,6 +14,8 @@ from ucl_open_coen_dome_navigation import waveforms
 from ucl_open_coen_dome_navigation.task import (
     STEP_SECONDS,
     LASER_MAX_MARGIN_SECONDS,
+    CONDITION_FIELDS,
+    TRIAL_TYPES,
     OptogeneticsSettings,
     UclOpenCoenDomeNavigationTaskLogic,
     UclOpenCoenDomeNavigationTaskParameters,
@@ -64,37 +66,46 @@ def test_a_reward_zone_past_the_sweep_s_end_is_refused():
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 
 
-def test_the_mouse_s_weights_are_auditory_alone():
-    # Top-level trialWeights, set per mouse on Setup and carried (a pipeline stage may set the whole map).
+def test_the_task_file_s_conditions_are_its_old_weights():
+    # trialConditions replaced trialWeights { visual: 0, auditory: 1, audiovisualCoherent: 0, ... }: one condition per type the
+    # corridor shows (Setup edits only the weights), each set empty. One whole value (x-whole), no condition fields yet.
     params = task()["taskParameters"]
-    assert "modality" not in params
-    assert params["trialWeights"] == {"visual": 0, "auditory": 1, "audiovisualCoherent": 0, "audiovisualConflict": 0, "neutral": 0}
+    assert "modality" not in params and "trialWeights" not in params
+    assert params["trialConditions"] == [
+        {"type": "visual", "weight": 0, "set": {}}, {"type": "auditory", "weight": 1, "set": {}}, {"type": "audiovisualCoherent", "weight": 0, "set": {}}]
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
-
-
-WEIGHTS = {"visual": 0, "auditory": 1, "audiovisualCoherent": 0, "audiovisualConflict": 0, "neutral": 0}
+    params_schema = schema["$defs"]["UclOpenCoenDomeNavigationTaskParameters"]
+    assert params_schema["x-conditionFields"] == {} == CONDITION_FIELDS
+    assert params_schema["properties"]["trialConditions"]["x-whole"] is True
+    assert list(TRIAL_TYPES) == [t["type"] for t in params["trialConditions"]]
 
 
 @pytest.mark.parametrize(
-    "change, match",
+    "conditions, match",
     [
-        ({"auditory": 0}, "weight above 0"),
-        ({"visual": -1}, "greater than or equal"),
-        ({"audiovisualConflict": 1}, "audiovisual_conflict must be 0: that trial is not defined in this task yet"),
-        ({"neutral": 2}, "neutral must be 0: that trial is not defined in this task yet"),
+        ([], "at least 1 item"),
+        ([{"type": "auditory", "weight": 0}], "weight above 0"),
+        ([{"type": "auditory", "weight": -1}], "greater than or equal"),
+        ([{"type": "auditory", "weight": 1}, {"type": "neutral", "weight": 0}], r"trial_conditions\[1\] \(neutral\): its type is not one of visual, auditory, audiovisualCoherent"),
+        ([{"type": "audiovisualConflict", "weight": 1}], "its type is not one of"),
+        ([{"type": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets rewardSizeUl, which is not a condition field of visual"),
+        ([{"type": "visual", "weight": 1, "colour": 1}], "Extra inputs"),
     ],
 )
-def test_weights_all_zero_negative_or_for_an_undefined_trial_are_refused(change, match):
+def test_conditions_need_a_weight_a_shown_type_and_an_empty_set(conditions, match):
     params = task()["taskParameters"]
-    params["trialWeights"] = {**WEIGHTS, **change}
+    params["trialConditions"] = conditions
     with pytest.raises(pydantic.ValidationError, match=match):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 
-def test_a_missing_weight_key_is_refused():
+def test_a_condition_s_set_may_be_left_out_and_the_mix_is_required():
     params = task()["taskParameters"]
-    del params["trialWeights"]["neutral"]
-    with pytest.raises(pydantic.ValidationError, match="neutral"):
+    params["trialConditions"] = [{"type": "audiovisualCoherent", "weight": 3}]
+    assert UclOpenCoenDomeNavigationTaskParameters.model_validate(params).trial_conditions[0].set == {}
+    del params["trialConditions"]
+    with pytest.raises(pydantic.ValidationError, match="trialConditions"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 
@@ -389,7 +400,7 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
     ((), "wheelGain", 0), ((), "autoProgressPerSecond", -0.1), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
     ((), "autoRewardProbability", 1.5), ((), "autoRewardProbability", -0.1),
     ((), "wrongLickLimit", -1), ((), "rewardFloorHz", 25000), (("reward",), "rewardSizeUl", 0),
-    (("trialWeights",), "visual", -1)])
+    (("trialConditions", 0), "weight", -1)])
 def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
     # The task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
     data = task()["taskParameters"]

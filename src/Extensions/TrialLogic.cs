@@ -52,7 +52,8 @@ public class Trial : IZapitTrial
     double IZapitTrial.LaserPowerMw { get { return laserPowerMw; } }
 
     public int trialNumber;
-    public string trialType;            // TrialDraw.TypeNames: what the trial shows, drawn from the task's trialWeights
+    public string trialType;            // TrialDraw.TypeNames: what the trial shows, its condition's type
+    public int trialCondition;          // the 0-based index of its condition in the task's trialConditions
     public double itiSeconds;           // the interval before this trial: the last outcome (after any timeout; trial 1: the first clock tick) to the first pip, with a quiet mouse
     public double lickQuietSeconds;     // the quiet waits, from the interval's start (QuietWait): the stage's lick, trialStructure's wheel; 0: off
     public double wheelQuietSeconds;
@@ -250,6 +251,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var row = SharedTrialColumns.Fill(new TrialRow
         {
             trialType = trial.trialType,
+            trialCondition = trial.trialCondition,
             outcome = rewarded ? TrialOutcomes.Correct : ranOut ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
             outcomeReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
@@ -271,27 +273,27 @@ public class TrialDraw
     public const string Visual = "visual";                           // the grating alone
     public const string Auditory = "auditory";                       // the tone sweep alone
     public const string AudiovisualCoherent = "audiovisualCoherent"; // both
-    /// <summary>The trial types the corridor shows, the trial row's trialType and the trialWeights' first keys (coen-dome-decision-making's names).</summary>
+    /// <summary>The trial types the corridor shows, the trial row's trialType and trialConditions' types (coen-dome-decision-making's names).</summary>
     public static readonly string[] TypeNames = { Visual, Auditory, AudiovisualCoherent };
 
-    /// <summary>The task's trialWeights in TypeNames' order.</summary>
-    public static int[] Weights(UclOpenCoenDomeNavigationTaskParameters task)
-    {
-        var w = task.TrialWeights;
-        return w == null ? new int[TypeNames.Length] : new[] { w.Visual, w.Auditory, w.AudiovisualCoherent };
-    }
-
-    /// <summary>What is wrong with the task's trialWeights (task.py's TrialTypeWeights rules).</summary>
-    public static List<string> WeightProblems(UclOpenCoenDomeNavigationTaskParameters task)
+    /// <summary>What is wrong with the task's trialConditions (task.py's rules): a type the corridor does not show, a set
+    /// (the corridor has no condition fields yet, x-conditionFields), a weight below 0, none above 0.</summary>
+    public static List<string> ConditionProblems(UclOpenCoenDomeNavigationTaskParameters task)
     {
         var problems = new List<string>();
-        var w = task.TrialWeights;
-        const string name = "trialWeights";
-        if (w == null) { problems.Add(name + " is missing"); return problems; }
-        if (w.AudiovisualConflict > 0) problems.Add(name + ".audiovisualConflict must be 0: that trial is not defined in this task yet");
-        if (w.Neutral > 0) problems.Add(name + ".neutral must be 0: that trial is not defined in this task yet");
-        var all = new[] { w.Visual, w.Auditory, w.AudiovisualCoherent, w.AudiovisualConflict, w.Neutral };
-        if (all.Any(x => x < 0) || all.Sum() <= 0) problems.Add(name + " needs every weight 0 or more and one above 0");
+        var conditions = task.TrialConditions;
+        if (conditions == null || conditions.Count == 0) { problems.Add("trialConditions needs a condition"); return problems; }
+        for (int i = 0; i < conditions.Count; i++)
+        {
+            var c = conditions[i];
+            var where = string.Format("trialConditions[{0}] ({1})", i, c.Type);
+            if (!TypeNames.Contains(c.Type)) problems.Add(where + ": its type is not one of " + string.Join(", ", TypeNames));
+            if (c.Weight < 0) problems.Add(where + ": its weight is below 0");
+            var set = c.Set as System.Collections.IDictionary;
+            if (set != null) foreach (var path in set.Keys) problems.Add(where + " sets " + path + ", which is not a condition field of " + c.Type + " (x-conditionFields)");
+            else if (c.Set != null) problems.Add(where + ": its set is not a map");
+        }
+        if (conditions.Sum(c => c.Weight) <= 0) problems.Add("trialConditions needs a condition with a weight above 0");
         return problems;
     }
 
@@ -348,7 +350,7 @@ public class TrialDraw
         foreach (var p in TaskBlocks.AutoRewardProblems(task.AutoRewardProbability)) problems.Add(p);
         number("visualStimulus.spatialFrequencyStartCpd", task.VisualStimulus.SpatialFrequencyStartCpd, true);
         number("visualStimulus.spatialFrequencyEndCpd", task.VisualStimulus.SpatialFrequencyEndCpd, true);
-        problems.AddRange(TrialDraw.WeightProblems(task));
+        problems.AddRange(TrialDraw.ConditionProblems(task));
         foreach (var p in TaskBlocks.ResponseWindowProblems(task.ResponseWindowSeconds)) problems.Add(p);
         // The lead: the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
         // trigger laserToStimulusSeconds before the first pip; whole steps, at most 0.2 s before it, inside the shortest interval
@@ -424,22 +426,23 @@ public class TrialDraw
                 out t.laserCondition, out t.laserOn, out t.laserPowerMw);
             t.laserMaxSeconds = opto.LaserMaxSeconds;
         }
-        t.trialType = TypeNames[WeightedType()];
+        t.trialCondition = WeightedCondition();
+        t.trialType = task.TrialConditions[t.trialCondition].Type;
         t.autoReward = random.NextDouble() < task.AutoRewardProbability;   // so 1 is every trial and 0 none
         return t;
     }
 
-    /// <summary>A trial type drawn with the trialWeights as relative chances (TrialRules.Create refuses all 0).</summary>
-    int WeightedType()
+    /// <summary>A trial condition drawn with the weights as relative chances (TrialRules.Create refuses all 0).</summary>
+    int WeightedCondition()
     {
-        var weights = Weights(task);
-        int draw = random.Next(weights.Sum());
-        for (int type = 0; type < weights.Length; type++)
+        var conditions = task.TrialConditions;
+        int draw = random.Next(conditions.Sum(c => c.Weight));
+        for (int i = 0; i < conditions.Count; i++)
         {
-            draw -= weights[type];
-            if (draw < 0) return type;
+            draw -= conditions[i].Weight;
+            if (draw < 0) return i;
         }
-        throw new InvalidOperationException("No trial type drawn.");
+        throw new InvalidOperationException("No trial condition drawn.");
     }
 }
 

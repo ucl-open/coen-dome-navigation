@@ -10,7 +10,7 @@ RMS: auditoryStimulus, rewardTone, backgroundNoise and penalty.sound)."""
 
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 # Integers are int: open_rigs' Int carries its own range, which drops a Field's ge or gt.
 from open_rigs.core.base import Double, String
@@ -32,7 +32,7 @@ from open_rigs.core.task import (
     WheelQuietWait,
 )
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
-from pydantic import Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from ucl_open_coen_dome_navigation import __semver__
 
@@ -130,27 +130,23 @@ class OptogeneticsSettings(Optogenetics):
         return self
 
 
-UNDEFINED_TYPES = ("audiovisual_conflict", "neutral")  # decision-making's trial types the corridor has no trial for yet
+# The trial types the corridor shows (TrialDraw.TypeNames), in coen-dome-decision-making's names; its audiovisualConflict
+# and neutral are not defined here yet.
+TRIAL_TYPES = ("visual", "auditory", "audiovisualCoherent")
+# The fields a pipeline may make condition-level (its conditionFields), each with the trial types it applies to: none yet,
+# so every condition's set is empty. The schema's x-conditionFields, as coen-dome-decision-making's.
+CONDITION_FIELDS: dict[str, tuple[str, ...]] = {}
 
 
-class TrialTypeWeights(TaskBlock):
-    """Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed).
-    audiovisualCoherent, audiovisualConflict and neutral are coen-dome-decision-making's names, kept so one analysis reads both tasks."""
+class TrialCondition(TaskBlock):
+    """One kind of trial in the mix: its type, its relative weight and its condition-level values (set), by dotted path,
+    as coen-dome-decision-making's. The corridor has no condition fields yet (x-conditionFields is empty), so set is empty."""
 
-    visual: int = Field(ge=0, description="The grating alone")
-    auditory: int = Field(ge=0, description="The tone sweep alone")
-    audiovisual_coherent: int = Field(ge=0, description="The tone sweep and the grating together")
-    audiovisual_conflict: int = Field(ge=0, description="Not defined in this task yet: must be 0")
-    neutral: int = Field(ge=0, description="Not defined in this task yet: must be 0")
+    model_config = ConfigDict(extra="forbid")
 
-    @model_validator(mode="after")
-    def _some_defined_weight(self) -> "TrialTypeWeights":
-        for name in UNDEFINED_TYPES:
-            if getattr(self, name) > 0:
-                raise ValueError(f"trial_weights.{name} must be 0: that trial is not defined in this task yet")
-        if not any(self.model_dump().values()):
-            raise ValueError("trial_weights needs a trial type with a weight above 0")
-        return self
+    type: String = Field(description="The trial type, what the trial shows: visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both)")
+    weight: int = Field(ge=0, description="Relative draw weight: each new trial picks a condition with these as relative chances")
+    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-conditionFields' paths that apply to the type); none in this task yet")
 
 
 class TrainingPipeline(TaskBlock):
@@ -170,11 +166,18 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
 
     A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
+    model_config = ConfigDict(json_schema_extra={"x-conditionFields": {path: list(types) for path, types in CONDITION_FIELDS.items()}})
+
     reward: RewardSettings = Field(description="Reward delivery parameters")
 
-    trial_weights: TrialTypeWeights = Field(
-        default=TrialTypeWeights(visual=0, auditory=1, audiovisual_coherent=0, audiovisual_conflict=0, neutral=0),
-        description="Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)",
+    trial_conditions: list[TrialCondition] = Field(
+        min_length=1,
+        description=(
+            "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
+            "trial, and shows its type (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a pipeline "
+            "stage's conditions replace it; the trialCondition column is its 0-based index"
+        ),
+        json_schema_extra={"x-whole": True},
     )
     auditory_stimulus: StimulusSound = Field(
         default=StimulusSound(), description="The tone sweep's pips (src/sounds/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"
@@ -207,6 +210,20 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         default=None,
         description="The training pipeline stage these values came from (id, label, sha256 of the pipeline file), filled by rig-control at launch; Go refuses a task whose id is missing or differs from the TrainingStage setting",
     )
+
+    @model_validator(mode="after")
+    def _conditions(self):
+        # TrialDraw.CheckTask's same rules.
+        for i, condition in enumerate(self.trial_conditions):
+            where = f"trial_conditions[{i}] ({condition.type})"
+            if condition.type not in TRIAL_TYPES:
+                raise ValueError(f"{where}: its type is not one of {', '.join(TRIAL_TYPES)}")
+            for path in condition.set:
+                if condition.type not in CONDITION_FIELDS.get(path, ()):
+                    raise ValueError(f"{where} sets {path}, which is not a condition field of {condition.type} (x-conditionFields)")
+        if not sum(condition.weight for condition in self.trial_conditions) > 0:
+            raise ValueError("trial_conditions needs a condition with a weight above 0")
+        return self
 
     @model_validator(mode="after")
     def _zone_ordered(self):

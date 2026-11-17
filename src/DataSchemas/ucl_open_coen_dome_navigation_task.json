@@ -280,6 +280,35 @@
       "title": "TrainingPipeline",
       "type": "object"
     },
+    "TrialCondition": {
+      "additionalProperties": false,
+      "description": "One kind of trial in the mix: its type, its relative weight and its condition-level values (set), by dotted path,\nas coen-dome-decision-making's. The corridor has no condition fields yet (x-conditionFields is empty), so set is empty.",
+      "properties": {
+        "type": {
+          "description": "The trial type, what the trial shows: visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both)",
+          "title": "Type",
+          "type": "string"
+        },
+        "weight": {
+          "description": "Relative draw weight: each new trial picks a condition with these as relative chances",
+          "minimum": 0,
+          "title": "Weight",
+          "type": "integer"
+        },
+        "set": {
+          "additionalProperties": true,
+          "description": "Condition-level values by dotted path (x-conditionFields' paths that apply to the type); none in this task yet",
+          "title": "Set",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "weight"
+      ],
+      "title": "TrialCondition",
+      "type": "object"
+    },
     "TrialStructure": {
       "description": "Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The wheel quiet wait (open_rigs.core.task WheelQuietWait) is here, the same for every stage; the lick quiet wait is each stage's.",
       "properties": {
@@ -331,50 +360,6 @@
         "itiMaxSeconds"
       ],
       "title": "TrialStructure",
-      "type": "object"
-    },
-    "TrialTypeWeights": {
-      "description": "Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed).\naudiovisualCoherent, audiovisualConflict and neutral are coen-dome-decision-making's names, kept so one analysis reads both tasks.",
-      "properties": {
-        "visual": {
-          "description": "The grating alone",
-          "minimum": 0,
-          "title": "Visual",
-          "type": "integer"
-        },
-        "auditory": {
-          "description": "The tone sweep alone",
-          "minimum": 0,
-          "title": "Auditory",
-          "type": "integer"
-        },
-        "audiovisualCoherent": {
-          "description": "The tone sweep and the grating together",
-          "minimum": 0,
-          "title": "AudiovisualCoherent",
-          "type": "integer"
-        },
-        "audiovisualConflict": {
-          "description": "Not defined in this task yet: must be 0",
-          "minimum": 0,
-          "title": "AudiovisualConflict",
-          "type": "integer"
-        },
-        "neutral": {
-          "description": "Not defined in this task yet: must be 0",
-          "minimum": 0,
-          "title": "Neutral",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "visual",
-        "auditory",
-        "audiovisualCoherent",
-        "audiovisualConflict",
-        "neutral"
-      ],
-      "title": "TrialTypeWeights",
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskLogic": {
@@ -451,17 +436,15 @@
           "description": "Reward delivery parameters",
           "title": "Reward"
         },
-        "trialWeights": {
-          "$ref": "#/$defs/TrialTypeWeights",
-          "default": {
-            "visual": 0,
-            "auditory": 1,
-            "audiovisualCoherent": 0,
-            "audiovisualConflict": 0,
-            "neutral": 0
+        "trialConditions": {
+          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, and shows its type (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a pipeline stage's conditions replace it; the trialCondition column is its 0-based index",
+          "items": {
+            "$ref": "#/$defs/TrialCondition"
           },
-          "description": "Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)",
-          "title": "TrialWeights"
+          "minItems": 1,
+          "title": "TrialConditions",
+          "type": "array",
+          "x-whole": true
         },
         "auditoryStimulus": {
           "$ref": "#/$defs/StimulusSound",
@@ -580,12 +563,14 @@
       },
       "required": [
         "reward",
+        "trialConditions",
         "trialStructure",
         "penalty",
         "optogenetics"
       ],
       "title": "UclOpenCoenDomeNavigationTaskParameters",
-      "type": "object"
+      "type": "object",
+      "x-conditionFields": {}
     },
     "VisualStimulus": {
       "description": "The grating: its spatial frequency runs from start to end along the track on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame).",

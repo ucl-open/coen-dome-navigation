@@ -1092,6 +1092,127 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
+    /// One kind of trial in the mix: its type, its relative weight and its condition-level values (set), by dotted path,
+    ///as coen-dome-decision-making's. The corridor has no condition fields yet (x-conditionFields is empty), so set is empty.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("One kind of trial in the mix: its type, its relative weight and its condition-lev" +
+        "el values (set), by dotted path,\nas coen-dome-decision-making\'s. The corridor ha" +
+        "s no condition fields yet (x-conditionFields is empty), so set is empty.")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class TrialCondition
+    {
+    
+        private string _type;
+    
+        private int _weight;
+    
+        private object _set;
+    
+        public TrialCondition()
+        {
+        }
+    
+        protected TrialCondition(TrialCondition other)
+        {
+            _type = other._type;
+            _weight = other._weight;
+            _set = other._set;
+        }
+    
+        /// <summary>
+        /// The trial type, what the trial shows: visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("type", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="type")]
+        [System.ComponentModel.DescriptionAttribute("The trial type, what the trial shows: visual (the grating alone), auditory (the t" +
+            "one sweep alone) or audiovisualCoherent (both)")]
+        public string Type
+        {
+            get
+            {
+                return _type;
+            }
+            set
+            {
+                _type = value;
+            }
+        }
+    
+        /// <summary>
+        /// Relative draw weight: each new trial picks a condition with these as relative chances
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("weight", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="weight")]
+        [System.ComponentModel.DescriptionAttribute("Relative draw weight: each new trial picks a condition with these as relative cha" +
+            "nces")]
+        public int Weight
+        {
+            get
+            {
+                return _weight;
+            }
+            set
+            {
+                _weight = value;
+            }
+        }
+    
+        /// <summary>
+        /// Condition-level values by dotted path (x-conditionFields' paths that apply to the type); none in this task yet
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("set")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="set")]
+        [System.ComponentModel.DescriptionAttribute("Condition-level values by dotted path (x-conditionFields\' paths that apply to the" +
+            " type); none in this task yet")]
+        public object Set
+        {
+            get
+            {
+                return _set;
+            }
+            set
+            {
+                _set = value;
+            }
+        }
+    
+        public System.IObservable<TrialCondition> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new TrialCondition(this)));
+        }
+    
+        public System.IObservable<TrialCondition> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new TrialCondition(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("Type = " + _type + ", ");
+            stringBuilder.Append("Weight = " + _weight + ", ");
+            stringBuilder.Append("Set = " + _set);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
     /// Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The wheel quiet wait (open_rigs.core.task WheelQuietWait) is here, the same for every stage; the lick quiet wait is each stage's.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
@@ -1258,168 +1379,6 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed).
-    ///audiovisualCoherent, audiovisualConflict and neutral are coen-dome-decision-making's names, kept so one analysis reads both tasks.
-    /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Relative draw weight of each trial type, by the name the trial log gives it (tria" +
-        "lType: what the trial showed).\naudiovisualCoherent, audiovisualConflict and neut" +
-        "ral are coen-dome-decision-making\'s names, kept so one analysis reads both tasks" +
-        ".")]
-    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
-    [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class TrialTypeWeights
-    {
-    
-        private int _visual;
-    
-        private int _auditory;
-    
-        private int _audiovisualCoherent;
-    
-        private int _audiovisualConflict;
-    
-        private int _neutral;
-    
-        public TrialTypeWeights()
-        {
-        }
-    
-        protected TrialTypeWeights(TrialTypeWeights other)
-        {
-            _visual = other._visual;
-            _auditory = other._auditory;
-            _audiovisualCoherent = other._audiovisualCoherent;
-            _audiovisualConflict = other._audiovisualConflict;
-            _neutral = other._neutral;
-        }
-    
-        /// <summary>
-        /// The grating alone
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("visual", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visual")]
-        [System.ComponentModel.DescriptionAttribute("The grating alone")]
-        public int Visual
-        {
-            get
-            {
-                return _visual;
-            }
-            set
-            {
-                _visual = value;
-            }
-        }
-    
-        /// <summary>
-        /// The tone sweep alone
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("auditory", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
-        [System.ComponentModel.DescriptionAttribute("The tone sweep alone")]
-        public int Auditory
-        {
-            get
-            {
-                return _auditory;
-            }
-            set
-            {
-                _auditory = value;
-            }
-        }
-    
-        /// <summary>
-        /// The tone sweep and the grating together
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("audiovisualCoherent", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisualCoherent")]
-        [System.ComponentModel.DescriptionAttribute("The tone sweep and the grating together")]
-        public int AudiovisualCoherent
-        {
-            get
-            {
-                return _audiovisualCoherent;
-            }
-            set
-            {
-                _audiovisualCoherent = value;
-            }
-        }
-    
-        /// <summary>
-        /// Not defined in this task yet: must be 0
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("audiovisualConflict", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisualConflict")]
-        [System.ComponentModel.DescriptionAttribute("Not defined in this task yet: must be 0")]
-        public int AudiovisualConflict
-        {
-            get
-            {
-                return _audiovisualConflict;
-            }
-            set
-            {
-                _audiovisualConflict = value;
-            }
-        }
-    
-        /// <summary>
-        /// Not defined in this task yet: must be 0
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("neutral", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="neutral")]
-        [System.ComponentModel.DescriptionAttribute("Not defined in this task yet: must be 0")]
-        public int Neutral
-        {
-            get
-            {
-                return _neutral;
-            }
-            set
-            {
-                _neutral = value;
-            }
-        }
-    
-        public System.IObservable<TrialTypeWeights> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new TrialTypeWeights(this)));
-        }
-    
-        public System.IObservable<TrialTypeWeights> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new TrialTypeWeights(this));
-        }
-    
-        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
-        {
-            stringBuilder.Append("Visual = " + _visual + ", ");
-            stringBuilder.Append("Auditory = " + _auditory + ", ");
-            stringBuilder.Append("AudiovisualCoherent = " + _audiovisualCoherent + ", ");
-            stringBuilder.Append("AudiovisualConflict = " + _audiovisualConflict + ", ");
-            stringBuilder.Append("Neutral = " + _neutral);
-            return true;
-        }
-    
-        public override string ToString()
-        {
-            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
-            stringBuilder.Append(GetType().Name);
-            stringBuilder.Append(" { ");
-            if (PrintMembers(stringBuilder))
-            {
-                stringBuilder.Append(" ");
-            }
-            stringBuilder.Append("}");
-            return stringBuilder.ToString();
-        }
-    }
-
-
-    /// <summary>
     /// Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and what a training stage sets (the flat values below, stage 0's by default; the lick quiet wait, response window and auto-reward are the lab's, open_rigs.core.task).
     ///
     ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
@@ -1443,7 +1402,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private RewardSettings _reward;
     
-        private TrialTypeWeights _trialWeights;
+        private System.Collections.Generic.List<TrialCondition> _trialConditions;
     
         private StimulusSound _auditoryStimulus;
     
@@ -1480,7 +1439,7 @@ namespace UclOpenCoenDomeNavigationTask
             _autoRewardProbability = 1D;
             _lickQuietSeconds = 0D;
             _reward = new RewardSettings();
-            _trialWeights = new TrialTypeWeights();
+            _trialConditions = new System.Collections.Generic.List<TrialCondition>();
             _auditoryStimulus = new StimulusSound();
             _rewardTone = new RewardTone();
             _backgroundNoise = new BackgroundNoise();
@@ -1504,7 +1463,7 @@ namespace UclOpenCoenDomeNavigationTask
             _lickQuietSeconds = other._lickQuietSeconds;
             _rngSeed = other._rngSeed;
             _reward = other._reward;
-            _trialWeights = other._trialWeights;
+            _trialConditions = other._trialConditions;
             _auditoryStimulus = other._auditoryStimulus;
             _rewardTone = other._rewardTone;
             _backgroundNoise = other._backgroundNoise;
@@ -1617,23 +1576,21 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)
+        /// The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, and shows its type (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a pipeline stage's conditions replace it; the trialCondition column is its 0-based index
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("trialWeights")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialWeights")]
-        [System.ComponentModel.DescriptionAttribute("Relative draw weight per trial type, set per mouse and kept from experiment to ex" +
-            "periment: each trial draws what it shows at random with these as relative chance" +
-            "s, independently of every other trial (trialType in the trial row)")]
-        public TrialTypeWeights TrialWeights
+        [Newtonsoft.Json.JsonPropertyAttribute("trialConditions", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialConditions")]
+        [System.ComponentModel.DescriptionAttribute(@"The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, and shows its type (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a pipeline stage's conditions replace it; the trialCondition column is its 0-based index")]
+        public System.Collections.Generic.List<TrialCondition> TrialConditions
         {
             get
             {
-                return _trialWeights;
+                return _trialConditions;
             }
             set
             {
-                _trialWeights = value;
+                _trialConditions = value;
             }
         }
     
@@ -1947,7 +1904,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("LickQuietSeconds = " + _lickQuietSeconds + ", ");
             stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
             stringBuilder.Append("Reward = " + _reward + ", ");
-            stringBuilder.Append("TrialWeights = " + _trialWeights + ", ");
+            stringBuilder.Append("TrialConditions = " + _trialConditions + ", ");
             stringBuilder.Append("AuditoryStimulus = " + _auditoryStimulus + ", ");
             stringBuilder.Append("RewardTone = " + _rewardTone + ", ");
             stringBuilder.Append("BackgroundNoise = " + _backgroundNoise + ", ");
@@ -2159,14 +2116,14 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<TrainingPipeline>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<TrialCondition> source)
+        {
+            return Process<TrialCondition>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<TrialStructure> source)
         {
             return Process<TrialStructure>(source);
-        }
-
-        public System.IObservable<string> Process(System.IObservable<TrialTypeWeights> source)
-        {
-            return Process<TrialTypeWeights>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
@@ -2198,8 +2155,8 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingPipeline>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialCondition>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialTypeWeights>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<VisualStimulus>))]
     public partial class DeserializeFromJson : Bonsai.Expressions.SingleArgumentExpressionBuilder
@@ -2301,14 +2258,14 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<TrainingPipeline>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<TrialCondition> source)
+        {
+            return Process<TrialCondition>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<TrialStructure> source)
         {
             return Process<TrialStructure>(source);
-        }
-
-        public System.IObservable<string> Process(System.IObservable<TrialTypeWeights> source)
-        {
-            return Process<TrialTypeWeights>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<UclOpenCoenDomeNavigationTaskParameters> source)
@@ -2340,8 +2297,8 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingPipeline>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialCondition>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialTypeWeights>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<VisualStimulus>))]
     public partial class DeserializeFromYaml : Bonsai.Expressions.SingleArgumentExpressionBuilder

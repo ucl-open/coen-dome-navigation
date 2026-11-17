@@ -201,19 +201,43 @@ public class TrialDrawTests
         }
     }
 
-    static TrialTypeWeights Weights(int visual, int auditory, int coherent, int conflict = 0, int neutral = 0)
+    /// <summary>One condition per type, set empty, in the task file's order (visual, auditory, audiovisualCoherent).</summary>
+    static List<TrialCondition> Conditions(int visual, int auditory, int coherent)
     {
-        return new TrialTypeWeights { Visual = visual, Auditory = auditory, AudiovisualCoherent = coherent, AudiovisualConflict = conflict, Neutral = neutral };
+        return new[] { visual, auditory, coherent }.Select((w, i) => new TrialCondition { Type = TrialDraw.TypeNames[i], Weight = w, Set = new Dictionary<object, object>() }).ToList();
+    }
+
+    [TestMethod]
+    public void TheWeightsAreHonouredAndEachTrialLogsItsCondition()
+    {
+        // Two conditions of one type are told apart by trialCondition, their index; a seeded run follows the weights.
+        var task = Fixture.Task(3);
+        task.TrialConditions = Conditions(1, 2, 0);
+        task.TrialConditions.Add(new TrialCondition { Type = "visual", Weight = 5 });
+        var draw = Fixture.Draw(task, 3);
+        var trials = Enumerable.Range(0, 4000).Select(i => draw.Next()).ToList();
+        var weights = new[] { 1, 2, 0, 5 };
+        for (int i = 0; i < weights.Length; i++)
+        {
+            Assert.AreEqual(weights[i] / 8.0, trials.Count(t => t.trialCondition == i) / 4000.0, 0.02, "condition " + i);
+        }
+        Assert.IsTrue(trials.All(t => t.trialType == task.TrialConditions[t.trialCondition].Type));
+        task.TrialConditions = Conditions(0, 0, 0);
+        task.TrialConditions.Add(new TrialCondition { Type = "visual", Weight = 1 });
+        var rig = new Rig(Fixture.Setup(task, 3));
+        rig.RunTo(TrialEventKind.Start);
+        rig.Wheel(1000);
+        Assert.AreEqual(3, rig.RunTo(TrialEventKind.Outcome).Outcome.Row.Value.trialCondition, "the row logs it");
     }
 
     [TestMethod]
     public void EachTrialsTypeIsDrawnFromTheTasksWeights()
     {
-        // The task file: auditory alone, so mice run as before trialWeights
+        // The task file: auditory alone, as before trialConditions
         var task = Fixture.Task(3);
         var file = Fixture.Draw(task, 3);
         for (int i = 0; i < 100; i++) Assert.AreEqual("auditory", file.Next().trialType);
-        task.TrialWeights = Weights(0, 1, 3);   // a mouse's weights, edited on Setup
+        task.TrialConditions = Conditions(0, 1, 3);   // weights edited on Setup
         var draw = Fixture.Draw(task, 3);
         var types = Enumerable.Range(0, 4000).Select(i => draw.Next().trialType).ToList();
         Assert.AreEqual(0, types.Count(t => t == "visual"));   // weight 0: never
@@ -227,30 +251,37 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void WeightsAllZeroNegativeOrForAnUndefinedTrialAreRefused()
+    public void ConditionsAllZeroNegativeOfAnUndefinedTypeOrWithASetAreRefused()
     {
+        var conflict = Conditions(0, 1, 0);
+        conflict.Add(new TrialCondition { Type = "audiovisualConflict", Weight = 1 });
+        var set = Conditions(0, 1, 0);
+        set[1].Set = new Dictionary<object, object> { { "reward.rewardSizeUl", 2.0 } };
         var cases = new[]
         {
-            Tuple.Create(Weights(0, 0, 0), "needs every weight 0 or more and one above 0"),
-            Tuple.Create(Weights(-1, 2, 0), "needs every weight 0 or more and one above 0"),
-            Tuple.Create(Weights(0, 1, 0, conflict: 1), "audiovisualConflict must be 0: that trial is not defined in this task yet"),
-            Tuple.Create(Weights(0, 1, 0, neutral: 1), "neutral must be 0: that trial is not defined in this task yet"),
+            Tuple.Create(new List<TrialCondition>(), "trialConditions needs a condition"),
+            Tuple.Create(Conditions(0, 0, 0), "trialConditions needs a condition with a weight above 0"),
+            Tuple.Create(Conditions(-1, 2, 0), "trialConditions[0] (visual): its weight is below 0"),
+            Tuple.Create(conflict, "trialConditions[3] (audiovisualConflict): its type is not one of visual, auditory, audiovisualCoherent"),
+            Tuple.Create(set, "trialConditions[1] (auditory) sets reward.rewardSizeUl, which is not a condition field of auditory (x-conditionFields)"),
         };
         foreach (var c in cases)
         {
             var task = Fixture.Task(2);
-            task.TrialWeights = c.Item1;
-            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, "trialWeights" + (c.Item2.StartsWith("needs") ? " " : ".") + c.Item2);
+            task.TrialConditions = c.Item1;
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, c.Item2);
         }
     }
 
     [TestMethod]
-    public void TheTaskFilesWeightsAreReadByTheirYamlNames()
+    public void TheTaskFilesConditionsAreReadByTheirYamlNames()
     {
         var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-corridor.yml"))
-            .Replace("trialWeights: { visual: 0, auditory: 1, audiovisualCoherent: 0,", "trialWeights: { visual: 2, auditory: 1, audiovisualCoherent: 3,");
+            .Replace("- { type: visual, weight: 0, set: {} }", "- { type: visual, weight: 2, set: {} }");
         var task = new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
-        CollectionAssert.AreEqual(new[] { 2, 1, 3 }, TrialDraw.Weights(task));
+        CollectionAssert.AreEqual(new[] { "visual:2", "auditory:1", "audiovisualCoherent:0" }, task.TrialConditions.Select(c => c.Type + ":" + c.Weight).ToArray());
+        Assert.AreEqual(0, ((System.Collections.IDictionary)task.TrialConditions[0].Set).Count, "set: {} reads as an empty map");
+        Assert.AreEqual(0, TrialDraw.ConditionProblems(task).Count);
     }
 
     [TestMethod]
@@ -259,7 +290,7 @@ public class TrialDrawTests
         foreach (var type in TrialDraw.TypeNames)
         {
             var task = Fixture.Task(1);
-            task.TrialWeights = Weights(type == "visual" ? 1 : 0, type == "auditory" ? 1 : 0, type == "audiovisualCoherent" ? 1 : 0);
+            task.TrialConditions = Conditions(type == "visual" ? 1 : 0, type == "auditory" ? 1 : 0, type == "audiovisualCoherent" ? 1 : 0);
             var rig = new Rig(Fixture.Setup(task, 1));
             rig.RunTo(TrialEventKind.Start);
             var pip = rig.RunTo(TrialEventKind.Update).Update;

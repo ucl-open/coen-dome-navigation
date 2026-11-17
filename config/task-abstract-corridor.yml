@@ -10,9 +10,12 @@
 # this file against the pydantic model (src\ucl_open_coen_dome_navigation\task.py), which also says what each field does.
 taskParameters:
   rngSeed: null               # null = the workflow draws one at Go; each seed used is a RngSeed event in WorkflowData_Events
-  # Relative chances of what a trial shows, per mouse (Setup): the grating, the tone sweep or both; conflict and neutral
-  # trials are not defined here yet. A pipeline stage may set its own (the whole map).
-  trialWeights: { visual: 0, auditory: 1, audiovisualCoherent: 0, audiovisualConflict: 0, neutral: 0 }
+  # The trial mix, one whole value: what a trial shows (the grating, the tone sweep or both) and its relative chance; a
+  # pipeline stage's conditions replace it, and Setup edits only the weights. set: condition-level values (x-conditionFields, none yet).
+  trialConditions:
+    - { type: visual, weight: 0, set: {} }
+    - { type: auditory, weight: 1, set: {} }
+    - { type: audiovisualCoherent, weight: 0, set: {} }
   reward:
     rewardSizeUl: 3.0         # ul on the left spout's valve, planned from its calibration
   # The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms); each sound's level is here,
