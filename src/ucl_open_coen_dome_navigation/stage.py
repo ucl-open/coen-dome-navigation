@@ -1,6 +1,6 @@
 """The training stage to suggest for a mouse's next experiment, from its earlier ones of this workflow, whatever
 trial types they drew (the trialWeights): Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
-unchanged, reading the mouse's session summaries (jacuzzi-ingest's `sub-<lab ID>/<ses folder>.json`, version 1:
+unchanged, reading the mouse's session summaries (jacuzzi-ingest's `sub-<lab ID>/<ses folder>.json`, version 1 or 2:
 claude-tools records.md, "Session summaries"). The old workflow's TrialLog files (ShapingStage,
 WasRewarded) and folders named by eartag are not read.
 
@@ -38,7 +38,7 @@ TWO_IN_A_ROW_STAGE = 1
 TWO_IN_A_ROW_REWARDED = 50
 REGRESS_RATE = 0.5
 EARLY_ADVANCE_FROM = 2  # stages 2 and 3 also advance on their first 100 or 150 trials
-SUMMARY_VERSION = 1
+SUMMARY_VERSIONS = (1, 2)  # 2 rebases Harp times, which this never reads; 1 until every rig writes 2
 
 
 @dataclass
@@ -97,7 +97,7 @@ def ours(summary: dict) -> bool:
 
 def summaries_of(subject: str, folder: Path, expected: Path, unread: list[str]) -> list[dict]:
     """The mouse's full summaries (skipped and other workflows' left out). Every problem is added to `unread`: a
-    folder that does not answer, an expected run id with no file, a file that cannot be read or is not version 1."""
+    folder that does not answer, an expected run id with no file, a file that cannot be read or is not version 1 or 2."""
     try:
         os.listdir(folder)
     except OSError:
@@ -116,7 +116,7 @@ def summaries_of(subject: str, folder: Path, expected: Path, unread: list[str]) 
         try:
             with open(file, encoding="utf-8-sig") as f:
                 s = json.load(f)
-            if s["version"] != SUMMARY_VERSION:
+            if s["version"] not in SUMMARY_VERSIONS:
                 unread.append(f"{file.name} (Version {s['version']} Is Not Supported)")
                 continue
             runs.add(s["run"])
