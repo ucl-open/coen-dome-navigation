@@ -54,7 +54,7 @@ public class Trial : IZapitTrial
     public int trialNumber;
     public string trialType;            // TrialDraw.TypeNames: what the trial shows, drawn from the trialWeights (the stage's, else the task's)
     public double itiSeconds;           // the interval before this trial: the last outcome (after any timeout; trial 1: the first clock tick) to the first pip, with a quiet mouse
-    public double lickQuietSeconds;     // the stage's quiet waits, from the interval's start (QuietWait); 0: off
+    public double lickQuietSeconds;     // the quiet waits, from the interval's start (QuietWait): the stage's lick, trialStructure's wheel; 0: off
     public double wheelQuietSeconds;
     public double wheelQuietCm;
     public double trackLengthCm;
@@ -63,7 +63,7 @@ public class Trial : IZapitTrial
     public bool visualOff;              // and the grating
     public double rewardFloorHz;
     public double rewardCeilingHz;
-    public double rewardOfferedUl;     // the stage's rewardSizeUl: what a reward on this trial gives
+    public double rewardOfferedUl;     // the task file's rewardSizeUl: what a reward on this trial gives
     public bool autoReward;             // drawn with the stage's autoRewardProbability: rewarded on reaching the floor, licks ignored
     public int wrongLickLimit;
     public double responseWindowSeconds;     // from the first pip; NaN: none
@@ -86,7 +86,7 @@ public class TrialOutcome : OpenRigs.Trials.TrialOutcome<TrialRow> { public Tria
 /// drawn from and run on. The loop times each trial: its interval from the last outcome (after any
 /// timeout; trial 1 from the first clock tick), a hardware-triggered Zapit armed during it once the last trial's trigger
 /// line has fallen, the trial start (step 0) at the interval's end less the lead, max(laserToStimulusSeconds, 0), or later
-/// until the stage's quiet waits hold, the trigger laserToStimulusSeconds before the first pip, the first pip the lead
+/// until the quiet waits hold, the trigger laserToStimulusSeconds before the first pip, the first pip the lead
 /// after the start. These rules run the trial along the virtual track: a pip every 50 ms on the trial start's grid, the
 /// left spout's licks from the first pip, the end of the track, and the outcome.
 /// </summary>
@@ -344,9 +344,10 @@ public class TrialDraw
         // The lab's blocks, checked by their one C# check each (OpenRigs.Core TaskBlocks, QuietWait).
         foreach (var p in TaskBlocks.ItiProblems(task.TrialStructure.ItiMinSeconds, task.TrialStructure.ItiMaxSeconds)) problems.Add("trialStructure." + p);
         number("penalty.timeoutSeconds", task.Penalty.TimeoutSeconds, false);
-        // The quiet waits, the lab's one check (OpenRigs.Core QuietWait: finite, 0 or more, at most 10 s and 20 cm, the
+        // The quiet waits, the lab's one check each (OpenRigs.Core QuietWait: finite, 0 or more, at most 10 s and 20 cm, the
         // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
-        foreach (var p in QuietWait.SettingsProblems(row.LickQuietSeconds, row.WheelQuietSeconds, row.WheelQuietCm)) problems.Add("stage " + stage + ": " + p);
+        foreach (var p in QuietWait.LickProblems(row.LickQuietSeconds)) problems.Add("stage " + stage + ": " + p);
+        foreach (var p in QuietWait.WheelProblems(task.TrialStructure.WheelQuietSeconds, task.TrialStructure.WheelQuietCm)) problems.Add("trialStructure." + p);
         number("stage " + stage + "'s trackLengthScale", row.TrackLengthScale, true);
         foreach (var p in TaskBlocks.AutoRewardProblems(row.AutoRewardProbability)) problems.Add("stage " + stage + ": " + p);
         number("driftSeconds", task.DriftSeconds, true);
@@ -409,11 +410,11 @@ public class TrialDraw
         t.auditoryOff = !double.IsNaN(t.stimulusOffFraction) && task.StimulusOff.Stimuli.Contains(Stimuli.Auditory);
         t.visualOff = !double.IsNaN(t.stimulusOffFraction) && task.StimulusOff.Stimuli.Contains(Stimuli.Visual);
         t.lickQuietSeconds = stage.LickQuietSeconds;
-        t.wheelQuietSeconds = stage.WheelQuietSeconds;
-        t.wheelQuietCm = stage.WheelQuietCm;
+        t.wheelQuietSeconds = task.TrialStructure.WheelQuietSeconds;
+        t.wheelQuietCm = task.TrialStructure.WheelQuietCm;
         t.rewardFloorHz = stage.RewardFloorHz;
         t.rewardCeilingHz = stage.RewardCeilingHz;
-        t.rewardOfferedUl = stage.RewardSizeUl;
+        t.rewardOfferedUl = task.RewardSizeUl;
         t.wrongLickLimit = stage.WrongLickLimit;
         t.responseWindowSeconds = stage.ResponseWindowSeconds ?? double.NaN;
         t.frequencyDrift = stage.FrequencyDrift;

@@ -326,33 +326,33 @@ public class TrialDrawTests
     public void TheQuietWaitsAreRefusedNegativeOrHalfSet()
     {
         var task = Fixture.Task();
-        task.TrainingStages[1].WheelQuietSeconds = 1;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "are both above 0 (the wheel's quiet wait) or both 0 (off)");
-        task.TrainingStages[1].WheelQuietCm = 2;
+        task.TrialStructure.WheelQuietSeconds = 1;
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "trialStructure.wheelQuietSeconds 1 and wheelQuietCm 0 are both above 0 (the wheel's quiet wait) or both 0 (off)");
+        task.TrialStructure.WheelQuietCm = 2;
         Fixture.Setup(task, 1);
         task.TrainingStages[1].LickQuietSeconds = -1;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "lickQuietSeconds is -1, not from 0 to 10 s");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "stage 1: lickQuietSeconds is -1, not from 0 to 10 s");
     }
 
     [TestMethod]
     public void AQuietWaitAboveItsMaximumIsRefusedAtGo()
     {
-        var cases = new Dictionary<string, Action<TrainingStage>>
+        var cases = new Dictionary<string, Action<UclOpenCoenDomeNavigationTaskParameters>>
         {
-            { "lickQuietSeconds is 10.5, not from 0 to 10 s", s => s.LickQuietSeconds = 10.5 },
-            { "wheelQuietSeconds is 11, not from 0 to 10 s", s => { s.WheelQuietSeconds = 11; s.WheelQuietCm = 1; } },
-            { "wheelQuietCm is 21, not from 0 to 20 cm", s => { s.WheelQuietSeconds = 1; s.WheelQuietCm = 21; } },
+            { "stage 4: lickQuietSeconds is 10.5, not from 0 to 10 s", t => t.TrainingStages[4].LickQuietSeconds = 10.5 },
+            { "trialStructure.wheelQuietSeconds is 11, not from 0 to 10 s", t => { t.TrialStructure.WheelQuietSeconds = 11; t.TrialStructure.WheelQuietCm = 1; } },
+            { "trialStructure.wheelQuietCm is 21, not from 0 to 20 cm", t => { t.TrialStructure.WheelQuietSeconds = 1; t.TrialStructure.WheelQuietCm = 21; } },
         };
         foreach (var c in cases)
         {
             var task = Fixture.Task();
-            c.Value(task.TrainingStages[4]);
+            c.Value(task);
             StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4), c.Key).Message, c.Key);
         }
         var atMax = Fixture.Task();
         atMax.TrainingStages[4].LickQuietSeconds = 10;
-        atMax.TrainingStages[4].WheelQuietSeconds = 10;
-        atMax.TrainingStages[4].WheelQuietCm = 20;
+        atMax.TrialStructure.WheelQuietSeconds = 10;
+        atMax.TrialStructure.WheelQuietCm = 20;
         Fixture.Setup(atMax, 4);
     }
 
@@ -366,7 +366,7 @@ public class TrialDrawTests
             { "itiMinSeconds", t => t.TrialStructure.ItiMinSeconds = double.NaN },
             { "timeoutSeconds", t => t.Penalty.TimeoutSeconds = double.NaN },
             { "lickQuietSeconds", t => t.TrainingStages[4].LickQuietSeconds = double.NaN },
-            { "wheelQuietSeconds", t => t.TrainingStages[4].WheelQuietSeconds = double.PositiveInfinity },
+            { "wheelQuietSeconds", t => t.TrialStructure.WheelQuietSeconds = double.PositiveInfinity },
             { "trackLengthScale", t => t.TrainingStages[4].TrackLengthScale = 0 },
             { "responseWindowSeconds", t => t.TrainingStages[4].ResponseWindowSeconds = double.NaN },
             { "trackLengthsCm", t => t.TrialStructure.TrackLengthsCm[0] = double.PositiveInfinity },
@@ -594,8 +594,8 @@ public class TrialRulesTests
     public void TheWheelWaitCountsTheLastWheelQuietSeconds()
     {
         var task = Fixture.Task();
-        task.TrainingStages[1].WheelQuietSeconds = 1.0;
-        task.TrainingStages[1].WheelQuietCm = 1.0;
+        task.TrialStructure.WheelQuietSeconds = 1.0;
+        task.TrialStructure.WheelQuietCm = 1.0;
         var still = new Rig(Fixture.Setup(task, 1));
         still.Wheel(50);
         var start = still.RunTo(TrialEventKind.Start);

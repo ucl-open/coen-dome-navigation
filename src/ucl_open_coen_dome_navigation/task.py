@@ -18,9 +18,9 @@ from open_rigs.core.task import (
     AutoReward,
     BackgroundNoise,
     Iti,
+    LickQuietWait,
     Optogenetics,
     Penalty,
-    QuietWait,
     ResponseWindow,
     RewardSize,
     RewardTone,
@@ -28,6 +28,7 @@ from open_rigs.core.task import (
     Task,
     TaskBlock,
     TaskParameters,
+    WheelQuietWait,
 )
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
 from pydantic import Field, field_validator, model_validator
@@ -47,8 +48,8 @@ def sweep() -> dict:
     return json.loads(SWEEP_FILE.read_text(encoding="utf-8"))
 
 
-class TrialStructure(Iti):
-    """Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)."""
+class TrialStructure(Iti, WheelQuietWait):
+    """Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The wheel quiet wait (open_rigs.core.task WheelQuietWait) is here, the same for every stage; the lick quiet wait is each stage's."""
 
     track_lengths_cm: list[Double] = Field(
         default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
@@ -151,8 +152,8 @@ class TrialTypeWeights(TaskBlock):
         return self
 
 
-class TrainingStage(QuietWait, ResponseWindow, AutoReward, RewardSize):
-    """One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
+class TrainingStage(LickQuietWait, ResponseWindow, AutoReward):
+    """One row of the training stage table: what the stage does, only what some stage changes (the rest is task-level). Its lick quiet wait, response window and auto-reward are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
 
     A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
@@ -175,8 +176,8 @@ class TrainingStage(QuietWait, ResponseWindow, AutoReward, RewardSize):
         return self
 
 
-class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
-    """Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages."""
+class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, RewardSize):
+    """Task parameters for the coen-dome-navigation corridor: the reward size (open_rigs.core.task RewardSize, on the left spout's valve), the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages."""
 
     trial_weights: TrialTypeWeights = Field(
         default=TrialTypeWeights(visual=0, auditory=1, audiovisual_coherent=0, audiovisual_conflict=0, neutral=0),

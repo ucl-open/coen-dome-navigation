@@ -60,12 +60,21 @@ def test_a_reward_zone_past_the_sweep_s_end_is_refused():
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 
 
-def test_the_response_window_and_quiet_wait_are_one_optional_field_each_per_stage():
-    # A stage's responseWindowSeconds, null for none; the quiet waits, 0 for off.
-    rows = task()["taskParameters"]["trainingStages"]
+def test_the_response_window_and_lick_quiet_wait_are_per_stage_and_the_wheel_s_is_the_task_s():
+    # A stage's responseWindowSeconds, null for none, and lickQuietSeconds, 0 for off; the wheel's wait is trialStructure's.
+    params = task()["taskParameters"]
+    rows = params["trainingStages"]
     assert [r["responseWindowSeconds"] for r in rows] == [None] * 3 + [12.0] * 3
     assert [r["lickQuietSeconds"] for r in rows] == [0] * 3 + [1.0] * 3
-    assert all(r["wheelQuietSeconds"] == 0 and r["wheelQuietCm"] == 0 for r in rows)
+    assert (params["trialStructure"]["wheelQuietSeconds"], params["trialStructure"]["wheelQuietCm"]) == (0, 0)
+
+
+def test_a_stage_field_is_one_some_stage_changes():
+    # Pip: "if it isn't chosen to be part of pipeline, then it should just be a global param like everything else".
+    # Every stage field but label and the optional trialWeights takes two values or more over the stages.
+    stages = UclOpenCoenDomeNavigationTaskLogic.model_validate(task()).model_dump(by_alias=True)["taskParameters"]["trainingStages"]
+    fixed = [key for key in stages[0] if key not in ("label", "trialWeights") and len({repr(s[key]) for s in stages}) == 1]
+    assert fixed == [], f"the same in every stage, so task-level: {fixed}"
 
 
 def test_the_mouse_s_weights_are_auditory_alone_and_no_stage_sets_its_own():
@@ -191,7 +200,7 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
     params = task()["taskParameters"]
     opto = params["optogenetics"]
     assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserToStimulusSeconds"], opto["laserMaxSeconds"], opto["triggerHoldSeconds"]) == (0.4, 20, 0.1, 12.5, 1.0)
-    assert {row["rewardSizeUl"] for row in params["trainingStages"]} == {3.0}
+    assert params["rewardSizeUl"] == 3.0
 
 
 def test_a_trigger_hold_as_long_as_the_shortest_interval_is_refused():
@@ -230,16 +239,19 @@ def test_a_bad_stimulus_off_block_is_refused(key, value, match):
 
 @pytest.mark.parametrize("key, value, pair", [("lickQuietSeconds", 10.5, None), ("wheelQuietSeconds", 10.5, ("wheelQuietCm", 1)), ("wheelQuietCm", 20.5, ("wheelQuietSeconds", 1))])
 def test_a_quiet_wait_above_its_maximum_is_refused(key, value, pair):
-    # A long wait and a licking mouse would hold the trial start with no message. The caps are the lab's
-    # (open_rigs.core.task QuietWait); TrialLogic.cs refuses them at Go too, through OpenRigs.Core QuietWait.SettingsProblems.
+    # A long wait and a licking mouse would hold the trial start with no message. The caps are the lab's (open_rigs.core.task
+    # LickQuietWait on each stage, WheelQuietWait in trialStructure); TrialLogic.cs refuses them at Go too, through
+    # OpenRigs.Core QuietWait.LickProblems and WheelProblems.
     doc = task()
-    row = doc["taskParameters"]["trainingStages"][4]
+    params = doc["taskParameters"]
+    row = params["trainingStages"][4] if key == "lickQuietSeconds" else params["trialStructure"]
     row[key] = value
     if pair:
         row[pair[0]] = pair[1]
     with pytest.raises(pydantic.ValidationError, match="less than or equal to"):
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
-    assert "QuietWait.SettingsProblems" in (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
+    logic = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
+    assert "QuietWait.LickProblems" in logic and "QuietWait.WheelProblems" in logic
 
 
 def test_the_committed_task_schema_is_the_model_s():
@@ -278,9 +290,9 @@ def test_a_reward_over_the_cap_is_refused():
 
     params = yaml.safe_load((ROOT / "config" / "task-abstract-corridor.yml").read_text(encoding="utf-8"))["taskParameters"]
     ok = copy.deepcopy(params)
-    ok["trainingStages"][0]["rewardSizeUl"] = MAX_REWARD_UL
+    ok["rewardSizeUl"] = MAX_REWARD_UL
     UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
-    ok["trainingStages"][0]["rewardSizeUl"] = MAX_REWARD_UL + 1
+    ok["rewardSizeUl"] = MAX_REWARD_UL + 1
     with pytest.raises(pydantic.ValidationError, match="less than or equal to 20"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
 
@@ -398,7 +410,7 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
 @pytest.mark.parametrize("where, key, value", [
     ((), "positionStepCm", 0), ((), "driftSeconds", 0), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
     (("trainingStages", 0), "autoRewardProbability", 1.5), (("trainingStages", 0), "autoRewardProbability", -0.1),
-    (("trainingStages", 0), "wrongLickLimit", -1), (("trainingStages", 0), "rewardSizeUl", 0),
+    (("trainingStages", 0), "wrongLickLimit", -1), ((), "rewardSizeUl", 0),
     (("trialWeights",), "visual", -1)])
 def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
     # The task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
@@ -420,7 +432,7 @@ def test_the_backlog_has_the_pupil_gain_decided():
 
 
 def test_the_task_file_dumps_back_unchanged():
-    # The shared blocks (Iti, ResponseWindow, AutoReward, RewardSize) keep every key where the file has it: the dump
+    # The shared blocks (Iti, LickQuietWait, WheelQuietWait, ResponseWindow, AutoReward, RewardSize) keep every key where the file has it: the dump
     # holds each of the file's values (the model adds defaults the file leaves out), and dumps back the same again.
     def held(file, dumped, path=""):
         if isinstance(file, dict):

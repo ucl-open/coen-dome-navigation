@@ -69,7 +69,7 @@
           "type": "number"
         },
         "laserToStimulusSeconds": {
-          "description": "Signed, in seconds: the trigger (the ZapitTrigger line) comes this long before the stimulus; 0 with it; negative after it. The trial's start is the end of the interval less the lead, max(this, 0), once the stage's quiet waits hold, and the stimulus comes the lead after the trial's start in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger only with optogenetics. Zapit is armed during the interval and adds no time. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin); each task adds its own limits",
+          "description": "Signed, in seconds: the trigger (the ZapitTrigger line) comes this long before the stimulus; 0 with it; negative after it. The trial's start is the end of the interval less the lead, max(this, 0), once the quiet waits hold, and the stimulus comes the lead after the trial's start in every experiment, optogenetics on or off, so timing never reveals Zapit; the trigger only with optogenetics. Zapit is armed during the interval and adds no time. Refused above itiMinSeconds - 0.2 s (Zapit's reply margin); each task adds its own limits",
           "title": "LaserToStimulusSeconds",
           "type": "number"
         },
@@ -230,15 +230,8 @@
       "type": "object"
     },
     "TrainingStage": {
-      "description": "One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
+      "description": "One row of the training stage table: what the stage does, only what some stage changes (the rest is task-level). Its lick quiet wait, response window and auto-reward are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
       "properties": {
-        "rewardSizeUl": {
-          "description": "Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for",
-          "exclusiveMinimum": 0,
-          "maximum": 20,
-          "title": "RewardSizeUl",
-          "type": "number"
-        },
         "autoRewardProbability": {
           "description": "Probability that a trial is an auto-reward trial, rewarded without a correct response (how is the task's); 0: never, 1: every trial",
           "maximum": 1,
@@ -266,22 +259,6 @@
           "maximum": 10,
           "minimum": 0,
           "title": "LickQuietSeconds",
-          "type": "number"
-        },
-        "wheelQuietSeconds": {
-          "default": 0.0,
-          "description": "Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0); at most 10 s",
-          "maximum": 10,
-          "minimum": 0,
-          "title": "WheelQuietSeconds",
-          "type": "number"
-        },
-        "wheelQuietCm": {
-          "default": 0.0,
-          "description": "The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0); at most 20 cm",
-          "maximum": 20,
-          "minimum": 0,
-          "title": "WheelQuietCm",
           "type": "number"
         },
         "label": {
@@ -344,7 +321,6 @@
         }
       },
       "required": [
-        "rewardSizeUl",
         "autoRewardProbability",
         "rewardFloorHz",
         "rewardCeilingHz",
@@ -357,10 +333,26 @@
       "type": "object"
     },
     "TrialStructure": {
-      "description": "Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s).",
+      "description": "Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The wheel quiet wait (open_rigs.core.task WheelQuietWait) is here, the same for every stage; the lick quiet wait is each stage's.",
       "properties": {
+        "wheelQuietSeconds": {
+          "default": 0.0,
+          "description": "Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0); at most 10 s",
+          "maximum": 10,
+          "minimum": 0,
+          "title": "WheelQuietSeconds",
+          "type": "number"
+        },
+        "wheelQuietCm": {
+          "default": 0.0,
+          "description": "The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0); at most 20 cm",
+          "maximum": 20,
+          "minimum": 0,
+          "title": "WheelQuietCm",
+          "type": "number"
+        },
         "itiMinSeconds": {
-          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds; the stage's quiet waits can only lengthen it (quietWaitSeconds)",
+          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds; the quiet waits can only lengthen it (quietWaitSeconds)",
           "minimum": 0,
           "title": "ItiMinSeconds",
           "type": "number"
@@ -465,8 +457,15 @@
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskParameters": {
-      "description": "Task parameters for the coen-dome-navigation corridor: the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.",
+      "description": "Task parameters for the coen-dome-navigation corridor: the reward size (open_rigs.core.task RewardSize, on the left spout's valve), the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.",
       "properties": {
+        "rewardSizeUl": {
+          "description": "Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for",
+          "exclusiveMinimum": 0,
+          "maximum": 20,
+          "title": "RewardSizeUl",
+          "type": "number"
+        },
         "rngSeed": {
           "default": null,
           "description": "Seed of the random number generator for these task parameters",
@@ -570,6 +569,7 @@
         }
       },
       "required": [
+        "rewardSizeUl",
         "trialStructure",
         "penalty",
         "optogenetics",
