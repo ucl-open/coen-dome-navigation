@@ -57,7 +57,7 @@ public class Trial : IZapitTrial
     public double lickQuietSeconds;     // the quiet waits, from the interval's start (QuietWait): the stage's lick, trialStructure's wheel; 0: off
     public double wheelQuietSeconds;
     public double wheelQuietCm;
-    public double trackLengthCm;
+    public double trackLengthCm;        // wheel cm to the track's end: the drawn track cm / wheelGain
     public double stimulusOffFraction;  // a stimulus-off trial's track fraction (stimulusOff.trackFractions); NaN: every stimulus stays on
     public bool auditoryOff;            // on a stimulus-off trial, whether the tone switches off (stimulusOff.stimuli)
     public bool visualOff;              // and the grating
@@ -67,7 +67,8 @@ public class Trial : IZapitTrial
     public bool autoReward;             // drawn with the stage's autoRewardProbability: rewarded on reaching the floor, licks ignored
     public int wrongLickLimit;
     public double responseWindowSeconds;     // from the first pip; NaN: none
-    public bool frequencyDrift;
+    public double wheelGain;            // the stage's: track cm per wheel cm
+    public double autoProgressPerSecond; // the stage's: fraction of the track the stimulus advances per second on its own
     public int firstPipStep;            // the lead, max(laserToStimulusSeconds, 0), in steps after the trial start (step 0), in every experiment
     public bool optogenetics;
     public int laserCondition;          // 0 without optogenetics
@@ -204,20 +205,16 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 
     StimulusFrame Frame(Trial trial, int step)
     {
-        var positionStep = Math.Max(1, task.PositionStepCm);
-        var position = Math.Round(track.Position / positionStep) * positionStep;
+        // The mouse's place on the track, from the wheel alone (wheel cm over the trial's wheel cm to the end, so gain
+        // included); the stimulus's progress adds the stage's auto-progress since the trial start. Tone and grating are
+        // both set from that one progress, so they stay in step.
+        var position = track.Position;
         var fraction = trial.trackLengthCm > 0 ? position / trial.trackLengthCm : 0;
-        var tone = sweep.FrequencyAt(fraction);
+        var progress = Math.Max(0, Math.Min(1, fraction + trial.autoProgressPerSecond * step * StepSeconds));
+        var tone = sweep.FrequencyAt(progress);
         var visual = task.VisualStimulus;
         var gratingStart = visual.SpatialFrequencyStartCpd;
-        var gratingRatio = visual.SpatialFrequencyEndCpd / gratingStart;
-        var grating = gratingStart * Math.Pow(gratingRatio, Math.Max(0, Math.Min(1, fraction)));
-        if (trial.frequencyDrift)
-        {
-            var drift = step * StepSeconds / task.DriftSeconds;
-            tone += sweep.StartHz * Math.Pow(sweep.TrackRatio, drift) - sweep.StartHz;
-            grating += gratingStart * Math.Pow(gratingRatio, drift) - gratingStart;
-        }
+        var grating = gratingStart * Math.Pow(visual.SpatialFrequencyEndCpd / gratingStart, progress);
         // A stimulus-off trial's listed stimuli switch off once the mouse has run its fraction of the track.
         var off = !double.IsNaN(trial.stimulusOffFraction) && Math.Round(fraction, 3) >= trial.stimulusOffFraction;
         var auditoryOn = !(off && trial.auditoryOff);
@@ -240,8 +237,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 
     /// <summary>The outcome (Tom Childs' ProcessTrialEnd): a trial that ends on a lick in the zone or the zone reached
     /// is rewarded; one that runs out of time or track in the zone is penalised, as is one ending outside it. Reaching the
-    /// zone is the floor alone, as in Tom's FreqAboveThreshold: a drifting stage's tone can pass the ceiling (and the
-    /// sweep's end) on the step it crosses the floor, and is rewarded.</summary>
+    /// zone is the floor alone, as in Tom's FreqAboveThreshold: a fast stage's tone (high wheelGain or auto-progress) can
+    /// pass the ceiling on the step it crosses the floor, and is rewarded.</summary>
     TrialOutcome End(Trial trial, string reason, TrialTimes times)
     {
         var tone = last != null ? last.Row.auditoryFrequencyHz : 0;
@@ -256,6 +253,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             outcome = rewarded ? TrialOutcomes.Correct : ranOut ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
             outcomeReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
+            wheelGain = trial.wheelGain,
             outcomePositionCm = track.Position,
             outcomeAuditoryFrequencyHz = tone,
             outcomeVisualSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
@@ -348,9 +346,9 @@ public class TrialDraw
         // wheel's pair both set or both 0): a long wait and a licking mouse would hold the trial start with no message.
         foreach (var p in QuietWait.LickProblems(row.LickQuietSeconds)) problems.Add("stage " + stage + ": " + p);
         foreach (var p in QuietWait.WheelProblems(task.TrialStructure.WheelQuietSeconds, task.TrialStructure.WheelQuietCm)) problems.Add("trialStructure." + p);
-        number("stage " + stage + "'s trackLengthScale", row.TrackLengthScale, true);
+        number("stage " + stage + "'s wheelGain", row.WheelGain, true);
+        number("stage " + stage + "'s autoProgressPerSecond", row.AutoProgressPerSecond, false);
         foreach (var p in TaskBlocks.AutoRewardProblems(row.AutoRewardProbability)) problems.Add("stage " + stage + ": " + p);
-        number("driftSeconds", task.DriftSeconds, true);
         number("visualStimulus.spatialFrequencyStartCpd", task.VisualStimulus.SpatialFrequencyStartCpd, true);
         number("visualStimulus.spatialFrequencyEndCpd", task.VisualStimulus.SpatialFrequencyEndCpd, true);
         problems.AddRange(TrialDraw.WeightProblems(task, row));
@@ -402,7 +400,7 @@ public class TrialDraw
         var iti = task.TrialStructure.ItiMinSeconds + (task.TrialStructure.ItiMaxSeconds - task.TrialStructure.ItiMinSeconds) * random.NextDouble();
         t.itiSeconds = iti;  // trial 1 too, from the first clock tick, so Zapit is armed before its trigger
         var lengths = task.TrialStructure.TrackLengthsCm;
-        t.trackLengthCm = lengths[random.Next(lengths.Count)] * stage.TrackLengthScale;
+        t.trackLengthCm = lengths[random.Next(lengths.Count)] / stage.WheelGain;  // wheel cm to the end
         var u = random.NextDouble();
         var fractions = task.StimulusOff.TrackFractions;
         var p = stage.StimulusOffProbability;
@@ -417,7 +415,8 @@ public class TrialDraw
         t.rewardOfferedUl = task.RewardSizeUl;
         t.wrongLickLimit = stage.WrongLickLimit;
         t.responseWindowSeconds = stage.ResponseWindowSeconds ?? double.NaN;
-        t.frequencyDrift = stage.FrequencyDrift;
+        t.wheelGain = stage.WheelGain;
+        t.autoProgressPerSecond = stage.AutoProgressPerSecond;
         var opto = task.Optogenetics;
         t.optogenetics = opto.Enabled;
         // The lead applies in every experiment, so timing never reveals Zapit.

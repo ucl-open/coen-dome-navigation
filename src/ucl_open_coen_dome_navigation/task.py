@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Literal
 
 # Integers are int: open_rigs' Int carries its own range, which drops a Field's ge or gt.
-from open_rigs.core.base import Bool, Double, String
+from open_rigs.core.base import Double, String
 from open_rigs.core.task import (
     MAX_REWARD_UL,
     AutoReward,
@@ -52,7 +52,7 @@ class TrialStructure(Iti, WheelQuietWait):
     """Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The wheel quiet wait (open_rigs.core.task WheelQuietWait) is here, the same for every stage; the lick quiet wait is each stage's."""
 
     track_lengths_cm: list[Double] = Field(
-        default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
+        default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial, in track cm (the mouse runs track cm / the stage's wheelGain of wheel)"
     )
 
 
@@ -165,8 +165,11 @@ class TrainingStage(LickQuietWait, ResponseWindow, AutoReward):
     reward_floor_hz: Double = Field(ge=1, description="Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)")
     reward_ceiling_hz: Double = Field(ge=1, description="Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)")
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
-    track_length_scale: Double = Field(gt=0, description="The drawn track length is multiplied by this")
-    frequency_drift: Bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
+    wheel_gain: Double = Field(gt=0, description="Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end")
+    auto_progress_per_second: Double = Field(
+        ge=0,
+        description="Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
+    )
     stimulus_off_probability: Double = Field(ge=0, le=1, description="Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial")
 
     @model_validator(mode="after")
@@ -193,12 +196,6 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, RewardSize):
         default=BackgroundNoise(), description="The lab's background white noise (rig.yml's speakerArray.backgroundNoise) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)"
     )
     visual_stimulus: VisualStimulus = Field(default=VisualStimulus(), description="The grating's spatial frequencies along the track")
-    position_step_cm: int = Field(default=1, description="The distance run is rounded to this before it sets the frequency, in cm", ge=1)
-    drift_seconds: Double = Field(
-        default=25.0,
-        gt=0,
-        description="On a stage with frequencyDrift, the time from the trial start over which the tone and grating drift on their own from the sweep's start to its end, in seconds, added to what the distance run sets. One value for every drift stage, as there is one sweep",
-    )
     trial_structure: TrialStructure = Field(description="Timing of each trial")
     penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
     stimulus_off: StimulusOff = Field(default=StimulusOff(), description="Where and which stimuli switch off on a stimulus-off trial")

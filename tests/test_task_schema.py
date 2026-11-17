@@ -408,7 +408,7 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
 
 
 @pytest.mark.parametrize("where, key, value", [
-    ((), "positionStepCm", 0), ((), "driftSeconds", 0), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
+    (("trainingStages", 0), "wheelGain", 0), (("trainingStages", 0), "autoProgressPerSecond", -0.1), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
     (("trainingStages", 0), "autoRewardProbability", 1.5), (("trainingStages", 0), "autoRewardProbability", -0.1),
     (("trainingStages", 0), "wrongLickLimit", -1), ((), "rewardSizeUl", 0),
     (("trialWeights",), "visual", -1)])

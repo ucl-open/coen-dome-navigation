@@ -23,6 +23,7 @@ public class TrialRow
     public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
     public string outcomeReason;
     public double trackLengthCm;
+    public double wheelGain;
     public double outcomePositionCm;
     public double outcomeAuditoryFrequencyHz;
     public double outcomeVisualSpatialFrequencyCpd;

@@ -301,16 +301,17 @@
           "title": "WrongLickLimit",
           "type": "integer"
         },
-        "trackLengthScale": {
-          "description": "The drawn track length is multiplied by this",
+        "wheelGain": {
+          "description": "Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end",
           "exclusiveMinimum": 0,
-          "title": "TrackLengthScale",
+          "title": "WheelGain",
           "type": "number"
         },
-        "frequencyDrift": {
-          "description": "Whether the frequency also drifts up with time, not only with distance run",
-          "title": "FrequencyDrift",
-          "type": "boolean"
+        "autoProgressPerSecond": {
+          "description": "Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
+          "minimum": 0,
+          "title": "AutoProgressPerSecond",
+          "type": "number"
         },
         "stimulusOffProbability": {
           "description": "Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial",
@@ -325,8 +326,8 @@
         "rewardFloorHz",
         "rewardCeilingHz",
         "wrongLickLimit",
-        "trackLengthScale",
-        "frequencyDrift",
+        "wheelGain",
+        "autoProgressPerSecond",
         "stimulusOffProbability"
       ],
       "title": "TrainingStage",
@@ -369,7 +370,7 @@
             100.0,
             120.0
           ],
-          "description": "Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm",
+          "description": "Track lengths, one drawn per trial, in track cm (the mouse runs track cm / the stage's wheelGain of wheel)",
           "items": {
             "type": "number"
           },
@@ -517,20 +518,6 @@
             "spatialFrequencyEndCpd": 0.3
           },
           "description": "The grating's spatial frequencies along the track"
-        },
-        "positionStepCm": {
-          "default": 1,
-          "description": "The distance run is rounded to this before it sets the frequency, in cm",
-          "minimum": 1,
-          "title": "PositionStepCm",
-          "type": "integer"
-        },
-        "driftSeconds": {
-          "default": 25.0,
-          "description": "On a stage with frequencyDrift, the time from the trial start over which the tone and grating drift on their own from the sweep's start to its end, in seconds, added to what the distance run sets. One value for every drift stage, as there is one sweep",
-          "exclusiveMinimum": 0,
-          "title": "DriftSeconds",
-          "type": "number"
         },
         "trialStructure": {
           "$ref": "#/$defs/TrialStructure",

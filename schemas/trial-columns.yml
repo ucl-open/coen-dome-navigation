@@ -103,11 +103,14 @@ outcomeReason:
 trackLengthCm:
   type: double
   unit: cm
-  description: The trial's track length, one of trialStructure.trackLengthsCm, drawn per trial, times the stage's trackLengthScale. Distances are at rig.yml's wheelDiameterMm (75 mm on every dome).
+  description: Wheel distance from the trial start to the track's end - the trial's track length (one of trialStructure.trackLengthsCm, drawn per trial) divided by wheelGain. Every position column is in these wheel cm. Distances are at rig.yml's wheelDiameterMm (75 mm on every dome).
+wheelGain:
+  type: double
+  description: The stage's wheelGain - track cm per wheel cm, so the track length drawn is trackLengthCm x wheelGain. The tone and grating are set from the track's progress, wheel cm x wheelGain / track length plus the stage's autoProgressPerSecond x seconds since the trial start (in the stage's row in Settings_Task).
 outcomePositionCm:
   type: double
   unit: cm
-  description: Position along the track at the outcome (outcomeTime), behind the start never counted and capped at the track's length. Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
+  description: Wheel distance run along the track at the outcome (outcomeTime), behind the start never counted and capped at the track's length. Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
 outcomeAuditoryFrequencyHz:
   type: double
   unit: Hz

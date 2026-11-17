@@ -933,9 +933,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         private int _wrongLickLimit;
     
-        private double _trackLengthScale;
+        private double _wheelGain;
     
-        private bool _frequencyDrift;
+        private double _autoProgressPerSecond;
     
         private double _stimulusOffProbability;
     
@@ -954,8 +954,8 @@ namespace UclOpenCoenDomeNavigationTask
             _rewardFloorHz = other._rewardFloorHz;
             _rewardCeilingHz = other._rewardCeilingHz;
             _wrongLickLimit = other._wrongLickLimit;
-            _trackLengthScale = other._trackLengthScale;
-            _frequencyDrift = other._frequencyDrift;
+            _wheelGain = other._wheelGain;
+            _autoProgressPerSecond = other._autoProgressPerSecond;
             _stimulusOffProbability = other._stimulusOffProbability;
         }
     
@@ -1111,38 +1111,42 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The drawn track length is multiplied by this
+        /// Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("trackLengthScale", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackLengthScale")]
-        [System.ComponentModel.DescriptionAttribute("The drawn track length is multiplied by this")]
-        public double TrackLengthScale
+        [Newtonsoft.Json.JsonPropertyAttribute("wheelGain", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelGain")]
+        [System.ComponentModel.DescriptionAttribute("Track cm per wheel cm: the track\'s tone and grating move this many cm for each cm" +
+            " the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the " +
+            "end")]
+        public double WheelGain
         {
             get
             {
-                return _trackLengthScale;
+                return _wheelGain;
             }
             set
             {
-                _trackLengthScale = value;
+                _wheelGain = value;
             }
         }
     
         /// <summary>
-        /// Whether the frequency also drifts up with time, not only with distance run
+        /// Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("frequencyDrift", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="frequencyDrift")]
-        [System.ComponentModel.DescriptionAttribute("Whether the frequency also drifts up with time, not only with distance run")]
-        public bool FrequencyDrift
+        [Newtonsoft.Json.JsonPropertyAttribute("autoProgressPerSecond", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoProgressPerSecond")]
+        [System.ComponentModel.DescriptionAttribute("Fraction of the track the tone and grating advance per second on their own from t" +
+            "he trial start, added to what the wheel sets; 0: none. Moves the stimulus only: " +
+            "the track\'s end and the stimulus-off points are judged on the wheel alone")]
+        public double AutoProgressPerSecond
         {
             get
             {
-                return _frequencyDrift;
+                return _autoProgressPerSecond;
             }
             set
             {
-                _frequencyDrift = value;
+                _autoProgressPerSecond = value;
             }
         }
     
@@ -1185,8 +1189,8 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("RewardFloorHz = " + _rewardFloorHz + ", ");
             stringBuilder.Append("RewardCeilingHz = " + _rewardCeilingHz + ", ");
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
-            stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
-            stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");
+            stringBuilder.Append("WheelGain = " + _wheelGain + ", ");
+            stringBuilder.Append("AutoProgressPerSecond = " + _autoProgressPerSecond + ", ");
             stringBuilder.Append("StimulusOffProbability = " + _stimulusOffProbability);
             return true;
         }
@@ -1318,13 +1322,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm
+        /// Track lengths, one drawn per trial, in track cm (the mouse runs track cm / the stage's wheelGain of wheel)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("trackLengthsCm")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackLengthsCm")]
-        [System.ComponentModel.DescriptionAttribute("Track lengths, one drawn per trial and scaled by the stage\'s trackLengthScale, in" +
-            " cm")]
+        [System.ComponentModel.DescriptionAttribute("Track lengths, one drawn per trial, in track cm (the mouse runs track cm / the st" +
+            "age\'s wheelGain of wheel)")]
         public System.Collections.Generic.List<double> TrackLengthsCm
         {
             get
@@ -1561,10 +1565,6 @@ namespace UclOpenCoenDomeNavigationTask
     
         private VisualStimulus _visualStimulus;
     
-        private int _positionStepCm;
-    
-        private double _driftSeconds;
-    
         private TrialStructure _trialStructure;
     
         private Penalty _penalty;
@@ -1582,8 +1582,6 @@ namespace UclOpenCoenDomeNavigationTask
             _rewardTone = new RewardTone();
             _backgroundNoise = new BackgroundNoise();
             _visualStimulus = new VisualStimulus();
-            _positionStepCm = 1;
-            _driftSeconds = 25D;
             _trialStructure = new TrialStructure();
             _penalty = new Penalty();
             _stimulusOff = new StimulusOff();
@@ -1600,8 +1598,6 @@ namespace UclOpenCoenDomeNavigationTask
             _rewardTone = other._rewardTone;
             _backgroundNoise = other._backgroundNoise;
             _visualStimulus = other._visualStimulus;
-            _positionStepCm = other._positionStepCm;
-            _driftSeconds = other._driftSeconds;
             _trialStructure = other._trialStructure;
             _penalty = other._penalty;
             _stimulusOff = other._stimulusOff;
@@ -1746,45 +1742,6 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The distance run is rounded to this before it sets the frequency, in cm
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("positionStepCm")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="positionStepCm")]
-        [System.ComponentModel.DescriptionAttribute("The distance run is rounded to this before it sets the frequency, in cm")]
-        public int PositionStepCm
-        {
-            get
-            {
-                return _positionStepCm;
-            }
-            set
-            {
-                _positionStepCm = value;
-            }
-        }
-    
-        /// <summary>
-        /// On a stage with frequencyDrift, the time from the trial start over which the tone and grating drift on their own from the sweep's start to its end, in seconds, added to what the distance run sets. One value for every drift stage, as there is one sweep
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("driftSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="driftSeconds")]
-        [System.ComponentModel.DescriptionAttribute("On a stage with frequencyDrift, the time from the trial start over which the tone" +
-            " and grating drift on their own from the sweep\'s start to its end, in seconds, a" +
-            "dded to what the distance run sets. One value for every drift stage, as there is" +
-            " one sweep")]
-        public double DriftSeconds
-        {
-            get
-            {
-                return _driftSeconds;
-            }
-            set
-            {
-                _driftSeconds = value;
-            }
-        }
-    
-        /// <summary>
         /// Timing of each trial
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
@@ -1900,8 +1857,6 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("RewardTone = " + _rewardTone + ", ");
             stringBuilder.Append("BackgroundNoise = " + _backgroundNoise + ", ");
             stringBuilder.Append("VisualStimulus = " + _visualStimulus + ", ");
-            stringBuilder.Append("PositionStepCm = " + _positionStepCm + ", ");
-            stringBuilder.Append("DriftSeconds = " + _driftSeconds + ", ");
             stringBuilder.Append("TrialStructure = " + _trialStructure + ", ");
             stringBuilder.Append("Penalty = " + _penalty + ", ");
             stringBuilder.Append("StimulusOff = " + _stimulusOff + ", ");

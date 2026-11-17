@@ -26,12 +26,10 @@ taskParameters:
   visualStimulus:             # the grating's spatial frequency, from the track's start to its end on a log scale
     spatialFrequencyStartCpd: 0.03
     spatialFrequencyEndCpd: 0.3
-  positionStepCm: 1           # the distance run is rounded to this before it sets the frequency
-  driftSeconds: 25.0          # a frequencyDrift stage's tone and grating reach the sweep's end on their own after this long from the trial start
   trialStructure:
     itiMinSeconds: 2.0        # from the outcome (after any timeout) to the first pip, drinking included:
     itiMaxSeconds: 3.0        # Tom's 2 s then 0 or 1 s, now drawn evenly between
-    trackLengthsCm: [80, 100, 120]   # one drawn per trial, times the stage's trackLengthScale
+    trackLengthsCm: [80, 100, 120]   # track cm, one drawn per trial; the mouse runs track cm / the stage's wheelGain of wheel
     wheelQuietSeconds: 0      # s with the wheel still before the trial start, from the interval's start; 0 off (with wheelQuietCm 0)
     wheelQuietCm: 0           # cm of wheel travel (forward and back added) allowed in the last wheelQuietSeconds
   penalty:
@@ -54,7 +52,7 @@ taskParameters:
   # Rows by the Training Stage setting (a setting past the end stops the workflow at Go). The reward zones are
   # Tom's: centred on 18 kHz in log space, a 6 kHz window from stage 2 (task.py's old derivation).
   trainingStages:
-    # Stage 0: rewarded on reaching the zone, no lick; short tracks; the frequency drifts too
+    # Stage 0: rewarded on reaching the zone, no lick; wheel gain 8; the stimulus also advances on its own
     - label: Zone Reward, Drift
       rewardFloorHz: 18000
       rewardCeilingHz: 25000
@@ -62,8 +60,8 @@ taskParameters:
       wrongLickLimit: 0
       lickQuietSeconds: 0
       responseWindowSeconds: null   # the window never closes
-      trackLengthScale: 0.125
-      frequencyDrift: true
+      wheelGain: 8.0              # track cm per wheel cm
+      autoProgressPerSecond: 0.04   # of the track per second on its own: the whole track in 25 s
       stimulusOffProbability: 0.0
     # Stage 1: as stage 0, no drift
     - label: Zone Reward
@@ -73,8 +71,8 @@ taskParameters:
       wrongLickLimit: 0
       lickQuietSeconds: 0
       responseWindowSeconds: null   # the window never closes
-      trackLengthScale: 0.125
-      frequencyDrift: false
+      wheelGain: 8.0              # track cm per wheel cm
+      autoProgressPerSecond: 0.0
       stimulusOffProbability: 0.0
     # Stage 2: a lick anywhere above the floor; full tracks
     - label: Lick to Report
@@ -84,8 +82,8 @@ taskParameters:
       wrongLickLimit: 0
       lickQuietSeconds: 0
       responseWindowSeconds: null   # the window never closes
-      trackLengthScale: 1.0
-      frequencyDrift: false
+      wheelGain: 1.0
+      autoProgressPerSecond: 0.0
       stimulusOffProbability: 0.0
     # Stage 3: the ceiling comes in; wrong licks and slowness penalised
     - label: Ceiling In
@@ -95,8 +93,8 @@ taskParameters:
       wrongLickLimit: 8
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      trackLengthScale: 1.0
-      frequencyDrift: false
+      wheelGain: 1.0
+      autoProgressPerSecond: 0.0
       stimulusOffProbability: 0.0
     # Stage 4: fewer wrong licks allowed
     - label: Fewer Wrong Licks
@@ -106,8 +104,8 @@ taskParameters:
       wrongLickLimit: 5
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      trackLengthScale: 1.0
-      frequencyDrift: false
+      wheelGain: 1.0
+      autoProgressPerSecond: 0.0
       stimulusOffProbability: 0.0
     - label: Stimulus Off   # stage 4 with 16% stimulus-off trials; only ever chosen by hand
       rewardFloorHz: 15248
@@ -116,6 +114,6 @@ taskParameters:
       wrongLickLimit: 5
       lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
       responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      trackLengthScale: 1.0
-      frequencyDrift: false
+      wheelGain: 1.0
+      autoProgressPerSecond: 0.0
       stimulusOffProbability: 0.16

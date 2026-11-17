@@ -255,11 +255,12 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void TracksAreScaledByTheStageAndStimulusOffFollowsItsProbability()
+    public void TheWheelRunsTheTrackOverTheStagesGainAndStimulusOffFollowsItsProbability()
     {
         var draw = Fixture.Draw(Fixture.Task(), 0);
-        var lengths = Enumerable.Range(0, 200).Select(_ => draw.Next()).Select(t => t.trackLengthCm).Distinct().OrderBy(l => l).ToList();
-        CollectionAssert.AreEqual(new[] { 10.0, 12.5, 15.0 }, lengths);
+        var drawn = Enumerable.Range(0, 200).Select(_ => draw.Next()).ToList();
+        CollectionAssert.AreEqual(new[] { 10.0, 12.5, 15.0 }, drawn.Select(t => t.trackLengthCm).Distinct().OrderBy(l => l).ToList());   // 80, 100, 120 track cm at wheelGain 8
+        Assert.IsTrue(drawn.All(t => t.wheelGain == 8));
         draw = Fixture.Draw(Fixture.Task(), 5);
         var trials = Enumerable.Range(0, 2000).Select(_ => draw.Next()).ToList();
         var off = trials.Where(t => !double.IsNaN(t.stimulusOffFraction)).ToList();
@@ -367,7 +368,8 @@ public class TrialDrawTests
             { "timeoutSeconds", t => t.Penalty.TimeoutSeconds = double.NaN },
             { "lickQuietSeconds", t => t.TrainingStages[4].LickQuietSeconds = double.NaN },
             { "wheelQuietSeconds", t => t.TrialStructure.WheelQuietSeconds = double.PositiveInfinity },
-            { "trackLengthScale", t => t.TrainingStages[4].TrackLengthScale = 0 },
+            { "wheelGain", t => t.TrainingStages[4].WheelGain = 0 },
+            { "autoProgressPerSecond", t => t.TrainingStages[4].AutoProgressPerSecond = double.NaN },
             { "responseWindowSeconds", t => t.TrainingStages[4].ResponseWindowSeconds = double.NaN },
             { "trackLengthsCm", t => t.TrialStructure.TrackLengthsCm[0] = double.PositiveInfinity },
             { "laserMaxSeconds", t => { Fixture.Opto(t); t.Optogenetics.LaserMaxSeconds = double.PositiveInfinity; } },
@@ -450,7 +452,7 @@ public class TrialRulesTests
     }
 
     [TestMethod]
-    public void Stage0DriftsIntoTheZoneWithoutRunning()
+    public void Stage0AutoProgressesIntoTheZoneWithoutRunning()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
@@ -461,15 +463,15 @@ public class TrialRulesTests
     }
 
     [TestMethod]
-    public void DriftSecondsAndTheGratingsFrequenciesAreTheTaskFiles()
+    public void AutoProgressAndTheGratingsFrequenciesAreTheTaskFiles()
     {
         var task = Fixture.Task();
-        task.DriftSeconds = 5;
+        task.TrainingStages[0].AutoProgressPerSecond = 0.2;   // the whole track in 5 s
         task.VisualStimulus.SpatialFrequencyStartCpd = 0.05;
         var rig = new Rig(Fixture.Setup(task, 0));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         var first = rig.Events.First(e => e.Kind == TrialEventKind.Update).Update.Row;
-        Assert.AreEqual(0.05, first.visualSpatialFrequencyCpd, 0.005);   // drifted a little by the first pip, after the lead
+        Assert.AreEqual(0.05, first.visualSpatialFrequencyCpd, 0.005);   // progressed a little by the first pip, after the lead
         Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime < 5);
     }
@@ -865,8 +867,11 @@ public class TrialRulesTests
     [TestMethod]
     public void Stage0RunningAt40CmPerSecondPastTheCeilingIsStillRewarded()
     {
-        // 6 s of drift, then 2 cm a step: the step that crosses the floor is above the ceiling (the sweep's end, 25000 Hz).
-        var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
+        // 6 s of auto-progress, then 2 wheel cm a step (16 track cm at wheelGain 8, over a tenth of the track): the step
+        // that crosses the floor (18 kHz) passes a 20 kHz ceiling.
+        var task = Fixture.Task();
+        task.TrainingStages[0].RewardCeilingHz = 20000;
+        var rig = new Rig(Fixture.Setup(task, 0));
         rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 6.0);
         double cm = 0;
@@ -880,7 +885,7 @@ public class TrialRulesTests
             outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == TrialEventKind.Outcome);
         }
         Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.outcomeReason);
-        Assert.IsTrue(outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz > 25000, outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz.ToString());
+        Assert.IsTrue(outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz > 20000, outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz.ToString());
         Assert.IsTrue(outcome.Outcome.Rewarded);
         Assert.AreEqual("Correct", outcome.Outcome.Row.Value.outcome);
         Assert.IsFalse(outcome.Outcome.Row.Value.penaltySoundOn);

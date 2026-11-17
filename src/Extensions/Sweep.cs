@@ -57,7 +57,7 @@ public class Sweep
     }
 
     /// <summary>The track's sweep ratio, sweepEndHz / sweepStartHz in whole numbers (25000 / 2000 = 12), as Tom Childs' workflow
-    /// divided them: the tone runs 2 to 24 kHz along the track, which his mice learned. Position and drift
+    /// divided them: the tone runs 2 to 24 kHz along the track, which his mice learned. The track's progress
     /// use it; the tone files span the full sweep, so BinOf does not.</summary>
     public double TrackRatio { get { return Math.Floor(EndHz / StartHz); } }
 
