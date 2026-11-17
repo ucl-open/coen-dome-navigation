@@ -13,9 +13,23 @@ from typing import Literal
 
 # Integers are int: open_rigs' Int carries its own range, which drops a Field's ge or gt.
 from open_rigs.core.base import Bool, Double, String
-from open_rigs.core.task import BackgroundNoise, Optogenetics, Penalty, QuietWait, RewardTone, StimulusSound, Task, TaskBlock, TaskParameters
+from open_rigs.core.task import (
+    MAX_REWARD_UL,
+    AutoReward,
+    BackgroundNoise,
+    Iti,
+    Optogenetics,
+    Penalty,
+    QuietWait,
+    ResponseWindow,
+    RewardSize,
+    RewardTone,
+    StimulusSound,
+    Task,
+    TaskBlock,
+    TaskParameters,
+)
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
-from open_rigs.rigs.lab_rig import MAX_REWARD_UL
 from pydantic import Field, field_validator, model_validator
 
 from ucl_open_coen_dome_navigation import __semver__
@@ -33,24 +47,12 @@ def sweep() -> dict:
     return json.loads(SWEEP_FILE.read_text(encoding="utf-8"))
 
 
-class TrialStructure(TaskBlock):
-    """Timing of each trial."""
+class TrialStructure(Iti):
+    """Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s)."""
 
-    iti_min_seconds: Double = Field(
-        default=2.0,
-        ge=0,
-        description="Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
-    )
-    iti_max_seconds: Double = Field(default=3.0, ge=0, description="Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)")
     track_lengths_cm: list[Double] = Field(
         default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial and scaled by the stage's trackLengthScale, in cm"
     )
-
-    @model_validator(mode="after")
-    def _iti_ordered(self) -> "TrialStructure":
-        if self.iti_max_seconds < self.iti_min_seconds:
-            raise ValueError("iti_max_seconds must be >= iti_min_seconds")
-        return self
 
 
 class VisualStimulus(TaskBlock):
@@ -137,8 +139,10 @@ class TrialTypeWeights(TaskBlock):
         return self
 
 
-class TrainingStage(QuietWait):
-    """One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting."""
+class TrainingStage(QuietWait, ResponseWindow, AutoReward, RewardSize):
+    """One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
+
+    The response window runs from the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
     label: String | None = Field(default=None, description="The stage's name, shown on Setup after its number")
     trial_weights: TrialTypeWeights | None = Field(
@@ -147,20 +151,7 @@ class TrainingStage(QuietWait):
     )
     reward_floor_hz: Double = Field(ge=1, description="Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)")
     reward_ceiling_hz: Double = Field(ge=1, description="Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)")
-    reward_size_ul: Double = Field(
-        gt=0,
-        le=MAX_REWARD_UL,
-        description=f"Microlitres each reward gives, at most {MAX_REWARD_UL} (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json). An uncalibrated valve stops the workflow at Start",
-    )
-    auto_reward_probability: Double = Field(
-        ge=0,
-        le=1,
-        description="The chance a trial is rewarded without a correct response, drawn per trial: such a trial ends rewarded on the pip whose tone reaches the reward floor, no lick needed, and its licks are ignored (endReason FrequencyReached); on the others only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised",
-    )
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
-    response_window_seconds: Double | None = Field(
-        default=None, gt=0, description="The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes"
-    )
     track_length_scale: Double = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: Bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
     truncated_trial_fraction: Double = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")
@@ -195,7 +186,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         gt=0,
         description="On a stage with frequencyDrift, the time from the trial start over which the tone and grating drift on their own from the sweep's start to its end, in seconds, added to what the distance run sets. One value for every drift stage, as there is one sweep",
     )
-    trial_structure: TrialStructure = Field(default=TrialStructure(), description="Timing of each trial")
+    trial_structure: TrialStructure = Field(default=TrialStructure(iti_min_seconds=2.0, iti_max_seconds=3.0), description="Timing of each trial")
     penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
     truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
     optogenetics: OptogeneticsSettings = Field(description="Zapit optogenetic stimulation")

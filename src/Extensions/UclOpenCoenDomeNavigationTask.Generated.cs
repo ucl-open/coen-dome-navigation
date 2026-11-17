@@ -798,16 +798,24 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting.
+    /// One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
+    ///
+    ///The response window runs from the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("One row of the training stage table: what the stage does, its quiet waits the lab" +
-        "\'s (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setti" +
-        "ng.")]
+    [System.ComponentModel.DescriptionAttribute(@"One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
+
+    The response window runs from the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrainingStage
     {
+    
+        private double _rewardSizeUl;
+    
+        private double _autoRewardProbability;
+    
+        private double? _responseWindowSeconds;
     
         private double _lickQuietSeconds;
     
@@ -823,13 +831,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _rewardCeilingHz;
     
-        private double _rewardSizeUl;
-    
-        private double _autoRewardProbability;
-    
         private int _wrongLickLimit;
-    
-        private double? _responseWindowSeconds;
     
         private double _trackLengthScale;
     
@@ -846,6 +848,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected TrainingStage(TrainingStage other)
         {
+            _rewardSizeUl = other._rewardSizeUl;
+            _autoRewardProbability = other._autoRewardProbability;
+            _responseWindowSeconds = other._responseWindowSeconds;
             _lickQuietSeconds = other._lickQuietSeconds;
             _wheelQuietSeconds = other._wheelQuietSeconds;
             _wheelQuietCm = other._wheelQuietCm;
@@ -853,13 +858,68 @@ namespace UclOpenCoenDomeNavigationTask
             _trialWeights = other._trialWeights;
             _rewardFloorHz = other._rewardFloorHz;
             _rewardCeilingHz = other._rewardCeilingHz;
-            _rewardSizeUl = other._rewardSizeUl;
-            _autoRewardProbability = other._autoRewardProbability;
             _wrongLickLimit = other._wrongLickLimit;
-            _responseWindowSeconds = other._responseWindowSeconds;
             _trackLengthScale = other._trackLengthScale;
             _frequencyDrift = other._frequencyDrift;
             _truncatedTrialFraction = other._truncatedTrialFraction;
+        }
+    
+        /// <summary>
+        /// Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
+        [System.ComponentModel.DescriptionAttribute("Reward size, in microlitres, planned into valve pulses from the valve\'s calibrati" +
+            "on; at most 20, the most one reward may ask for")]
+        public double RewardSizeUl
+        {
+            get
+            {
+                return _rewardSizeUl;
+            }
+            set
+            {
+                _rewardSizeUl = value;
+            }
+        }
+    
+        /// <summary>
+        /// Probability that a trial is an auto-reward trial, rewarded without a correct response (how is the task's); 0: never, 1: every trial
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("autoRewardProbability", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoRewardProbability")]
+        [System.ComponentModel.DescriptionAttribute("Probability that a trial is an auto-reward trial, rewarded without a correct resp" +
+            "onse (how is the task\'s); 0: never, 1: every trial")]
+        public double AutoRewardProbability
+        {
+            get
+            {
+                return _autoRewardProbability;
+            }
+            set
+            {
+                _autoRewardProbability = value;
+            }
+        }
+    
+        /// <summary>
+        /// The response window, in seconds from the start of the task's response period; with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("responseWindowSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="responseWindowSeconds")]
+        [System.ComponentModel.DescriptionAttribute("The response window, in seconds from the start of the task\'s response period; wit" +
+            "h no response by its end the trial is NoResponse. Null or left out: no limit (a " +
+            "task may refuse it)")]
+        public double? ResponseWindowSeconds
+        {
+            get
+            {
+                return _responseWindowSeconds;
+            }
+            set
+            {
+                _responseWindowSeconds = value;
+            }
         }
     
         /// <summary>
@@ -995,44 +1055,6 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json). An uncalibrated valve stops the workflow at Start
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
-        [System.ComponentModel.DescriptionAttribute("Microlitres each reward gives, at most 20 (the most one reward may ask for), on t" +
-            "he left spout\'s valve, planned from the valve\'s calibration (calibration\\RewardV" +
-            "alve-Left.json). An uncalibrated valve stops the workflow at Start")]
-        public double RewardSizeUl
-        {
-            get
-            {
-                return _rewardSizeUl;
-            }
-            set
-            {
-                _rewardSizeUl = value;
-            }
-        }
-    
-        /// <summary>
-        /// The chance a trial is rewarded without a correct response, drawn per trial: such a trial ends rewarded on the pip whose tone reaches the reward floor, no lick needed, and its licks are ignored (endReason FrequencyReached); on the others only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("autoRewardProbability", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoRewardProbability")]
-        [System.ComponentModel.DescriptionAttribute(@"The chance a trial is rewarded without a correct response, drawn per trial: such a trial ends rewarded on the pip whose tone reaches the reward floor, no lick needed, and its licks are ignored (endReason FrequencyReached); on the others only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised")]
-        public double AutoRewardProbability
-        {
-            get
-            {
-                return _autoRewardProbability;
-            }
-            set
-            {
-                _autoRewardProbability = value;
-            }
-        }
-    
-        /// <summary>
         /// Licks outside the zone that end the trial; 0: wrong licks never end it
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("wrongLickLimit", Required=Newtonsoft.Json.Required.Always)]
@@ -1047,26 +1069,6 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _wrongLickLimit = value;
-            }
-        }
-    
-        /// <summary>
-        /// The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("responseWindowSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="responseWindowSeconds")]
-        [System.ComponentModel.DescriptionAttribute("The response window: the longest a trial runs from its first tone pip, in seconds" +
-            ", after which it ends as NoResponse (endReason ResponseWindowEnd); null: the win" +
-            "dow never closes")]
-        public double? ResponseWindowSeconds
-        {
-            get
-            {
-                return _responseWindowSeconds;
-            }
-            set
-            {
-                _responseWindowSeconds = value;
             }
         }
     
@@ -1136,6 +1138,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
+            stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl + ", ");
+            stringBuilder.Append("AutoRewardProbability = " + _autoRewardProbability + ", ");
+            stringBuilder.Append("ResponseWindowSeconds = " + _responseWindowSeconds + ", ");
             stringBuilder.Append("LickQuietSeconds = " + _lickQuietSeconds + ", ");
             stringBuilder.Append("WheelQuietSeconds = " + _wheelQuietSeconds + ", ");
             stringBuilder.Append("WheelQuietCm = " + _wheelQuietCm + ", ");
@@ -1143,10 +1148,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("TrialWeights = " + _trialWeights + ", ");
             stringBuilder.Append("RewardFloorHz = " + _rewardFloorHz + ", ");
             stringBuilder.Append("RewardCeilingHz = " + _rewardCeilingHz + ", ");
-            stringBuilder.Append("RewardSizeUl = " + _rewardSizeUl + ", ");
-            stringBuilder.Append("AutoRewardProbability = " + _autoRewardProbability + ", ");
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
-            stringBuilder.Append("ResponseWindowSeconds = " + _responseWindowSeconds + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
             stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");
             stringBuilder.Append("TruncatedTrialFraction = " + _truncatedTrialFraction);
@@ -1169,10 +1171,10 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Timing of each trial.
+    /// Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Timing of each trial.")]
+    [System.ComponentModel.DescriptionAttribute(@"Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrialStructure
@@ -1186,8 +1188,6 @@ namespace UclOpenCoenDomeNavigationTask
     
         public TrialStructure()
         {
-            _itiMinSeconds = 2D;
-            _itiMaxSeconds = 3D;
             _trackLengthsCm = new System.Collections.Generic.List<double>();
         }
     
@@ -1199,11 +1199,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)
+        /// Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds; the stage's quiet waits can only lengthen it (quietWaitSeconds)
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("itiMinSeconds")]
+        [Newtonsoft.Json.JsonPropertyAttribute("itiMinSeconds", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMinSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)")]
+        [System.ComponentModel.DescriptionAttribute("Lower bound of the inter-trial interval, drawn uniformly for every trial, in seco" +
+            "nds; the stage\'s quiet waits can only lengthen it (quietWaitSeconds)")]
         public double ItiMinSeconds
         {
             get
@@ -1217,12 +1218,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)
+        /// Upper bound of the inter-trial interval, in seconds; at least itiMinSeconds
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("itiMaxSeconds")]
+        [Newtonsoft.Json.JsonPropertyAttribute("itiMaxSeconds", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="itiMaxSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSecond" +
-            "s)")]
+        [System.ComponentModel.DescriptionAttribute("Upper bound of the inter-trial interval, in seconds; at least itiMinSeconds")]
         public double ItiMaxSeconds
         {
             get

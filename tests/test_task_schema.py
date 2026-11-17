@@ -253,7 +253,7 @@ def test_a_reward_over_the_cap_is_refused():
     # lib-open-rigs' MAX_REWARD_UL, RewardValve's MaxRewardUl.
     import copy
 
-    from open_rigs.rigs.lab_rig import MAX_REWARD_UL
+    from open_rigs.core.task import MAX_REWARD_UL
 
     from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskParameters
 
@@ -398,3 +398,22 @@ def test_the_backlog_has_the_pupil_gain_decided():
     # The Pupil camera's gain is 0 (Pip).
     text = (ROOT / "BACKLOG.md").read_text(encoding="utf-8")
     assert "gain stays 20" not in text and "Pupil camera's gain is 0" in text
+
+
+def test_the_task_file_dumps_back_unchanged():
+    # The shared blocks (Iti, ResponseWindow, AutoReward, RewardSize) keep every key where the file has it: the dump
+    # holds each of the file's values (the model adds defaults the file leaves out), and dumps back the same again.
+    def held(file, dumped, path=""):
+        if isinstance(file, dict):
+            for key, value in file.items():
+                held(value, dumped[key], f"{path}.{key}")
+        elif isinstance(file, list):
+            assert len(file) == len(dumped), path
+            for i, (f, d) in enumerate(zip(file, dumped)):
+                held(f, d, f"{path}[{i}]")
+        else:
+            assert dumped == file, path
+
+    dumped = UclOpenCoenDomeNavigationTaskLogic.model_validate(task()).model_dump(by_alias=True)
+    held(task(), dumped)
+    assert UclOpenCoenDomeNavigationTaskLogic.model_validate(dumped).model_dump(by_alias=True) == dumped

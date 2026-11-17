@@ -193,8 +193,36 @@
       "type": "object"
     },
     "TrainingStage": {
-      "description": "One row of the training stage table: what the stage does, its quiet waits the lab's (open_rigs.core.task QuietWait). Rows are selected by the TrainingStage setting.",
+      "description": "One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.\n\nThe response window runs from the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
       "properties": {
+        "rewardSizeUl": {
+          "description": "Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for",
+          "exclusiveMinimum": 0,
+          "maximum": 20,
+          "title": "RewardSizeUl",
+          "type": "number"
+        },
+        "autoRewardProbability": {
+          "description": "Probability that a trial is an auto-reward trial, rewarded without a correct response (how is the task's); 0: never, 1: every trial",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "AutoRewardProbability",
+          "type": "number"
+        },
+        "responseWindowSeconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The response window, in seconds from the start of the task's response period; with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)",
+          "title": "ResponseWindowSeconds"
+        },
         "lickQuietSeconds": {
           "default": 0.0,
           "description": "Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
@@ -253,39 +281,11 @@
           "title": "RewardCeilingHz",
           "type": "number"
         },
-        "rewardSizeUl": {
-          "description": "Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json). An uncalibrated valve stops the workflow at Start",
-          "exclusiveMinimum": 0,
-          "maximum": 20,
-          "title": "RewardSizeUl",
-          "type": "number"
-        },
-        "autoRewardProbability": {
-          "description": "The chance a trial is rewarded without a correct response, drawn per trial: such a trial ends rewarded on the pip whose tone reaches the reward floor, no lick needed, and its licks are ignored (endReason FrequencyReached); on the others only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised",
-          "maximum": 1,
-          "minimum": 0,
-          "title": "AutoRewardProbability",
-          "type": "number"
-        },
         "wrongLickLimit": {
           "description": "Licks outside the zone that end the trial; 0: wrong licks never end it",
           "minimum": 0,
           "title": "WrongLickLimit",
           "type": "integer"
-        },
-        "responseWindowSeconds": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The response window: the longest a trial runs from its first tone pip, in seconds, after which it ends as NoResponse (endReason ResponseWindowEnd); null: the window never closes",
-          "title": "ResponseWindowSeconds"
         },
         "trackLengthScale": {
           "description": "The drawn track length is multiplied by this",
@@ -307,10 +307,10 @@
         }
       },
       "required": [
-        "rewardFloorHz",
-        "rewardCeilingHz",
         "rewardSizeUl",
         "autoRewardProbability",
+        "rewardFloorHz",
+        "rewardCeilingHz",
         "wrongLickLimit",
         "trackLengthScale",
         "frequencyDrift",
@@ -320,18 +320,16 @@
       "type": "object"
     },
     "TrialStructure": {
-      "description": "Timing of each trial.",
+      "description": "Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s).",
       "properties": {
         "itiMinSeconds": {
-          "default": 2.0,
-          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds: from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s); the stage's quiet waits can only lengthen it (quietWaitSeconds)",
+          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds; the stage's quiet waits can only lengthen it (quietWaitSeconds)",
           "minimum": 0,
           "title": "ItiMinSeconds",
           "type": "number"
         },
         "itiMaxSeconds": {
-          "default": 3.0,
-          "description": "Upper bound of the uniformly drawn inter-trial interval, in seconds (itiMinSeconds)",
+          "description": "Upper bound of the inter-trial interval, in seconds; at least itiMinSeconds",
           "minimum": 0,
           "title": "ItiMaxSeconds",
           "type": "number"
@@ -351,6 +349,10 @@
           "type": "array"
         }
       },
+      "required": [
+        "itiMinSeconds",
+        "itiMaxSeconds"
+      ],
       "title": "TrialStructure",
       "type": "object"
     },
