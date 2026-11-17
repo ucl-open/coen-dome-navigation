@@ -193,7 +193,7 @@
       "type": "object"
     },
     "TrainingStage": {
-      "description": "One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.\n\nThe response window runs from the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
+      "description": "One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
       "properties": {
         "rewardSizeUl": {
           "description": "Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for",
@@ -298,11 +298,11 @@
           "title": "FrequencyDrift",
           "type": "boolean"
         },
-        "truncatedTrialFraction": {
-          "description": "Fraction of trials whose stimulus switches off early (truncation.sweepFractions)",
+        "truncatedTrialProbability": {
+          "description": "Probability that a trial's stimulus switches off early (truncation.sweepFractions); 0: never, 1: every trial",
           "maximum": 1,
           "minimum": 0,
-          "title": "TruncatedTrialFraction",
+          "title": "TruncatedTrialProbability",
           "type": "number"
         }
       },
@@ -314,7 +314,7 @@
         "wrongLickLimit",
         "trackLengthScale",
         "frequencyDrift",
-        "truncatedTrialFraction"
+        "truncatedTrialProbability"
       ],
       "title": "TrainingStage",
       "type": "object"
@@ -401,7 +401,7 @@
       "type": "object"
     },
     "Truncation": {
-      "description": "Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).\n\nOn a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the stimulus.",
+      "description": "Where the stimulus switches off on a truncated trial (a stage's truncatedTrialProbability says how often).\n\nOn a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about\nthe trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward\nzone without the stimulus.",
       "properties": {
         "sweepFractions": {
           "default": [
@@ -518,15 +518,6 @@
         },
         "trialStructure": {
           "$ref": "#/$defs/TrialStructure",
-          "default": {
-            "itiMinSeconds": 2.0,
-            "itiMaxSeconds": 3.0,
-            "trackLengthsCm": [
-              80.0,
-              100.0,
-              120.0
-            ]
-          },
           "description": "Timing of each trial"
         },
         "penalty": {
@@ -558,6 +549,7 @@
         }
       },
       "required": [
+        "trialStructure",
         "penalty",
         "optogenetics",
         "trainingStages"

@@ -119,6 +119,14 @@ def test_the_interval_runs_from_the_outcome_and_keeps_tom_s_timing():
     assert (structure["itiMinSeconds"], structure["itiMaxSeconds"]) == (2.0, 3.0) and "drinkSeconds" not in structure
 
 
+def test_trial_structure_has_no_coded_default():
+    # The task file gives the interval: a file without trialStructure is refused, not run on a default.
+    params = task()["taskParameters"]
+    del params["trialStructure"]
+    with pytest.raises(pydantic.ValidationError, match="trialStructure"):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+
+
 def test_the_committed_waveforms_are_waveforms_py_s():
     assert json.loads((WAVES / "sweep.json").read_text(encoding="utf-8")) == waveforms.sweep()
     freqs = waveforms.tone_frequencies()

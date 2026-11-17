@@ -800,12 +800,12 @@ namespace UclOpenCoenDomeNavigationTask
     /// <summary>
     /// One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
     ///
-    ///The response window runs from the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
+    ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute(@"One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
 
-    The response window runs from the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
+    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrainingStage
@@ -837,7 +837,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private bool _frequencyDrift;
     
-        private double _truncatedTrialFraction;
+        private double _truncatedTrialProbability;
     
         public TrainingStage()
         {
@@ -861,7 +861,7 @@ namespace UclOpenCoenDomeNavigationTask
             _wrongLickLimit = other._wrongLickLimit;
             _trackLengthScale = other._trackLengthScale;
             _frequencyDrift = other._frequencyDrift;
-            _truncatedTrialFraction = other._truncatedTrialFraction;
+            _truncatedTrialProbability = other._truncatedTrialProbability;
         }
     
         /// <summary>
@@ -1109,20 +1109,21 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Fraction of trials whose stimulus switches off early (truncation.sweepFractions)
+        /// Probability that a trial's stimulus switches off early (truncation.sweepFractions); 0: never, 1: every trial
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("truncatedTrialFraction", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncatedTrialFraction")]
-        [System.ComponentModel.DescriptionAttribute("Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")]
-        public double TruncatedTrialFraction
+        [Newtonsoft.Json.JsonPropertyAttribute("truncatedTrialProbability", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="truncatedTrialProbability")]
+        [System.ComponentModel.DescriptionAttribute("Probability that a trial\'s stimulus switches off early (truncation.sweepFractions" +
+            "); 0: never, 1: every trial")]
+        public double TruncatedTrialProbability
         {
             get
             {
-                return _truncatedTrialFraction;
+                return _truncatedTrialProbability;
             }
             set
             {
-                _truncatedTrialFraction = value;
+                _truncatedTrialProbability = value;
             }
         }
     
@@ -1151,7 +1152,7 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
             stringBuilder.Append("TrackLengthScale = " + _trackLengthScale + ", ");
             stringBuilder.Append("FrequencyDrift = " + _frequencyDrift + ", ");
-            stringBuilder.Append("TruncatedTrialFraction = " + _truncatedTrialFraction);
+            stringBuilder.Append("TruncatedTrialProbability = " + _truncatedTrialProbability);
             return true;
         }
     
@@ -1451,14 +1452,14 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).
+    /// Where the stimulus switches off on a truncated trial (a stage's truncatedTrialProbability says how often).
     ///
     ///On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
     ///the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
     ///zone without the stimulus.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).
+    [System.ComponentModel.DescriptionAttribute(@"Where the stimulus switches off on a truncated trial (a stage's truncatedTrialProbability says how often).
 
     On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
     the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
@@ -1762,7 +1763,7 @@ namespace UclOpenCoenDomeNavigationTask
         /// Timing of each trial
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("trialStructure")]
+        [Newtonsoft.Json.JsonPropertyAttribute("trialStructure", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialStructure")]
         [System.ComponentModel.DescriptionAttribute("Timing of each trial")]
         public TrialStructure TrialStructure

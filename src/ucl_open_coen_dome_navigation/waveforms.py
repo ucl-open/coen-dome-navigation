@@ -4,7 +4,7 @@ Tom Childs' gen_session.py wrote the tones again before every experiment, at the
 scaled them by the amplitude again, so a pip peaked at amplitude squared. The sweep is fixed here (SWEEP_START_HZ ...
 PIP_PEAK, Tom's 2000 to 25000 Hz in 100 tones at 0.05 squared) and recorded in sweep.json, which the workflow reads
 for the sweep's frequencies (Sweep.cs) and task.py for the reward zones' bounds. The files' amplitudes do not
-set how loud they play: the workflow plays each at the task file's level in dBFS RMS of the file as stored (tonePips,
+set how loud they play: the workflow plays each at the task file's level in dBFS RMS of the file as stored (auditoryStimulus,
 rewardTone .levelDbfs) on rig.yml's speakers, equalised for each (OpenRigs.Audio SpeakerBuffer); the penalty sound is the lab's, from OpenRigs.Audio,
 and the background noise the lab's one file, rig.yml's speakerArray.backgroundNoise. Run `uv run generate-waveforms` after changing one of them, and commit.
 """

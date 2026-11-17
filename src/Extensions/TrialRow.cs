@@ -27,4 +27,5 @@ public class TrialRow
     public double auditoryEndFrequencyHz;
     public double visualEndSpatialFrequencyCpd;
     public double truncationFraction;
+    public bool autoRewarded;
 }

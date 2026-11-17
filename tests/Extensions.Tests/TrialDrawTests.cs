@@ -439,6 +439,7 @@ public class TrialRulesTests
         Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
         Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's rewardSizeUl, 3 ul
         Assert.IsTrue(outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Row.Value.penalised && outcome.Outcome.Row.Value.rewardOfferedUl == 3, "the row says what the valve did");
+        Assert.IsTrue(outcome.Outcome.Row.Value.autoRewarded, "stage 1 auto-rewards every trial");
         var next = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(outcome.Seconds + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
         rig.Until(rig.Now + 0.2);
@@ -500,6 +501,7 @@ public class TrialRulesTests
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
         Assert.IsTrue(outcome.Outcome.Rewarded && !outcome.Outcome.Row.Value.penalised);
+        Assert.IsTrue(outcome.Outcome.Row.Value.autoRewarded);
     }
 
     [TestMethod]
@@ -530,6 +532,7 @@ public class TrialRulesTests
         rig.Lick();
         var rewarded = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome);
         Assert.AreEqual("CorrectLick", rewarded.Outcome.Row.Value.endReason);
+        Assert.IsTrue(rewarded.Outcome.Row.Value.rewarded && !rewarded.Outcome.Row.Value.autoRewarded, "earned, not auto-rewarded");
         Assert.AreEqual(2.0, rewarded.Outcome.Row.Value.itiStartTime - outcome.Seconds, 0.0011);
         Assert.AreEqual(next.Trial.itiSeconds, rewarded.Outcome.Row.Value.itiSeconds);
     }

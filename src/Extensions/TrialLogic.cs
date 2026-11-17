@@ -249,7 +249,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             endPositionCm = track.Position,
             auditoryEndFrequencyHz = tone,
             visualEndSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
-            truncationFraction = trial.truncationFraction
+            truncationFraction = trial.truncationFraction,
+            autoRewarded = trial.autoReward && rewarded
         }, trial, times, trial.rewardOfferedUl, rewarded, penalised, task.Penalty.TimeoutSeconds, task.Penalty.Sound.Enabled);
         return new TrialOutcome(row);
     }
@@ -357,7 +358,7 @@ public class TrialDraw
         var hold = task.Optogenetics.TriggerHoldSeconds;
         var holdMax = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;
         if (task.Optogenetics.Enabled && hold > holdMax + 1e-9) problems.Add(string.Format("optogenetics.triggerHoldSeconds ({0} s) must be at most {1} s (itiMinSeconds - laserToStimulusSeconds - {2} s): the next trial is armed once the line falls, and Zapit's reply needs {2} s before its trigger", hold, holdMax, ZapitTrial.ReplyMarginSeconds));
-        if (row.TruncatedTrialFraction > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage " + stage + " truncates trials but truncation.sweepFractions is empty");
+        if (row.TruncatedTrialProbability > 0 && (task.Truncation.SweepFractions == null || task.Truncation.SweepFractions.Count == 0)) problems.Add("stage " + stage + " truncates trials but truncation.sweepFractions is empty");
         if (!(row.RewardFloorHz > sweep.StartHz && row.RewardFloorHz < row.RewardCeilingHz && row.RewardCeilingHz <= sweep.EndHz)) problems.Add(string.Format("stage {0}'s reward zone ({1} to {2} Hz) is not inside the sweep ({3} to {4} Hz)", stage, row.RewardFloorHz, row.RewardCeilingHz, sweep.StartHz, sweep.EndHz));
         var opto = task.Optogenetics;
         if (opto.Enabled)
@@ -388,8 +389,8 @@ public class TrialDraw
         t.trackLengthCm = lengths[random.Next(lengths.Count)] * stage.TrackLengthScale;
         var u = random.NextDouble();
         var fractions = task.Truncation.SweepFractions;
-        t.truncationFraction = stage.TruncatedTrialFraction > 0 && u < stage.TruncatedTrialFraction
-            ? fractions[(int)Math.Floor(u / stage.TruncatedTrialFraction * fractions.Count)]
+        t.truncationFraction = stage.TruncatedTrialProbability > 0 && u < stage.TruncatedTrialProbability
+            ? fractions[(int)Math.Floor(u / stage.TruncatedTrialProbability * fractions.Count)]
             : 1.0;
         t.lickQuietSeconds = stage.LickQuietSeconds;
         t.wheelQuietSeconds = stage.WheelQuietSeconds;

@@ -63,7 +63,7 @@ class VisualStimulus(TaskBlock):
 
 
 class Truncation(TaskBlock):
-    """Where the stimulus switches off on a truncated trial (a stage's truncatedTrialFraction says how many).
+    """Where the stimulus switches off on a truncated trial (a stage's truncatedTrialProbability says how often).
 
     On a truncated trial the stimulus (tone and grating) switches off part way along the sweep. Everything else about
     the trial is unchanged, so it is still rewarded as normal: the animal has to keep going and find the reward
@@ -142,7 +142,7 @@ class TrialTypeWeights(TaskBlock):
 class TrainingStage(QuietWait, ResponseWindow, AutoReward, RewardSize):
     """One row of the training stage table: what the stage does. Its quiet waits, response window, auto-reward and reward size are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
 
-    The response window runs from the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
+    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (endReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
     label: String | None = Field(default=None, description="The stage's name, shown on Setup after its number")
     trial_weights: TrialTypeWeights | None = Field(
@@ -154,7 +154,7 @@ class TrainingStage(QuietWait, ResponseWindow, AutoReward, RewardSize):
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
     track_length_scale: Double = Field(gt=0, description="The drawn track length is multiplied by this")
     frequency_drift: Bool = Field(description="Whether the frequency also drifts up with time, not only with distance run")
-    truncated_trial_fraction: Double = Field(ge=0, le=1, description="Fraction of trials whose stimulus switches off early (truncation.sweepFractions)")
+    truncated_trial_probability: Double = Field(ge=0, le=1, description="Probability that a trial's stimulus switches off early (truncation.sweepFractions); 0: never, 1: every trial")
 
     @model_validator(mode="after")
     def _zone_ordered(self) -> "TrainingStage":
@@ -186,7 +186,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         gt=0,
         description="On a stage with frequencyDrift, the time from the trial start over which the tone and grating drift on their own from the sweep's start to its end, in seconds, added to what the distance run sets. One value for every drift stage, as there is one sweep",
     )
-    trial_structure: TrialStructure = Field(default=TrialStructure(iti_min_seconds=2.0, iti_max_seconds=3.0), description="Timing of each trial")
+    trial_structure: TrialStructure = Field(description="Timing of each trial")
     penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
     truncation: Truncation = Field(default=Truncation(), description="Where the stimulus switches off on a truncated trial")
     optogenetics: OptogeneticsSettings = Field(description="Zapit optogenetic stimulation")
