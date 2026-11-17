@@ -51,9 +51,9 @@
                 <Parameter>
                   <Name>TrainingStage</Name>
                   <Value>0</Value>
-                  <Description>Row of the task file's trainingStages to run, 0 to 5 (a row past the end stops the workflow at Go): suggested from the mouse's earlier experiments.</Description>
+                  <Description>The id of the training pipeline stage to run (K:\config\training-pipelines\coen-dome-navigation\task-abstract-corridor.yml), 0 to 99: rig-control writes that stage's values into the task file with its id as trainingPipeline.id, and Go stops the workflow when the two differ.</Description>
                   <Minimum>0</Minimum>
-                  <Maximum>5</Maximum>
+                  <Maximum>99</Maximum>
                   <WholeNumber>true</WholeNumber>
                 </Parameter>
               </Parameters>

@@ -246,108 +246,38 @@
       "title": "StimulusSound",
       "type": "object"
     },
-    "TrainingStage": {
-      "description": "One row of the training stage table: what the stage does, only what some stage changes (the rest is task-level). Its lick quiet wait, response window and auto-reward are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
+    "TrainingPipeline": {
+      "description": "The training pipeline stage the values came from, filled by rig-control at launch; empty in the repo's task files.",
       "properties": {
-        "autoRewardProbability": {
-          "description": "Probability that a trial is an auto-reward trial, rewarded without a correct response (how is the task's); 0: never, 1: every trial",
-          "maximum": 1,
-          "minimum": 0,
-          "title": "AutoRewardProbability",
-          "type": "number"
-        },
-        "responseWindowSeconds": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
+        "id": {
           "default": null,
-          "description": "The response window, in seconds from when a lick first counts (the task says when); with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)",
-          "title": "ResponseWindowSeconds"
-        },
-        "lickQuietSeconds": {
-          "default": 0.0,
-          "description": "Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
-          "maximum": 10,
-          "minimum": 0,
-          "title": "LickQuietSeconds",
-          "type": "number"
+          "description": "The stage's id in the pipeline, which the TrainingStage setting must equal (Go refuses otherwise)",
+          "title": "Id",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "label": {
           "default": null,
-          "description": "The stage's name, shown on Setup after its number",
+          "description": "The stage's label in the pipeline",
           "title": "Label",
           "type": [
             "string",
             "null"
           ]
         },
-        "trialWeights": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TrialTypeWeights"
-            },
-            {
-              "type": "null"
-            }
-          ],
+        "sha256": {
           "default": null,
-          "description": "This stage's own trialWeights, replacing the task's (the mouse's) for this stage; null: the task's trialWeights apply",
-          "title": "TrialWeights"
-        },
-        "rewardFloorHz": {
-          "description": "Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)",
-          "minimum": 1,
-          "title": "RewardFloorHz",
-          "type": "number"
-        },
-        "rewardCeilingHz": {
-          "description": "Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)",
-          "minimum": 1,
-          "title": "RewardCeilingHz",
-          "type": "number"
-        },
-        "wrongLickLimit": {
-          "description": "Licks outside the zone that end the trial; 0: wrong licks never end it",
-          "minimum": 0,
-          "title": "WrongLickLimit",
-          "type": "integer"
-        },
-        "wheelGain": {
-          "description": "Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end",
-          "exclusiveMinimum": 0,
-          "title": "WheelGain",
-          "type": "number"
-        },
-        "autoProgressPerSecond": {
-          "description": "Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
-          "minimum": 0,
-          "title": "AutoProgressPerSecond",
-          "type": "number"
-        },
-        "stimulusOffProbability": {
-          "description": "Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial",
-          "maximum": 1,
-          "minimum": 0,
-          "title": "StimulusOffProbability",
-          "type": "number"
+          "description": "The sha256 of the pipeline file's text rig-control ran it from",
+          "title": "Sha256",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": [
-        "autoRewardProbability",
-        "rewardFloorHz",
-        "rewardCeilingHz",
-        "wrongLickLimit",
-        "wheelGain",
-        "autoProgressPerSecond",
-        "stimulusOffProbability"
-      ],
-      "title": "TrainingStage",
+      "title": "TrainingPipeline",
       "type": "object"
     },
     "TrialStructure": {
@@ -475,8 +405,38 @@
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskParameters": {
-      "description": "Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.",
+      "description": "Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and what a training stage sets (the flat values below, stage 0's by default; the lick quiet wait, response window and auto-reward are the lab's, open_rigs.core.task).\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
       "properties": {
+        "autoRewardProbability": {
+          "default": 1.0,
+          "description": "Probability that a trial is an auto-reward trial, rewarded on reaching the zone's floor without a lick; 0: never, 1: every trial",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "AutoRewardProbability",
+          "type": "number"
+        },
+        "responseWindowSeconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The response window, in seconds from when a lick first counts (the task says when); with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)",
+          "title": "ResponseWindowSeconds"
+        },
+        "lickQuietSeconds": {
+          "default": 0.0,
+          "description": "Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
+          "maximum": 10,
+          "minimum": 0,
+          "title": "LickQuietSeconds",
+          "type": "number"
+        },
         "rngSeed": {
           "default": null,
           "description": "Seed of the random number generator for these task parameters",
@@ -500,7 +460,7 @@
             "audiovisualConflict": 0,
             "neutral": 0
           },
-          "description": "Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead",
+          "description": "Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)",
           "title": "TrialWeights"
         },
         "auditoryStimulus": {
@@ -561,21 +521,68 @@
           "description": "Zapit optogenetic stimulation",
           "title": "Optogenetics"
         },
-        "trainingStages": {
-          "description": "Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go",
-          "items": {
-            "$ref": "#/$defs/TrainingStage"
-          },
-          "title": "TrainingStages",
-          "type": "array"
+        "rewardFloorHz": {
+          "default": 18000,
+          "description": "Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)",
+          "minimum": 1,
+          "title": "RewardFloorHz",
+          "type": "number"
+        },
+        "rewardCeilingHz": {
+          "default": 25000,
+          "description": "Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)",
+          "minimum": 1,
+          "title": "RewardCeilingHz",
+          "type": "number"
+        },
+        "wrongLickLimit": {
+          "default": 0,
+          "description": "Licks outside the zone that end the trial; 0: wrong licks never end it",
+          "minimum": 0,
+          "title": "WrongLickLimit",
+          "type": "integer"
+        },
+        "wheelGain": {
+          "default": 8.0,
+          "description": "Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end",
+          "exclusiveMinimum": 0,
+          "title": "WheelGain",
+          "type": "number"
+        },
+        "autoProgressPerSecond": {
+          "default": 0.04,
+          "description": "Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
+          "minimum": 0,
+          "title": "AutoProgressPerSecond",
+          "type": "number"
+        },
+        "stimulusOffProbability": {
+          "default": 0.0,
+          "description": "Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "StimulusOffProbability",
+          "type": "number"
+        },
+        "trainingPipeline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrainingPipeline"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The training pipeline stage these values came from (id, label, sha256 of the pipeline file), filled by rig-control at launch; Go refuses a task whose id is missing or differs from the TrainingStage setting",
+          "title": "TrainingPipeline"
         }
       },
       "required": [
         "reward",
         "trialStructure",
         "penalty",
-        "optogenetics",
-        "trainingStages"
+        "optogenetics"
       ],
       "title": "UclOpenCoenDomeNavigationTaskParameters",
       "type": "object"

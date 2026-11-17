@@ -976,124 +976,58 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// One row of the training stage table: what the stage does, only what some stage changes (the rest is task-level). Its lick quiet wait, response window and auto-reward are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
-    ///
-    ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
+    /// The training pipeline stage the values came from, filled by rig-control at launch; empty in the repo's task files.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"One row of the training stage table: what the stage does, only what some stage changes (the rest is task-level). Its lick quiet wait, response window and auto-reward are the lab's (open_rigs.core.task). Rows are selected by the TrainingStage setting.
-
-    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
+    [System.ComponentModel.DescriptionAttribute("The training pipeline stage the values came from, filled by rig-control at launch" +
+        "; empty in the repo\'s task files.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class TrainingStage
+    public partial class TrainingPipeline
     {
     
-        private double _autoRewardProbability;
-    
-        private double? _responseWindowSeconds;
-    
-        private double _lickQuietSeconds;
+        private int? _id;
     
         private string _label;
     
-        private TrialTypeWeights _trialWeights;
+        private string _sha256;
     
-        private double _rewardFloorHz;
-    
-        private double _rewardCeilingHz;
-    
-        private int _wrongLickLimit;
-    
-        private double _wheelGain;
-    
-        private double _autoProgressPerSecond;
-    
-        private double _stimulusOffProbability;
-    
-        public TrainingStage()
+        public TrainingPipeline()
         {
-            _lickQuietSeconds = 0D;
         }
     
-        protected TrainingStage(TrainingStage other)
+        protected TrainingPipeline(TrainingPipeline other)
         {
-            _autoRewardProbability = other._autoRewardProbability;
-            _responseWindowSeconds = other._responseWindowSeconds;
-            _lickQuietSeconds = other._lickQuietSeconds;
+            _id = other._id;
             _label = other._label;
-            _trialWeights = other._trialWeights;
-            _rewardFloorHz = other._rewardFloorHz;
-            _rewardCeilingHz = other._rewardCeilingHz;
-            _wrongLickLimit = other._wrongLickLimit;
-            _wheelGain = other._wheelGain;
-            _autoProgressPerSecond = other._autoProgressPerSecond;
-            _stimulusOffProbability = other._stimulusOffProbability;
+            _sha256 = other._sha256;
         }
     
         /// <summary>
-        /// Probability that a trial is an auto-reward trial, rewarded without a correct response (how is the task's); 0: never, 1: every trial
+        /// The stage's id in the pipeline, which the TrainingStage setting must equal (Go refuses otherwise)
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("autoRewardProbability", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoRewardProbability")]
-        [System.ComponentModel.DescriptionAttribute("Probability that a trial is an auto-reward trial, rewarded without a correct resp" +
-            "onse (how is the task\'s); 0: never, 1: every trial")]
-        public double AutoRewardProbability
+        [Newtonsoft.Json.JsonPropertyAttribute("id")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="id")]
+        [System.ComponentModel.DescriptionAttribute("The stage\'s id in the pipeline, which the TrainingStage setting must equal (Go re" +
+            "fuses otherwise)")]
+        public int? Id
         {
             get
             {
-                return _autoRewardProbability;
+                return _id;
             }
             set
             {
-                _autoRewardProbability = value;
+                _id = value;
             }
         }
     
         /// <summary>
-        /// The response window, in seconds from when a lick first counts (the task says when); with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("responseWindowSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="responseWindowSeconds")]
-        [System.ComponentModel.DescriptionAttribute("The response window, in seconds from when a lick first counts (the task says when" +
-            "); with no response by its end the trial is NoResponse. Null or left out: no lim" +
-            "it (a task may refuse it)")]
-        public double? ResponseWindowSeconds
-        {
-            get
-            {
-                return _responseWindowSeconds;
-            }
-            set
-            {
-                _responseWindowSeconds = value;
-            }
-        }
-    
-        /// <summary>
-        /// Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("lickQuietSeconds")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickQuietSeconds")]
-        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)")]
-        public double LickQuietSeconds
-        {
-            get
-            {
-                return _lickQuietSeconds;
-            }
-            set
-            {
-                _lickQuietSeconds = value;
-            }
-        }
-    
-        /// <summary>
-        /// The stage's name, shown on Setup after its number
+        /// The stage's label in the pipeline
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("label")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="label")]
-        [System.ComponentModel.DescriptionAttribute("The stage\'s name, shown on Setup after its number")]
+        [System.ComponentModel.DescriptionAttribute("The stage\'s label in the pipeline")]
         public string Label
         {
             get
@@ -1107,163 +1041,38 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// This stage's own trialWeights, replacing the task's (the mouse's) for this stage; null: the task's trialWeights apply
+        /// The sha256 of the pipeline file's text rig-control ran it from
         /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("trialWeights")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialWeights")]
-        [System.ComponentModel.DescriptionAttribute("This stage\'s own trialWeights, replacing the task\'s (the mouse\'s) for this stage;" +
-            " null: the task\'s trialWeights apply")]
-        public TrialTypeWeights TrialWeights
+        [Newtonsoft.Json.JsonPropertyAttribute("sha256")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sha256")]
+        [System.ComponentModel.DescriptionAttribute("The sha256 of the pipeline file\'s text rig-control ran it from")]
+        public string Sha256
         {
             get
             {
-                return _trialWeights;
+                return _sha256;
             }
             set
             {
-                _trialWeights = value;
+                _sha256 = value;
             }
         }
     
-        /// <summary>
-        /// Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("rewardFloorHz", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardFloorHz")]
-        [System.ComponentModel.DescriptionAttribute("Lower frequency of the reward zone, in Hz, above the sweep\'s start (src/sounds/sw" +
-            "eep.json)")]
-        public double RewardFloorHz
+        public System.IObservable<TrainingPipeline> Generate()
         {
-            get
-            {
-                return _rewardFloorHz;
-            }
-            set
-            {
-                _rewardFloorHz = value;
-            }
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new TrainingPipeline(this)));
         }
     
-        /// <summary>
-        /// Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("rewardCeilingHz", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardCeilingHz")]
-        [System.ComponentModel.DescriptionAttribute("Upper frequency of the reward zone, in Hz, at most the sweep\'s end (src/sounds/sw" +
-            "eep.json)")]
-        public double RewardCeilingHz
+        public System.IObservable<TrainingPipeline> Generate<TSource>(System.IObservable<TSource> source)
         {
-            get
-            {
-                return _rewardCeilingHz;
-            }
-            set
-            {
-                _rewardCeilingHz = value;
-            }
-        }
-    
-        /// <summary>
-        /// Licks outside the zone that end the trial; 0: wrong licks never end it
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("wrongLickLimit", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wrongLickLimit")]
-        [System.ComponentModel.DescriptionAttribute("Licks outside the zone that end the trial; 0: wrong licks never end it")]
-        public int WrongLickLimit
-        {
-            get
-            {
-                return _wrongLickLimit;
-            }
-            set
-            {
-                _wrongLickLimit = value;
-            }
-        }
-    
-        /// <summary>
-        /// Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("wheelGain", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelGain")]
-        [System.ComponentModel.DescriptionAttribute("Track cm per wheel cm: the track\'s tone and grating move this many cm for each cm" +
-            " the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the " +
-            "end")]
-        public double WheelGain
-        {
-            get
-            {
-                return _wheelGain;
-            }
-            set
-            {
-                _wheelGain = value;
-            }
-        }
-    
-        /// <summary>
-        /// Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("autoProgressPerSecond", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoProgressPerSecond")]
-        [System.ComponentModel.DescriptionAttribute("Fraction of the track the tone and grating advance per second on their own from t" +
-            "he trial start, added to what the wheel sets; 0: none. Moves the stimulus only: " +
-            "the track\'s end and the stimulus-off points are judged on the wheel alone")]
-        public double AutoProgressPerSecond
-        {
-            get
-            {
-                return _autoProgressPerSecond;
-            }
-            set
-            {
-                _autoProgressPerSecond = value;
-            }
-        }
-    
-        /// <summary>
-        /// Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("stimulusOffProbability", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulusOffProbability")]
-        [System.ComponentModel.DescriptionAttribute("Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimul" +
-            "i switch off part way along the track; 0: never, 1: every trial")]
-        public double StimulusOffProbability
-        {
-            get
-            {
-                return _stimulusOffProbability;
-            }
-            set
-            {
-                _stimulusOffProbability = value;
-            }
-        }
-    
-        public System.IObservable<TrainingStage> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new TrainingStage(this)));
-        }
-    
-        public System.IObservable<TrainingStage> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new TrainingStage(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new TrainingPipeline(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("AutoRewardProbability = " + _autoRewardProbability + ", ");
-            stringBuilder.Append("ResponseWindowSeconds = " + _responseWindowSeconds + ", ");
-            stringBuilder.Append("LickQuietSeconds = " + _lickQuietSeconds + ", ");
+            stringBuilder.Append("Id = " + _id + ", ");
             stringBuilder.Append("Label = " + _label + ", ");
-            stringBuilder.Append("TrialWeights = " + _trialWeights + ", ");
-            stringBuilder.Append("RewardFloorHz = " + _rewardFloorHz + ", ");
-            stringBuilder.Append("RewardCeilingHz = " + _rewardCeilingHz + ", ");
-            stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
-            stringBuilder.Append("WheelGain = " + _wheelGain + ", ");
-            stringBuilder.Append("AutoProgressPerSecond = " + _autoProgressPerSecond + ", ");
-            stringBuilder.Append("StimulusOffProbability = " + _stimulusOffProbability);
+            stringBuilder.Append("Sha256 = " + _sha256);
             return true;
         }
     
@@ -1611,16 +1420,24 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and the training stages.
+    /// Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and what a training stage sets (the flat values below, stage 0's by default; the lick quiet wait, response window and auto-reward are the lab's, open_rigs.core.task).
+    ///
+    ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Task parameters for the coen-dome-navigation corridor: the reward, the trial mix," +
-        " the sounds, the trial structure, the penalty, stimulus off, optogenetics and th" +
-        "e training stages.")]
+    [System.ComponentModel.DescriptionAttribute(@"Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and what a training stage sets (the flat values below, stage 0's by default; the lick quiet wait, response window and auto-reward are the lab's, open_rigs.core.task).
+
+    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class UclOpenCoenDomeNavigationTaskParameters
     {
+    
+        private double _autoRewardProbability;
+    
+        private double? _responseWindowSeconds;
+    
+        private double _lickQuietSeconds;
     
         private double? _rngSeed;
     
@@ -1644,10 +1461,24 @@ namespace UclOpenCoenDomeNavigationTask
     
         private OptogeneticsSettings _optogenetics;
     
-        private System.Collections.Generic.List<TrainingStage> _trainingStages;
+        private double _rewardFloorHz;
+    
+        private double _rewardCeilingHz;
+    
+        private int _wrongLickLimit;
+    
+        private double _wheelGain;
+    
+        private double _autoProgressPerSecond;
+    
+        private double _stimulusOffProbability;
+    
+        private TrainingPipeline _trainingPipeline;
     
         public UclOpenCoenDomeNavigationTaskParameters()
         {
+            _autoRewardProbability = 1D;
+            _lickQuietSeconds = 0D;
             _reward = new RewardSettings();
             _trialWeights = new TrialTypeWeights();
             _auditoryStimulus = new StimulusSound();
@@ -1658,11 +1489,19 @@ namespace UclOpenCoenDomeNavigationTask
             _penalty = new Penalty();
             _stimulusOff = new StimulusOff();
             _optogenetics = new OptogeneticsSettings();
-            _trainingStages = new System.Collections.Generic.List<TrainingStage>();
+            _rewardFloorHz = 18000D;
+            _rewardCeilingHz = 25000D;
+            _wrongLickLimit = 0;
+            _wheelGain = 8D;
+            _autoProgressPerSecond = 0.04D;
+            _stimulusOffProbability = 0D;
         }
     
         protected UclOpenCoenDomeNavigationTaskParameters(UclOpenCoenDomeNavigationTaskParameters other)
         {
+            _autoRewardProbability = other._autoRewardProbability;
+            _responseWindowSeconds = other._responseWindowSeconds;
+            _lickQuietSeconds = other._lickQuietSeconds;
             _rngSeed = other._rngSeed;
             _reward = other._reward;
             _trialWeights = other._trialWeights;
@@ -1674,7 +1513,70 @@ namespace UclOpenCoenDomeNavigationTask
             _penalty = other._penalty;
             _stimulusOff = other._stimulusOff;
             _optogenetics = other._optogenetics;
-            _trainingStages = other._trainingStages;
+            _rewardFloorHz = other._rewardFloorHz;
+            _rewardCeilingHz = other._rewardCeilingHz;
+            _wrongLickLimit = other._wrongLickLimit;
+            _wheelGain = other._wheelGain;
+            _autoProgressPerSecond = other._autoProgressPerSecond;
+            _stimulusOffProbability = other._stimulusOffProbability;
+            _trainingPipeline = other._trainingPipeline;
+        }
+    
+        /// <summary>
+        /// Probability that a trial is an auto-reward trial, rewarded on reaching the zone's floor without a lick; 0: never, 1: every trial
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("autoRewardProbability")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoRewardProbability")]
+        [System.ComponentModel.DescriptionAttribute("Probability that a trial is an auto-reward trial, rewarded on reaching the zone\'s" +
+            " floor without a lick; 0: never, 1: every trial")]
+        public double AutoRewardProbability
+        {
+            get
+            {
+                return _autoRewardProbability;
+            }
+            set
+            {
+                _autoRewardProbability = value;
+            }
+        }
+    
+        /// <summary>
+        /// The response window, in seconds from when a lick first counts (the task says when); with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("responseWindowSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="responseWindowSeconds")]
+        [System.ComponentModel.DescriptionAttribute("The response window, in seconds from when a lick first counts (the task says when" +
+            "); with no response by its end the trial is NoResponse. Null or left out: no lim" +
+            "it (a task may refuse it)")]
+        public double? ResponseWindowSeconds
+        {
+            get
+            {
+                return _responseWindowSeconds;
+            }
+            set
+            {
+                _responseWindowSeconds = value;
+            }
+        }
+    
+        /// <summary>
+        /// Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("lickQuietSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lickQuietSeconds")]
+        [System.ComponentModel.DescriptionAttribute(@"Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)")]
+        public double LickQuietSeconds
+        {
+            get
+            {
+                return _lickQuietSeconds;
+            }
+            set
+            {
+                _lickQuietSeconds = value;
+            }
         }
     
         /// <summary>
@@ -1715,12 +1617,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead
+        /// Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("trialWeights")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialWeights")]
-        [System.ComponentModel.DescriptionAttribute(@"Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead")]
+        [System.ComponentModel.DescriptionAttribute("Relative draw weight per trial type, set per mouse and kept from experiment to ex" +
+            "periment: each trial draws what it shows at random with these as relative chance" +
+            "s, independently of every other trial (trialType in the trial row)")]
         public TrialTypeWeights TrialWeights
         {
             get
@@ -1891,22 +1795,138 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Training stage table, indexed by the TrainingStage setting from 0; a setting past the end stops the workflow at Go
+        /// Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)
         /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("trainingStages", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trainingStages")]
-        [System.ComponentModel.DescriptionAttribute("Training stage table, indexed by the TrainingStage setting from 0; a setting past" +
-            " the end stops the workflow at Go")]
-        public System.Collections.Generic.List<TrainingStage> TrainingStages
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardFloorHz")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardFloorHz")]
+        [System.ComponentModel.DescriptionAttribute("Lower frequency of the reward zone, in Hz, above the sweep\'s start (src/sounds/sw" +
+            "eep.json)")]
+        public double RewardFloorHz
         {
             get
             {
-                return _trainingStages;
+                return _rewardFloorHz;
             }
             set
             {
-                _trainingStages = value;
+                _rewardFloorHz = value;
+            }
+        }
+    
+        /// <summary>
+        /// Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardCeilingHz")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardCeilingHz")]
+        [System.ComponentModel.DescriptionAttribute("Upper frequency of the reward zone, in Hz, at most the sweep\'s end (src/sounds/sw" +
+            "eep.json)")]
+        public double RewardCeilingHz
+        {
+            get
+            {
+                return _rewardCeilingHz;
+            }
+            set
+            {
+                _rewardCeilingHz = value;
+            }
+        }
+    
+        /// <summary>
+        /// Licks outside the zone that end the trial; 0: wrong licks never end it
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("wrongLickLimit")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wrongLickLimit")]
+        [System.ComponentModel.DescriptionAttribute("Licks outside the zone that end the trial; 0: wrong licks never end it")]
+        public int WrongLickLimit
+        {
+            get
+            {
+                return _wrongLickLimit;
+            }
+            set
+            {
+                _wrongLickLimit = value;
+            }
+        }
+    
+        /// <summary>
+        /// Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("wheelGain")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="wheelGain")]
+        [System.ComponentModel.DescriptionAttribute("Track cm per wheel cm: the track\'s tone and grating move this many cm for each cm" +
+            " the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the " +
+            "end")]
+        public double WheelGain
+        {
+            get
+            {
+                return _wheelGain;
+            }
+            set
+            {
+                _wheelGain = value;
+            }
+        }
+    
+        /// <summary>
+        /// Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("autoProgressPerSecond")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoProgressPerSecond")]
+        [System.ComponentModel.DescriptionAttribute("Fraction of the track the tone and grating advance per second on their own from t" +
+            "he trial start, added to what the wheel sets; 0: none. Moves the stimulus only: " +
+            "the track\'s end and the stimulus-off points are judged on the wheel alone")]
+        public double AutoProgressPerSecond
+        {
+            get
+            {
+                return _autoProgressPerSecond;
+            }
+            set
+            {
+                _autoProgressPerSecond = value;
+            }
+        }
+    
+        /// <summary>
+        /// Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("stimulusOffProbability")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulusOffProbability")]
+        [System.ComponentModel.DescriptionAttribute("Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimul" +
+            "i switch off part way along the track; 0: never, 1: every trial")]
+        public double StimulusOffProbability
+        {
+            get
+            {
+                return _stimulusOffProbability;
+            }
+            set
+            {
+                _stimulusOffProbability = value;
+            }
+        }
+    
+        /// <summary>
+        /// The training pipeline stage these values came from (id, label, sha256 of the pipeline file), filled by rig-control at launch; Go refuses a task whose id is missing or differs from the TrainingStage setting
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("trainingPipeline")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trainingPipeline")]
+        [System.ComponentModel.DescriptionAttribute("The training pipeline stage these values came from (id, label, sha256 of the pipe" +
+            "line file), filled by rig-control at launch; Go refuses a task whose id is missi" +
+            "ng or differs from the TrainingStage setting")]
+        public TrainingPipeline TrainingPipeline
+        {
+            get
+            {
+                return _trainingPipeline;
+            }
+            set
+            {
+                _trainingPipeline = value;
             }
         }
     
@@ -1922,6 +1942,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
+            stringBuilder.Append("AutoRewardProbability = " + _autoRewardProbability + ", ");
+            stringBuilder.Append("ResponseWindowSeconds = " + _responseWindowSeconds + ", ");
+            stringBuilder.Append("LickQuietSeconds = " + _lickQuietSeconds + ", ");
             stringBuilder.Append("RngSeed = " + _rngSeed + ", ");
             stringBuilder.Append("Reward = " + _reward + ", ");
             stringBuilder.Append("TrialWeights = " + _trialWeights + ", ");
@@ -1933,7 +1956,13 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("Penalty = " + _penalty + ", ");
             stringBuilder.Append("StimulusOff = " + _stimulusOff + ", ");
             stringBuilder.Append("Optogenetics = " + _optogenetics + ", ");
-            stringBuilder.Append("TrainingStages = " + _trainingStages);
+            stringBuilder.Append("RewardFloorHz = " + _rewardFloorHz + ", ");
+            stringBuilder.Append("RewardCeilingHz = " + _rewardCeilingHz + ", ");
+            stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
+            stringBuilder.Append("WheelGain = " + _wheelGain + ", ");
+            stringBuilder.Append("AutoProgressPerSecond = " + _autoProgressPerSecond + ", ");
+            stringBuilder.Append("StimulusOffProbability = " + _stimulusOffProbability + ", ");
+            stringBuilder.Append("TrainingPipeline = " + _trainingPipeline);
             return true;
         }
     
@@ -2125,9 +2154,9 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<StimulusSound>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<TrainingStage> source)
+        public System.IObservable<string> Process(System.IObservable<TrainingPipeline> source)
         {
-            return Process<TrainingStage>(source);
+            return Process<TrainingPipeline>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<TrialStructure> source)
@@ -2168,7 +2197,7 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingPipeline>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialTypeWeights>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]
@@ -2267,9 +2296,9 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<StimulusSound>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<TrainingStage> source)
+        public System.IObservable<string> Process(System.IObservable<TrainingPipeline> source)
         {
-            return Process<TrainingStage>(source);
+            return Process<TrainingPipeline>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<TrialStructure> source)
@@ -2310,7 +2339,7 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusSound>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingStage>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrainingPipeline>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialTypeWeights>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<UclOpenCoenDomeNavigationTaskParameters>))]

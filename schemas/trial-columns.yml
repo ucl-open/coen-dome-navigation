@@ -17,7 +17,7 @@
 # trialType and outcome are described per task, and which trials are rewarded and penalised in those columns' notes. This task's own columns follow.
 #
 # Only what changes from trial to trial: the task file's values fixed for the
-# experiment (the stage's row, the sound levels) are in Settings\Settings_Task_*.json and the stage itself
+# experiment (the stage's values and trainingPipeline, the sound levels) are in Settings\Settings_Task_*.json and the stage itself
 # is TrainingStage in Settings\Settings_Experiment_*.json; no column sums the Harp logs, and none repeats another but outcomeTime, which names harpTime's
 # moment so that the shared block names every moment of a trial.
 

@@ -1,16 +1,17 @@
 # yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_dome_navigation_task.json
-# The task file: rig-control copies it at launch and again at Go with the form's edits (the stage is
-# the Training Stage setting, suggested from the mouse's earlier experiments),
-# and the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest.
-# From the editor, the workflow reads this file as it is.
+# The task file: rig-control copies it at launch and again at Go with the form's edits, and the workflow reads the
+# copy (TaskPath) at Start for the background noise and at Go for the rest. From the editor, the workflow reads this
+# file as it is.
 #
-# Each trainingStages row says what its stage does. Not every rule is in the schema: tests\test_task_schema.py
-# checks this file against the pydantic model (src\ucl_open_coen_dome_navigation\task.py), which
-# also says what each field does.
+# The stage is the Training Stage setting, the id of a stage of the lab's training pipeline
+# (K:\config\training-pipelines\coen-dome-navigation\task-abstract-corridor.yml, edited on rig-control's Training
+# Pipeline page): rig-control writes that stage's values over the values below at launch and fills trainingPipeline.
+# The values here are the defaults (stage 0's). Not every rule is in the schema: tests\test_task_schema.py checks
+# this file against the pydantic model (src\ucl_open_coen_dome_navigation\task.py), which also says what each field does.
 taskParameters:
   rngSeed: null               # null = the workflow draws one at Go; each seed used is a RngSeed event in WorkflowData_Events
   # Relative chances of what a trial shows, per mouse (Setup): the grating, the tone sweep or both; conflict and neutral
-  # trials are not defined here yet. A trainingStages row may set its own trialWeights for that stage (none does).
+  # trials are not defined here yet. A pipeline stage may set its own (the whole map).
   trialWeights: { visual: 0, auditory: 1, audiovisualCoherent: 0, audiovisualConflict: 0, neutral: 0 }
   reward:
     rewardSizeUl: 3.0         # ul on the left spout's valve, planned from its calibration
@@ -30,7 +31,7 @@ taskParameters:
   trialStructure:
     itiMinSeconds: 2.0        # from the outcome (after any timeout) to the first pip, drinking included:
     itiMaxSeconds: 3.0        # Tom's 2 s then 0 or 1 s, now drawn evenly between
-    trackLengthsCm: [80, 100, 120]   # track cm, one drawn per trial; the mouse runs track cm / the stage's wheelGain of wheel
+    trackLengthsCm: [80, 100, 120]   # track cm, one drawn per trial; the mouse runs track cm / wheelGain of wheel
     wheelQuietSeconds: 0      # s with the wheel still before the trial start, from the interval's start; 0 off (with wheelQuietCm 0)
     wheelQuietCm: 0           # cm of wheel travel (forward and back added) allowed in the last wheelQuietSeconds
   penalty:
@@ -38,7 +39,7 @@ taskParameters:
     sound:                    # the lab's penalty sound (OpenRigs.Audio), on a penalised trial
       enabled: true
       levelDbfs: -44.6        # dBFS RMS, on rig.yml's penaltySoundChannel alone
-  stimulusOff:                # on a stage's stimulus-off trials
+  stimulusOff:                # on stimulus-off trials (stimulusOffProbability)
     trackFractions: [0.4, 0.6]   # of the trial's track length
     stimuli: [auditory, visual]   # the stimuli that switch off
   optogenetics:               # Zapit; the laser runs from the trigger to the outcome (or laserMaxSeconds), laser-off trials laser off
@@ -46,75 +47,21 @@ taskParameters:
     zapitConditionsPath: ''   # the Zapit conditions file loaded in Zapit
     laserPowerMw: null        # mW on laser-on trials, every condition; required with optogenetics on
     laserOnProbability: 0.4   # laser-on trials after trialsBeforeLaser; the rest are 0 mW; each trial's condition drawn at random
-    laserMaxSeconds: 12.5     # s from the trigger; a cap: at least the longest responseWindowSeconds + laserToStimulusSeconds + 0.25, the laser stops at the outcome
+    laserMaxSeconds: 12.5     # s from the trigger; a cap: at least responseWindowSeconds + laserToStimulusSeconds + 0.25, the laser stops at the outcome
     laserToStimulusSeconds: 0.1   # s, signed, whole 0.05 s steps, at most 0.2: the trigger before the first pip (negative: after); the first pip comes max(this, 0) after the trial's start in every experiment
     triggerHoldSeconds: 1.0   # s the trigger line and masking light stay on after the outcome (at least 0.5, the longest ramp-down; the next trial is armed once it falls)
     trialsBeforeLaser: 20     # no laser-on trial among the first this many
-  # Rows by the Training Stage setting (a setting past the end stops the workflow at Go). The reward zones are
-  # Tom's: centred on 18 kHz in log space, a 6 kHz window from stage 2 (task.py's old derivation).
-  trainingStages:
-    # Stage 0: rewarded on reaching the zone, no lick; wheel gain 8; the stimulus also advances on its own
-    - label: Zone Reward, Drift
-      rewardFloorHz: 18000
-      rewardCeilingHz: 25000
-      autoRewardProbability: 1.0   # every trial rewarded on reaching the floor, no lick needed
-      wrongLickLimit: 0
-      lickQuietSeconds: 0
-      responseWindowSeconds: null   # the window never closes
-      wheelGain: 8.0              # track cm per wheel cm
-      autoProgressPerSecond: 0.04   # of the track per second on its own: the whole track in 25 s
-      stimulusOffProbability: 0.0
-    # Stage 1: as stage 0, no drift
-    - label: Zone Reward
-      rewardFloorHz: 18000
-      rewardCeilingHz: 25000
-      autoRewardProbability: 1.0   # every trial rewarded on reaching the floor, no lick needed
-      wrongLickLimit: 0
-      lickQuietSeconds: 0
-      responseWindowSeconds: null   # the window never closes
-      wheelGain: 8.0              # track cm per wheel cm
-      autoProgressPerSecond: 0.0
-      stimulusOffProbability: 0.0
-    # Stage 2: a lick anywhere above the floor; full tracks
-    - label: Lick to Report
-      rewardFloorHz: 15248
-      rewardCeilingHz: 25000
-      autoRewardProbability: 0.0
-      wrongLickLimit: 0
-      lickQuietSeconds: 0
-      responseWindowSeconds: null   # the window never closes
-      wheelGain: 1.0
-      autoProgressPerSecond: 0.0
-      stimulusOffProbability: 0.0
-    # Stage 3: the ceiling comes in; wrong licks and slowness penalised
-    - label: Ceiling In
-      rewardFloorHz: 15248
-      rewardCeilingHz: 21248
-      autoRewardProbability: 0.0
-      wrongLickLimit: 8
-      lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
-      responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      wheelGain: 1.0
-      autoProgressPerSecond: 0.0
-      stimulusOffProbability: 0.0
-    # Stage 4: fewer wrong licks allowed
-    - label: Fewer Wrong Licks
-      rewardFloorHz: 15248
-      rewardCeilingHz: 21248
-      autoRewardProbability: 0.0
-      wrongLickLimit: 5
-      lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
-      responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      wheelGain: 1.0
-      autoProgressPerSecond: 0.0
-      stimulusOffProbability: 0.0
-    - label: Stimulus Off   # stage 4 with 16% stimulus-off trials; only ever chosen by hand
-      rewardFloorHz: 15248
-      rewardCeilingHz: 21248
-      autoRewardProbability: 0.0
-      wrongLickLimit: 5
-      lickQuietSeconds: 1.0       # s without licks before the trial start, from the interval's start
-      responseWindowSeconds: 12.0  # s from the first tone pip; then NoResponse
-      wheelGain: 1.0
-      autoProgressPerSecond: 0.0
-      stimulusOffProbability: 0.16
+  # What a training stage changes; the reward zones are Tom's: centred on 18 kHz in log space, a 6 kHz window from
+  # the Lick to Report stage (task.py's old derivation).
+  rewardFloorHz: 18000
+  rewardCeilingHz: 25000
+  autoRewardProbability: 1.0   # every trial rewarded on reaching the floor, no lick needed
+  wrongLickLimit: 0           # licks outside the zone that end the trial; 0: never
+  lickQuietSeconds: 0         # s without licks before the trial start, from the interval's start; 0 off
+  responseWindowSeconds: null   # s from the first tone pip, then NoResponse; null: the window never closes
+  wheelGain: 8.0              # track cm per wheel cm
+  autoProgressPerSecond: 0.04   # of the track per second on its own: the whole track in 25 s
+  stimulusOffProbability: 0.0
+  # The pipeline stage these values came from: rig-control fills it at launch, and Go refuses a task whose id is
+  # missing or differs from the Training Stage setting. Empty here.
+  trainingPipeline: { id: null, label: null, sha256: null }

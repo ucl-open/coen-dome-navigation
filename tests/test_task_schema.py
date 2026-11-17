@@ -33,58 +33,42 @@ def test_the_task_file_validates():
     UclOpenCoenDomeNavigationTaskLogic.model_validate(task())
 
 
-def test_every_stage_has_a_name():
-    labels = [row.get("label") for row in task()["taskParameters"]["trainingStages"]]
-    assert labels == ["Zone Reward, Drift", "Zone Reward", "Lick to Report", "Ceiling In", "Fewer Wrong Licks", "Stimulus Off"]
+def test_the_stages_are_the_pipeline_s_and_the_file_has_stage_0_s_values():
+    # The stages live in the lab's training pipeline on the share (rig-control writes the chosen stage's values over these
+    # at launch); the file holds the defaults, stage 0's (Zone Reward, Drift), and an empty trainingPipeline.
+    params = task()["taskParameters"]
+    assert "trainingStages" not in params
+    assert params["trainingPipeline"] == {"id": None, "label": None, "sha256": None}
+    stage_0 = {"rewardFloorHz": 18000, "rewardCeilingHz": 25000, "autoRewardProbability": 1.0, "wrongLickLimit": 0, "lickQuietSeconds": 0,
+               "responseWindowSeconds": None, "wheelGain": 8.0, "autoProgressPerSecond": 0.04, "stimulusOffProbability": 0.0}
+    assert {key: params[key] for key in stage_0} == stage_0
+    assert (params["trialStructure"]["wheelQuietSeconds"], params["trialStructure"]["wheelQuietCm"]) == (0, 0)
 
 
-def test_the_stage_rows_keep_tom_s_reward_zones():
-    # Tom Childs' zones: from 18 kHz to the sweep's end at stages 0-1, then a window centred on 18 kHz in
-    # log space (6 kHz wide), its floor from stage 2 and its ceiling from stage 3.
-    floor, ceiling = 15248, 21248  # the 6 kHz log window centred on 18 kHz
-    rows = task()["taskParameters"]["trainingStages"]
-    assert len(rows) == 6
-    zones = [(r["rewardFloorHz"], r["rewardCeilingHz"]) for r in rows]
-    assert zones == [(18000, 25000)] * 2 + [(floor, 25000)] + [(floor, ceiling)] * 3
-
-
-def test_stages_0_and_1_reward_every_trial_on_reaching_the_zone():
-    rows = task()["taskParameters"]["trainingStages"]
-    assert [r["autoRewardProbability"] for r in rows] == [1.0] * 2 + [0.0] * 4
+@pytest.mark.parametrize("pipeline", ["absent", {}, {"id": None, "label": None, "sha256": None}, {"id": 3, "label": "Ceiling In", "sha256": "ab12"}])
+def test_training_pipeline_is_optional_in_the_model_and_the_schema(pipeline):
+    # rig-control fills it at launch; Go (TrialLogic.cs CheckTask) refuses it missing or naming another stage.
+    doc = task()
+    if pipeline == "absent":
+        del doc["taskParameters"]["trainingPipeline"]
+    else:
+        doc["taskParameters"]["trainingPipeline"] = pipeline
+    UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
+    assert list(jsonschema.Draft202012Validator(_closed(json.loads(SCHEMA.read_text(encoding="utf-8")))).iter_errors(doc)) == []
 
 
 def test_a_reward_zone_past_the_sweep_s_end_is_refused():
     doc = task()
-    doc["taskParameters"]["trainingStages"][2]["rewardCeilingHz"] = 25001
+    doc["taskParameters"]["rewardCeilingHz"] = 25001
     with pytest.raises(pydantic.ValidationError, match="not inside the sweep"):
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 
 
-def test_the_response_window_and_lick_quiet_wait_are_per_stage_and_the_wheel_s_is_the_task_s():
-    # A stage's responseWindowSeconds, null for none, and lickQuietSeconds, 0 for off; the wheel's wait is trialStructure's.
-    params = task()["taskParameters"]
-    rows = params["trainingStages"]
-    assert [r["responseWindowSeconds"] for r in rows] == [None] * 3 + [12.0] * 3
-    assert [r["lickQuietSeconds"] for r in rows] == [0] * 3 + [1.0] * 3
-    assert (params["trialStructure"]["wheelQuietSeconds"], params["trialStructure"]["wheelQuietCm"]) == (0, 0)
-
-
-def test_a_stage_field_is_one_some_stage_changes():
-    # Pip: "if it isn't chosen to be part of pipeline, then it should just be a global param like everything else".
-    # Every stage field but label and the optional trialWeights takes two values or more over the stages.
-    stages = UclOpenCoenDomeNavigationTaskLogic.model_validate(task()).model_dump(by_alias=True)["taskParameters"]["trainingStages"]
-    fixed = [key for key in stages[0] if key not in ("label", "trialWeights") and len({repr(s[key]) for s in stages}) == 1]
-    assert fixed == [], f"the same in every stage, so task-level: {fixed}"
-
-
-def test_the_mouse_s_weights_are_auditory_alone_and_no_stage_sets_its_own():
-    # Top-level trialWeights, set per mouse on Setup and carried (a stage may set its own; none does).
+def test_the_mouse_s_weights_are_auditory_alone():
+    # Top-level trialWeights, set per mouse on Setup and carried (a pipeline stage may set the whole map).
     params = task()["taskParameters"]
     assert "modality" not in params
     assert params["trialWeights"] == {"visual": 0, "auditory": 1, "audiovisualCoherent": 0, "audiovisualConflict": 0, "neutral": 0}
-    assert all("trialWeights" not in row for row in params["trainingStages"])
-    model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    assert all(stage.trial_weights is None for stage in model.training_stages)
     assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
 
 
@@ -100,23 +84,16 @@ WEIGHTS = {"visual": 0, "auditory": 1, "audiovisualCoherent": 0, "audiovisualCon
         ({"neutral": 2}, "neutral must be 0: that trial is not defined in this task yet"),
     ],
 )
-@pytest.mark.parametrize("where", ["task", "stage"])
-def test_weights_all_zero_negative_or_for_an_undefined_trial_are_refused(change, match, where):
+def test_weights_all_zero_negative_or_for_an_undefined_trial_are_refused(change, match):
     params = task()["taskParameters"]
-    weights = {**WEIGHTS, **change}
-    if where == "task":
-        params["trialWeights"] = weights
-    else:
-        params["trainingStages"][2]["trialWeights"] = weights
+    params["trialWeights"] = {**WEIGHTS, **change}
     with pytest.raises(pydantic.ValidationError, match=match):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 
-def test_a_stage_may_set_its_own_weights_and_a_missing_key_is_refused():
+def test_a_missing_weight_key_is_refused():
     params = task()["taskParameters"]
-    params["trainingStages"][2]["trialWeights"] = {**WEIGHTS, "auditory": 0, "audiovisualCoherent": 1}
-    assert UclOpenCoenDomeNavigationTaskParameters.model_validate(params).training_stages[2].trial_weights.audiovisual_coherent == 1
-    del params["trainingStages"][2]["trialWeights"]["neutral"]
+    del params["trialWeights"]["neutral"]
     with pytest.raises(pydantic.ValidationError, match="neutral"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
@@ -240,11 +217,11 @@ def test_a_bad_stimulus_off_block_is_refused(key, value, match):
 @pytest.mark.parametrize("key, value, pair", [("lickQuietSeconds", 10.5, None), ("wheelQuietSeconds", 10.5, ("wheelQuietCm", 1)), ("wheelQuietCm", 20.5, ("wheelQuietSeconds", 1))])
 def test_a_quiet_wait_above_its_maximum_is_refused(key, value, pair):
     # A long wait and a licking mouse would hold the trial start with no message. The caps are the lab's (open_rigs.core.task
-    # LickQuietWait on each stage, WheelQuietWait in trialStructure); TrialLogic.cs refuses them at Go too, through
+    # LickQuietWait at the top level, WheelQuietWait in trialStructure); TrialLogic.cs refuses them at Go too, through
     # OpenRigs.Core QuietWait.LickProblems and WheelProblems.
     doc = task()
     params = doc["taskParameters"]
-    row = params["trainingStages"][4] if key == "lickQuietSeconds" else params["trialStructure"]
+    row = params if key == "lickQuietSeconds" else params["trialStructure"]
     row[key] = value
     if pair:
         row[pair[0]] = pair[1]
@@ -274,10 +251,10 @@ def test_the_generated_csharp_has_every_schema_field():
     assert names == _property_names(json.loads(SCHEMA.read_text(encoding="utf-8")))
 
 
-def test_training_stage_s_maximum_is_the_task_file_s_last_row():
-    # A row added to trainingStages is reachable only once ExperimentControl's TrainingStage Maximum (main.bonsai) says so.
+def test_training_stage_takes_any_pipeline_id_up_to_99():
+    # TrainingStage carries the pipeline stage's id (ids are never reused); rig-control's page refuses one above 99.
     declared = re.search(r"<Name>TrainingStage</Name>.*?<Maximum>(\d+)</Maximum>", (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig"), re.S)
-    assert int(declared.group(1)) == len(task()["taskParameters"]["trainingStages"]) - 1
+    assert int(declared.group(1)) == 99
 
 
 def test_a_reward_over_the_cap_is_refused():
@@ -297,7 +274,7 @@ def test_a_reward_over_the_cap_is_refused():
         UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
 
 # The optogenetics settings' rules: laser_to_stimulus_seconds in whole steps up to 0.2 s, a laser_max_seconds cap
-# longer than the longest trial (a stage's responseWindowSeconds + laser_to_stimulus_seconds), and TrialLogic.cs checking the same rules.
+# longer than the longest trial (responseWindowSeconds + laser_to_stimulus_seconds), and TrialLogic.cs checking the same rules.
 
 PARAMS = yaml.safe_load(TASK.read_text(encoding="utf-8"))["taskParameters"]
 TRIAL_LOGIC = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
@@ -310,13 +287,11 @@ def opto(**fields) -> OptogeneticsSettings:
 
 
 def params(window=None, **opto):
-    """The task file's parameters with optogenetics on, every stage with a response window given this one."""
+    """The task file's parameters with optogenetics on and this response window (None: the file's, none)."""
     doc = copy.deepcopy(PARAMS)
     doc["optogenetics"].update({"enabled": True, "zapitConditionsPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0, **opto})
     if window is not None:
-        for row in doc["trainingStages"]:
-            if row["responseWindowSeconds"] is not None:
-                row["responseWindowSeconds"] = window
+        doc["responseWindowSeconds"] = window
     return UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
 
 
@@ -332,11 +307,14 @@ def test_other_lead_times_are_refused(seconds):
         opto(laser_to_stimulus_seconds=seconds)
 
 
-def test_a_trigger_past_every_stage_s_limit_is_refused():
-    # Stages 3-5 limit trials to 12 s from the first pip; the furthest after it is the longest limit.
-    assert params(laserToStimulusSeconds=-12.0).optogenetics.laser_to_stimulus_seconds == -12.0
-    with pytest.raises(pydantic.ValidationError, match="past every stage"):
-        params(laserToStimulusSeconds=-12.05)
+def test_a_trigger_past_the_response_window_is_refused():
+    # A 12 s window from the first pip: the trigger at most 12 s after it; with no window, at most 2 s.
+    assert params(12, laserToStimulusSeconds=-12.0).optogenetics.laser_to_stimulus_seconds == -12.0
+    with pytest.raises(pydantic.ValidationError, match="after the first pip"):
+        params(12, laserToStimulusSeconds=-12.05)
+    assert params(laserToStimulusSeconds=-2.0).optogenetics.laser_to_stimulus_seconds == -2.0
+    with pytest.raises(pydantic.ValidationError, match="after the first pip"):
+        params(laserToStimulusSeconds=-2.05)
 
 
 def test_a_lead_needs_zapit_s_reply_margin_inside_the_shortest_interval():
@@ -369,7 +347,7 @@ def test_a_cap_that_would_end_the_laser_before_the_window_closes_is_refused(limi
 
 def test_the_cap_rule_only_applies_with_optogenetics_on():
     doc = copy.deepcopy(PARAMS)
-    doc["trainingStages"][3]["responseWindowSeconds"] = 30
+    doc["responseWindowSeconds"] = 30
     assert UclOpenCoenDomeNavigationTaskParameters.model_validate(doc).optogenetics.enabled is False
 
 
@@ -408,9 +386,9 @@ def test_the_trigger_hold_is_at_least_lib_open_rigs_ramp_down():
 
 
 @pytest.mark.parametrize("where, key, value", [
-    (("trainingStages", 0), "wheelGain", 0), (("trainingStages", 0), "autoProgressPerSecond", -0.1), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
-    (("trainingStages", 0), "autoRewardProbability", 1.5), (("trainingStages", 0), "autoRewardProbability", -0.1),
-    (("trainingStages", 0), "wrongLickLimit", -1), (("reward",), "rewardSizeUl", 0),
+    ((), "wheelGain", 0), ((), "autoProgressPerSecond", -0.1), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
+    ((), "autoRewardProbability", 1.5), ((), "autoRewardProbability", -0.1),
+    ((), "wrongLickLimit", -1), ((), "rewardFloorHz", 25000), (("reward",), "rewardSizeUl", 0),
     (("trialWeights",), "visual", -1)])
 def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
     # The task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
