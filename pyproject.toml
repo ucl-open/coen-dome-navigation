@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "ucl-open-coen-dome-navigation"
-description = "The coen-dome-navigation experiment's task schema, waveforms and shaping-stage choice."
+description = "The coen-dome-navigation experiment's task schema and waveforms."
 authors = [ {name = "Tom Childs", email = "thomas.childs.19@ucl.ac.uk"}]
 license = "BSD-3-Clause"
 requires-python = ">=3.11, <3.12"
@@ -30,7 +30,6 @@ dev = [
 [project.scripts]
 regenerate-schemas = "ucl_open_coen_dome_navigation.regenerate:main"
 generate-waveforms = "ucl_open_coen_dome_navigation.waveforms:main"
-suggest-stage = "ucl_open_coen_dome_navigation.stage:main"
 summarise-experiment = "open_rigs.rigs.trials:main"
 
 [tool.ruff]

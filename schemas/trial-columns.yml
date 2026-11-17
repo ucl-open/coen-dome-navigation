@@ -32,7 +32,7 @@ trialNumber:
 trialType:
   type: string
   values: [visual, auditory, audiovisualCoherent]
-  description: What the trial showed, in words (TrialDraw.TypeNames; coen-dome-decision-making's names and the task file's trialWeights keys) - visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both together), drawn for each trial with the trialWeights as relative chances (the stage's own if it has them, else the task's, set per mouse). The weights' audiovisualConflict and neutral are not defined in this task yet and must be 0.
+  description: What the trial showed, in words (TrialDraw.TypeNames; coen-dome-decision-making's names and the task file's trialWeights keys) - visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both together), drawn for each trial with the trialWeights as relative chances (the task file's, set per mouse, unless the training pipeline's stage sets them). The weights' audiovisualConflict and neutral are not defined in this task yet and must be 0.
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
@@ -106,7 +106,7 @@ trackLengthCm:
   description: Wheel distance from the trial start to the track's end - the trial's track length (one of trialStructure.trackLengthsCm, drawn per trial) divided by wheelGain. Every position column is in these wheel cm. Distances are at rig.yml's wheelDiameterMm (75 mm on every dome).
 wheelGain:
   type: double
-  description: The stage's wheelGain - track cm per wheel cm, so the track length drawn is trackLengthCm x wheelGain. The tone and grating are set from the track's progress, wheel cm x wheelGain / track length plus the stage's autoProgressPerSecond x seconds since the trial start (in the stage's row in Settings_Task).
+  description: The stage's wheelGain - track cm per wheel cm, so the track length drawn is trackLengthCm x wheelGain. The tone and grating are set from the track's progress, wheel cm x wheelGain / track length plus the stage's autoProgressPerSecond x seconds since the trial start (in Settings_Task's taskParameters).
 outcomePositionCm:
   type: double
   unit: cm
