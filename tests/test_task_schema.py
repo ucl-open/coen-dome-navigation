@@ -33,9 +33,9 @@ def test_the_task_file_validates():
     UclOpenCoenDomeNavigationTaskLogic.model_validate(task())
 
 
-def test_only_the_truncated_stage_has_a_name():
+def test_every_stage_has_a_name():
     labels = [row.get("label") for row in task()["taskParameters"]["trainingStages"]]
-    assert labels == [None, None, None, None, None, "Truncated"]
+    assert labels == ["Zone Reward, Drift", "Zone Reward", "Lick to Report", "Ceiling In", "Fewer Wrong Licks", "Truncated"]
 
 
 def test_the_stage_rows_keep_tom_s_reward_zones():
