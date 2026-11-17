@@ -12,7 +12,7 @@ import yaml
 
 from ucl_open_coen_dome_navigation import waveforms
 from ucl_open_coen_dome_navigation.task import (
-    BEEP_SECONDS,
+    STEP_SECONDS,
     LASER_MAX_MARGIN_SECONDS,
     OptogeneticsSettings,
     UclOpenCoenDomeNavigationTaskLogic,
@@ -20,8 +20,8 @@ from ucl_open_coen_dome_navigation.task import (
 )
 
 ROOT = Path(__file__).parent.parent
-TASK = ROOT / "config" / "task-abstract-av-corridor.yml"
-WAVES = ROOT / "src" / "waveforms"
+TASK = ROOT / "config" / "task-abstract-corridor.yml"
+WAVES = ROOT / "src" / "sounds"
 SCHEMA = ROOT / "src" / "DataSchemas" / "ucl_open_coen_dome_navigation_task.json"
 
 
@@ -39,8 +39,8 @@ def test_every_stage_has_a_name():
 
 
 def test_the_stage_rows_keep_tom_s_reward_zones():
-    # Tom Childs' zones: from 18 kHz to the sweep's end at his stages 1-2, then a window centred on 18 kHz in
-    # log space (6 kHz wide), its floor from stage 3 and its ceiling from stage 4 (rows 0-5 are his 1-6).
+    # Tom Childs' zones: from 18 kHz to the sweep's end at stages 0-1, then a window centred on 18 kHz in
+    # log space (6 kHz wide), its floor from stage 2 and its ceiling from stage 3.
     floor, ceiling = 15248, 21248  # the 6 kHz log window centred on 18 kHz
     rows = task()["taskParameters"]["trainingStages"]
     assert len(rows) == 6
@@ -49,7 +49,7 @@ def test_the_stage_rows_keep_tom_s_reward_zones():
 
 
 def test_the_response_window_and_quiet_wait_are_one_optional_field_each_per_stage():
-    # A stage's responseWindowSeconds, null for none; the quiet waits (Pip, 13 Nov 2026), 0 for off.
+    # A stage's responseWindowSeconds, null for none; the quiet waits, 0 for off.
     rows = task()["taskParameters"]["trainingStages"]
     assert [r["responseWindowSeconds"] for r in rows] == [None] * 3 + [12.0] * 3
     assert [r["lickQuietSeconds"] for r in rows] == [0] * 3 + [1.0] * 3
@@ -57,7 +57,7 @@ def test_the_response_window_and_quiet_wait_are_one_optional_field_each_per_stag
 
 
 def test_the_mouse_s_weights_are_auditory_alone_and_no_stage_sets_its_own():
-    # Pip, 16 Nov 2026: top-level trialWeights, set per mouse on Setup and carried (a stage may set its own; none does).
+    # Top-level trialWeights, set per mouse on Setup and carried (a stage may set its own; none does).
     params = task()["taskParameters"]
     assert "modality" not in params
     assert params["trialWeights"] == {"visual": 0, "auditory": 1, "audiovisualCoherent": 0, "audiovisualConflict": 0, "neutral": 0}
@@ -125,7 +125,7 @@ def test_the_penalty_sound_is_the_lab_s():
     assert set(schema["$defs"]["PenaltySound"]["properties"]) == {"enabled", "levelDbfs"}
     # rig-control checks the task file against the closed schema, so a file naming a sound path is refused.
     doc = task()
-    doc["taskParameters"]["penalty"]["sound"]["path"] = "waveforms\\penalty.wav"
+    doc["taskParameters"]["penalty"]["sound"]["path"] = "sounds\\penalty.wav"
     errors = [e.message for e in jsonschema.Draft202012Validator(_closed(schema)).iter_errors(doc)]
     assert len(errors) == 1 and "'path'" in errors[0]
 
@@ -199,7 +199,7 @@ def test_the_task_s_own_blocks_refuse_inf_and_nan(block, key, value):
 
 @pytest.mark.parametrize("key, value, pair", [("lickQuietSeconds", 10.5, None), ("wheelQuietSeconds", 10.5, ("wheelQuietCm", 1)), ("wheelQuietCm", 20.5, ("wheelQuietSeconds", 1))])
 def test_a_quiet_wait_above_its_maximum_is_refused(key, value, pair):
-    # Pip, 15 Nov 2026: a long wait and a licking mouse would hold the trial start with no message. The caps are the lab's
+    # A long wait and a licking mouse would hold the trial start with no message. The caps are the lab's
     # (open_rigs.core.task QuietWait); TrialLogic.cs refuses them at Go too, through OpenRigs.Core QuietWait.SettingsProblems.
     doc = task()
     row = doc["taskParameters"]["trainingStages"][4]
@@ -245,7 +245,7 @@ def test_a_reward_over_the_cap_is_refused():
 
     from ucl_open_coen_dome_navigation.task import UclOpenCoenDomeNavigationTaskParameters
 
-    params = yaml.safe_load((ROOT / "config" / "task-abstract-av-corridor.yml").read_text(encoding="utf-8"))["taskParameters"]
+    params = yaml.safe_load((ROOT / "config" / "task-abstract-corridor.yml").read_text(encoding="utf-8"))["taskParameters"]
     ok = copy.deepcopy(params)
     ok["trainingStages"][0]["rewardSizeUl"] = MAX_REWARD_UL
     UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
@@ -253,7 +253,7 @@ def test_a_reward_over_the_cap_is_refused():
     with pytest.raises(pydantic.ValidationError, match="less than or equal to 20"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(ok)
 
-# The optogenetics settings' rules: laser_to_stimulus_seconds in whole beeps up to 0.2 s, a laser_max_seconds cap
+# The optogenetics settings' rules: laser_to_stimulus_seconds in whole steps up to 0.2 s, a laser_max_seconds cap
 # longer than the longest trial (a stage's responseWindowSeconds + laser_to_stimulus_seconds), and TrialLogic.cs checking the same rules.
 
 PARAMS = yaml.safe_load(TASK.read_text(encoding="utf-8"))["taskParameters"]
@@ -278,8 +278,8 @@ def params(window=None, **opto):
 
 
 @pytest.mark.parametrize("seconds", [0.05, 0.1, 0.15, 0.2, 0.0, -0.05, -1.0])
-def test_a_signed_lead_in_whole_beeps_up_to_0_2_is_accepted(seconds):
-    # Pip, 13 Nov 2026: signed; negative puts the trigger after the first pip.
+def test_a_signed_lead_in_whole_steps_up_to_0_2_is_accepted(seconds):
+    # Signed; negative puts the trigger after the first pip.
     assert opto(laser_to_stimulus_seconds=seconds).laser_to_stimulus_seconds == seconds
 
 
@@ -346,7 +346,7 @@ def test_the_trigger_hold_outlasts_the_longest_ramp_down():
 def test_trial_logic_cs_uses_the_same_constants():
     # TrialLogic.cs's own checks of these rules, and the laser-off trials' 0 mW, are tests\Extensions.Tests' (TrialDrawTests.cs).
     assert float(re.search(r"const double LaserMaxMarginSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == LASER_MAX_MARGIN_SECONDS
-    assert float(re.search(r"const double BeepSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == BEEP_SECONDS
+    assert float(re.search(r"const double StepSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == STEP_SECONDS
     from ucl_open_coen_dome_navigation import task
 
     for py, cs in (("MAX_LEAD_SECONDS", "MaxLeadSeconds"), ("UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS", "UnlimitedWindowTriggerAfterSeconds")):

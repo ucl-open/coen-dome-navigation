@@ -1,9 +1,9 @@
-﻿"""The task file's schema: config/task-abstract-av-corridor.yml, which rig-control copies at launch and again at Go with the
+﻿"""The task file's schema: config/task-abstract-corridor.yml, which rig-control copies at launch and again at Go with the
 form's edits; the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest. Ported from Tom Childs' auditory-vr-corridor task.py.
 
-The stage is the TrainingStage experiment setting, a row of trainingStages from 0 (Tom's stages 1 to 6 are rows 0 to
-5), and each row says what the stage does; trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
-sound, and rngSeed seeds every draw. The sweep is src/waveforms/sweep.json's, made with the tone files
+The stage is the TrainingStage experiment setting, a row of trainingStages from 0, and each row
+says what the stage does; trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
+sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made with the tone files
 (`uv run generate-waveforms`), not the task file's; every sound's level is the task file's (levelDbfs, in dBFS
 RMS: tonePips, rewardTone, backgroundNoise and penalty.sound)."""
 
@@ -20,12 +20,12 @@ from pydantic import Field, field_validator, model_validator
 
 from ucl_open_coen_dome_navigation import __semver__
 
-BEEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (TrialLogic.cs BeepSeconds)
+STEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (TrialLogic.cs StepSeconds)
 LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (responseWindowSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
-MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole beeps (TrialLogic.cs MaxLeadSeconds)
+MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole steps (TrialLogic.cs MaxLeadSeconds)
 UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without responseWindowSeconds (TrialLogic.cs)
 
-SWEEP_FILE = Path(__file__).resolve().parents[1] / "waveforms" / "sweep.json"  # src/waveforms/sweep.json
+SWEEP_FILE = Path(__file__).resolve().parents[1] / "sounds" / "sweep.json"  # src/sounds/sweep.json
 
 
 def sweep() -> dict:
@@ -81,7 +81,7 @@ class OptogeneticsSettings(Optogenetics):
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
     the same file to list its conditions. "Stimulus" is the tone and grating; the laser is continuous: it starts at the
     trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first
-    tone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's
+    tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the trial's
     outcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.
     """
 
@@ -98,10 +98,10 @@ class OptogeneticsSettings(Optogenetics):
 
     @model_validator(mode="after")
     def validate_lead_time(self):
-        # The trigger and the first pip fall on beeps, so the lead is a whole number of beeps, at most MAX_LEAD_SECONDS
-        beeps = self.laser_to_stimulus_seconds / BEEP_SECONDS
-        if abs(beeps - round(beeps)) > 1e-6:
-            raise ValueError(f"laser_to_stimulus_seconds ({self.laser_to_stimulus_seconds}) must be a multiple of the {BEEP_SECONDS} s beep interval")
+        # The trigger and the first pip fall on steps, so the lead is a whole number of steps, at most MAX_LEAD_SECONDS
+        steps = self.laser_to_stimulus_seconds / STEP_SECONDS
+        if abs(steps - round(steps)) > 1e-6:
+            raise ValueError(f"laser_to_stimulus_seconds ({self.laser_to_stimulus_seconds}) must be a multiple of the {STEP_SECONDS} s step interval")
         if self.laser_to_stimulus_seconds > MAX_LEAD_SECONDS + 1e-9:
             raise ValueError(f"laser_to_stimulus_seconds ({self.laser_to_stimulus_seconds}) must be at most {MAX_LEAD_SECONDS} s")
         return self
@@ -112,7 +112,7 @@ UNDEFINED_TYPES = ("audiovisual_conflict", "neutral")  # decision-making's trial
 
 class TrialTypeWeights(TaskBlock):
     """Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),
-    coen-dome-decision-making's names (Pip, 16 Nov 2026)."""
+    coen-dome-decision-making's names."""
 
     visual: int = Field(ge=0, description="The grating alone")
     auditory: int = Field(ge=0, description="The tone sweep alone")
@@ -143,7 +143,7 @@ class TrainingStage(QuietWait):
     reward_size_ul: Double = Field(
         gt=0,
         le=MAX_REWARD_UL,
-        description=f"Microlitres each reward gives, at most {MAX_REWARD_UL} (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start",
+        description=f"Microlitres each reward gives, at most {MAX_REWARD_UL} (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json). An uncalibrated valve stops the workflow at Start",
     )
     lick_to_reward: Bool = Field(description="Whether a lick in the zone earns the reward; false rewards reaching the zone, no lick needed")
     wrong_lick_limit: int = Field(ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
@@ -173,10 +173,10 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         description="Relative draw weight per trial type, set per mouse and kept from experiment to experiment: each trial draws what it shows at random with these as relative chances, independently of every other trial (trialType in the trial row). A stage with its own trialWeights uses those instead",
     )
     tone_pips: StimulusSound = Field(
-        default=StimulusSound(), description="The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"
+        default=StimulusSound(), description="The tone sweep's pips (src/sounds/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"
     )
     reward_tone: RewardTone = Field(
-        default=RewardTone(), description="The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
+        default=RewardTone(), description="The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
     )
     background_noise: BackgroundNoise = Field(
         default=BackgroundNoise(), description="The lab's background white noise (rig.yml's speakerArray.backgroundNoise) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)"
@@ -208,7 +208,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
 
     @model_validator(mode="after")
     def _the_lead_fits(self):
-        # TrialLogic.cs TrialRules.Create's same rules (Pip, 13 Nov 2026).
+        # TrialLogic.cs TrialRules.Create's same rules.
         self.optogenetics.check_lead_fits(self.trial_structure.iti_min_seconds)
         lead = self.optogenetics.laser_to_stimulus_seconds
         # A negative lead puts the trigger after the first pip, at most the stage's responseWindowSeconds (any stage here; Go checks the one chosen).
@@ -229,7 +229,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters):
         for i, stage in enumerate(self.training_stages):
             if stage.reward_floor_hz <= made["sweepStartHz"] or stage.reward_ceiling_hz > made["sweepEndHz"]:
                 raise ValueError(
-                    f"training_stages[{i}]'s reward zone is not inside the sweep ({made['sweepStartHz']} to {made['sweepEndHz']} Hz, src/waveforms/sweep.json)"
+                    f"training_stages[{i}]'s reward zone is not inside the sweep ({made['sweepStartHz']} to {made['sweepEndHz']} Hz, src/sounds/sweep.json)"
                 )
         return self
 

@@ -222,7 +222,7 @@ namespace UclOpenCoenDomeNavigationTask
     ///The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
     ///the same file to list its conditions. "Stimulus" is the tone and grating; the laser is continuous: it starts at the
     ///trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first
-    ///tone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's
+    ///tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the trial's
     ///outcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
@@ -231,7 +231,7 @@ namespace UclOpenCoenDomeNavigationTask
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
     the same file to list its conditions. ""Stimulus"" is the tone and grating; the laser is continuous: it starts at the
     trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first
-    tone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's
+    tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the trial's
     outcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
@@ -462,13 +462,13 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// What a wrong or missed trial costs: a timeout, and the penalty sound with it (the trial log's penaltySound and
+    /// What a wrong or missed trial costs: a timeout, and the penalty sound with it (the trial log's penaltySoundOn and
     ///penaltyTimeoutSeconds). Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("What a wrong or missed trial costs: a timeout, and the penalty sound with it (the" +
-        " trial log\'s penaltySound and\npenaltyTimeoutSeconds). Each task says which trial" +
-        "s are penalised; timeoutSeconds has no lab default: each task file gives it.")]
+        " trial log\'s penaltySoundOn and\npenaltyTimeoutSeconds). Each task says which tri" +
+        "als are penalised; timeoutSeconds has no lab default: each task file gives it.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Penalty
@@ -999,13 +999,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\valve-DO1.json). An uncalibrated valve stops the workflow at Start
+        /// Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json). An uncalibrated valve stops the workflow at Start
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("rewardSizeUl", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardSizeUl")]
         [System.ComponentModel.DescriptionAttribute("Microlitres each reward gives, at most 20 (the most one reward may ask for), on t" +
-            "he left spout\'s valve, planned from the valve\'s calibration (calibration\\valve-D" +
-            "O1.json). An uncalibrated valve stops the workflow at Start")]
+            "he left spout\'s valve, planned from the valve\'s calibration (calibration\\RewardV" +
+            "alve-Left.json). An uncalibrated valve stops the workflow at Start")]
         public double RewardSizeUl
         {
             get
@@ -1335,12 +1335,11 @@ namespace UclOpenCoenDomeNavigationTask
 
     /// <summary>
     /// Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),
-    ///coen-dome-decision-making's names (Pip, 16 Nov 2026).
+    ///coen-dome-decision-making's names.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("Relative draw weight of each trial type, by the name the trial log gives it (tria" +
-        "lType: what the trial showed),\ncoen-dome-decision-making\'s names (Pip, 16 Nov 20" +
-        "26).")]
+        "lType: what the trial showed),\ncoen-dome-decision-making\'s names.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrialTypeWeights
@@ -1676,13 +1675,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)
+        /// The tone sweep's pips (src/sounds/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("tonePips")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="tonePips")]
-        [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/waveforms/all_waveforms.bin), each played at levelDbfs" +
-            " (open_rigs.core.task StimulusSound)")]
+        [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/sounds/all_waveforms.bin), each played at levelDbfs (o" +
+            "pen_rigs.core.task StimulusSound)")]
         public StimulusSound TonePips
         {
             get
@@ -1696,13 +1695,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)
+        /// The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("rewardTone")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardTone")]
-        [System.ComponentModel.DescriptionAttribute("The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.c" +
-            "ore.task RewardTone)")]
+        [System.ComponentModel.DescriptionAttribute("The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core" +
+            ".task RewardTone)")]
         public RewardTone RewardTone
         {
             get

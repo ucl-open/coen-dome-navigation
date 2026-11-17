@@ -87,5 +87,5 @@ ipython_config.py
 #   intended to run in multiple environments; otherwise, check them in:
 # .python-version
 # The tone pips and reward tone the workflow plays: generated once by
-# ucl_open_coen_dome_navigation.waveforms from its own sweep (written to src/waveforms/sweep.json), committed (tests check them).
-!src/waveforms/*.bin
+# ucl_open_coen_dome_navigation.waveforms from its own sweep (written to src/sounds/sweep.json), committed (tests check them).
+!src/sounds/*.bin

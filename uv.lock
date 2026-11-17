@@ -232,7 +232,7 @@ wheels = [
 [[package]]
 name = "open-rigs"
 version = "0.0.0"
-source = { git = "https://github.com/Coen-Lab/lib-open-rigs?rev=70f09cb70196033e8414b9824aac7ef0e9a0a113#70f09cb70196033e8414b9824aac7ef0e9a0a113" }
+source = { git = "https://github.com/Coen-Lab/lib-open-rigs?rev=c40428102f3d84f20a2c14a13fc17b584d42f9f6#c40428102f3d84f20a2c14a13fc17b584d42f9f6" }
 dependencies = [
     { name = "pydantic" },
     { name = "pydantic-yaml" },
@@ -575,7 +575,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "numpy" },
-    { name = "open-rigs", git = "https://github.com/Coen-Lab/lib-open-rigs?rev=70f09cb70196033e8414b9824aac7ef0e9a0a113" },
+    { name = "open-rigs", git = "https://github.com/Coen-Lab/lib-open-rigs?rev=c40428102f3d84f20a2c14a13fc17b584d42f9f6" },
 ]
 
 [package.metadata.requires-dev]

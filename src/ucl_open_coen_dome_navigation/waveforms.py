@@ -1,4 +1,4 @@
-﻿"""The sounds the workflow plays, made once and committed in src/waveforms.
+﻿"""The sounds the workflow plays, made once and committed in src/sounds.
 
 Tom Childs' gen_session.py wrote the tones again before every experiment, at the task's amplitude, and the workflow
 scaled them by the amplitude again, so a pip peaked at amplitude squared. The sweep is fixed here (SWEEP_START_HZ ...
@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT_DIR = ROOT / "src" / "waveforms"
+OUT_DIR = ROOT / "src" / "sounds"
 SAMPLE_RATE = 48000  # every waveform's, recorded in sweep.json: the workflow stops at Start unless rig.yml's speakerArray.device.sampleRate is the same
 TONE_MS = 50  # one tone pip; the pips are 50 ms apart
 

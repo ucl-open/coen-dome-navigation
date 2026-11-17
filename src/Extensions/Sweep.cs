@@ -2,7 +2,7 @@
 using Bonsai.Harp;
 using Newtonsoft.Json.Linq;
 using OpenCV.Net;
-using OpenRigs.Devices;
+using OpenRigs.Trials;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -10,7 +10,7 @@ using System.IO;
 using System.Reactive.Linq;
 
 /// <summary>The sweep the committed tone files were made for, and the rate every waveform was made at
-/// (src\waveforms\sweep.json, ucl_open_coen_dome_navigation.waveforms).</summary>
+/// (src\sounds\sweep.json, ucl_open_coen_dome_navigation.waveforms).</summary>
 public class Sweep
 {
     public double StartHz;
@@ -18,8 +18,8 @@ public class Sweep
     public int Steps;
     public int SampleRate;
 
-    /// <summary>One pip's samples, a row of all_waveforms.bin: a beep at SampleRate.</summary>
-    public int PipSamples { get { return (int)Math.Round(SampleRate * TrialRules.BeepSeconds); } }
+    /// <summary>One pip's samples, a row of all_waveforms.bin: a step at SampleRate.</summary>
+    public int PipSamples { get { return (int)Math.Round(SampleRate * TrialRules.StepSeconds); } }
 
     public static Sweep Load(string path)
     {
@@ -57,7 +57,7 @@ public class Sweep
     }
 
     /// <summary>The track's sweep ratio, sweepEndHz / sweepStartHz in whole numbers (25000 / 2000 = 12), as Tom Childs' workflow
-    /// divided them: the tone runs 2 to 24 kHz along the track, which his mice learned (Pip, 16 Nov 2026). Position, drift and
+    /// divided them: the tone runs 2 to 24 kHz along the track, which his mice learned. Position, drift and
     /// truncation use it; the tone files span the full sweep, so BinOf does not.</summary>
     public double TrackRatio { get { return Math.Floor(EndHz / StartHz); } }
 
@@ -84,7 +84,7 @@ public class Sweep
     }
 }
 
-/// <summary>A beep's stimulus: its BonsaiData_StimulusState row and what the mixer and grating play.</summary>
+/// <summary>A step's stimulus: its WorkflowData_StimulusState row and what the mixer and grating play.</summary>
 public class StimulusFrame
 {
     public StimulusStateRow Row;
@@ -93,7 +93,7 @@ public class StimulusFrame
     public double GratingOpacity; // 1, or 0 when truncated or not visual
 }
 
-/// <summary>A BonsaiData_StimulusState row, one per pip while a trial runs.</summary>
+/// <summary>A WorkflowData_StimulusState row, one per pip while a trial runs.</summary>
 public class StimulusStateRow
 {
     public int trialNumber;
@@ -110,7 +110,7 @@ public class LoadSweep
 {
     public LoadSweep()
     {
-        SweepFile = @"waveforms\sweep.json";
+        SweepFile = @"sounds\sweep.json";
     }
 
     [Description("sweep.json, relative to the workflow's folder (src).")]
@@ -123,9 +123,9 @@ public class LoadSweep
 }
 
 [Combinator]
-[Description("A pip's BonsaiData_StimulusState row (an Update event of TrialEvents), stamped with its Harp time.")]
+[Description("A pip's WorkflowData_StimulusState row (an Update event of TrialEvents), stamped with its Harp time.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
-public class CreateStimulusRow
+public class CreateStimulusStateRow
 {
     public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> source)
     {

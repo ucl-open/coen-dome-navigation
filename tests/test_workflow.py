@@ -38,9 +38,9 @@ def test_no_wall_clock_wait_inside_task_logic():
 def test_the_shared_blocks_replace_the_local_copies():
     includes = {e.get("Path") for e in MAIN.iter(W + "Expression") if e.get(XSI) == "IncludeWorkflow"}
     assert {"OpenRigs.Devices:DomeHardware.bonsai", lint.REWARDS,
-            "OpenRigs.Devices:Zapit.ConnectForTask.bonsai", "OpenRigs.Logging:LogLabExperiment.bonsai",
+            "OpenRigs.Devices:ConnectForTask.bonsai", "OpenRigs.Logging:ExperimentLogs.bonsai",
             lint.LAUNCH_SETTINGS, lint.BACKGROUND_NOISE, lint.EXPERIMENT_RECORDS} <= includes
-    # The speakers and the projector are DomeHardware's (Pip, 15 Nov 2026: every task has background noise and a screen).
+    # The speakers and the projector are DomeHardware's (every task has background noise and a screen).
     assert not includes & {lint.SPEAKER_MIXER, lint.PROJECTOR_DISPLAY}
     assert not [p for p in includes if p.startswith("Extensions")]
     assert sorted(p.name for p in (ROOT / "src" / "Extensions").iterdir()) == [
@@ -60,7 +60,7 @@ def test_the_manifest_records_rig_yml_and_every_file_it_names():
 
 
 def test_the_launch_properties():
-    # No MissingCalibration: a reward valve without a calibration always stops the workflow (Pip, 15 Nov 2026).
+    # No MissingCalibration: a reward valve without a calibration always stops the workflow.
     top = MAIN.find(W + "Workflow").find(W + "Nodes")
     exposed = {p.get("Name") for e in top if e.get(XSI) == "ExternalizedMapping" for p in e}
     assert {"SubjectId", "SessionId", "LaunchId", "TaskPath", "DisplayDevice", "ConfigRoot"} == exposed
@@ -71,13 +71,13 @@ def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
     # trialType as coen-dome-decision-making reports it: the view's type_metric.
     assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition"}
-    # trainingStage is OpenRigs.Control's TrainingStage's (16 Nov 2026).
+    # trainingStage is OpenRigs.Control's TrainingStage's.
     assert lint.training_stage_problems(WORKFLOW) == []
 
 
 def test_stimulus_state_reaches_disk_row_by_row():
-    log = next(e for e in group("ExperimentLogs").iter(W + "Expression")
-               if e.get("Path") == "OpenRigs.Logging:LogData.bonsai" and e.findtext(W + "LogName") == "BonsaiData_StimulusState")
+    log = next(e for e in group("Logging").iter(W + "Expression")
+               if e.get("Path") == "OpenRigs.Logging:LogWorkflowData.bonsai" and e.findtext(W + "LogName") == "WorkflowData_StimulusState")
     assert log.findtext(W + "AutoFlush") == "true"
 
 
@@ -97,16 +97,16 @@ def _upstream(edges: list[tuple[int, int]], node: int) -> set[int]:
     return seen
 
 
-DEV_KIND = "{clr-namespace:OpenRigs.Devices;assembly=OpenRigs.Devices}Kind"
+TRL_KIND = "{clr-namespace:OpenRigs.Trials;assembly=OpenRigs.Trials}Kind"
 
 
 def _picked(nodes: list[ET.Element], i: int) -> str | None:
     """The TrialEvents kind node i picks (lib-open-rigs' PickTrialEvents), or None."""
-    return next(nodes[i].iter(DEV_KIND)).text if lint.kind(nodes[i]) == "dev:PickTrialEvents" else None
+    return next(nodes[i].iter(TRL_KIND)).text if lint.kind(nodes[i]) == "trl:PickTrialEvents" else None
 
 
 def test_the_trigger_line_rises_at_the_trigger_and_falls_at_trigger_off():
-    # BACKLOG (Decided; Pip, 13 Nov 2026): the trigger line and the masking LEDs on it only in optogenetics experiments:
+    # BACKLOG (Decided): the trigger line and the masking LEDs on it only in optogenetics experiments:
     # TrialLoop gives Trigger and TriggerOff only for a laser trial (tests\Extensions.Tests), each straight to the line.
     nodes, edges = _scope(group("TaskLogic"))
     lines = [i for i, n in enumerate(nodes) if n.get("Path") == lint.SET_ZAPIT_TRIGGER_LINE]
@@ -115,7 +115,7 @@ def test_the_trigger_line_rises_at_the_trigger_and_falls_at_trigger_off():
 
 
 def test_the_trigger_event_raises_the_line_and_starts_a_software_triggered_zapit():
-    # Pip, 13 Nov 2026: the trigger comes laserToStimulusSeconds before the first pip (TrialLoop's Trigger), not at Start;
+    # The trigger comes laserToStimulusSeconds before the first pip (TrialLoop's Trigger), not at Start;
     # its trial is ArmZapit's second input, sent there on a rig without hardware triggering.
     nodes, edges = _scope(group("Zapit"))
     (trigger,) = [i for i in range(len(nodes)) if _picked(nodes, i) == "Trigger"]
@@ -154,7 +154,7 @@ def test_the_trial_loop_starts_on_the_clock_thread():
 
 def test_zapit_s_hardware_triggering_is_rig_yml_s():
     # lib-open-rigs' ZapitTrialCommand, its HardwareTriggered mapped from rig.yml's zapit.hardwareTriggered, never typed in.
-    assert TEXT.count('"zap:ZapitTrialCommand"') == 1 and "ext:ZapitTrialCommand" not in TEXT
+    assert TEXT.count('"trl:ZapitTrialCommand"') == 1 and "ext:ZapitTrialCommand" not in TEXT
     assert '<Property Name="HardwareTriggered" Selector="Zapit.HardwareTriggered" />' in TEXT and "HardwareTriggered>true<" not in TEXT
 
 
@@ -201,10 +201,9 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
 
 
 def test_the_background_noise_is_the_shared_include():
-    # OpenRigs.Audio's BackgroundNoise (16 Nov 2026): the noise unequalised on every speaker at the launched task file's
+    # OpenRigs.Audio's BackgroundNoise: the noise unequalised on every speaker at the launched task file's
     # level from Ready, Go stopping on a backgroundNoise changed after launch. The noise is the lab's one file, rig.yml's
-    # speakerArray.backgroundNoise (16 Nov 2026, this repo's old background_noise.wav byte for byte, now on the server's
-    # config\shared): the include takes no file and the repo keeps none (the lint).
+    # speakerArray.backgroundNoise (on the server's config\shared): the include takes no file and the repo keeps none (the lint).
     assert lint.background_noise_problems(WORKFLOW) == []
     (noise,) = [e for e in MAIN.iter(W + "Expression") if e.get("Path") == lint.BACKGROUND_NOISE]
     assert noise.find(W + "FileName") is None
@@ -246,8 +245,8 @@ def test_every_harp_delay_runs_on_the_timestamp_clock():
     assert off == []
 
 
-def test_no_async_event_sender_completes_async_events():
-    senders, finite = lint.finite_async_event_senders(WORKFLOW)
+def test_no_event_sender_completes_events():
+    senders, finite = lint.finite_event_senders(WORKFLOW)
     assert senders == 0 and finite == []  # LogRngSeed sends RngSeed, LogControlEvents Control and Rewards RewardDelivered
 
 
@@ -264,7 +263,7 @@ def test_zapit_is_the_shared_include_given_the_conditions_file():
 
 
 def test_every_reward_goes_through_the_lab_s_rewards():
-    # OpenRigs.Devices' BehaviorBoard.Rewards (RewardRequests, RewardDelivered), then one RewardValve per valve, before TaskLogic.
+    # OpenRigs.Devices' Rewards (RewardRequests, RewardDelivered), then one RewardValve per valve, before TaskLogic.
     assert lint.reward_problems(WORKFLOW) == []
 
 
@@ -278,7 +277,7 @@ def test_the_readme_lists_every_open_rigs_block():
 
 def test_every_command_is_declared_once_by_the_task_or_its_piece():
     # The pieces declare their own (LickSpoutStage's spout commands and SpoutStepSize, each RewardValve's
-    # <Name>.Reward, 16 Nov 2026): a task's copy stops ControlServer at Start.
+    # <Name>.Reward): a task's copy stops ControlServer at Start.
     assert lint.undeclared_commands(WORKFLOW) == [] and lint.declared_twice(WORKFLOW) == []
 
 
@@ -342,7 +341,7 @@ def test_each_trial_s_sound_carries_its_sync_copy():
 
 
 def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
-    # Pip, 15 Nov 2026: sweep.json is read at Start (LoadSweep, from rig.yml's speakerArray.device.sampleRate), so a wrong
+    # Sweep.json is read at Start (LoadSweep, from rig.yml's speakerArray.device.sampleRate), so a wrong
     # working folder or a waveform rate other than the audio device's stops the run at Start, not at Go.
     nodes, edges = _scope(group("TaskFile"))
     (sweep,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "rx:AsyncSubject" and n.findtext(W + "Name") == "Sweep"]
@@ -363,7 +362,7 @@ def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
 def test_the_waveforms_are_at_the_lab_rig_s_rate():
     # The committed waveforms' rate (sweep.json) is the rig template's audio device's, as every dome's rig.yml.
     rig = LabRig.model_validate(yaml.safe_load((Path(open_rigs.rigs.__file__).parent / "rig-template.yml").read_text(encoding="utf-8").replace("CHANGE-ME", "X")))
-    sweep = json.loads((ROOT / "src" / "waveforms" / "sweep.json").read_text(encoding="utf-8"))
+    sweep = json.loads((ROOT / "src" / "sounds" / "sweep.json").read_text(encoding="utf-8"))
     assert sweep["sampleRate"] == rig.speaker_array.device.sample_rate == 48000
 
 

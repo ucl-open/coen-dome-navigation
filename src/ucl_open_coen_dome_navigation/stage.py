@@ -1,11 +1,10 @@
 """The training stage to suggest for a mouse's next experiment, from its earlier ones of this workflow, whatever
-trial types they drew (the trialWeights, Pip, 16 Nov 2026; by the session's modality until then): Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
+trial types they drew (the trialWeights): Tom Childs' determine_shaping_stage (auditory-vr-corridor gen-sessions/helpers.py), rules
 unchanged, reading the mouse's session summaries (jacuzzi-ingest's `sub-<lab ID>/<ses folder>.json`, version 1:
 claude-tools records.md, "Session summaries"). The old workflow's TrialLog files (ShapingStage,
-WasRewarded) and folders named by eartag are not read: their readers were deleted on 15 Nov 2026 (Pip).
+WasRewarded) and folders named by eartag are not read.
 
-Stages are the task file's trainingStages rows, from 0 (Pip, 9 Nov 2026: as av-dome's): Tom's stages 1
-to 6 are 0 to 5. rig-control asks for it when a mouse
+Stages are the task file's trainingStages rows, from 0 (as av-dome's). rig-control asks for it when a mouse
 is chosen and fills the TrainingStage setting with it; the experimenter can change it before Go. As a
 command:
 
@@ -35,10 +34,10 @@ from pathlib import Path
 MAX_AUTO_STAGE = 4
 MIN_TRIALS = 50
 ADVANCE_RATE = 0.7
-TWO_IN_A_ROW_STAGE = 1  # Tom's stage 2
+TWO_IN_A_ROW_STAGE = 1
 TWO_IN_A_ROW_REWARDED = 50
 REGRESS_RATE = 0.5
-EARLY_ADVANCE_FROM = 2  # Tom's stage 3: stages 2 and 3 also advance on their first 100 or 150 trials
+EARLY_ADVANCE_FROM = 2  # stages 2 and 3 also advance on their first 100 or 150 trials
 SUMMARY_VERSION = 1
 
 
@@ -83,7 +82,7 @@ def read_experiment(summary: dict) -> Experiment | None:
                       any(int(float(r.get("laserCondition") or 0)) > 0 for r in rows))
 
 
-# This repo's names, now and before the 9 Nov 2026 rename, and Tom Childs' original task (Pip, 15 Nov 2026).
+# This repo's names, now and before its rename, and Tom Childs' original task.
 OURS = ("coen-dome-navigation", "coen-av-corridor", "auditory-vr-corridor")
 
 

@@ -1,6 +1,6 @@
 ﻿using Bonsai;
 using OpenRigs.Core;
-using OpenRigs.Devices;
+using OpenRigs.Trials;
 using OpenRigs.Devices.Zapit;
 using System;
 using System.Collections.Generic;
@@ -68,7 +68,7 @@ public class Trial : IZapitTrial
     public double responseWindowSeconds;     // from the first pip; NaN: none
     public bool trackEndEndsTrial;
     public bool frequencyDrift;
-    public int firstPipBeep;            // the lead, max(laserToStimulusSeconds, 0), in beeps after the trial start (beep 0), in every experiment
+    public int firstPipStep;            // the lead, max(laserToStimulusSeconds, 0), in steps after the trial start (step 0), in every experiment
     public bool optogenetics;
     public int laserCondition;          // 0 without optogenetics
     public bool laserOn;
@@ -79,24 +79,24 @@ public class Trial : IZapitTrial
 
 /// <summary>A trial's outcome (lib-open-rigs' TrialOutcome): its row, the reward at the left valve, the penalty sound
 /// and the timeout before the next interval.</summary>
-public class TrialOutcome : OpenRigs.Devices.TrialOutcome<TrialRow> { public TrialOutcome(TrialRow row) : base(row, "left") { } }
+public class TrialOutcome : OpenRigs.Trials.TrialOutcome<TrialRow> { public TrialOutcome(TrialRow row) : base(row, "left") { } }
 
 /// <summary>
 /// This task's rules for lib-open-rigs' TrialLoop, with everything fixed for the experiment that the trials are
-/// drawn from and run on. The loop times each trial (Pip, 13 Nov 2026): its interval from the last outcome (after any
+/// drawn from and run on. The loop times each trial: its interval from the last outcome (after any
 /// timeout; trial 1 from the first clock tick), a hardware-triggered Zapit armed during it once the last trial's trigger
-/// line has fallen, the trial start (beep 0) at the interval's end less the lead, max(laserToStimulusSeconds, 0), or later
+/// line has fallen, the trial start (step 0) at the interval's end less the lead, max(laserToStimulusSeconds, 0), or later
 /// until the stage's quiet waits hold, the trigger laserToStimulusSeconds before the first pip, the first pip the lead
 /// after the start. These rules run the trial along the virtual track: a pip every 50 ms on the trial start's grid, the
 /// left spout's licks from the first pip, the end of the track, and the outcome.
 /// </summary>
 public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 {
-    public const double BeepSeconds = 0.05;       // task.py BEEP_SECONDS
+    public const double StepSeconds = 0.05;       // task.py STEP_SECONDS
     public const double LaserMaxMarginSeconds = 0.25; // task.py LASER_MAX_MARGIN_SECONDS
     public const double MaxLeadSeconds = 0.2;            // task.py MAX_LEAD_SECONDS: the furthest the trigger may come before the first pip
     public const double UnlimitedWindowTriggerAfterSeconds = 2.0; // task.py UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS: the furthest after the first pip it may come on a stage without responseWindowSeconds
-    public const int DriftBeeps = 500;           // a drift stage's frequency reaches the sweep's end on its own after this many beeps (25 s)
+    public const int DriftSteps = 500;           // a drift stage's frequency reaches the sweep's end on its own after this many steps (25 s)
     public const double GratingStartCpd = 0.03;   // the grating's spatial frequency at the track's start
     public const double GratingEndCpd = 0.3;      // and at its end
 
@@ -106,7 +106,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     readonly LaserTiming laser;
     VirtualTrack track;
     StimulusFrame last;
-    int nextBeep, wrongLicks;
+    int nextStep, wrongLicks;
 
     public TrialRules(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
     {
@@ -126,7 +126,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         return new TrialRules(task, stage, sweep, hardwareTriggered, zapitConditionCount);
     }
 
-    /// <summary>The laser in an optogenetics experiment (the trigger line only rises in one, Pip, 13 Nov 2026); null without.</summary>
+    /// <summary>The laser in an optogenetics experiment (the trigger line only rises in one); null without.</summary>
     public LaserTiming Laser { get { return laser; } }
 
     public Trial Draw(TrialOutcome previous)
@@ -139,7 +139,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         return new TrialTiming
         {
             ItiSeconds = trial.itiSeconds,
-            // The lead applies in every experiment, so timing never reveals Zapit (Pip, 13 Nov 2026).
+            // The lead applies in every experiment, so timing never reveals Zapit.
             LaserToStimulusSeconds = task.Optogenetics.LaserToStimulusSeconds,
             LickQuietSeconds = trial.lickQuietSeconds,
             WheelQuietSeconds = trial.wheelQuietSeconds,
@@ -155,26 +155,26 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var wheel = double.IsNaN(wheelCm) ? 0 : wheelCm;
         track = new VirtualTrack(trial.trackLengthCm, wheel);
         track.Update(wheel);
-        nextBeep = trial.firstPipBeep;
+        nextStep = trial.firstPipStep;
         wrongLicks = 0;
         last = null;
     }
 
     public void Stimulus(Trial trial, TrialTimes times, ICollection<StimulusFrame> updates)
     {
-        // The stimulus's tick is the first pip (the lead is whole beeps): Tick plays it.
+        // The stimulus's tick is the first pip (the lead is whole steps): Tick plays it.
     }
 
-    /// <summary>A pip every 50 ms on the trial start's grid; after a gap in the Harp clock only the latest beep due, the
+    /// <summary>A pip every 50 ms on the trial start's grid; after a gap in the Harp clock only the latest step due, the
     /// missed pips not played at once. A stage without lickToReward ends on the pip that reaches the reward floor.</summary>
     public TrialOutcome Tick(Trial trial, TrialTimes times, ICollection<StimulusFrame> updates)
     {
-        var due = Math.Max((int)Math.Floor((times.Now - times.TrialStartTime + 1e-9) / BeepSeconds), trial.firstPipBeep);
-        if (due < nextBeep) return null;
-        nextBeep = due + 1;
+        var due = Math.Max((int)Math.Floor((times.Now - times.TrialStartTime + 1e-9) / StepSeconds), trial.firstPipStep);
+        if (due < nextStep) return null;
+        nextStep = due + 1;
         last = Frame(trial, due);
         updates.Add(last);
-        return !trial.lickToReward && last.Row.toneFrequencyHz >= trial.rewardFloorHz ? End(trial, "FreqReached", times) : null;
+        return !trial.lickToReward && last.Row.toneFrequencyHz >= trial.rewardFloorHz ? End(trial, "FrequencyReached", times) : null;
     }
 
     /// <summary>The left spout's licks count from the first pip: in the zone rewarded, outside toward wrongLickLimit.</summary>
@@ -190,7 +190,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     public TrialOutcome Wheel(Trial trial, double cm, TrialTimes times, ICollection<StimulusFrame> updates)
     {
         track.Update(cm);
-        return trial.trackEndEndsTrial && track.AtEnd ? End(trial, "EndOfTrack", times) : null;
+        return trial.trackEndEndsTrial && track.AtEnd ? End(trial, "TrackEnd", times) : null;
     }
 
     /// <summary>responseWindowSeconds from the first pip.</summary>
@@ -199,16 +199,16 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         return End(trial, "ResponseWindowEnd", times);
     }
 
-    StimulusFrame Frame(Trial trial, int beep)
+    StimulusFrame Frame(Trial trial, int step)
     {
-        var step = Math.Max(1, task.PositionStepCm);
-        var position = Math.Round(track.Position / step) * step;
+        var positionStep = Math.Max(1, task.PositionStepCm);
+        var position = Math.Round(track.Position / positionStep) * positionStep;
         var fraction = trial.trackLengthCm > 0 ? position / trial.trackLengthCm : 0;
         var tone = sweep.FrequencyAt(fraction);
         var grating = GratingStartCpd * Math.Pow(GratingEndCpd / GratingStartCpd, Math.Max(0, Math.Min(1, fraction)));
         if (trial.frequencyDrift)
         {
-            var drift = (double)beep / DriftBeeps;
+            var drift = (double)step / DriftSteps;
             tone += sweep.StartHz * Math.Pow(sweep.TrackRatio, drift) - sweep.StartHz;
             grating += GratingStartCpd * Math.Pow(GratingEndCpd / GratingStartCpd, drift) - GratingStartCpd;
         }
@@ -230,13 +230,13 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     /// <summary>The outcome (Tom Childs' ProcessTrialEnd): a trial that ends on a lick in the zone or the zone reached
     /// is rewarded; one that runs out of time or track in the zone is penalised, as is one ending outside it on a stage
     /// with penaliseWrongZone. Reaching the zone is the floor alone, as in Tom's FreqAboveThreshold: a drifting stage's
-    /// tone can pass the ceiling (and the sweep's end) on the beep it crosses the floor, and is rewarded.</summary>
+    /// tone can pass the ceiling (and the sweep's end) on the step it crosses the floor, and is rewarded.</summary>
     TrialOutcome End(Trial trial, string reason, TrialTimes times)
     {
         var tone = last != null ? last.Row.toneFrequencyHz : 0;
-        var onTarget = reason == "FreqReached" || OnTarget(trial, tone);
-        var ranOut = reason == "ResponseWindowEnd" || reason == "EndOfTrack";
-        var rewarded = onTarget && (reason == "Lick" || reason == "FreqReached");
+        var onTarget = reason == "FrequencyReached" || OnTarget(trial, tone);
+        var ranOut = reason == "ResponseWindowEnd" || reason == "TrackEnd";
+        var rewarded = onTarget && (reason == "Lick" || reason == "FrequencyReached");
         var penalised = onTarget ? ranOut : trial.penaliseWrongZone;
         // The shared block (trialNumber, the times, rewardOfferedUl, rewarded, the penalty, the laser) is lib-open-rigs'.
         var row = SharedTrialColumns.Fill(new TrialRow
@@ -338,12 +338,12 @@ public class TrialDraw
         number("stage " + stage + "'s trackLengthScale", row.TrackLengthScale, true);
         problems.AddRange(TrialDraw.WeightProblems(task, row));
         if (row.ResponseWindowSeconds.HasValue) number("stage " + stage + "'s responseWindowSeconds", row.ResponseWindowSeconds.Value, true);
-        // The lead (Pip, 13 Nov 2026): the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
-        // trigger laserToStimulusSeconds before the first pip; whole beeps, at most 0.2 s before it, inside the shortest interval
+        // The lead: the first pip comes max(laserToStimulusSeconds, 0) after the trial start in every experiment, the
+        // trigger laserToStimulusSeconds before the first pip; whole steps, at most 0.2 s before it, inside the shortest interval
         // with Zapit's reply margin, and no later after it than the stage's response window.
         var lead = task.Optogenetics.LaserToStimulusSeconds;
-        var leadBeeps = lead / TrialRules.BeepSeconds;
-        if (!(Math.Abs(leadBeeps - Math.Round(leadBeeps)) < 1e-6)) problems.Add("optogenetics.laserToStimulusSeconds must be a whole number of 0.05 s beeps");
+        var leadSteps = lead / TrialRules.StepSeconds;
+        if (!(Math.Abs(leadSteps - Math.Round(leadSteps)) < 1e-6)) problems.Add("optogenetics.laserToStimulusSeconds must be a whole number of 0.05 s steps");
         if (lead > TrialRules.MaxLeadSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, TrialRules.MaxLeadSeconds));
         var leadProblem = ZapitTrial.LeadProblem(lead, task.TrialStructure.ItiMinSeconds);
         if (leadProblem != null) problems.Add(leadProblem);
@@ -400,8 +400,8 @@ public class TrialDraw
         t.frequencyDrift = stage.FrequencyDrift;
         var opto = task.Optogenetics;
         t.optogenetics = opto.Enabled;
-        // The lead applies in every experiment, so timing never reveals Zapit (Pip, 13 Nov 2026).
-        t.firstPipBeep = Math.Max((int)Math.Round(opto.LaserToStimulusSeconds / TrialRules.BeepSeconds), 0);
+        // The lead applies in every experiment, so timing never reveals Zapit.
+        t.firstPipStep = Math.Max((int)Math.Round(opto.LaserToStimulusSeconds / TrialRules.StepSeconds), 0);
         if (opto.Enabled)
         {
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).

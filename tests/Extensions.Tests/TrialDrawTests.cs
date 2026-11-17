@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OpenRigs.Devices;
+using OpenRigs.Trials;
 using OpenRigs.Devices.Rigs;
 using OpenRigs.Devices.Zapit;
 using System;
@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.Serialization;
-using TrialEventOf = OpenRigs.Devices.TrialEvent<Trial, StimulusFrame, TrialOutcome>;
+using TrialEventOf = OpenRigs.Trials.TrialEvent<Trial, StimulusFrame, TrialOutcome>;
 
 static class Fixture
 {
@@ -22,7 +22,7 @@ static class Fixture
 
     public static UclOpenCoenDomeNavigationTaskParameters Task()
     {
-        var text = File.ReadAllText(Path.Combine(Repo(), "config", "task-abstract-av-corridor.yml"));
+        var text = File.ReadAllText(Path.Combine(Repo(), "config", "task-abstract-corridor.yml"));
         var task = new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
         task.RngSeed = 1;
         return task;
@@ -30,7 +30,7 @@ static class Fixture
 
     public static Sweep Sweep()
     {
-        return global::Sweep.Load(Path.Combine(Repo(), "src", "waveforms", "sweep.json"));
+        return global::Sweep.Load(Path.Combine(Repo(), "src", "sounds", "sweep.json"));
     }
 
     public static TrialRules Setup(UclOpenCoenDomeNavigationTaskParameters task, int stage, bool hardware = true)
@@ -161,7 +161,7 @@ public class TrialDrawTests
     [TestMethod]
     public void EachTrialsTypeIsDrawnFromTheTasksWeights()
     {
-        // The task file: auditory alone, no stage with its own weights (Pip, 16 Nov 2026), so mice run as before trialWeights
+        // The task file: auditory alone, no stage with its own weights, so mice run as before trialWeights
         var task = Fixture.Task();
         Assert.IsTrue(task.TrainingStages.All(s => s.TrialWeights == null));
         var file = Fixture.Draw(task, 3);
@@ -220,7 +220,7 @@ public class TrialDrawTests
     [TestMethod]
     public void TheTaskFilesWeightsAreReadByTheirYamlNames()
     {
-        var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-av-corridor.yml"))
+        var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-corridor.yml"))
             .Replace("trialWeights: { visual: 0, auditory: 1, audiovisualCoherent: 0,", "trialWeights: { visual: 2, auditory: 1, audiovisualCoherent: 3,");
         var task = new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
         CollectionAssert.AreEqual(new[] { 2, 1, 3 }, TrialDraw.Weights(task, task.TrainingStages[0]));
@@ -280,7 +280,7 @@ public class TrialDrawTests
         Assert.IsTrue(trials.Where(t => t.laserOn).All(t => t.laserPowerMw == 2.0));
         Assert.AreEqual(0.4, trials.Skip(20).Count(t => t.laserOn) / 480.0, 0.07);
         var rules = Fixture.Setup(task, 4);
-        Assert.IsTrue(trials.All(t => t.firstPipBeep == 2 && rules.Timing(t).Laser && rules.Timing(t).LaserToStimulusSeconds == 0.1));
+        Assert.IsTrue(trials.All(t => t.firstPipStep == 2 && rules.Timing(t).Laser && rules.Timing(t).LaserToStimulusSeconds == 0.1));
         Assert.IsTrue(rules.Laser.HardwareTriggered);   // armed during the interval
     }
 
@@ -294,7 +294,7 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void ALeadTimeOutsideWholeBeepsUpTo200MsIsRefused()
+    public void ALeadTimeOutsideWholeStepsUpTo200MsIsRefused()
     {
         foreach (var seconds in new[] { 0.07, -0.07, 0.25 })
         {
@@ -306,10 +306,10 @@ public class TrialDrawTests
         var ok = Fixture.Task();
         Fixture.Opto(ok);
         ok.Optogenetics.LaserToStimulusSeconds = 0.2;
-        Assert.AreEqual(4, Fixture.Draw(ok, 4).Next().firstPipBeep);
-        ok.Optogenetics.LaserToStimulusSeconds = -0.5;   // after the first pip: the first pip at the trial start, the trigger 10 beeps later
+        Assert.AreEqual(4, Fixture.Draw(ok, 4).Next().firstPipStep);
+        ok.Optogenetics.LaserToStimulusSeconds = -0.5;   // after the first pip: the first pip at the trial start, the trigger 10 steps later
         var late = Fixture.Draw(ok, 4).Next();
-        Assert.IsTrue(late.firstPipBeep == 0 && Fixture.Setup(ok, 4).Timing(late).LaserToStimulusSeconds == -0.5);
+        Assert.IsTrue(late.firstPipStep == 0 && Fixture.Setup(ok, 4).Timing(late).LaserToStimulusSeconds == -0.5);
         ok.Optogenetics.LaserToStimulusSeconds = -12.05;  // past stage 4's 12 s limit
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok, 4)).Message, "responseWindowSeconds");
         ok.Optogenetics.LaserToStimulusSeconds = -2.05;   // past the 2 s on a stage without one
@@ -436,8 +436,8 @@ public class TrialRulesTests
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.IsTrue(outcome.Outcome.Rewarded);
         Assert.AreEqual("Correct", outcome.Outcome.Row.Value.outcome);
-        Assert.AreEqual("FreqReached", outcome.Outcome.Row.Value.endReason);
-        Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's rewardSizeUl (3 ul since 15 Nov 2026)
+        Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
+        Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's rewardSizeUl, 3 ul
         Assert.IsTrue(outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Row.Value.penalised && outcome.Outcome.Row.Value.rewardOfferedUl == 3, "the row says what the valve did");
         var next = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(outcome.Seconds + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
@@ -451,7 +451,7 @@ public class TrialRulesTests
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
-        Assert.AreEqual("FreqReached", outcome.Outcome.Row.Value.endReason);
+        Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
         Assert.IsTrue(outcome.Outcome.Row.Value.toneEndFrequencyHz >= 18000);
         Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime > 10 && outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime < 25);
         Assert.AreEqual(outcome.Seconds, outcome.Outcome.Row.Value.outcomeTime, "outcomeTime is the row's own time, harpTime");
@@ -470,7 +470,7 @@ public class TrialRulesTests
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
         Assert.AreEqual("Incorrect", outcome.Outcome.Row.Value.outcome);
         Assert.AreEqual("WrongLickLimit", outcome.Outcome.Row.Value.endReason);
-        Assert.IsTrue(outcome.Outcome.Row.Value.penaltySound);
+        Assert.IsTrue(outcome.Outcome.Row.Value.penaltySoundOn);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Rewarded, "penalised, unrewarded");
         Assert.AreEqual(3.0, outcome.Outcome.Row.Value.rewardOfferedUl, "the offer kept on a trial not rewarded");
         Assert.AreEqual(2.0, outcome.Outcome.Row.Value.penaltyTimeoutSeconds);
@@ -655,7 +655,7 @@ public class TrialRulesTests
     public void TheTrialRowsFieldsAreTheTrialColumnsInOrder()
     {
         // schemas\trial-columns.yml's names, harpTime aside (the row's timestamp), are TrialRow's fields in order:
-        // LogTrial writes the fields in declaration order.
+        // LogTrials writes the fields in declaration order.
         var yaml = new DeserializerBuilder().Build().Deserialize<Dictionary<string, object>>(
             File.ReadAllText(Path.Combine(Fixture.Repo(), "schemas", "trial-columns.yml")));
         var fields = typeof(TrialRow).GetFields().Select(f => f.Name).ToList();
@@ -674,7 +674,7 @@ public class TrialRulesTests
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.AreEqual("ResponseWindowEnd", outcome.Outcome.Row.Value.endReason);
         Assert.AreEqual("NoResponse", outcome.Outcome.Row.Value.outcome);
-        Assert.IsTrue(outcome.Outcome.Row.Value.penaltySound);
+        Assert.IsTrue(outcome.Outcome.Row.Value.penaltySoundOn);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded);
         Assert.AreEqual(start.Seconds + 0.1 + 12.0, outcome.Seconds, 0.0011);
     }
@@ -687,7 +687,7 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.1);
         rig.Wheel(start.Trial.trackLengthCm + 5);
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
-        Assert.AreEqual("EndOfTrack", outcome.Outcome.Row.Value.endReason);
+        Assert.AreEqual("TrackEnd", outcome.Outcome.Row.Value.endReason);
         Assert.AreEqual(start.Trial.trackLengthCm, outcome.Outcome.Row.Value.endPositionCm, 1e-9);
     }
 
@@ -708,7 +708,7 @@ public class TrialRulesTests
         var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(0.0, pip.ToneGain);
         Assert.IsFalse(pip.Row.stimulusActive);
-        // A bool, so BonsaiData_StimulusState says True or False, as the lab's other bool columns.
+        // A bool, so WorkflowData_StimulusState says True or False, as the lab's other bool columns.
         Assert.AreEqual(typeof(bool), typeof(StimulusStateRow).GetField("stimulusActive").FieldType);
     }
 
@@ -785,7 +785,7 @@ public class TrialRulesTests
     [TestMethod]
     public void Stage0RunningAt40CmPerSecondPastTheCeilingIsStillRewarded()
     {
-        // 6 s of drift, then 2 cm a beep: the beep that crosses the floor is above the ceiling (the sweep's end, 25000 Hz).
+        // 6 s of drift, then 2 cm a step: the step that crosses the floor is above the ceiling (the sweep's end, 25000 Hz).
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 0));
         rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 6.0);
@@ -799,15 +799,15 @@ public class TrialRulesTests
             rig.Until(rig.Now + 0.05);
             outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == TrialEventKind.Outcome);
         }
-        Assert.AreEqual("FreqReached", outcome.Outcome.Row.Value.endReason);
+        Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.endReason);
         Assert.IsTrue(outcome.Outcome.Row.Value.toneEndFrequencyHz > 25000, outcome.Outcome.Row.Value.toneEndFrequencyHz.ToString());
         Assert.IsTrue(outcome.Outcome.Rewarded);
         Assert.AreEqual("Correct", outcome.Outcome.Row.Value.outcome);
-        Assert.IsFalse(outcome.Outcome.Row.Value.penaltySound);
+        Assert.IsFalse(outcome.Outcome.Row.Value.penaltySoundOn);
     }
 
     [TestMethod]
-    public void AfterAGapInTheHarpClockOnlyTheLatestBeepPips()
+    public void AfterAGapInTheHarpClockOnlyTheLatestStepPips()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(), 3));
         var start = rig.RunTo(TrialEventKind.Start);

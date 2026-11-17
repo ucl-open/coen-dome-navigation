@@ -1,6 +1,6 @@
-﻿/// <summary>A BonsaiData_Trial row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
+﻿/// <summary>A WorkflowData_Trials row; fields in schemas\trial-columns.yml's order, after harpTime (the row's timestamp, its
 /// outcome). The fields up to laserTriggerTime are the lab's shared block, its core with the optogenetics and quietWait blocks (lib-open-rigs
-/// open_rigs.rigs.trials), in coen-dome-decision-making's order and words too (Pip, 14 Nov 2026);
+/// open_rigs.rigs.trials), in coen-dome-decision-making's order and words too;
 /// this task's own follow.</summary>
 public class TrialRow
 {
@@ -15,7 +15,7 @@ public class TrialRow
     public double outcomeTime;
     public double rewardOfferedUl;
     public bool rewarded;
-    public bool penaltySound;
+    public bool penaltySoundOn;
     public double penaltyTimeoutSeconds;
     public bool penalised;
     public int laserCondition;

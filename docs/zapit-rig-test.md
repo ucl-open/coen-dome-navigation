@@ -6,18 +6,18 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
 
 - Zapit (MATLAB): real DAQ, not `start_zapit('simulated', true)` (its simulated DAQ hides stop problems); `tcpServer.enable: true`; calibrated; the conditions file named in the task file loaded. Every condition's `offRampDownDuration_ms` 100 to 500 ms (250 is usual).
 - rig.yml `zapit:` block: host, port, `hardwareTriggered`; the trigger line is the Behavior board line `behaviorBoard.main.wiring` gives `ZapitTrigger` (DO3). With `hardwareTriggered: true`, it must be cabled to the Zapit DAQ trigger input. Also check rig.yml's lick thresholds and the left valve's calibration (BACKLOG).
-- If rig-control refuses to launch over names not on the lab's names list, add them on Lab Names, in Rig Control's Settings menu, with Pip's OK (the list is production config).
+- If app-rig-control refuses to launch over names not in the lab's Data Dictionary, add them on its Lab Names page, with Pip's OK (the dictionary is production config).
 
 ## 1. Optogenetics off
 
-rig-control, `test` mouse, Training Stage 4 (Tom's 5), optogenetics unticked; ~20 trials.
-**Pass:** task as before; nothing in Zapit's window; no `BonsaiData\BonsaiData_ZapitReplies_*.csv` and no `Settings_ZapitConditions` file; trial rows `laserPowerMw` 0, `laserCondition` 0; the trigger line (and the masking LEDs) low throughout: no DO3 edges in the Behavior board log.
+rig-control, `test` mouse, Training Stage 4, optogenetics unticked; ~20 trials.
+**Pass:** task as before; nothing in Zapit's window; no `ZapitReply` rows in `WorkflowData_Events` and no `Settings_ZapitConditions` file; trial rows `laserPowerMw` 0, `laserCondition` 0; the trigger line (and the masking LEDs) low throughout: no DO3 edges in the Behavior board log.
 
 ## 2. Optogenetics on
 
 Same, optogenetics ticked with `zapitConditionsPath` and `laserPowerMw`; at least 30 trials (the first 20, `trialsBeforeLaser`, are all 0 mW: galvos move, laser off). With nobody at the wheel every trial ends as NoResponse 12 s after its first pip, when the stage's response window (`responseWindowSeconds`) closes.
 **Pass:**
-- `BonsaiData_ZapitReplies` log: StartStimulus (command 1) then StopStimulus (command 0) on every trial, alternating, `isError` False.
+- `ZapitReply` rows in `WorkflowData_Events`: StartStimulus then StopStimulus on every trial, alternating (the command in `Detail`), and no error in any `Detail`.
 - Trial rows: `laserCondition` on every trial; `laserPowerMw` the task's `laserPowerMw` on about 40% of trials after the first 20, 0 on the rest.
 - `Settings\Settings_ZapitConditions_<time>.json` in the experiment folder, holding the config's path and its text.
 - No "Not ready to stimulate" in MATLAB.
@@ -25,7 +25,7 @@ Same, optogenetics ticked with `zapitConditionsPath` and `laserPowerMw`; at leas
 ## 3. Hardware-triggered rig
 
 Step 2 on the rig with `hardwareTriggered: true`.
-**Pass:** each trial's StartStimulus reply arrives during the interval, before the trial starts (the trial's start is never later for Zapit); the Behavior board log has the trigger line going high `laserToStimulusSeconds` before every first pip (at the trial's start with the default 0.1 s) and low `triggerHoldSeconds` (1 s) after each outcome (it is held, not pulsed, since 10 Nov 2026); the masking LEDs stay lit for all of that, on laser-off trials too; Zapit starts every trial (one rising edge each), including the first after a long trial; with the galvos visible or a photodiode, the stimulus starts at the trigger, not at the command.
+**Pass:** each trial's StartStimulus reply arrives during the interval, before the trial starts (the trial's start is never later for Zapit); the Behavior board log has the trigger line going high `laserToStimulusSeconds` before every first pip (at the trial's start with the default 0.1 s) and low `triggerHoldSeconds` (1 s) after each outcome (it is held, not pulsed); the masking LEDs stay lit for all of that, on laser-off trials too; Zapit starts every trial (one rising edge each), including the first after a long trial; with the galvos visible or a photodiode, the stimulus starts at the trigger, not at the command.
 
 ## 4. Failures (each should stop the experiment with a message)
 

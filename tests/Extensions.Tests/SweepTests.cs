@@ -30,7 +30,7 @@ public class SweepTests
     public void TheTrackRunsTwoToTwentyFourKilohertzAsTomsWorkflowDid()
     {
         // Tom Childs' 'cm to Hz' divided sweepEndHz / sweepStartHz as whole numbers (25000 / 2000 = 12): his mice learned 2 to 24 kHz
-        // along the track, so the reward zones sit where they did (Pip, 16 Nov 2026). The tone files still span 2 to 25 kHz.
+        // along the track, so the reward zones sit where they did. The tone files still span 2 to 25 kHz.
         var sweep = Fixture.Sweep();
         Assert.AreEqual(12, sweep.TrackRatio);
         Assert.AreEqual(24000, sweep.TrackEndHz);
@@ -60,7 +60,7 @@ public class SweepTests
     public void WaveformsAtAnotherRateThanTheAudioDeviceAreRefusedNamingBoth()
     {
         // rig.yml's speakerArray.device.sampleRate; the committed waveforms are 48 kHz.
-        var path = Path.Combine(Fixture.Repo(), "src", "waveforms", "sweep.json");
+        var path = Path.Combine(Fixture.Repo(), "src", "sounds", "sweep.json");
         Assert.AreEqual(48000, global::Sweep.Load(path, 48000).SampleRate);
         var message = Assert.ThrowsException<InvalidOperationException>(() => global::Sweep.Load(path, 44100)).Message;
         StringAssert.Contains(message, "sweep.json is 48000 Hz, but the audio device runs at 44100 Hz");
@@ -81,7 +81,7 @@ public class SweepTests
         {
             Directory.SetCurrentDirectory(folder);
             var message = Assert.ThrowsException<FileNotFoundException>(() => new LoadSweep().Process(Observable.Return(48000)).Wait()).Message;
-            StringAssert.Contains(message, Path.Combine(folder, "waveforms", "sweep.json"));
+            StringAssert.Contains(message, Path.Combine(folder, "sounds", "sweep.json"));
             StringAssert.Contains(message, "working folder must be the workflow's (src)");
         }
         finally

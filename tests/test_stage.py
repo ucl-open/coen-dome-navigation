@@ -9,7 +9,7 @@ from ucl_open_coen_dome_navigation.stage import Experiment, experiments, read_ex
 
 STAGE_PY = Path(__file__).parents[1] / "src" / "ucl_open_coen_dome_navigation" / "stage.py"
 
-# Stages are trainingStages rows from 0: Tom Childs' stage n is n - 1 (Pip, 9 Nov 2026).
+# Stages are trainingStages rows from 0.
 
 
 def exp(name, stage, n, rewarded, stages=None):
@@ -30,7 +30,7 @@ def exp(name, stage, n, rewarded, stages=None):
         ([exp("2026-01-02", 1, 100, 60), exp("2026-01-01", 1, 100, 50)], 2),
         ([exp("2026-01-02", 1, 100, 60), exp("2026-01-01", 1, 100, 49)], 1),
         ([exp("2026-01-02", 1, 100, 40)], 0),  # stage 1 under 50% falls back
-        ([exp("2026-01-02", 3, 100, 100), exp("2026-01-01", 1, 100, 60)], 4),  # the latest decides, whatever trial types it drew (16 Nov 2026)
+        ([exp("2026-01-02", 3, 100, 100), exp("2026-01-01", 1, 100, 60)], 4),  # the latest decides, whatever trial types it drew
         ([exp("2026-01-02", 0, 0, 0), exp("2026-01-01", 2, 40, 0)], 2),  # an empty experiment is skipped
     ],
 )
@@ -162,7 +162,7 @@ def test_another_workflow_s_summary_never_decides_but_is_accounted_for(tmp_path)
 @pytest.mark.parametrize("repo", ["https://github.com/Coen-Lab/coen-dome-navigation", "https://github.com/someone/Coen-Dome-Navigation.git/",
                                   "https://github.com/ucl-open/coen-av-corridor.git", "https://github.com/ucl-open/auditory-vr-corridor"])
 def test_the_repo_name_alone_decides_whatever_the_owner_fork_or_former_name(tmp_path, repo):
-    # Pip, 15 Nov 2026: the newest session that matches, not identically; branches and forks count the same.
+    # The newest session that matches, not identically; branches and forks count the same.
     put(tmp_path, summary("ses-002D1_2026-11-10T09-00-00", "r2", 2, ROWS, repo=repo))
     assert [e.name for e in read(tmp_path, "r2")[0]] == ["ses-002D1_2026-11-10T09-00-00"]
 

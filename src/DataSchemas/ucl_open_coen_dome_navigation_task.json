@@ -22,7 +22,7 @@
       "type": "object"
     },
     "OptogeneticsSettings": {
-      "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the\ntrigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first\ntone pip (after it if negative), in whole 50 ms beeps and at most 0.2 s, and Bonsai stops it at the trial's\noutcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.",
+      "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the\ntrigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first\ntone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the trial's\noutcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.",
       "if": {
         "additionalProperties": true,
         "properties": {
@@ -117,7 +117,7 @@
       "type": "object"
     },
     "Penalty": {
-      "description": "What a wrong or missed trial costs: a timeout, and the penalty sound with it (the trial log's penaltySound and\npenaltyTimeoutSeconds). Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.",
+      "description": "What a wrong or missed trial costs: a timeout, and the penalty sound with it (the trial log's penaltySoundOn and\npenaltyTimeoutSeconds). Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.",
       "properties": {
         "timeoutSeconds": {
           "description": "Timeout after a penalised trial, in seconds; the next interval starts after it",
@@ -256,7 +256,7 @@
           "type": "number"
         },
         "rewardSizeUl": {
-          "description": "Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\valve-DO1.json). An uncalibrated valve stops the workflow at Start",
+          "description": "Microlitres each reward gives, at most 20 (the most one reward may ask for), on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json). An uncalibrated valve stops the workflow at Start",
           "exclusiveMinimum": 0,
           "maximum": 20,
           "title": "RewardSizeUl",
@@ -367,7 +367,7 @@
       "type": "object"
     },
     "TrialTypeWeights": {
-      "description": "Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),\ncoen-dome-decision-making's names (Pip, 16 Nov 2026).",
+      "description": "Relative draw weight of each trial type, by the name the trial log gives it (trialType: what the trial showed),\ncoen-dome-decision-making's names.",
       "properties": {
         "visual": {
           "description": "The grating alone",
@@ -486,7 +486,7 @@
           "default": {
             "levelDbfs": -30.0
           },
-          "description": "The tone sweep's pips (src/waveforms/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)",
+          "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)",
           "title": "TonePips"
         },
         "rewardTone": {
@@ -494,7 +494,7 @@
           "default": {
             "levelDbfs": -36.0
           },
-          "description": "The reward tone (src/waveforms/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
+          "description": "The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
         },
         "backgroundNoise": {
           "$ref": "#/$defs/BackgroundNoise",
