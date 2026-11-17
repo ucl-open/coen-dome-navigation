@@ -903,13 +903,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The response window, in seconds from the start of the task's response period; with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)
+        /// The response window, in seconds from when a lick first counts (the task says when); with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("responseWindowSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="responseWindowSeconds")]
-        [System.ComponentModel.DescriptionAttribute("The response window, in seconds from the start of the task\'s response period; wit" +
-            "h no response by its end the trial is NoResponse. Null or left out: no limit (a " +
-            "task may refuse it)")]
+        [System.ComponentModel.DescriptionAttribute("The response window, in seconds from when a lick first counts (the task says when" +
+            "); with no response by its end the trial is NoResponse. Null or left out: no lim" +
+            "it (a task may refuse it)")]
         public double? ResponseWindowSeconds
         {
             get

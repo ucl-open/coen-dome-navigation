@@ -220,7 +220,7 @@
             }
           ],
           "default": null,
-          "description": "The response window, in seconds from the start of the task's response period; with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)",
+          "description": "The response window, in seconds from when a lick first counts (the task says when); with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)",
           "title": "ResponseWindowSeconds"
         },
         "lickQuietSeconds": {
