@@ -57,7 +57,7 @@ public class Trial : IZapitTrial
     public int trialCondition;          // the 0-based index of its condition in the task's trialConditions
     public double visualContrast;       // the grating's contrast, drawn from its condition's contrasts; 0: no grating
     public double auditoryAmplitude;    // the pips' amplitude, its condition's auditoryStimulus.amplitude; 0: no tone
-    public int speakerChannel;          // the one speaker's mixer channel; AllSpeakersChannel on every speaker (startAzimuthsDeg "all"), -1 with no tone
+    public int speakerChannel;          // the one speaker's mixer channel; AllSpeakersChannel on every speaker (initialAzimuthsDeg "all"), -1 with no tone
     public double auditoryAzimuthDeg;   // that speaker's position (rig.yml); NaN on every speaker or with no tone
     public double auditoryElevationDeg;
     public double itiSeconds;           // the interval before this trial: the last outcome (after any timeout; trial 1: the first clock tick) to the first pip, with a quiet mouse
@@ -84,7 +84,7 @@ public class Trial : IZapitTrial
     public double laserMaxSeconds;      // the workflow's wall-clock backstop (LaserBackstop); the loop's LaserCap is TrialRules.Laser's
     public int rngSeed;                 // the experiment's seed, for the RngSeed event
 
-    /// <summary>speakerChannel on a trial whose pips play on every rig.yml speaker (auditoryStimulus.startAzimuthsDeg "all"),
+    /// <summary>speakerChannel on a trial whose pips play on every rig.yml speaker (auditoryStimulus.initialAzimuthsDeg "all"),
     /// as coen-dome-decision-making's.</summary>
     public const int AllSpeakersChannel = -2;
 }
@@ -130,7 +130,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     }
 
     /// <summary>The rules for a task file with the sweep, Zapit's hardware triggering and rig.yml's speakerArray (null: none,
-    /// so only startAzimuthsDeg "all"); throws naming every problem (TrialDraw.CheckTask).</summary>
+    /// so only initialAzimuthsDeg "all"); throws naming every problem (TrialDraw.CheckTask).</summary>
     public static TrialRules Create(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount, EqualisedSpeakerArray speakers = null)
     {
         return new TrialRules(task, sweep, hardwareTriggered, zapitConditionCount, speakers);
@@ -313,7 +313,7 @@ public class TrialConditionCombination
     /// <summary>The pips' amplitude (0: no tone).</summary>
     public double Amplitude;
     /// <summary>Where the pips play, one drawn per trial: a number (rig.yml's speaker nearest it) or "all" (every speaker).</summary>
-    public List<object> StartAzimuths;
+    public List<object> InitialAzimuths;
     /// <summary>A reward's size, ul.</summary>
     public double RewardSizeUl;
     /// <summary>The chance a trial is an auto-reward trial.</summary>
@@ -357,10 +357,10 @@ public class TrialDraw
     /// equal). Only what Next alone reads per trial.</summary>
     public static readonly string[] ConditionFields =
     {
-        "contrasts", "auditoryStimulus.amplitude", "auditoryStimulus.startAzimuthsDeg", "optogenetics.laserOnProbability", "reward.rewardSizeUl", "autoRewardProbability"
+        "contrasts", "auditoryStimulus.amplitude", "auditoryStimulus.initialAzimuthsDeg", "optogenetics.laserOnProbability", "reward.rewardSizeUl", "autoRewardProbability"
     };
 
-    /// <summary>An auditoryStimulus.startAzimuthsDeg item that plays the pips on every rig.yml speaker (task.py ALL_SPEAKERS).</summary>
+    /// <summary>An auditoryStimulus.initialAzimuthsDeg item that plays the pips on every rig.yml speaker (task.py ALL_SPEAKERS).</summary>
     public const string AllSpeakers = "all";
 
     /// <summary>The rules linking settings: task.py's RULES, the schema's x-rules (a test holds them equal), checked on the
@@ -368,7 +368,7 @@ public class TrialDraw
     public static readonly ConditionRule[] Rules =
     {
         new ConditionRule { when = "contrasts", @is = 0, unused = new[] { "visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd" } },
-        new ConditionRule { when = "auditoryStimulus.amplitude", @is = 0, unused = new[] { "auditoryStimulus.startAzimuthsDeg" } },
+        new ConditionRule { when = "auditoryStimulus.amplitude", @is = 0, unused = new[] { "auditoryStimulus.initialAzimuthsDeg" } },
         new ConditionRule { when = "autoRewardProbability", @is = 1, unused = new[] { "wrongLickLimit", "rewardCeilingHz" } },
         new ConditionRule { when = "stimulusOffProbability", @is = 0, unused = new[] { "stimulusOff.trackFractions", "stimulusOff.stimuli" } },
     };
@@ -480,18 +480,18 @@ public class TrialDraw
     }
 
     // The list fields: a cell picks one entry, a one-entry list.
-    static bool IsList(string path) { return path == "contrasts" || path == "auditoryStimulus.startAzimuthsDeg"; }
+    static bool IsList(string path) { return path == "contrasts" || path == "auditoryStimulus.initialAzimuthsDeg"; }
 
-    /// <summary>The task's own values of the condition fields: a combination with no picks (startAzimuthsDeg's items as
+    /// <summary>The task's own values of the condition fields: a combination with no picks (initialAzimuthsDeg's items as
     /// numbers or "all", however the YAML reader typed them).</summary>
     public static TrialConditionCombination Base(UclOpenCoenDomeNavigationTaskParameters task)
     {
-        var azimuths = task.AuditoryStimulus.StartAzimuthsDeg ?? new List<object>();
+        var azimuths = task.AuditoryStimulus.InitialAzimuthsDeg ?? new List<object>();
         return new TrialConditionCombination
         {
             Contrasts = task.Contrasts,
             Amplitude = task.AuditoryStimulus.Amplitude,
-            StartAzimuths = azimuths.Select(a => Azimuth(a) ?? a).ToList(),
+            InitialAzimuths = azimuths.Select(a => Azimuth(a) ?? a).ToList(),
             RewardSizeUl = task.Reward.RewardSizeUl,
             AutoRewardProbability = task.AutoRewardProbability,
             LaserOnProbability = task.Optogenetics.LaserOnProbability,
@@ -499,7 +499,7 @@ public class TrialDraw
         };
     }
 
-    // A startAzimuthsDeg item as the draw reads it: a number, or "all"; null when it is neither.
+    // A initialAzimuthsDeg item as the draw reads it: a number, or "all"; null when it is neither.
     static object Azimuth(object value)
     {
         double number;
@@ -513,7 +513,7 @@ public class TrialDraw
         {
             case "contrasts": return combination.Contrasts.Cast<object>().ToList();
             case "auditoryStimulus.amplitude": return combination.Amplitude;
-            case "auditoryStimulus.startAzimuthsDeg": return combination.StartAzimuths;
+            case "auditoryStimulus.initialAzimuthsDeg": return combination.InitialAzimuths;
             case "reward.rewardSizeUl": return combination.RewardSizeUl;
             case "autoRewardProbability": return combination.AutoRewardProbability;
             case "optogenetics.laserOnProbability": return combination.LaserOnProbability;
@@ -527,7 +527,7 @@ public class TrialDraw
         {
             case "contrasts": combination.Contrasts = ((List<object>)value).Cast<double>().ToList(); break;
             case "auditoryStimulus.amplitude": combination.Amplitude = (double)value; break;
-            case "auditoryStimulus.startAzimuthsDeg": combination.StartAzimuths = (List<object>)value; break;
+            case "auditoryStimulus.initialAzimuthsDeg": combination.InitialAzimuths = (List<object>)value; break;
             case "reward.rewardSizeUl": combination.RewardSizeUl = (double)value; break;
             case "autoRewardProbability": combination.AutoRewardProbability = (double)value; break;
             case "optogenetics.laserOnProbability": combination.LaserOnProbability = (double)value; break;
@@ -536,13 +536,13 @@ public class TrialDraw
     }
 
     // A cell's picks (task.py _options): a list field's entries, each a one-entry list; a scalar's list, else its one value.
-    // The value is the set's, else the task's; null, with a problem, when a value is not a number (startAzimuthsDeg: or
+    // The value is the set's, else the task's; null, with a problem, when a value is not a number (initialAzimuthsDeg: or
     // "all").
     static List<object> Options(UclOpenCoenDomeNavigationTaskParameters task, Dictionary<string, object> values, string path, string where, List<string> problems)
     {
         object value;
         var listField = IsList(path);
-        var azimuths = path == "auditoryStimulus.startAzimuthsDeg";
+        var azimuths = path == "auditoryStimulus.initialAzimuthsDeg";
         if (!values.TryGetValue(path, out value)) value = Get(Base(task), path);
         var list = value as System.Collections.IList;
         if (listField && list == null) { problems.Add(string.Format("{0}: {1} must be a list", where, path)); return null; }
@@ -622,10 +622,10 @@ public class TrialDraw
     {
         if (c.Contrasts == null || c.Contrasts.Count == 0 || c.Contrasts.Any(v => !(v >= 0) || double.IsInfinity(v))) yield return "contrasts must each be a finite number, 0 or more, at least one";
         if (!(c.Amplitude >= 0) || double.IsInfinity(c.Amplitude)) yield return "auditoryStimulus.amplitude must be a finite number, 0 or more";
-        if (c.StartAzimuths == null || c.StartAzimuths.Count == 0 || c.StartAzimuths.Any(a => !(a as string == AllSpeakers || a is double && (double)a >= -180 && (double)a <= 180)))
-            yield return "auditoryStimulus.startAzimuthsDeg must each be all or a number in [-180, 180], at least one";
-        else if (c.Amplitude > 0 && c.StartAzimuths.Any(a => a is double) && (speakers == null || speakers.Speakers == null || speakers.Speakers.Count == 0))
-            yield return "auditoryStimulus.startAzimuthsDeg names an azimuth but rig.yml has no speakerArray.speakers";
+        if (c.InitialAzimuths == null || c.InitialAzimuths.Count == 0 || c.InitialAzimuths.Any(a => !(a as string == AllSpeakers || a is double && (double)a >= -180 && (double)a <= 180)))
+            yield return "auditoryStimulus.initialAzimuthsDeg must each be all or a number in [-180, 180], at least one";
+        else if (c.Amplitude > 0 && c.InitialAzimuths.Any(a => a is double) && (speakers == null || speakers.Speakers == null || speakers.Speakers.Count == 0))
+            yield return "auditoryStimulus.initialAzimuthsDeg names an azimuth but rig.yml has no speakerArray.speakers";
         if (!(c.RewardSizeUl > 0 && c.RewardSizeUl <= LoadRewardLine.DefaultMaxRewardUl)) yield return string.Format("reward.rewardSizeUl must be above 0 and at most {0} ul", LoadRewardLine.DefaultMaxRewardUl);
         foreach (var p in TaskBlocks.AutoRewardProblems(c.AutoRewardProbability)) yield return p;
         if (!(c.LaserOnProbability >= 0 && c.LaserOnProbability <= 1)) yield return "optogenetics.laserOnProbability must be in [0, 1]";
@@ -795,7 +795,7 @@ public class TrialDraw
         t.visualContrast = combination.Contrasts.Count == 1 ? combination.Contrasts[0] : combination.Contrasts[random.Next(combination.Contrasts.Count)];
         t.auditoryAmplitude = combination.Amplitude;
         // Where the pips play: every speaker ("all"), or rig.yml's speaker nearest the picked azimuth; nowhere at amplitude 0.
-        var azimuths = combination.StartAzimuths;
+        var azimuths = combination.InitialAzimuths;
         var azimuth = azimuths.Count == 1 ? azimuths[0] : azimuths[random.Next(azimuths.Count)];
         t.speakerChannel = t.auditoryAmplitude > 0 ? Trial.AllSpeakersChannel : -1;
         t.auditoryAzimuthDeg = double.NaN;
@@ -869,7 +869,7 @@ public class ReadTask
 }
 
 [Combinator]
-[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (task file, rig.yml, sweep); rig.yml's speakerArray places startAzimuthsDeg's nearest speaker. Stops the workflow on a task whose curriculum is empty or malformed, a trial condition that cannot be built (its set and pairs over the task's values, every combination), a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
+[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (task file, rig.yml, sweep); rig.yml's speakerArray places initialAzimuthsDeg's nearest speaker. Stops the workflow on a task whose curriculum is empty or malformed, a trial condition that cannot be built (its set and pairs over the task's values, every combination), a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CheckTaskAtGo
 {

@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AuditoryStimulus": {
-      "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the\npicked start azimuth is \"all\", else on rig.yml's speaker nearest it (at elevation 0).",
+      "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the\npicked initial azimuth is \"all\", else on rig.yml's speaker nearest it (at elevation 0).",
       "properties": {
         "amplitude": {
           "default": 1.0,
@@ -10,7 +10,7 @@
           "title": "Amplitude",
           "type": "number"
         },
-        "startAzimuthsDeg": {
+        "initialAzimuthsDeg": {
           "default": [
             "all"
           ],
@@ -27,7 +27,7 @@
             ]
           },
           "minItems": 1,
-          "title": "StartAzimuthsDeg",
+          "title": "InitialAzimuthsDeg",
           "type": "array"
         }
       },
@@ -507,7 +507,7 @@
           "$ref": "#/$defs/AuditoryStimulus",
           "default": {
             "amplitude": 1.0,
-            "startAzimuthsDeg": [
+            "initialAzimuthsDeg": [
               "all"
             ]
           },
@@ -644,7 +644,7 @@
       "x-conditionFields": [
         "contrasts",
         "auditoryStimulus.amplitude",
-        "auditoryStimulus.startAzimuthsDeg",
+        "auditoryStimulus.initialAzimuthsDeg",
         "optogenetics.laserOnProbability",
         "reward.rewardSizeUl",
         "autoRewardProbability"
@@ -661,7 +661,7 @@
         {
           "is": 0,
           "unused": [
-            "auditoryStimulus.startAzimuthsDeg"
+            "auditoryStimulus.initialAzimuthsDeg"
           ],
           "when": "auditoryStimulus.amplitude"
         },

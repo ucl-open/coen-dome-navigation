@@ -81,7 +81,7 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
         {"label": "auditory", "weight": 1, "set": {"contrasts": [0]}},
         {"label": "audiovisualCoherent", "weight": 0, "set": {}},
     ]
-    assert params["contrasts"] == [1.0] and params["auditoryStimulus"] == {"amplitude": 1, "startAzimuthsDeg": ["all"]}
+    assert params["contrasts"] == [1.0] and params["auditoryStimulus"] == {"amplitude": 1, "initialAzimuthsDeg": ["all"]}
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     assert [derive_label(model, c) for c in model.trial_conditions] == [c.label.value for c in model.trial_conditions]
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
@@ -91,9 +91,9 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     # rules (TrialDraw.Rules); a C# test holds both to the schema.
     # decision-making's condition fields where the corridor has them (Pip, 18 Nov 2026).
     assert params_schema["x-conditionFields"] == list(CONDITION_FIELDS) == [
-        "contrasts", "auditoryStimulus.amplitude", "auditoryStimulus.startAzimuthsDeg", "optogenetics.laserOnProbability", "reward.rewardSizeUl", "autoRewardProbability"]
-    # startAzimuthsDeg's items a number or "all", oneOf as decision-making's (Bonsai.Sgen's List<object>).
-    azimuths = schema["$defs"]["AuditoryStimulus"]["properties"]["startAzimuthsDeg"]
+        "contrasts", "auditoryStimulus.amplitude", "auditoryStimulus.initialAzimuthsDeg", "optogenetics.laserOnProbability", "reward.rewardSizeUl", "autoRewardProbability"]
+    # initialAzimuthsDeg's items a number or "all", oneOf as decision-making's (Bonsai.Sgen's List<object>).
+    azimuths = schema["$defs"]["AuditoryStimulus"]["properties"]["initialAzimuthsDeg"]
     assert azimuths["default"] == ["all"] and azimuths["items"] == {"oneOf": [{"type": "number"}, {"const": "all", "type": "string"}]}
     assert params_schema["x-rules"] == [dict(rule) for rule in RULES]
     assert params_schema["properties"]["trialConditions"]["x-whole"] is True
@@ -139,8 +139,8 @@ def test_a_rule_s_then_and_one_of_are_checked():
         ([{"label": "visual", "weight": 1, "set": {"optogenetics.laserOnProbability": 1}}], r"sets optogenetics.laserOnProbability with optogenetics off"),
         ([{"label": "visual", "weight": 1, "set": {"reward.rewardSizeUl": 0}}], r"(?s)with \{'reward.rewardSizeUl': 0\}.*greater than 0"),
         ([{"label": "visual", "weight": 1, "set": {"autoRewardProbability": 2}}], r"less than or equal to 1"),
-        ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.startAzimuthsDeg": [200]}}], r"outside \[-180, 180\]"),
-        ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.startAzimuthsDeg": ["left"]}}], r"Input should be 'all'"),
+        ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": [200]}}], r"outside \[-180, 180\]"),
+        ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": ["left"]}}], r"Input should be 'all'"),
         ([{"label": "visual", "weight": 1, "colour": 1}], "Extra inputs"),
         ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": -1}}], r"(?s)trial_conditions\[0\] \(visual\) with .*greater than or equal to 0"),
         ([{"label": "visual", "weight": 1, "set": {"contrasts": [0.5, -1]}}], r"(?s)with \{'contrasts': \[-1\]\}.*contrasts must each be 0 or more"),
@@ -529,6 +529,6 @@ def test_the_task_file_dumps_back_unchanged():
 def test_a_condition_sets_its_reward_auto_reward_and_where_the_pips_play():
     params = task()["taskParameters"]
     params["trialConditions"] = [{"label": "auditory", "weight": 1, "set": {
-        "contrasts": [0], "reward.rewardSizeUl": [2, 4], "autoRewardProbability": 0, "auditoryStimulus.startAzimuthsDeg": [-60, "all"]}}]
+        "contrasts": [0], "reward.rewardSizeUl": [2, 4], "autoRewardProbability": 0, "auditoryStimulus.initialAzimuthsDeg": [-60, "all"]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    assert params["auditoryStimulus"]["startAzimuthsDeg"] == ["all"]   # the task file's: every speaker, as before
+    assert params["auditoryStimulus"]["initialAzimuthsDeg"] == ["all"]   # the task file's: every speaker, as before

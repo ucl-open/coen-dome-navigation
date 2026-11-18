@@ -339,8 +339,8 @@ public class TrialDrawTests
             Tuple.Create(setting("optogenetics.laserOnProbability", 0.5), "trialConditions[1] (auditory) sets optogenetics.laserOnProbability with optogenetics off"),
             Tuple.Create(setting("reward.rewardSizeUl", 0.0), "trialConditions[1] (auditory): reward.rewardSizeUl must be above 0 and at most 20 ul"),
             Tuple.Create(setting("autoRewardProbability", 2.0), "trialConditions[1] (auditory): autoRewardProbability is 2, not from 0 to 1"),
-            Tuple.Create(setting("auditoryStimulus.startAzimuthsDeg", new List<object> { "left" }), "trialConditions[1] (auditory): auditoryStimulus.startAzimuthsDeg value 'left' is not a number or all"),
-            Tuple.Create(setting("auditoryStimulus.startAzimuthsDeg", new List<object> { 200.0 }), "trialConditions[1] (auditory): auditoryStimulus.startAzimuthsDeg must each be all or a number in [-180, 180]"),
+            Tuple.Create(setting("auditoryStimulus.initialAzimuthsDeg", new List<object> { "left" }), "trialConditions[1] (auditory): auditoryStimulus.initialAzimuthsDeg value 'left' is not a number or all"),
+            Tuple.Create(setting("auditoryStimulus.initialAzimuthsDeg", new List<object> { 200.0 }), "trialConditions[1] (auditory): auditoryStimulus.initialAzimuthsDeg must each be all or a number in [-180, 180]"),
             Tuple.Create(setting("auditoryStimulus.amplitude", -1.0), "trialConditions[1] (auditory): auditoryStimulus.amplitude must be a finite number, 0 or more"),
             Tuple.Create(setting("auditoryStimulus.amplitude", "loud"), "trialConditions[1] (auditory): auditoryStimulus.amplitude value 'loud' is not a number"),
             Tuple.Create(setting("contrasts", 0.5), "trialConditions[1] (auditory): contrasts must be a list"),
@@ -583,24 +583,24 @@ public class TrialDrawTests
     [TestMethod]
     public void ThePipsPlayOnEverySpeakerOrTheOneNearestThePickedAzimuth()
     {
-        // all (the task file's): every speaker, logged NaN with an amplitude above 0, as before startAzimuthsDeg.
+        // all (the task file's): every speaker, logged NaN with an amplitude above 0, as before initialAzimuthsDeg.
         var task = Fixture.Task(1);
         var all = Fixture.Draw(task).Next();
         Assert.AreEqual(Trial.AllSpeakersChannel, all.speakerChannel);
         Assert.IsTrue(double.IsNaN(all.auditoryAzimuthDeg) && double.IsNaN(all.auditoryElevationDeg) && all.auditoryAmplitude == 1);
         // A number: rig.yml's speaker nearest it.
         task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = TrialLabel.Auditory, Weight = 1,
-            Set = new Dictionary<object, object> { { "auditoryStimulus.startAzimuthsDeg", new List<object> { -70.0, "all", 20.0 } } } } };
+            Set = new Dictionary<object, object> { { "auditoryStimulus.initialAzimuthsDeg", new List<object> { -70.0, "all", 20.0 } } } } };
         var draw = Fixture.Draw(task);
         var picked = Enumerable.Range(0, 200).Select(_ => draw.Next()).Select(t => t.speakerChannel + ":" + t.auditoryAzimuthDeg + ":" + t.auditoryElevationDeg).Distinct().OrderBy(x => x).ToArray();
         CollectionAssert.AreEqual(new[] { "0:-90:15", "-2:NaN:NaN", "2:0:15" }.OrderBy(x => x).ToArray(), picked);
         // Silent: no speaker, NaN.
-        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.amplitude", 0.0 }, { "auditoryStimulus.startAzimuthsDeg", new List<object> { 20.0 } } };
+        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.amplitude", 0.0 }, { "auditoryStimulus.initialAzimuthsDeg", new List<object> { 20.0 } } };
         var silent = Fixture.Draw(task).Next();
         Assert.AreEqual(-1, silent.speakerChannel);
         Assert.IsTrue(double.IsNaN(silent.auditoryAzimuthDeg));
         // A number on a rig without speakers is refused at Go.
-        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.startAzimuthsDeg", new List<object> { 20.0 } } };
+        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.initialAzimuthsDeg", new List<object> { 20.0 } } };
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Draw(task, false)).Message, "names an azimuth but rig.yml has no speakerArray.speakers");
         // The trial row logs the speaker; the pip carries its channel to PipBuffer.
         var rig = new Rig(Fixture.Setup(Fixture.Task(1)));

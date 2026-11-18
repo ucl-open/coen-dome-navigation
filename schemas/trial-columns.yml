@@ -147,9 +147,9 @@ auditoryAzimuthDeg:
   type: double
   unit: deg
   description: Azimuth of the speaker that played, rig.yml's nearest to the location drawn; NaN when none played.
-  note: The pips' one speaker, rig.yml's nearest (at elevation 0) to the azimuth picked from the condition's auditoryStimulus.startAzimuthsDeg; NaN with auditoryAmplitude above 0 when the pick was all, every speaker at once (the corridor's sound before 18 Nov 2026, and its default).
+  note: The pips' one speaker, rig.yml's nearest (at elevation 0) to the azimuth picked from the condition's auditoryStimulus.initialAzimuthsDeg; NaN with auditoryAmplitude above 0 when the pick was all, every speaker at once (the corridor's sound before 18 Nov 2026, and its default).
 auditoryElevationDeg:
   type: double
   unit: deg
   description: Elevation of the speaker that played; NaN when none played.
-  note: NaN with auditoryAmplitude above 0 when every speaker played (startAzimuthsDeg all).
+  note: NaN with auditoryAmplitude above 0 when every speaker played (initialAzimuthsDeg all).

@@ -9,7 +9,7 @@ sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made 
 -58.1 dBFS RMS); the other sounds at the task file's levelDbfs (dBFS RMS: rewardTone, backgroundNoise and penalty.sound).
 
 What a trial shows and offers is its trial condition's (the condition fields, x-conditionFields: contrasts and
-auditoryStimulus.amplitude, each 0 for none, auditoryStimulus.startAzimuthsDeg, reward.rewardSizeUl, autoRewardProbability and
+auditoryStimulus.amplitude, each 0 for none, auditoryStimulus.initialAzimuthsDeg, reward.rewardSizeUl, autoRewardProbability and
 optogenetics.laserOnProbability); its label names it (trialType) and drives nothing."""
 
 import copy
@@ -70,7 +70,7 @@ class VisualStimulus(TaskBlock):
     spatial_frequency_end_cpd: Double = Field(default=0.3, gt=0, description="The grating's spatial frequency at the track's end, in cycles per degree")
 
 
-ALL_SPEAKERS = "all"  # an auditoryStimulus.startAzimuthsDeg item: every rig.yml speaker plays (TrialDraw.AllSpeakers)
+ALL_SPEAKERS = "all"  # an auditoryStimulus.initialAzimuthsDeg item: every rig.yml speaker plays (TrialDraw.AllSpeakers)
 # A sound azimuth or "all", as coen-dome-decision-making's. oneOf, not pydantic's anyOf: Bonsai.Sgen makes an empty class of
 # an anyOf item, object of a oneOf.
 SoundAzimuth = Annotated[Double | Literal["all"], WithJsonSchema({"oneOf": [{"type": "number"}, {"const": ALL_SPEAKERS, "type": "string"}]})]
@@ -78,7 +78,7 @@ SoundAzimuth = Annotated[Double | Literal["all"], WithJsonSchema({"oneOf": [{"ty
 
 class AuditoryStimulus(TaskBlock):
     """The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the
-    picked start azimuth is "all", else on rig.yml's speaker nearest it (at elevation 0)."""
+    picked initial azimuth is "all", else on rig.yml's speaker nearest it (at elevation 0)."""
 
     amplitude: Double = Field(
         default=1.0,
@@ -89,7 +89,7 @@ class AuditoryStimulus(TaskBlock):
             "after equalisation on any speaker; dB SPL is unknown until the speakers' SPL calibration"
         ),
     )
-    start_azimuths_deg: list[SoundAzimuth] = Field(
+    initial_azimuths_deg: list[SoundAzimuth] = Field(
         default=[ALL_SPEAKERS],
         min_length=1,
         description=(
@@ -99,13 +99,13 @@ class AuditoryStimulus(TaskBlock):
         ),
     )
 
-    @field_validator("start_azimuths_deg")
+    @field_validator("initial_azimuths_deg")
     @classmethod
     def _in_range(cls, value: list) -> list:
         # TrialDraw.CheckTask's same rule.
         for azimuth in value:
             if azimuth != ALL_SPEAKERS and not -180 <= azimuth <= 180:
-                raise ValueError(f"start_azimuths_deg value {azimuth} is outside [-180, 180]")
+                raise ValueError(f"initial_azimuths_deg value {azimuth} is outside [-180, 180]")
         return value
 
 
@@ -191,7 +191,7 @@ class TrialLabel(StrEnum):
 CONDITION_FIELDS = (
     "contrasts",
     "auditoryStimulus.amplitude",
-    "auditoryStimulus.startAzimuthsDeg",
+    "auditoryStimulus.initialAzimuthsDeg",
     "optogenetics.laserOnProbability",
     "reward.rewardSizeUl",
     "autoRewardProbability",
@@ -202,7 +202,7 @@ CONDITION_FIELDS = (
 # rules only say what goes unread.
 RULES = (
     {"when": "contrasts", "is": 0, "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"]},
-    {"when": "auditoryStimulus.amplitude", "is": 0, "unused": ["auditoryStimulus.startAzimuthsDeg"]},
+    {"when": "auditoryStimulus.amplitude", "is": 0, "unused": ["auditoryStimulus.initialAzimuthsDeg"]},
     {"when": "autoRewardProbability", "is": 1, "unused": ["wrongLickLimit", "rewardCeilingHz"]},
     {"when": "stimulusOffProbability", "is": 0, "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"]},
 )

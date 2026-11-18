@@ -121,12 +121,12 @@ namespace UclOpenCoenDomeNavigationTask
 
     /// <summary>
     /// The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the
-    ///picked start azimuth is "all", else on rig.yml's speaker nearest it (at elevation 0).
+    ///picked initial azimuth is "all", else on rig.yml's speaker nearest it (at elevation 0).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/sounds/all_waveforms.bin), each equalised for its spea" +
-        "ker: on every rig.yml speaker where the\npicked start azimuth is \"all\", else on r" +
-        "ig.yml\'s speaker nearest it (at elevation 0).")]
+        "ker: on every rig.yml speaker where the\npicked initial azimuth is \"all\", else on" +
+        " rig.yml\'s speaker nearest it (at elevation 0).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class AuditoryStimulus
@@ -134,18 +134,18 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _amplitude;
     
-        private System.Collections.Generic.List<object> _startAzimuthsDeg;
+        private System.Collections.Generic.List<object> _initialAzimuthsDeg;
     
         public AuditoryStimulus()
         {
             _amplitude = 1D;
-            _startAzimuthsDeg = new System.Collections.Generic.List<object>();
+            _initialAzimuthsDeg = new System.Collections.Generic.List<object>();
         }
     
         protected AuditoryStimulus(AuditoryStimulus other)
         {
             _amplitude = other._amplitude;
-            _startAzimuthsDeg = other._startAzimuthsDeg;
+            _initialAzimuthsDeg = other._initialAzimuthsDeg;
         }
     
         /// <summary>
@@ -170,18 +170,18 @@ namespace UclOpenCoenDomeNavigationTask
         /// Where the pips play, one picked per trial: "all" on every rig.yml speaker at once (the corridor's sound, logged auditoryAzimuthDeg NaN with an amplitude above 0); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevation 0, logged as that speaker's auditoryAzimuthDeg and auditoryElevationDeg. Unused where the amplitude is 0
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("startAzimuthsDeg")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="startAzimuthsDeg")]
+        [Newtonsoft.Json.JsonPropertyAttribute("initialAzimuthsDeg")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="initialAzimuthsDeg")]
         [System.ComponentModel.DescriptionAttribute(@"Where the pips play, one picked per trial: ""all"" on every rig.yml speaker at once (the corridor's sound, logged auditoryAzimuthDeg NaN with an amplitude above 0); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevation 0, logged as that speaker's auditoryAzimuthDeg and auditoryElevationDeg. Unused where the amplitude is 0")]
-        public System.Collections.Generic.List<object> StartAzimuthsDeg
+        public System.Collections.Generic.List<object> InitialAzimuthsDeg
         {
             get
             {
-                return _startAzimuthsDeg;
+                return _initialAzimuthsDeg;
             }
             set
             {
-                _startAzimuthsDeg = value;
+                _initialAzimuthsDeg = value;
             }
         }
     
@@ -198,7 +198,7 @@ namespace UclOpenCoenDomeNavigationTask
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
             stringBuilder.Append("Amplitude = " + _amplitude + ", ");
-            stringBuilder.Append("StartAzimuthsDeg = " + _startAzimuthsDeg);
+            stringBuilder.Append("InitialAzimuthsDeg = " + _initialAzimuthsDeg);
             return true;
         }
     
