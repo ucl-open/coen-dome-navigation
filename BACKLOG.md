@@ -55,3 +55,7 @@ What is still to do, then what has been decided and why. Closed work, audit roun
 - coen-dome-decision-making's schema allows a null `responseWindowSeconds`: it is the lab's shared field, and a null is refused loudly by its task.py and its Go check.
 - `autoRewardProbability` triggers differently in each task: it is one concept, a free reward when the mouse does not earn one, given the way each task gives rewards.
 - Old session summaries keep the old names: they are recorded data.
+
+### Trial-conditions audit round 2 (18 Nov 2026): not recommended
+
+- A condition with no `weight` reads as 0 at Go (the typed read), where coen-dome-decision-making refuses it from the text: CheckTask has no node tree here, and the schema app-rig-control checks at launch requires `weight`.
