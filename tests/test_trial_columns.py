@@ -23,12 +23,12 @@ def test_every_outcome_reason_the_rules_write_is_listed():
 
 
 def test_the_combination_is_logged_beside_the_condition():
-    # trialCombination, the index in the condition's combinations (TrialDraw.BuildConditions' order), follows trialCondition.
+    # trialCombinationId, the trial's row of Settings_Combinations (TrialDraw.BuildConditions' order), follows trialCondition.
     root = Path(__file__).parents[1]
     names = list(yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8")))
-    assert names[names.index("trialCondition") + 1] == "trialCombination"
+    assert names[names.index("trialCondition") + 1] == "trialCombinationId"
     row = (root / "src" / "Extensions" / "TrialRow.cs").read_text(encoding="utf-8")
-    assert re.search(r"int trialCondition;.*\n\s+public int trialCombination;", row)
+    assert re.search(r"int trialCondition;.*\n\s+public int trialCombinationId;", row)
 
 
 def test_the_trial_types_are_the_conditions_and_decision_making_s():

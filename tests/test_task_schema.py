@@ -169,6 +169,11 @@ def test_the_rules_say_what_goes_unread():
         # Every list field expands too: the task's 3 track lengths and 2 stimulus-off fractions times the set's 1 x 171.
         ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [1], "auditoryStimulus.amplitude": [i / 100 for i in range(1, 172)]}}],
          r"expands into 1026 combinations, more than 1024 \(x-max-combinations\)"),
+        # Counted before any is built, as TrialDraw.BuildConditions does: 6 x 1000^3 combinations would take hours and all
+        # memory to build.
+        ([{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": [i / 1000 for i in range(1000)], "autoRewardProbability": [i / 1000 for i in range(1000)],
+                                                      "reward.rewardSizeUl": [1 + i / 1000 for i in range(1000)]}}],
+         r"expands into 6000000000 combinations"),
     ],
 )
 def test_conditions_need_a_weight_a_label_and_what_they_set_to_run(conditions, match):
@@ -189,7 +194,7 @@ def test_a_condition_may_set_any_field_but_a_session_field_and_every_list_expand
 
 
 def test_combinations_are_ordered_by_path_the_first_changing_fastest():
-    # TrialDraw.BuildConditions' order, logged as trialCombination.
+    # TrialDraw.BuildConditions' order, Settings_Combinations' rows.
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"])
     combos = condition_combinations(model.model_dump(by_alias=True, mode="json"), {"contrasts": [0.5, 1]})
     assert len(combos) == 12 and combos[:3] == [

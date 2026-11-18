@@ -12,7 +12,7 @@ taskParameters:
   rngSeed: null               # null = the workflow draws one at Go; each seed used is a RngSeed event in WorkflowData_Events
   # The trial mix, one whole value: each condition's relative chance and what its trials show, its set over the task's
   # values (any field but x-session-fields': contrasts, 0 no grating; auditoryStimulus.amplitude, 0 no tone; ...), every
-  # list field one entry per combination (logged trialCombination), its pairs picking listed values together; its
+  # list field one entry per combination (a row of Settings_Combinations, logged trialCombinationId), its pairs picking listed values together; its
   # trialType names it. A curriculum stage's conditions replace it; Setup edits only the weights.
   trialConditions:
     - { trialType: visual, weight: 0, set: { auditoryStimulus.amplitude: 0 } }

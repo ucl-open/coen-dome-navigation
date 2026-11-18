@@ -3,7 +3,9 @@
 # own trial log; open_rigs.trial_log reads it from there.
 #
 # Each column: type (int, double, bool or string), and where they apply values (the strings it may hold),
-# unit, description (what it is), note (this task's detail) and history (what recorded data held before). The names and types must also be in the lab's
+# unit, description (what it is), note (this task's detail) and history (what recorded data held before); copyOf, a task
+# path (dotted) the column copies from the trial's Settings_Combinations row (else Settings_Task), and nanWhen {column,
+# equals}, the rows where it is NaN instead, which open_rigs.trial_log checks on every load. The names and types must also be in the lab's
 # Data Dictionary (K:\config\data-dictionary.json, edited on app-rig-control's Lab Names page): app-rig-control checks
 # both before it launches the workflow.
 #
@@ -71,6 +73,7 @@ rewardOfferedUl:
   unit: ul
   description: "Microlitres a reward on this trial gives, on every trial whether or not it was rewarded: the size the task drew for it (the task file's rewardSizeUl, or a larger reward where the task has one); 0 on a trial that offers none. rewarded says whether it was given; what was delivered is RewardDelivered in WorkflowData_Events."
   note: The trial's condition's reward.rewardSizeUl (a condition field since 18 Nov 2026; the task file's before), on every trial.
+  copyOf: reward.rewardSizeUl
 rewarded:
   type: bool
   description: "True when the trial's outcome delivered its reward (rewardOfferedUl, at outcomeTime): the value the workflow's reward command is made from. Which outcomes are rewarded is the task's (its note)."
@@ -100,10 +103,10 @@ laserTriggerTime:
 trialCondition:
   type: int
   description: The 0-based index of the trial's condition in trialConditions of the task file as run (Settings_Task), which gives its label, weight and condition-level values (set); before 18 Nov 2026 the label was named type. A repeat keeps the condition of the trial it repeats.
-trialCombination:
+trialCombinationId:
   type: int
-  description: The 0-based index of the trial's combination within its condition (trialCondition) - every list pick it drew, each list cell of the condition's set and each list field (contrasts, the initial azimuths, the track lengths and the stimulus-off fractions, the set's or the task's) one entry, pairs zipped, combined by path with the first pick changing fastest (task.py condition_combinations); with trialCondition and the task file as run it gives every value the trial was drawn from.
-  history: Added 18 Nov 2026; before it, the track length and stimulus-off fraction were drawn per trial apart from the condition.
+  description: The trial's row in the experiment's Settings_Combinations (0-based, session-wide) - the combination it was drawn from, every list pick (each list cell of the condition's set and each list field, contrasts, the initial azimuths, the track lengths and the stimulus-off fractions, one entry; pairs zipped), whose values that differ between combinations or from Settings_Task are the row's values. The row's trialCondition and trialType are this trial's.
+  history: Added 18 Nov 2026 with Settings_Combinations, replacing trialCombination (briefly logged that day, the index within the condition); before it, the track length and stimulus-off fraction were drawn per trial apart from the condition.
 outcomeReason:
   type: string
   values: [FrequencyReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]
@@ -115,6 +118,7 @@ trackLengthCm:
 wheelGain:
   type: double
   description: The stage's wheelGain - track cm per wheel cm, so the track length drawn is trackLengthCm x wheelGain. The tone and grating are set from the track's progress, wheel cm x wheelGain / track length plus the stage's autoProgressPerSecond x seconds since the trial start (in Settings_Task's taskParameters).
+  copyOf: wheelGain
 outcomePositionCm:
   type: double
   unit: cm
@@ -142,6 +146,7 @@ visualContrast:
   type: double
   description: Grating contrast as BonVision's Contrast, 1 full contrast; 0 when no grating showed (drawn from the trial's condition's contrasts).
   history: Added in the trial-type split (Nov 2026); before it a trial showing the grating showed it at contrast 1.
+  copyOf: contrasts
 auditoryAmplitude:
   type: double
   description: The tone's amplitude, the task's auditoryStimulus.amplitude for the trial's condition - the scale of the pips' samples as stored (1 the files as stored, -58.1 dBFS RMS before equalisation); 0 when no tone played.

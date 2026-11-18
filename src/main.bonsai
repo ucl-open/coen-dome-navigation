@@ -416,7 +416,7 @@
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ConnectForTask.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything else written to the experiment folder (ExperimentLogs, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), WorkflowData_Trials and Zapit's logs (its replies as Events rows, Settings_ZapitConditions), LogWorkflowData the task's own WorkflowData_StimulusState; each device logs itself; Rewards logs each reward (RewardDelivered) and each RewardValve piece its calibration file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
+        <Description>Everything else written to the experiment folder (ExperimentLogs, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), WorkflowData_Trials and Zapit's logs (its replies as Events rows, Settings_ZapitConditions), Settings_Combinations (TrialRules.CombinationsJson, through LogDataSchema) every combination the conditions built at Go, each a row the trial log's trialCombinationId names, with the values that vary, LogWorkflowData the task's own WorkflowData_StimulusState; each device logs itself; Rewards logs each reward (RewardDelivered) and each RewardValve piece its calibration file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -438,11 +438,22 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:TaskLogs.bonsai" />
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TrialRules</Name>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>CombinationsJson</Selector>
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogDataSchema.bonsai">
+              <Name>Settings_Combinations</Name>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
             <Edge From="2" To="3" Label="Source1" />
             <Edge From="3" To="4" Label="Source1" />
+            <Edge From="5" To="6" Label="Source1" />
+            <Edge From="6" To="7" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -961,7 +972,7 @@
         <Description>The controller's events (LogControlEvents), every Harp device in rig.yml checked at Start and recorded (RecordHarpDevices: the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits), and manifest.json (ExperimentManifest: rig.yml, every file it names and this mouse's spout positions ({RigFiles}), schemas\trial-columns.yml, and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files, WorkflowData (Trials, Events and StimulusState) and Settings_ZapitConditions in an optogenetics experiment). Last but LiveView, as it finds each device by the subjects published before it.</Description>
         <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
         <IngestScript>coen-dome-navigation</IngestScript>
-        <ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Experiment_;WorkflowData/WorkflowData_Trials_;WorkflowData/WorkflowData_Events_;WorkflowData/WorkflowData_StimulusState_;Settings/Settings_ZapitConditions_?Optogenetics</ExpectedFiles>
+        <ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Combinations_;Settings/Settings_Experiment_;WorkflowData/WorkflowData_Trials_;WorkflowData/WorkflowData_Events_;WorkflowData/WorkflowData_StimulusState_;Settings/Settings_ZapitConditions_?Optogenetics</ExpectedFiles>
       </Expression>
       <Expression xsi:type="lv:StreamDevices">
         <Name>LiveView</Name>

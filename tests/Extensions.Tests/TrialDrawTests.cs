@@ -338,6 +338,8 @@ public class TrialDrawTests
             Tuple.Create(setting("rngSeed", 2.0), "trialConditions[1] (auditory) sets or pairs rngSeed, a session field (x-session-fields: rngSeed)"),
             Tuple.Create(setting("optogenetics.laserMaxSeconds", 2.0), "trialConditions[1] (auditory) sets or pairs optogenetics.laserMaxSeconds, a session field (x-session-fields: optogenetics.laserMaxSeconds)"),
             Tuple.Create(setting("rewardTone.levelDbfs", -30.0), "trialConditions[1] (auditory) sets or pairs rewardTone.levelDbfs, a session field (x-session-fields: rewardTone)"),
+            // A set path that holds a session field (a map set whole) is refused as the field itself is.
+            Tuple.Create(setting("penalty.sound", new Dictionary<object, object> { { "enabled", true }, { "levelDbfs", -40.0 } }), "trialConditions[1] (auditory) sets or pairs penalty.sound, a session field (x-session-fields: penalty.sound.levelDbfs)"),
             Tuple.Create(setting("trialStructure.lengthCm", 2.0), "trialConditions[1] (auditory) sets or pairs trialStructure.lengthCm, which is not a task field"),
             Tuple.Create(setting("trialStructure", 2.0), "trialConditions[1] (auditory) sets or pairs trialStructure, which is not a task field"),
             Tuple.Create(setting("rewardFloorHz", 2.0), "trialConditions[1] (auditory): the reward zone (2 to 25000 Hz) is not inside the sweep"),
@@ -500,14 +502,14 @@ public class TrialDrawTests
         var draw = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 200).Select(i => draw.Next()).ToList();
         // The lengths are the one list with a choice: combination 0 draws 40 track cm, 1 draws 80, each at the condition's gain.
-        Assert.IsTrue(trials.All(t => t.trackLengthCm == (t.trialCombination == 0 ? 20 : 40) && t.wheelGain == 2));
-        CollectionAssert.AreEquivalent(new[] { 0, 1 }, trials.Select(t => t.trialCombination).Distinct().ToArray());
+        Assert.IsTrue(trials.All(t => t.trackLengthCm == (t.trialCombinationId == 0 ? 20 : 40) && t.wheelGain == 2));
+        CollectionAssert.AreEquivalent(new[] { 0, 1 }, trials.Select(t => t.trialCombinationId).Distinct().ToArray());
         var rig = new Rig(Fixture.Setup(task));
         var trial = rig.RunTo(TrialEventKind.Start).Trial;
         rig.RunTo(TrialEventKind.Update);
         rig.Wheel(1000);
         var outcome = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome;
-        Assert.AreEqual(trial.trialCombination, outcome.Row.Value.trialCombination);
+        Assert.AreEqual(trial.trialCombinationId, outcome.Row.Value.trialCombinationId);
         // Run to the track's end: penalised, with the condition's timeout.
         Assert.AreEqual(0.5, outcome.PenaltyTimeoutSeconds);
     }

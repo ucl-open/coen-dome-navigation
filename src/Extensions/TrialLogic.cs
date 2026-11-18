@@ -1,4 +1,4 @@
-﻿using Bonsai;
+using Bonsai;
 using OpenRigs.Core;
 using OpenRigs.Trials;
 using OpenRigs.Devices.Zapit;
@@ -56,7 +56,7 @@ public class Trial : IZapitTrial
     public int trialNumber;
     public string trialType;            // its condition's trialType: names it, drives nothing
     public int trialCondition;          // the 0-based index of its condition in the task's trialConditions
-    public int trialCombination;        // the 0-based index of its combination within the condition (TrialDraw.BuildConditions' order): with trialCondition and the task file, every list pick
+    public int trialCombinationId;      // its combination's row in Settings_Combinations (TrialConditionCombination.Id): every value it was drawn from
     public double visualContrast;       // the grating's contrast, drawn from its condition's contrasts; 0: no grating
     public double auditoryAmplitude;    // the pips' amplitude, its condition's auditoryStimulus.amplitude; 0: no tone
     public int speakerChannel;          // the one speaker's mixer channel; AllSpeakersChannel on every speaker (initialAzimuthsDeg "all"), -1 with no tone
@@ -144,6 +144,10 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 
     /// <summary>The loudest tone the task's conditions can draw (TrialDraw.Loudest), for the pips' peak check (LayOutPips).</summary>
     public LoudestSound Loudest { get { return draw.Loudest(); } }
+
+    /// <summary>Settings_Combinations' text (TrialDraw.CombinationsJson): every combination built at Go, each a row the trial
+    /// log's trialCombinationId names; logged through LogDataSchema in the Logging group.</summary>
+    public string CombinationsJson { get { return TrialDraw.CombinationsJson(task, draw.Conditions); } }
 
     /// <summary>The laser in an optogenetics experiment (the trigger line only rises in one); null without.</summary>
     public LaserTiming Laser { get { return laser; } }
@@ -276,7 +280,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         {
             trialType = trial.trialType,
             trialCondition = trial.trialCondition,
-            trialCombination = trial.trialCombination,
+            trialCombinationId = trial.trialCombinationId,
             outcome = rewarded ? TrialOutcomes.Correct : ranOut ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
             outcomeReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
             trackLengthCm = trial.trackLengthCm,
@@ -316,6 +320,8 @@ public class TrialConditionCombination
     public UclOpenCoenDomeNavigationTaskParameters Task;
     /// <summary>The picks that make it, for a message ("" with no list cell).</summary>
     public string Picks;
+    /// <summary>Its 0-based row in Settings_Combinations: build order across the session, conditions in turn (the trialCombinationId column).</summary>
+    public int Id;
 }
 
 /// <summary>The largest amplitude a task's conditions can draw, and where (a condition and its picks).</summary>
@@ -370,7 +376,7 @@ public class TrialDraw
     /// read back, once for every combination (task.py condition_combinations): each pairs group's lists (the set's, else the
     /// task's) zipped, equally long; then by path each other list cell of its set and every list field
     /// (TaskSchema.ListFields) one pick (a scalar field's list one value, a list field's entry a one-entry list); all combined
-    /// as a product, the first cell's pick changing fastest (a combination's index is the trialCombination column), at most
+    /// as a product, the first cell's pick changing fastest (each combination's Id its row, across the session), at most
     /// TaskSchema.MaxCombinations. A session field (TaskSchema.SessionFields) is refused. Adds a problem for each condition
     /// that cannot be built, and returns null then.</summary>
     public static List<TrialConditionDraw> BuildConditions(UclOpenCoenDomeNavigationTaskParameters task, List<string> problems)
@@ -392,6 +398,7 @@ public class TrialDraw
         stripped.Save(writer, false);
         var baseText = writer.ToString();
         var built = new List<TrialConditionDraw>();
+        int id = 0;   // each combination's row in Settings_Combinations
         for (int i = 0; i < typed.Count; i++)
         {
             var c = typed[i];
@@ -411,7 +418,7 @@ public class TrialDraw
             var paired = pairs.SelectMany(g => g ?? new List<string>()).ToList();
             foreach (var path in values.Keys.Concat(paired))
             {
-                var session = TaskSchema.SessionFields.FirstOrDefault(f => path == f || path.StartsWith(f + "."));
+                var session = TaskSchema.SessionFields.FirstOrDefault(f => path == f || path.StartsWith(f + ".") || f.StartsWith(path + "."));
                 if (session != null) problems.Add(string.Format("{0} sets or pairs {1}, a session field (x-session-fields: {2})", where, path, session));
                 else if (!Known(nodes, path)) problems.Add(string.Format("{0} sets or pairs {1}, which is not a task field", where, path));
                 else if (path.StartsWith("optogenetics.") && !task.Optogenetics.Enabled) problems.Add(string.Format("{0} sets {1} with optogenetics off", where, path));
@@ -459,7 +466,7 @@ public class TrialDraw
                 stream.Save(writer, false);
                 try
                 {
-                    draw.Combinations.Add(new TrialConditionCombination { Task = Read(writer.ToString()).TaskParameters, Picks = string.Join(", ", named) });
+                    draw.Combinations.Add(new TrialConditionCombination { Task = Read(writer.ToString()).TaskParameters, Picks = string.Join(", ", named), Id = id++ });
                 }
                 catch (YamlDotNet.Core.YamlException e)
                 {
@@ -471,6 +478,72 @@ public class TrialDraw
         }
         if (problems.Count == 0 && built.Sum(c => (long)c.Weight) <= 0) problems.Add("trialConditions needs a condition with a weight above 0");
         return problems.Count == 0 ? built : null;
+    }
+
+    /// <summary>Settings_Combinations: one row per combination of every condition, in build order (its Id, the trial log's
+    /// trialCombinationId), with its trialCondition, trialType, conditionWeight and values. Each task is serialised as
+    /// SerializeToJson serialises Settings_Task and flattened to dotted paths, a one-entry list unwrapped only at a list
+    /// field (TaskSchema.ListFields; an x-whole list such as stimulusOff.stimuli stays a list); a path is in values when it
+    /// differs between rows or from the task's own, so a set every condition shares is kept. Session fields
+    /// (TaskSchema.SessionFields) are left out: no condition sets one, and a combination is read without trialConditions.
+    /// NaN is written as JSON NaN.</summary>
+    public static string CombinationsJson(UclOpenCoenDomeNavigationTaskParameters task, IList<TrialConditionDraw> conditions)
+    {
+        var own = Flatten(task);
+        var all = conditions.SelectMany(c => c.Combinations.Select(m => Flatten(m.Task))).ToList();
+        var kept = all.SelectMany(r => r.Keys).Distinct()
+            .Where(path => !TaskSchema.SessionFields.Any(f => path == f || path.StartsWith(f + ".")))
+            .Where(path => all.Any(r => !Same(r, own, path) || !Same(r, all[0], path)))
+            .OrderBy(p => p, StringComparer.Ordinal).ToList();
+        var rows = new Newtonsoft.Json.Linq.JArray();
+        int n = 0;
+        for (int i = 0; i < conditions.Count; i++)
+        {
+            foreach (var combination in conditions[i].Combinations)
+            {
+                var values = new Newtonsoft.Json.Linq.JObject();
+                foreach (var path in kept) values[path] = all[n][path];
+                rows.Add(new Newtonsoft.Json.Linq.JObject(
+                    new Newtonsoft.Json.Linq.JProperty("trialCombinationId", combination.Id),
+                    new Newtonsoft.Json.Linq.JProperty("trialCondition", i),
+                    new Newtonsoft.Json.Linq.JProperty("trialType", conditions[i].TrialType),
+                    new Newtonsoft.Json.Linq.JProperty("conditionWeight", conditions[i].Weight),
+                    new Newtonsoft.Json.Linq.JProperty("values", values)));
+                n++;
+            }
+        }
+        var text = new StringWriter(System.Globalization.CultureInfo.InvariantCulture);
+        var writer = new Newtonsoft.Json.JsonTextWriter(text) { Formatting = Newtonsoft.Json.Formatting.Indented, FloatFormatHandling = Newtonsoft.Json.FloatFormatHandling.Symbol };
+        new Newtonsoft.Json.Linq.JObject(new Newtonsoft.Json.Linq.JProperty("rows", rows)).WriteTo(writer);
+        writer.Flush();
+        return text.ToString();
+    }
+
+    /// <summary>A task as dotted paths to its leaves (Settings_Combinations' normalisation): serialised as SerializeToJson
+    /// does, a one-entry list unwrapped only at a list field.</summary>
+    public static Dictionary<string, Newtonsoft.Json.Linq.JToken> Flatten(UclOpenCoenDomeNavigationTaskParameters task)
+    {
+        var leaves = new Dictionary<string, Newtonsoft.Json.Linq.JToken>();
+        Flatten(Newtonsoft.Json.Linq.JToken.FromObject(task), "", leaves);
+        return leaves;
+    }
+
+    static void Flatten(Newtonsoft.Json.Linq.JToken token, string path, Dictionary<string, Newtonsoft.Json.Linq.JToken> leaves)
+    {
+        var map = token as Newtonsoft.Json.Linq.JObject;
+        if (map != null)
+        {
+            foreach (var property in map.Properties()) Flatten(property.Value, path.Length == 0 ? property.Name : path + "." + property.Name, leaves);
+            return;
+        }
+        var list = token as Newtonsoft.Json.Linq.JArray;
+        leaves[path] = list != null && list.Count == 1 && TaskSchema.ListFields.Contains(path) ? list[0] : token;
+    }
+
+    static bool Same(Dictionary<string, Newtonsoft.Json.Linq.JToken> a, Dictionary<string, Newtonsoft.Json.Linq.JToken> b, string path)
+    {
+        Newtonsoft.Json.Linq.JToken x, y;
+        return a.TryGetValue(path, out x) == b.TryGetValue(path, out y) && Newtonsoft.Json.Linq.JToken.DeepEquals(x, y);
     }
 
     // A cell's picks (task.py _options): a list field's entries, each a one-entry list; a scalar field's list, else its one
@@ -691,8 +764,9 @@ public class TrialDraw
         t.trialCondition = WeightedCondition();
         var condition = conditions[t.trialCondition];
         t.trialType = condition.TrialType;
-        t.trialCombination = condition.Combinations.Count == 1 ? 0 : random.Next(condition.Combinations.Count);
-        var p = t.values = condition.Combinations[t.trialCombination].Task;
+        var combination = condition.Combinations[condition.Combinations.Count == 1 ? 0 : random.Next(condition.Combinations.Count)];
+        t.trialCombinationId = combination.Id;
+        var p = t.values = combination.Task;
         var structure = p.TrialStructure;
         t.itiSeconds = structure.ItiMinSeconds + (structure.ItiMaxSeconds - structure.ItiMinSeconds) * random.NextDouble();  // trial 1 too, from the first clock tick, so Zapit is armed before its trigger
         t.trackLengthCm = structure.TrackLengthsCm[0] / p.WheelGain;  // wheel cm to the end
