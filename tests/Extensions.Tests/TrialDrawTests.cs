@@ -231,6 +231,36 @@ public class TrialDrawTests
     }
 
     [TestMethod]
+    public void EachRowLogsTheConditionItsTrialStartedWith()
+    {
+        // A running loop over mixed conditions: each Outcome row's trialCondition and trialType are its Start's, never
+        // the next trial's (the loop draws ahead). Rows are matched by trialNumber: Wheel can end a trial in its own call.
+        var task = Fixture.Task(3);
+        task.TrialConditions = Conditions(1, 2, 1);
+        task.TrialConditions.Add(new TrialCondition { Type = "visual", Weight = 3 });
+        var rig = new Rig(Fixture.Setup(task, 3));
+        var seen = new HashSet<int>();
+        for (int i = 0; i < 30; i++)
+        {
+            var start = rig.RunTo(TrialEventKind.Start).Trial;
+            int from = rig.Events.Count, at = -1;
+            Func<bool> ended = () =>
+            {
+                for (; from < rig.Events.Count; from++)
+                    if (rig.Events[from].Kind == TrialEventKind.Outcome && rig.Events[from].Outcome.Row.Value.trialNumber == start.trialNumber) at = from;
+                return at >= 0;
+            };
+            rig.Wheel(1000);
+            if (!ended()) rig.Until(rig.Now + 60, ended);
+            var row = rig.Events[at].Outcome.Row.Value;
+            Assert.AreEqual(start.trialCondition, row.trialCondition, "trial " + start.trialNumber);
+            Assert.AreEqual(task.TrialConditions[row.trialCondition].Type, row.trialType, "trial " + start.trialNumber);
+            seen.Add(row.trialCondition);
+        }
+        CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, seen.ToArray());
+    }
+
+    [TestMethod]
     public void EachTrialsTypeIsDrawnFromTheTasksWeights()
     {
         // The task file: auditory alone, as before trialConditions
