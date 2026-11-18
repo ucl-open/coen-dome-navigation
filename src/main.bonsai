@@ -32,7 +32,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its curriculum the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go. TaskFile publishes the stage as TrainingCodeVersion (code-version, like S03A-k7f2, from the task file's curriculum) at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its curriculum the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go. TaskFile publishes the stage as CurriculumStage (code-version, like S03A-k7f2, from the task file's curriculum) at Go and reports it as the metric curriculumStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -68,7 +68,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskFile</Name>
-        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\sounds\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create: a curriculum empty or malformed, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is ConnectForTask's refusal.</Description>
+        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\sounds\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig (each read by ReadTask, which keeps a trial condition's set values as numbers), and checks it with rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create: a curriculum empty or malformed, a trial condition that cannot be built, its set and pairs over the task's values in every combination, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is ConnectForTask's refusal.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -91,8 +91,8 @@
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="core:ReadTextFile" />
             </Expression>
-            <Expression xsi:type="task:DeserializeFromYaml">
-              <task:Type xsi:type="TypeMapping" TypeArguments="task:UclOpenCoenDomeNavigationTaskLogic" />
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="ext:ReadTask" />
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>TaskConfig</Name>
@@ -103,8 +103,8 @@
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="core:ReadTextFile" />
             </Expression>
-            <Expression xsi:type="task:DeserializeFromYaml">
-              <task:Type xsi:type="TypeMapping" TypeArguments="task:UclOpenCoenDomeNavigationTaskLogic" />
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="ext:ReadTask" />
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>LaunchTaskConfig</Name>
@@ -147,15 +147,15 @@
               <Name>TrialRules</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>TrainingCodeVersion</Selector>
+              <Selector>CurriculumStage</Selector>
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
-              <Name>TrainingCodeVersion</Name>
+              <Name>CurriculumStage</Name>
               <Description>The stage as code-version (S03A-k7f2) from the task file's curriculum, found well formed by CheckTaskAtGo.</Description>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="orcl:ReportMetric">
-                <orcl:Name>trainingStage</orcl:Name>
+                <orcl:Name>curriculumStage</orcl:Name>
               </Combinator>
             </Expression>
           </Nodes>
@@ -231,7 +231,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Display</Name>
-        <Description>The grating (BonVision DrawGratings) on the dome: each pip sets its spatial frequency and opacity (TaskLogic); off between trials.</Description>
+        <Description>The grating (BonVision DrawGratings) on the dome: each pip sets its spatial frequency, opacity and contrast (TaskLogic: the trial's visualContrast; opacity 0 at contrast 0); off between trials.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -270,6 +270,14 @@
               <Aperture>0</Aperture>
               <Opacity>0</Opacity>
             </Expression>
+            <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
+              <rx:Name>GratingContrast</rx:Name>
+            </Expression>
+            <Expression xsi:type="PropertyMapping">
+              <PropertyMappings>
+                <Property Name="Contrast" />
+              </PropertyMappings>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="5" Label="Source1" />
@@ -277,19 +285,21 @@
             <Edge From="2" To="5" Label="Source2" />
             <Edge From="3" To="4" Label="Source1" />
             <Edge From="4" To="5" Label="Source3" />
+            <Edge From="6" To="7" Label="Source1" />
+            <Edge From="7" To="5" Label="Source4" />
           </Edges>
         </Workflow>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out at the task file's level in dBFS RMS (levelDbfs), which stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, auditoryStimulus.levelDbfs; read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) and the reward tone (RewardTone, rewardTone.levelDbfs) on every rig.yml speaker, each equalised with its filter; the lab's penalty sound is OpenRigs.Audio's PlayPenaltySound, in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, LayOutPips: read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) at amplitude 1, the files as stored (-58.1 dBFS RMS), checked at the largest auditoryStimulus.amplitude any condition can draw (TrialRules.Loudest), each pip then played at its trial's auditoryAmplitude (PipBuffer); the reward tone (RewardTone) at rewardTone.levelDbfs; the lab's penalty sound is OpenRigs.Audio's PlayPenaltySound, in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
-              <Name>TaskConfig</Name>
+              <Name>TrialRules</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.AuditoryStimulus.LevelDbfs</Selector>
+              <Selector>Loudest</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Speakers</Name>
@@ -323,18 +333,8 @@
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:Zip" />
             </Expression>
-            <Expression xsi:type="InputMapping">
-              <PropertyMappings>
-                <Property Name="LevelDbfs" Selector="Item1" />
-              </PropertyMappings>
-              <Selector>Item2</Selector>
-            </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="aud:SpeakerBuffer">
-                <aud:LevelDbfs>-30</aud:LevelDbfs>
-                <aud:Equalise>true</aud:Equalise>
-                <aud:SyncCopy>true</aud:SyncCopy>
-              </Combinator>
+              <Combinator xsi:type="ext:LayOutPips" />
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>PipBuffers</Name>
@@ -398,16 +398,15 @@
             <Edge From="7" To="8" Label="Source2" />
             <Edge From="8" To="9" Label="Source1" />
             <Edge From="9" To="10" Label="Source1" />
-            <Edge From="10" To="11" Label="Source1" />
-            <Edge From="12" To="13" Label="Source1" />
-            <Edge From="15" To="16" Label="Source1" />
-            <Edge From="14" To="17" Label="Source1" />
+            <Edge From="11" To="12" Label="Source1" />
+            <Edge From="14" To="15" Label="Source1" />
+            <Edge From="13" To="16" Label="Source1" />
+            <Edge From="15" To="16" Label="Source2" />
+            <Edge From="12" To="17" Label="Source1" />
             <Edge From="16" To="17" Label="Source2" />
-            <Edge From="13" To="18" Label="Source1" />
-            <Edge From="17" To="18" Label="Source2" />
+            <Edge From="17" To="18" Label="Source1" />
             <Edge From="18" To="19" Label="Source1" />
             <Edge From="19" To="20" Label="Source1" />
-            <Edge From="20" To="21" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -449,7 +448,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Status</Name>
-        <Description>The current trial's facts as metrics, named as WorkflowData_Trials's columns (trialNumber, trialType, rewardOfferedUl, laserCondition; the trainingStage, code-version, is TaskFile's), at each trial's start; rig-control computes counts and performance from the trial rows.</Description>
+        <Description>The current trial's facts as metrics, named as WorkflowData_Trials's columns (trialNumber, trialType, rewardOfferedUl, laserCondition; the curriculumStage, code-version, is TaskFile's), at each trial's start; rig-control computes counts and performance from the trial rows.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -894,6 +893,12 @@
             <Expression xsi:type="SubscribeSubject">
               <Name>LickStateRight</Name>
             </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>Update.GratingContrast</Selector>
+            </Expression>
+            <Expression xsi:type="MulticastSubject">
+              <Name>GratingContrast</Name>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="5" Label="Source1" />
@@ -947,6 +952,8 @@
             <Edge From="56" To="0" Label="Source1" />
             <Edge From="7" To="8" Label="Source1" />
             <Edge From="8" To="9" Label="Source1" />
+            <Edge From="16" To="58" Label="Source1" />
+            <Edge From="58" To="59" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

@@ -16,10 +16,13 @@ from ucl_open_coen_dome_navigation.task import (
     LASER_MAX_MARGIN_SECONDS,
     CONDITION_FIELDS,
     MAX_WEIGHT_SUM,
-    TRIAL_TYPES,
+    RULES,
     OptogeneticsSettings,
+    TrialLabel,
     UclOpenCoenDomeNavigationTaskLogic,
     UclOpenCoenDomeNavigationTaskParameters,
+    derive_label,
+    rule_problems,
 )
 
 ROOT = Path(__file__).parent.parent
@@ -67,19 +70,56 @@ def test_a_reward_zone_past_the_sweep_s_end_is_refused():
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 
 
-def test_the_task_file_s_conditions_are_its_old_weights():
-    # trialConditions replaced trialWeights { visual: 0, auditory: 1, audiovisualCoherent: 0, ... }: one condition per type the
-    # corridor shows (Setup edits only the weights), each set empty. One whole value (x-whole), no condition fields yet.
+def test_the_task_file_s_conditions_show_what_their_old_types_did():
+    # The trial-type split (18 Nov 2026): each condition says what it shows (contrasts 0 no grating, auditoryStimulus.amplitude
+    # 0 no tone) over the task's contrast 1 and amplitude 1, so each draws what its type drew; the label, derived from them,
+    # names it. Weights as before (visual 0, auditory 1, audiovisualCoherent 0). One whole value (x-whole).
     params = task()["taskParameters"]
     assert "modality" not in params and "trialWeights" not in params
     assert params["trialConditions"] == [
-        {"label": "visual", "weight": 0, "set": {}}, {"label": "auditory", "weight": 1, "set": {}}, {"label": "audiovisualCoherent", "weight": 0, "set": {}}]
+        {"label": "visual", "weight": 0, "set": {"auditoryStimulus.amplitude": 0}},
+        {"label": "auditory", "weight": 1, "set": {"contrasts": [0]}},
+        {"label": "audiovisualCoherent", "weight": 0, "set": {}},
+    ]
+    assert params["contrasts"] == [1.0] and params["auditoryStimulus"] == {"amplitude": 1}
+    model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+    assert [derive_label(model, c) for c in model.trial_conditions] == [c.label.value for c in model.trial_conditions]
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
     params_schema = schema["$defs"]["UclOpenCoenDomeNavigationTaskParameters"]
-    assert params_schema["x-conditionFields"] == [] == list(CONDITION_FIELDS) and params_schema["x-rules"] == []
+    # app-rig-control reads both dome tasks one way: x-conditionFields the allow-list (TrialDraw.ConditionFields), x-rules the
+    # rules (TrialDraw.Rules); a C# test holds both to the schema.
+    assert params_schema["x-conditionFields"] == list(CONDITION_FIELDS) == ["contrasts", "auditoryStimulus.amplitude"]
+    assert params_schema["x-rules"] == [dict(rule) for rule in RULES]
     assert params_schema["properties"]["trialConditions"]["x-whole"] is True
-    assert list(TRIAL_TYPES) == [t["label"] for t in params["trialConditions"]]
+    assert [label.value for label in TrialLabel] == schema["$defs"]["TrialLabel"]["enum"] == ["visual", "auditory", "audiovisualCoherent", "neutral"]
+
+
+def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
+    # The curriculum's path A visual, path B auditory: a stage's conditions say what its trials show, whatever their label.
+    params = task()["taskParameters"]
+    params["trialConditions"] = [{"label": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": 0, "contrasts": [0.5, 1.0]}}]
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+    params["trialConditions"] = [{"label": "auditory", "weight": 1, "set": {"contrasts": [0], "auditoryStimulus.amplitude": [0.5, 1]}}]
+    model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+    assert derive_label(model, model.trial_conditions[0]) == "auditory"
+
+
+@pytest.mark.parametrize("set_, label", [
+    ({}, "audiovisualCoherent"), ({"contrasts": [0]}, "auditory"), ({"auditoryStimulus.amplitude": 0}, "visual"),
+    ({"contrasts": [0], "auditoryStimulus.amplitude": 0}, "neutral"), ({"contrasts": [0, 0.5], "auditoryStimulus.amplitude": [0, 2]}, "audiovisualCoherent")])
+def test_the_label_is_derived_from_what_the_condition_shows(set_, label):
+    model = UclOpenCoenDomeNavigationTaskParameters.model_validate({**task()["taskParameters"], "trialConditions": [{"label": "neutral", "weight": 1, "set": set_}]})
+    assert derive_label(model, model.trial_conditions[0]) == label
+
+
+def test_a_rule_s_then_and_one_of_are_checked():
+    # The corridor's rules only say what goes unread; rule_problems checks a then or oneOf as coen-dome-decision-making's does.
+    values = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"]).model_dump(by_alias=True, mode="json")
+    assert rule_problems(values) == []
+    values["contrasts"] = [0, 0]
+    rules = [{"when": "contrasts", "is": 0, "then": {"auditoryStimulus.amplitude": 2}, "oneOf": {"wrongLickLimit": [5]}}]
+    assert rule_problems(values, rules) == ["contrasts 0 needs auditoryStimulus.amplitude 2 (x-rules)", "contrasts 0 needs wrongLickLimit one of 5 (x-rules)"]
 
 
 @pytest.mark.parametrize(
@@ -89,13 +129,20 @@ def test_the_task_file_s_conditions_are_its_old_weights():
         ([{"label": "auditory", "weight": 0}], "weight above 0"),
         ([{"label": "auditory", "weight": -1}], "greater than or equal"),
         ([{"label": "auditory", "weight": 1000001}], "less than or equal"),
-        ([{"label": "auditory", "weight": 1}, {"label": "neutral", "weight": 0}], r"trial_conditions\[1\] \(neutral\): its label is not one of visual, auditory, audiovisualCoherent"),
-        ([{"label": "audiovisualConflict", "weight": 1}], "its label is not one of"),
+        ([{"label": "audiovisualConflict", "weight": 1}], "Input should be 'visual', 'auditory', 'audiovisualCoherent' or 'neutral'"),
         ([{"label": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets or pairs rewardSizeUl, which is not a condition field"),
         ([{"label": "visual", "weight": 1, "colour": 1}], "Extra inputs"),
+        ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": -1}}], r"(?s)trial_conditions\[0\] \(visual\) with .*greater than or equal to 0"),
+        ([{"label": "visual", "weight": 1, "set": {"contrasts": [0.5, -1]}}], r"(?s)with \{'contrasts': \[-1\]\}.*contrasts must each be 0 or more"),
+        ([{"label": "visual", "weight": 1, "set": {"contrasts": []}}], "contrasts is an empty list"),
+        ([{"label": "visual", "weight": 1, "set": {"contrasts": [0.5, 1], "auditoryStimulus.amplitude": [1]}, "pairs": [["contrasts", "auditoryStimulus.amplitude"]]}],
+         "paired lists must be equally long"),
+        ([{"label": "visual", "weight": 1, "pairs": [["contrasts"]]}], "each pairs group needs two paths or more"),
+        ([{"label": "visual", "weight": 1, "set": {"contrasts": [i / 10 for i in range(1, 10)], "auditoryStimulus.amplitude": [i / 10 for i in range(1, 9)]}}],
+         "expands into 72 combinations, more than 64"),
     ],
 )
-def test_conditions_need_a_weight_a_shown_type_and_an_empty_set(conditions, match):
+def test_conditions_need_a_weight_a_label_and_what_they_set_to_run(conditions, match):
     params = task()["taskParameters"]
     params["trialConditions"] = conditions
     with pytest.raises(pydantic.ValidationError, match=match):
@@ -145,6 +192,16 @@ def test_the_committed_waveforms_are_waveforms_py_s():
     committed = np.fromfile(WAVES / "all_waveforms.bin", dtype=np.float32).reshape(waveforms.SWEEP_STEPS, -1)
     assert np.array_equal(committed, waveforms.tones(freqs))
     assert committed.shape[1] == 2400  # the workflow's MatrixReader BufferLength
+    # Amplitude 1 plays each pip as stored: -58.1 dBFS RMS, the auditoryStimulus.levelDbfs the pips played at before the
+    # trial-type split. Then SpeakerBuffer scaled Tom's pips (0.05 squared peak, -58.06) to -58.1; the files are those
+    # samples now, to float32's precision (PipSetTests holds the laid-out buffers equal too).
+    rms_dbfs = 20 * np.log10(np.sqrt(np.mean(committed.astype(np.float64) ** 2, axis=1)))
+    assert np.allclose(rms_dbfs, -58.1, atol=1e-5)
+    duration = waveforms.TONE_MS / 1000
+    t = np.linspace(0, duration, 2400, endpoint=False)
+    toms = np.stack([(np.sin(2 * np.pi * f * t) * np.sin(np.pi * t / duration) * 0.05**2).astype(np.float32) for f in freqs]).astype(np.float64)
+    before = toms * 10 ** ((-58.1 - 20 * np.log10(np.sqrt(np.mean(toms**2, axis=1, keepdims=True)))) / 20)
+    assert np.max(np.abs(committed - before)) < 1e-6 * np.max(np.abs(before))
     assert np.array_equal(np.fromfile(WAVES / "reward_tone.bin", dtype=np.float32), waveforms.reward_tone()[0])
 
 

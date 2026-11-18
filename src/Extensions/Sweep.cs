@@ -2,11 +2,13 @@
 using Bonsai.Harp;
 using Newtonsoft.Json.Linq;
 using OpenCV.Net;
+using OpenRigs.Audio;
 using OpenRigs.Trials;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Reactive.Linq;
 
 /// <summary>The sweep the committed tone files were made for, and the rate every waveform was made at
@@ -89,8 +91,70 @@ public class StimulusFrame
 {
     public StimulusStateRow Row;
     public int Bin;              // the tone file's row
-    public double ToneGain;      // 1, or 0 when switched off (StimulusStateRow.auditoryOn) or not auditory
-    public double GratingOpacity; // 1, or 0 when switched off (StimulusStateRow.visualOn) or not visual
+    public double ToneGain;      // the trial's auditoryAmplitude, or 0 when switched off (StimulusStateRow.auditoryOn)
+    public double GratingOpacity; // 1, or 0 when switched off (StimulusStateRow.visualOn) or at contrast 0
+    public double GratingContrast; // the trial's visualContrast
+}
+
+/// <summary>The pips as the mixer plays them: each equalised for every rig.yml speaker, with its sync copy, at amplitude 1
+/// (the files as stored, -58.1 dBFS RMS), checked at Go for the loudest amplitude the task's conditions can draw.</summary>
+public class PipSet
+{
+    readonly IList<Mat> buffers;
+    readonly int[] channels;
+
+    /// <summary>The largest amplitude the set was checked for at Go.</summary>
+    public double Largest { get; private set; }
+
+    PipSet(IList<Mat> buffers, int[] channels, double largest)
+    {
+        this.buffers = buffers;
+        this.channels = channels;
+        Largest = largest;
+    }
+
+    /// <summary>The pips laid out on the speakers at amplitude 1; stops, naming the pip, channel and condition, if any would peak
+    /// at -1 dBFS or more after equalisation at the loudest amplitude the conditions can draw.</summary>
+    public static PipSet Create(SpeakerSet speakers, IList<Mat> pips, LoudestSound loudest)
+    {
+        var buffers = pips.Select(pip => speakers.Layout(pip, null, 1, true, true)).ToList();
+        var set = new PipSet(buffers, speakers.SpeakerChannels, loudest.Amplitude);
+        for (int i = 0; i < buffers.Count && loudest.Amplitude > 0; i++)
+        {
+            using (var played = set.Scale(buffers[i], loudest.Amplitude))
+            {
+                SoundLevel.CheckPeak(played, "Pip " + i + " at amplitude " + loudest.Amplitude.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + " (auditoryStimulus.amplitude, " + loudest.Where + ")");
+            }
+        }
+        return set;
+    }
+
+    /// <summary>The number of pips.</summary>
+    public int Count { get { return buffers.Count; } }
+
+    /// <summary>A pip's buffer at an amplitude: its speakers' rows scaled, the sync copy kept; silent at 0.</summary>
+    public Mat Buffer(int bin, double amplitude)
+    {
+        var buffer = buffers[bin];
+        if (amplitude == 0)
+        {
+            var silent = new Mat(buffer.Size, buffer.Depth, buffer.Channels);
+            silent.SetZero();
+            return silent;
+        }
+        if (!(amplitude <= Largest)) throw new InvalidOperationException("A pip asks for amplitude " + amplitude + ", above the " + Largest + " the pips were checked for at Go (LayOutPips).");
+        return amplitude == 1 ? buffer : Scale(buffer, amplitude);
+    }
+
+    Mat Scale(Mat buffer, double amplitude)
+    {
+        var scaled = buffer.Clone();
+        foreach (var channel in channels)
+        {
+            using (var row = scaled.GetRow(channel)) CV.ConvertScale(row, row, amplitude, 0);
+        }
+        return scaled;
+    }
 }
 
 /// <summary>A WorkflowData_StimulusState row, one per pip while a trial runs.</summary>
@@ -135,19 +199,23 @@ public class CreateStimulusStateRow
 }
 
 [Combinator]
-[Description("A pip's buffer for the mixer: the tone file's row for the pip's bin (input: the pip's Update event and the tone rows), silent when the pip's ToneGain is 0.")]
+[Description("The pips laid out at Go (PipSet): each tone file row equalised for every rig.yml speaker with its sync copy, at amplitude 1 (the files as stored, -58.1 dBFS RMS). Input: the loudest tone the conditions can draw (TrialRules.Loudest), the speakers and the tone rows. Stops the workflow, naming the pip, channel and condition, if any would peak at -1 dBFS or more after equalisation at that amplitude.")]
+[WorkflowElementCategory(ElementCategory.Transform)]
+public class LayOutPips
+{
+    public IObservable<PipSet> Process(IObservable<Tuple<LoudestSound, Tuple<SpeakerSet, IList<Mat>>>> source)
+    {
+        return source.Select(x => PipSet.Create(x.Item2.Item1, x.Item2.Item2, x.Item1));
+    }
+}
+
+[Combinator]
+[Description("A pip's buffer for the mixer: the laid-out pip for the pip's bin at its ToneGain, the trial's auditoryAmplitude (input: the pip's Update event and the PipSet); silent when ToneGain is 0.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class PipBuffer
 {
-    public IObservable<Mat> Process(IObservable<Tuple<TrialEvent<Trial, StimulusFrame, TrialOutcome>, IList<Mat>>> source)
+    public IObservable<Mat> Process(IObservable<Tuple<TrialEvent<Trial, StimulusFrame, TrialOutcome>, PipSet>> source)
     {
-        return source.Select(x =>
-        {
-            var tone = x.Item2[x.Item1.Update.Bin];
-            if (x.Item1.Update.ToneGain > 0) return tone;
-            var silent = new Mat(tone.Size, tone.Depth, tone.Channels);
-            silent.SetZero();
-            return silent;
-        });
+        return source.Select(x => x.Item2.Buffer(x.Item1.Update.Bin, x.Item1.Update.ToneGain));
     }
 }

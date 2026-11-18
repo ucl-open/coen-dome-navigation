@@ -3,31 +3,34 @@
 # copy (TaskPath) at Start for the background noise and at Go for the rest. From the editor, the workflow reads this
 # file as it is.
 #
-# The stage is the Training Stage setting, the id of a stage of the lab's Mouse Curriculum
+# The stage is a stage of the lab's Mouse Curriculum
 # (K:\config\curricula\coen-dome-navigation\task-abstract-corridor.conditions.yml, edited on rig-control's Mouse
 # Curriculum page): rig-control writes that stage's values over the values below at launch and fills curriculum.
 # The values here are the defaults (stage 0's). Not every rule is in the schema: tests\test_task_schema.py checks
 # this file against the pydantic model (src\ucl_open_coen_dome_navigation\task.py), which also says what each field does.
 taskParameters:
   rngSeed: null               # null = the workflow draws one at Go; each seed used is a RngSeed event in WorkflowData_Events
-  # The trial mix, one whole value: what a trial shows (the grating, the tone sweep or both) and its relative chance; a
-  # curriculum stage's conditions replace it, and Setup edits only the weights. set: condition-level values (x-conditionFields, none yet).
+  # The trial mix, one whole value: each condition's relative chance and what its trials show, its set over the task's
+  # values (x-conditionFields: contrasts, 0 no grating; auditoryStimulus.amplitude, 0 no tone), its pairs picking listed
+  # values together; its label names it (trialType). A curriculum stage's conditions replace it; Setup edits only the weights.
   trialConditions:
-    - { label: visual, weight: 0, set: {} }
-    - { label: auditory, weight: 1, set: {} }
+    - { label: visual, weight: 0, set: { auditoryStimulus.amplitude: 0 } }
+    - { label: auditory, weight: 1, set: { contrasts: [0] } }
     - { label: audiovisualCoherent, weight: 0, set: {} }
   reward:
     rewardSizeUl: 3.0         # ul on the left spout's valve, planned from its calibration
-  # The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms); each sound's level is here,
-  # in dBFS RMS of the sound as stored, before equalisation: the levels mice have always had (Tom Childs' pips were
-  # scaled by 0.05 twice, hence quiet; the lab's defaults are lib-open-rigs' OpenRigs.Audio SoundLevel).
-  auditoryStimulus:           # the tone sweep's pips
-    levelDbfs: -58.1
+  # The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms). The pips play at an amplitude
+  # (1: the files as stored, -58.1 dBFS RMS), the other sounds at a level in dBFS RMS of the sound as stored, before
+  # equalisation: the loudness mice have always had (Tom Childs' pips were scaled by 0.05 twice, hence quiet; the lab's
+  # defaults are lib-open-rigs' OpenRigs.Audio SoundLevel).
+  auditoryStimulus:           # the tone sweep's pips, on every speaker
+    amplitude: 1              # scale of the pips as stored (-58.1 dBFS RMS); 0 no tone
   rewardTone:
     levelDbfs: -55.1
   backgroundNoise:            # white noise on every speaker, unequalised, faded in at Ready at the level launched
     enabled: true
     levelDbfs: -64.1
+  contrasts: [1.0]            # grating contrasts (BonVision's Contrast), one drawn per trial; 0 no grating
   visualStimulus:             # the grating's spatial frequency, from the track's start to its end on a log scale
     spatialFrequencyStartCpd: 0.03
     spatialFrequencyEndCpd: 0.3

@@ -18,7 +18,7 @@
 #
 # Only what changes from trial to trial: the task file's values fixed for the
 # experiment (the stage's values and curriculum, the sound levels) are in Settings\Settings_Task_*.json, whose curriculum (code, version, path)
-# is the stage, and the metric trainingStage is its code-version; no column sums the Harp logs, and none repeats another but outcomeTime, which names harpTime's
+# is the stage, and the metric curriculumStage is its code-version; no column sums the Harp logs, and none repeats another but outcomeTime, which names harpTime's
 # moment so that the shared block names every moment of a trial.
 
 harpTime:
@@ -31,8 +31,9 @@ trialNumber:
   description: The trial's number in the experiment, from 1.
 trialType:
   type: string
-  values: [visual, auditory, audiovisualCoherent]
-  description: What the trial showed, in words (TrialDraw.TypeNames; coen-dome-decision-making's names and the labels of the task file's trialConditions) - visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both together), its condition's label (trialCondition), each trial's condition drawn with the conditions' weights as relative chances. audiovisualConflict and neutral are not defined in this task yet.
+  values: [visual, auditory, audiovisualCoherent, neutral]
+  description: The label of the trial's condition (trialCondition), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryAmplitude). By default it is derived from the condition's settings - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither) - but a curriculum may choose another.
+  history: Before the trial-type split (Nov 2026) the condition's label drove what the trial showed (visual, auditory, audiovisualCoherent), at contrast 1 and the pips' one level, so the label alone says what those trials showed.
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
@@ -133,3 +134,11 @@ visualOffPositionCm:
 autoRewarded:
   type: bool
   description: True when an auto-reward trial (drawn with the stage's autoRewardProbability) was rewarded, on reaching the reward zone's floor with no lick needed (outcomeReason FrequencyReached).
+visualContrast:
+  type: double
+  description: Grating contrast as BonVision's Contrast, 1 full contrast; 0 when no grating showed (drawn from the trial's condition's contrasts).
+  history: Added in the trial-type split (Nov 2026); before it a trial showing the grating showed it at contrast 1.
+auditoryAmplitude:
+  type: double
+  description: The tone's amplitude, the task's auditoryStimulus.amplitude for the trial's condition - the scale of the pips' samples as stored (1 the files as stored, -58.1 dBFS RMS before equalisation); 0 when no tone played.
+  history: Added in the trial-type split (Nov 2026); before it every tone played at auditoryStimulus.levelDbfs -58.1, the same loudness as amplitude 1.

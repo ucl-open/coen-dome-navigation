@@ -22,15 +22,12 @@ def test_every_outcome_reason_the_rules_write_is_listed():
     assert sorted(listed) == sorted(written)
 
 
-def test_the_trial_types_are_the_draw_s_names_and_decision_making_s():
-    # trialType holds the drawn condition's label: its values are TrialDraw.TypeNames, the labels trialConditions may hold,
-    # in coen-dome-decision-making's names.
+def test_the_trial_types_are_the_labels_and_decision_making_s():
+    # trialType holds the drawn condition's label: its values are the labels trialConditions may hold, in
+    # coen-dome-decision-making's words.
     root = Path(__file__).parents[1]
     listed = yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))["trialType"]["values"]
-    code = (root / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
-    names = dict(re.findall(r'public const string (\w+) = "(\w+)";', code))
-    drawn = [names[n] for n in re.search(r"TypeNames = \{ ([^}]*) \}", code).group(1).replace(" ", "").split(",")]
-    from ucl_open_coen_dome_navigation.task import TRIAL_TYPES
+    from ucl_open_coen_dome_navigation.task import TrialLabel
 
-    assert listed == drawn == list(TRIAL_TYPES) == ["visual", "auditory", "audiovisualCoherent"]
+    assert listed == [label.value for label in TrialLabel] == ["visual", "auditory", "audiovisualCoherent", "neutral"]
 

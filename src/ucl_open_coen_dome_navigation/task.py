@@ -5,10 +5,15 @@ The stage is a stage of the lab's Mouse Curriculum, recorded only as the task fi
 (K:\\config\\curricula\\coen-dome-navigation\\task-abstract-corridor.conditions.yml): rig-control writes that stage's values
 over this file's flat values at launch and fills curriculum (id, code, version, path, label, sha256); trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
 sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made with the tone files
-(`uv run generate-waveforms`), not the task file's; every sound's level is the task file's (levelDbfs, in dBFS
-RMS: auditoryStimulus, rewardTone, backgroundNoise and penalty.sound)."""
+(`uv run generate-waveforms`), not the task file's. The pips play at auditoryStimulus.amplitude (1 the files as stored,
+-58.1 dBFS RMS); the other sounds at the task file's levelDbfs (dBFS RMS: rewardTone, backgroundNoise and penalty.sound).
 
+What a trial shows is its trial condition's (the condition fields, x-conditionFields: contrasts and
+auditoryStimulus.amplitude, each 0 for none); its label names it (trialType) and drives nothing."""
+
+import copy
 import json
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal
 
@@ -25,14 +30,13 @@ from open_rigs.core.task import (
     ResponseWindow,
     RewardSize,
     RewardTone,
-    StimulusSound,
     Task,
     TaskBlock,
     TaskParameters,
     WheelQuietWait,
 )
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, ValidationError, ValidationInfo, field_validator, model_validator
 
 from ucl_open_coen_dome_navigation import __semver__
 
@@ -46,7 +50,7 @@ SWEEP_FILE = Path(__file__).resolve().parents[1] / "sounds" / "sweep.json"  # sr
 
 
 def sweep() -> dict:
-    """The sweep the committed tone files were made for: sweepStartHz, sweepEndHz, sweepSteps, pipPeak and the waveforms' sampleRate."""
+    """The sweep the committed tone files were made for: sweepStartHz, sweepEndHz, sweepSteps, pipLevelDbfs and the waveforms' sampleRate."""
     return json.loads(SWEEP_FILE.read_text(encoding="utf-8"))
 
 
@@ -63,6 +67,20 @@ class VisualStimulus(TaskBlock):
 
     spatial_frequency_start_cpd: Double = Field(default=0.03, gt=0, description="The grating's spatial frequency at the track's start, in cycles per degree")
     spatial_frequency_end_cpd: Double = Field(default=0.3, gt=0, description="The grating's spatial frequency at the track's end, in cycles per degree")
+
+
+class AuditoryStimulus(TaskBlock):
+    """The tone sweep's pips (src/sounds/all_waveforms.bin), on every rig.yml speaker, each equalised for its speaker."""
+
+    amplitude: Double = Field(
+        default=1.0,
+        ge=0,
+        description=(
+            "Scale of the pips' samples as stored: 0 no tone, 1 the files as stored (-58.1 dBFS RMS, the loudness the pips have always "
+            "played at), above 1 louder. Go refuses the largest amplitude any condition can draw if a pip would peak at -1 dBFS or more "
+            "after equalisation on any speaker; dB SPL is unknown until the speakers' SPL calibration"
+        ),
+    )
 
 
 class StimulusOff(TaskBlock):
@@ -131,25 +149,125 @@ class OptogeneticsSettings(Optogenetics):
         return self
 
 
-# The trial types the corridor shows (TrialDraw.TypeNames), in coen-dome-decision-making's names; its audiovisualConflict
-# and neutral are not defined here yet.
-TRIAL_TYPES = ("visual", "auditory", "audiovisualCoherent")
-# The fields a condition may set (the schema's x-conditionFields, a list as coen-dome-decision-making's): none yet, so every
-# condition's set and pairs are empty; nor any rules linking them (x-rules).
-CONDITION_FIELDS: tuple[str, ...] = ()
+class TrialLabel(StrEnum):
+    """A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_label);
+    coen-dome-decision-making's words."""
+
+    VISUAL = "visual"
+    AUDITORY = "auditory"
+    AUDIOVISUAL_COHERENT = "audiovisualCoherent"
+    NEUTRAL = "neutral"
+
+
+# The fields a condition may set (the schema's x-conditionFields; TrialDraw.ConditionFields, a test holds both): what
+# TrialDraw.Next alone reads per trial. A condition's blank takes the stage's, then the task's value.
+CONDITION_FIELDS = ("contrasts", "auditoryStimulus.amplitude")
+# Where one setting limits another (the schema's x-rules; TrialDraw.Rules, a test holds both), as
+# coen-dome-decision-making's: when the path `when` is `is` (a list: every entry is), each `then` path must be its value,
+# each `oneOf` path one of its values, and the `unused` paths are not read. No corridor setting limits another, so its
+# rules only say what goes unread.
+RULES = (
+    {"when": "contrasts", "is": 0, "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"]},
+    {"when": "autoRewardProbability", "is": 1, "unused": ["wrongLickLimit", "rewardCeilingHz"]},
+    {"when": "stimulusOffProbability", "is": 0, "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"]},
+)
+# The most combinations one condition may expand into (TrialDraw.MaxCombinations).
+MAX_COMBINATIONS = 64
+
+
+def _get(data: dict, dotted) -> Any:
+    for part in dotted.split("."):
+        data = data[part]
+    return data
+
+
+def _put(data: dict, dotted, value: Any) -> None:
+    *parents, key = dotted.split(".")
+    for part in parents:
+        data = data[part]
+    if key not in data:
+        raise KeyError(dotted)
+    data[key] = value
+
+
+def _is(value: Any, expected: Any) -> bool:
+    if isinstance(value, list):
+        return bool(value) and all(v == expected for v in value)
+    return value == expected
+
+
+def rule_problems(values: dict, rules=RULES) -> list[str]:
+    """What breaks the rules in a task's values (by alias, as JSON)."""
+    problems = []
+    for rule in rules:
+        if not _is(_get(values, rule["when"]), rule["is"]):
+            continue
+        for path, expected in rule.get("then", {}).items():
+            if _get(values, path) != expected:
+                problems.append(f"{rule['when']} {rule['is']} needs {path} {expected} (x-rules)")
+        for path, allowed in rule.get("oneOf", {}).items():
+            if _get(values, path) not in allowed:
+                problems.append(f"{rule['when']} {rule['is']} needs {path} one of {', '.join(map(str, allowed))} (x-rules)")
+    return problems
+
+
+def _options(base: dict, values: dict[str, Any], path) -> list:
+    # A cell's picks: a list field's entries, each a one-entry list; a scalar field's list, else its one value.
+    value = values[path] if path in values else _get(base, path)
+    if isinstance(_get(base, path), list):
+        return [[entry] for entry in value] if isinstance(value, list) else [value]
+    return value if isinstance(value, list) else [value]
+
+
+def condition_combinations(base: dict, values: dict[str, Any], pairs: list[list[str]] = ()) -> list[dict[str, Any]]:
+    """Every combination of a condition's set and pairs (coen-dome-decision-making's): each pair group's lists zipped (equal
+    lengths), each other list cell one pick, all combined as a product; a list field's entry is a one-entry list."""
+    cells: list[tuple[tuple[str, ...], list[tuple]]] = []
+    paired = [path for group in pairs for path in group]
+    for group in pairs:
+        lists = [_options(base, values, path) for path in group]
+        if len({len(options) for options in lists}) > 1:
+            raise ValueError(f"pairs {group} have lists of lengths {', '.join(str(len(options)) for options in lists)}; paired lists must be equally long")
+        cells.append((tuple(group), list(zip(*lists))))
+    cells += [((path,), [(option,) for option in _options(base, values, path)]) for path in values if path not in paired]
+    combos: list[dict[str, Any]] = [{}]
+    for paths, options in cells:
+        if not options:
+            raise ValueError(f"{', '.join(paths)} is an empty list")
+        combos = [{**combo, **dict(zip(paths, option))} for combo in combos for option in options]
+    return combos
 
 
 class TrialCondition(TaskBlock):
-    """One kind of trial in the mix: its label, its relative weight, its condition-level values (set) by dotted path and its
-    pairs, coen-dome-decision-making's shape. The corridor has no condition fields yet (x-conditionFields is empty), so set and
-    pairs are empty, and the label (one of TRIAL_TYPES) is what the corridor shows."""
+    """One kind of trial in the mix (coen-dome-decision-making's shape): its label, its relative weight, its condition-level
+    values (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a
+    list field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial."""
 
     model_config = ConfigDict(extra="forbid")
 
-    label: String = Field(description="What the trial shows, logged as trialType: visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both); here it drives the draw, as no condition field does yet")
+    label: TrialLabel = Field(
+        description="The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (derive_label) unless chosen; it names rows and analysis groups and drives nothing"
+    )
     weight: int = Field(ge=0, le=1_000_000, description="Relative draw weight: each new trial picks a condition with these as relative chances")
-    pairs: list[list[String]] = Field(default_factory=list, description="Groups of x-conditionFields paths whose lists share one pick per trial; none in this task yet")
-    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-conditionFields); none in this task yet")
+    pairs: list[list[String]] = Field(
+        default_factory=list,
+        description="Groups of x-conditionFields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
+    )
+    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-conditionFields); the rest are the task's")
+
+
+def derive_label(task: "UclOpenCoenDomeNavigationTaskParameters", condition: TrialCondition) -> str:
+    """A condition's label from its settings (its set over the task's): the grating shown (a contrast above 0) and the tone
+    heard (an amplitude above 0): both audiovisualCoherent, one alone visual or auditory, neither neutral."""
+    base = task.model_dump(by_alias=True, mode="json")
+
+    def value(path) -> list:
+        found = condition.set.get(path, _get(base, path))
+        return found if isinstance(found, list) else [found]
+
+    grating = any(contrast > 0 for contrast in value("contrasts"))
+    sound = any(amplitude > 0 for amplitude in value("auditoryStimulus.amplitude"))
+    return "audiovisualCoherent" if grating and sound else "visual" if grating else "auditory" if sound else "neutral"
 
 
 class Curriculum(TaskBlock):
@@ -173,7 +291,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
 
     A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
-    model_config = ConfigDict(json_schema_extra={"x-conditionFields": list(CONDITION_FIELDS), "x-rules": []})
+    model_config = ConfigDict(json_schema_extra={"x-conditionFields": list(CONDITION_FIELDS), "x-rules": [dict(rule) for rule in RULES]})
 
     reward: RewardSettings = Field(description="Reward delivery parameters")
 
@@ -181,13 +299,14 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         min_length=1,
         description=(
             "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
-            "trial, and shows its label (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a curriculum "
-            "stage's conditions replace it; the trialCondition column is its 0-based index"
+            "trial, then draws as the task's values with the condition's set over them (what it shows: contrasts, auditoryStimulus.amplitude); "
+            "its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index"
         ),
         json_schema_extra={"x-whole": True},
     )
-    auditory_stimulus: StimulusSound = Field(
-        default=StimulusSound(), description="The tone sweep's pips (src/sounds/all_waveforms.bin), each played at levelDbfs (open_rigs.core.task StimulusSound)"
+    auditory_stimulus: AuditoryStimulus = Field(default=AuditoryStimulus(), description="The tone sweep's pips (src/sounds/all_waveforms.bin), each played at amplitude")
+    contrasts: list[Double] = Field(
+        default=[1.0], min_length=1, description="Candidate grating contrasts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating"
     )
     reward_tone: RewardTone = Field(
         default=RewardTone(), description="The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
@@ -218,20 +337,57 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         description="The Mouse Curriculum stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
     )
 
+    @field_validator("contrasts")
+    @classmethod
+    def _not_negative(cls, value: list[float]) -> list[float]:
+        if any(contrast < 0 for contrast in value):
+            raise ValueError("contrasts must each be 0 or more")
+        return value
+
     @model_validator(mode="after")
-    def _conditions(self):
-        # TrialDraw.CheckTask's same rules.
-        for i, condition in enumerate(self.trial_conditions):
-            where = f"trial_conditions[{i}] ({condition.label})"
-            if condition.label not in TRIAL_TYPES:
-                raise ValueError(f"{where}: its label is not one of {', '.join(TRIAL_TYPES)}")
-            for path in [*condition.set, *(path for group in condition.pairs for path in group)]:
-                if path not in CONDITION_FIELDS:
-                    raise ValueError(f"{where} sets or pairs {path}, which is not a condition field (x-conditionFields)")
+    def _weights_and_rules(self):
+        # TrialDraw.CheckTask's same rules: x-rules on the task's own values (each combination's in _conditions_run), the weights' sum.
+        problems = rule_problems(self.model_dump(by_alias=True, mode="json"))
+        if problems:
+            raise ValueError("; ".join(problems))
         if not sum(condition.weight for condition in self.trial_conditions) > 0:
             raise ValueError("trial_conditions needs a condition with a weight above 0")
         if sum(condition.weight for condition in self.trial_conditions) > MAX_WEIGHT_SUM:
             raise ValueError(f"trial_conditions' weights add to more than {MAX_WEIGHT_SUM}, the most the draw can sum")
+        return self
+
+    @model_validator(mode="after")
+    def _conditions_run(self, info: ValidationInfo):
+        # TrialDraw's same build: each condition's set and pairs over the task's values, every combination (at most
+        # MAX_COMBINATIONS), each a task that must validate.
+        if (info.context or {}).get("condition"):
+            return self
+        base = self.model_dump(by_alias=True, mode="json")
+        for i, condition in enumerate(self.trial_conditions):
+            where = f"trial_conditions[{i}] ({condition.label.value})"
+            paired = [path for group in condition.pairs for path in group]
+            for path in [*condition.set, *paired]:
+                if path not in CONDITION_FIELDS:
+                    raise ValueError(f"{where} sets or pairs {path}, which is not a condition field (x-conditionFields)")
+            if len(set(paired)) < len(paired) or any(len(group) < 2 for group in condition.pairs):
+                raise ValueError(f"{where}: each pairs group needs two paths or more, each path in one group")
+            if not condition.set and not condition.pairs:
+                continue
+            try:
+                combos = condition_combinations(base, condition.set, condition.pairs)
+            except ValueError as e:
+                raise ValueError(f"{where}: {e}") from None
+            if len(combos) > MAX_COMBINATIONS:
+                raise ValueError(f"{where} expands into {len(combos)} combinations, more than {MAX_COMBINATIONS}")
+            for combo in combos:
+                data = copy.deepcopy(base)
+                for path, value in combo.items():
+                    _put(data, path, value)
+                data["trialConditions"] = [{"label": condition.label.value, "weight": 1}]
+                try:
+                    type(self).model_validate(data, context={"condition": True})
+                except ValidationError as e:
+                    raise ValueError(f"{where} with {combo}: {e}") from None
         return self
 
     @model_validator(mode="after")

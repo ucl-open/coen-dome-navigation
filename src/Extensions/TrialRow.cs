@@ -31,4 +31,6 @@ public class TrialRow
     public double auditoryOffPositionCm;  // NaN when the tone never switched off
     public double visualOffPositionCm;    // NaN when the grating never switched off
     public bool autoRewarded;
+    public double visualContrast;       // 0: no grating
+    public double auditoryAmplitude;    // 0: no tone
 }

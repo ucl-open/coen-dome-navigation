@@ -70,15 +70,15 @@ def test_the_launch_properties():
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
     # trialType as coen-dome-decision-making reports it: the view's type_metric.
-    assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition", "trainingStage"}
-    # trainingStage is TaskFile's: the task file's curriculum as code-version, found well formed by CheckTaskAtGo.
-    assert "TrainingStage" not in TEXT
+    assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition", "curriculumStage"}
+    # curriculumStage is TaskFile's: the task file's curriculum as code-version, found well formed by CheckTaskAtGo.
+    assert "TrainingStage" not in TEXT and "trainingStage" not in TEXT and "TrainingCodeVersion" not in TEXT
     nodes, edges = _scope(group("TaskFile"))
-    (subject,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "TrainingCodeVersion"]
+    (subject,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "CurriculumStage"]
     (source,) = [a for a, b, *_ in edges if b == subject]
-    assert nodes[source].get(XSI) == "MemberSelector" and nodes[source].findtext(W + "Selector") == "TrainingCodeVersion"
+    assert nodes[source].get(XSI) == "MemberSelector" and nodes[source].findtext(W + "Selector") == "CurriculumStage"
     (metric,) = [b for a, b, *_ in edges if a == subject]
-    assert "trainingStage" in ET.tostring(nodes[metric], encoding="unicode")
+    assert "curriculumStage" in ET.tostring(nodes[metric], encoding="unicode")
 
 
 def test_stimulus_state_reaches_disk_row_by_row():
@@ -191,19 +191,23 @@ def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
 
 
 def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
-    # Each sound is one row laid out by OpenRigs.Audio's SpeakerBuffer on rig.yml's channels
-    # (no Tile 32), equalised for each speaker; no Channels is every rig.yml speaker.
-    for subject, reader in (("PipBuffers", "all_waveforms.bin"), ("RewardToneBuffer", "reward_tone.bin")):
-        nodes, upstream = _audio_chain(subject)
-        labels = _labels(nodes, upstream)
-        assert "Speakers" in labels and "rx:Zip" in labels and "dsp:Tile" not in labels, labels
-        assert any(reader in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
-        buffer = _speaker_buffer(nodes, upstream)
-        assert buffer.findtext(AUD + "Equalise") == "true" and buffer.findtext(AUD + "Gain") is None
-        assert not (buffer.findtext(AUD + "Channels") or "").strip()
+    # Each sound is one row laid out on rig.yml's channels (no Tile 32), equalised for each speaker: the reward tone by
+    # OpenRigs.Audio's SpeakerBuffer at rewardTone.levelDbfs, no Channels being every rig.yml speaker; the pips by LayOutPips
+    # (PipSet: SpeakerSet.Layout on every speaker at amplitude 1, checked at the loudest amplitude the conditions draw, TrialRules.Loudest).
+    nodes, upstream = _audio_chain("RewardToneBuffer")
+    labels = _labels(nodes, upstream)
+    assert "Speakers" in labels and "rx:Zip" in labels and "dsp:Tile" not in labels, labels
+    assert any("reward_tone.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
+    buffer = _speaker_buffer(nodes, upstream)
+    assert buffer.findtext(AUD + "Equalise") == "true" and buffer.findtext(AUD + "Gain") is None
+    assert not (buffer.findtext(AUD + "Channels") or "").strip()
     nodes, upstream = _audio_chain("PipBuffers")
-    assert _labels(nodes, upstream)[-3:] == ["rx:Zip", "Item2", "aud:SpeakerBuffer"] and "rx:ToList" in _labels(nodes, upstream)
-    assert "TaskParameters.AuditoryStimulus.LevelDbfs" in _labels(nodes, upstream)
+    labels = _labels(nodes, upstream)
+    assert any("all_waveforms.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
+    assert labels[-2:] == ["rx:Zip", "ext:LayOutPips"] and {"rx:ToList", "Speakers", "TrialRules", "Loudest"} <= set(labels), labels
+    assert "aud:SpeakerBuffer" not in labels and "dsp:Tile" not in labels
+    sweep = (ROOT / "src" / "Extensions" / "Sweep.cs").read_text(encoding="utf-8-sig")
+    assert "speakers.Layout(pip, null, 1, true, true)" in sweep
 
 
 def test_the_background_noise_is_the_shared_include():
@@ -341,9 +345,10 @@ def test_the_task_logs_are_the_shared_include():
 
 
 def test_each_trial_s_sound_carries_its_sync_copy():
-    # rig.yml's syncChannel at syncGain for each pip (OpenRigs.Audio SpeakerBuffer.SyncCopy), as coen-dome-decision-making's stimulus.
-    nodes, upstream = _audio_chain("PipBuffers")
-    assert _speaker_buffer(nodes, upstream).findtext("{clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio}SyncCopy") == "true"
+    # rig.yml's syncChannel at syncGain for each pip (SpeakerSet.Layout's syncCopy, kept unscaled at any amplitude: PipSetTests),
+    # as coen-dome-decision-making's stimulus.
+    sweep = (ROOT / "src" / "Extensions" / "Sweep.cs").read_text(encoding="utf-8-sig")
+    assert "speakers.Layout(pip, null, 1, true, true)" in sweep and "ext:LayOutPips" in _labels(*_audio_chain("PipBuffers"))
 
 
 def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
@@ -394,3 +399,16 @@ def test_the_extensions_readme_names_every_public_class():
     code = "".join(f.read_text(encoding="utf-8-sig") for f in folder.glob("*.cs") if not f.name.endswith(".Generated.cs"))
     classes = set(re.findall(r"^public (?:static )?class (\w+)", code, re.M))
     assert sorted(c for c in classes if f"`{c}`" not in readme) == []
+
+
+def test_each_pip_sets_the_grating_s_contrast():
+    # The trial's visualContrast reaches DrawGratings' Contrast (GratingContrast), beside its opacity and spatial frequency.
+    nodes, edges = _scope(group("Display"))
+    (subject,) = [i for i, n in enumerate(nodes) if n.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Name") == "GratingContrast"]
+    (mapping,) = [b for a, b in edges if a == subject]
+    assert [p.get("Name") for p in nodes[mapping].iter(W + "Property")] == ["Contrast"]
+    assert any(nodes[b].get("Path") == "BonVision:Primitives.DrawGratings.bonsai" for a, b in edges if a == mapping)
+    nodes, edges = _scope(group("TaskLogic"))
+    (multicast,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "GratingContrast"]
+    (source,) = [a for a, b in edges if b == multicast]
+    assert nodes[source].findtext(W + "Selector") == "Update.GratingContrast"

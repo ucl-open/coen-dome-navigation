@@ -1,4 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenCV.Net;
+using OpenRigs.Audio;
 using OpenRigs.Devices.Zapit;
 using System;
 using System.Collections.Generic;
@@ -8,6 +10,103 @@ using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.Serialization;
+
+// The speakers' filters are loaded and checked by OpenRigs.Audio (its own tests); these cover the pips laid out on them.
+[TestClass]
+public class PipSetTests
+{
+    static readonly double[] Symmetric = { 0.01, -0.05, 0.2, 1.1, 0.2, -0.05, 0.01 };
+    string rig;
+
+    [TestInitialize]
+    public void Write()
+    {
+        rig = Path.Combine(Path.GetTempPath(), "dome-navigation-pips-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(rig, "calibration"));
+        File.WriteAllText(Path.Combine(rig, "calibration", "sym.json"),
+            "{\"calibratedAt\":\"2026-11-04T00:00:00Z\",\"calibratedBy\":\"test\",\"machineName\":\"THIS-RIG\",\"notes\":\"\",\"sampleRate\":48000,\"taps\":[" +
+            string.Join(",", Symmetric.Select(t => t.ToString("R", System.Globalization.CultureInfo.InvariantCulture))) + "]}");
+        var speakers = "";
+        foreach (var s in new[] { Tuple.Create("left", -90, 0), Tuple.Create("right", 90, 1) })
+        {
+            speakers += "    " + s.Item1 + ":\n      position: {azimuth: " + s.Item2 + ", elevation: 15.0, radius: 1.0}\n      channel: " + s.Item3 + "\n      filter: calibration/sym.json\n";
+        }
+        File.WriteAllText(Path.Combine(rig, "rig.yml"), "speakerArray:\n  device:\n    sampleRate: 48000\n    channelCount: 4\n  speakers:\n" + speakers +
+            "  syncChannel: 3\n  penaltySoundChannel: 1\n  backgroundNoise: ../shared/sounds/background_noise.wav\n  penaltySound: ../shared/sounds/penalty_tone.wav\n");
+    }
+
+    [TestCleanup]
+    public void Remove()
+    {
+        Directory.Delete(rig, true);
+    }
+
+    SpeakerSet Speakers() { return SpeakerSet.Load(Path.Combine(rig, "rig.yml"), "THIS-RIG"); }
+
+    // The committed pips, a Mat a row, as the workflow's MatrixReader reads all_waveforms.bin.
+    static IList<Mat> Pips()
+    {
+        var bytes = File.ReadAllBytes(Path.Combine(Fixture.Repo(), "src", "sounds", "all_waveforms.bin"));
+        var samples = new float[bytes.Length / 4];
+        Buffer.BlockCopy(bytes, 0, samples, 0, bytes.Length);
+        return Enumerable.Range(0, samples.Length / 2400).Select(i => Mat.FromArray(samples.Skip(i * 2400).Take(2400).ToArray(), 1, 2400, Depth.F32, 1)).ToList();
+    }
+
+    static double MaxDifference(Mat a, Mat b)
+    {
+        using (var diff = new Mat(a.Size, Depth.F32, 1))
+        {
+            CV.AbsDiff(a, b, diff);
+            double min, max; Point minAt, maxAt;
+            CV.MinMaxLoc(diff, out min, out max, out minAt, out maxAt);
+            return max;
+        }
+    }
+
+    [TestMethod]
+    public void AmplitudeOneIsTheLoudnessThePipsPlayedAtBefore()
+    {
+        // Before the trial-type split the pips were SpeakerBuffer's at auditoryStimulus.levelDbfs -58.1 (SpeakerSet.Buffer); each
+        // file is now stored at -58.1 dBFS RMS, so amplitude 1, the file as stored, plays the same samples on every channel,
+        // the sync copy included.
+        var speakers = Speakers();
+        var pips = Pips();
+        var set = PipSet.Create(speakers, pips, new LoudestSound { Amplitude = 1, Where = "test" });
+        for (int i = 0; i < pips.Count; i++)
+        {
+            Assert.AreEqual(-58.1, SoundLevel.RmsDbfs(pips[i]), 1e-4, "pip " + i);
+            using (var before = speakers.Buffer(pips[i], null, -58.1, true, true))
+            {
+                Assert.IsTrue(MaxDifference(before, set.Buffer(i, 1)) < 1e-9, "pip " + i);
+            }
+        }
+    }
+
+    [TestMethod]
+    public void APipPlaysAtItsTrialsAmplitudeWithTheSyncCopyKept()
+    {
+        var speakers = Speakers();
+        var set = PipSet.Create(speakers, Pips(), new LoudestSound { Amplitude = 2, Where = "test" });
+        var one = set.Buffer(40, 1);
+        var half = set.Buffer(40, 0.5);
+        using (var left = one.GetRow(0)) using (var leftHalf = half.GetRow(0)) using (var expected = new Mat(left.Size, Depth.F32, 1))
+        {
+            CV.ConvertScale(left, expected, 0.5, 0);
+            Assert.IsTrue(MaxDifference(expected, leftHalf) < 1e-9);
+        }
+        using (var sync = one.GetRow(3)) using (var syncHalf = half.GetRow(3)) Assert.AreEqual(0, MaxDifference(sync, syncHalf));
+        Assert.AreEqual(0, CV.CountNonZero(set.Buffer(40, 0)));
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => set.Buffer(40, 3)).Message, "above the 2 the pips were checked for at Go");
+    }
+
+    [TestMethod]
+    public void AnAmplitudeThatWouldClipStopsAtGoNamingTheCondition()
+    {
+        var message = Assert.ThrowsException<InvalidOperationException>(() => PipSet.Create(Speakers(), Pips(), new LoudestSound { Amplitude = 2000, Where = "trialConditions[1] (auditory)" })).Message;
+        StringAssert.Contains(message, "trialConditions[1] (auditory)");
+        StringAssert.Contains(message, "amplitude 2000");
+    }
+}
 
 [TestClass]
 public class SweepTests
@@ -48,9 +147,9 @@ public class SweepTests
         var path = Path.GetTempFileName();
         try
         {
-            File.WriteAllText(path, "{\"sweepStartHz\": 2000, \"sweepSteps\": 100, \"pipPeak\": 0.0025, \"sampleRate\": 48000}");
+            File.WriteAllText(path, "{\"sweepStartHz\": 2000, \"sweepSteps\": 100, \"pipLevelDbfs\": -58.1, \"sampleRate\": 48000}");
             StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => global::Sweep.Load(path)).Message, "sweepEndHz");
-            File.WriteAllText(path, "{\"sweepStartHz\": 2000, \"sweepEndHz\": 25000, \"sweepSteps\": 100, \"pipPeak\": 0.0025}");
+            File.WriteAllText(path, "{\"sweepStartHz\": 2000, \"sweepEndHz\": 25000, \"sweepSteps\": 100, \"pipLevelDbfs\": -58.1}");
             StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => global::Sweep.Load(path)).Message, "sampleRate");
         }
         finally { File.Delete(path); }
