@@ -316,12 +316,11 @@
     },
     "TrialCondition": {
       "additionalProperties": false,
-      "description": "One kind of trial in the mix (coen-dome-decision-making's shape): its label, its relative weight, its condition-level\nvalues (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a\nlist field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial.",
+      "description": "One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level\nvalues (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a\nlist field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial.",
       "properties": {
-        "label": {
-          "$ref": "#/$defs/TrialLabel",
-          "description": "The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (derive_label) unless chosen; it names rows and analysis groups and drives nothing",
-          "title": "Label"
+        "trialType": {
+          "$ref": "#/$defs/TrialType",
+          "description": "The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing"
         },
         "weight": {
           "description": "Relative draw weight: each new trial picks a condition with these as relative chances",
@@ -331,7 +330,7 @@
           "type": "integer"
         },
         "pairs": {
-          "description": "Groups of x-conditionFields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
+          "description": "Groups of x-condition-fields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
           "items": {
             "items": {
               "type": "string"
@@ -343,28 +342,17 @@
         },
         "set": {
           "additionalProperties": true,
-          "description": "Condition-level values by dotted path (x-conditionFields); the rest are the task's",
+          "description": "Condition-level values by dotted path (x-condition-fields); the rest are the task's",
           "title": "Set",
           "type": "object"
         }
       },
       "required": [
-        "label",
+        "trialType",
         "weight"
       ],
       "title": "TrialCondition",
       "type": "object"
-    },
-    "TrialLabel": {
-      "description": "A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_label);\ncoen-dome-decision-making's words.",
-      "enum": [
-        "visual",
-        "auditory",
-        "audiovisualCoherent",
-        "neutral"
-      ],
-      "title": "TrialLabel",
-      "type": "string"
     },
     "TrialStructure": {
       "description": "Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The wheel quiet wait (open_rigs.core.task WheelQuietWait) is here, the same for every stage; the lick quiet wait is each stage's.",
@@ -418,6 +406,17 @@
       ],
       "title": "TrialStructure",
       "type": "object"
+    },
+    "TrialType": {
+      "description": "A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_trial_type);\ncoen-dome-decision-making's words.",
+      "enum": [
+        "visual",
+        "auditory",
+        "audiovisualCoherent",
+        "neutral"
+      ],
+      "title": "TrialType",
+      "type": "string"
     },
     "UclOpenCoenDomeNavigationTaskLogic": {
       "description": "Top-level task logic schema.",
@@ -494,7 +493,7 @@
           "title": "Reward"
         },
         "trialConditions": {
-          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-conditionFields: what it shows, its reward, auto-reward and laser-on chances); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index",
+          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-condition-fields: what it shows, its reward, auto-reward and laser-on chances); its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index",
           "items": {
             "$ref": "#/$defs/TrialCondition"
           },
@@ -641,7 +640,7 @@
       ],
       "title": "UclOpenCoenDomeNavigationTaskParameters",
       "type": "object",
-      "x-conditionFields": [
+      "x-condition-fields": [
         "contrasts",
         "auditoryStimulus.amplitude",
         "auditoryStimulus.initialAzimuthsDeg",
@@ -649,61 +648,109 @@
         "reward.rewardSizeUl",
         "autoRewardProbability"
       ],
-      "x-labels": [
-        {
-          "anyAbove": {
-            "auditoryStimulus.amplitude": 0,
-            "contrasts": 0
-          },
-          "label": "audiovisualCoherent"
-        },
-        {
-          "anyAbove": {
-            "contrasts": 0
-          },
-          "label": "visual"
-        },
-        {
-          "anyAbove": {
-            "auditoryStimulus.amplitude": 0
-          },
-          "label": "auditory"
-        },
-        {
-          "label": "neutral"
-        }
-      ],
       "x-rules": [
         {
-          "is": 0,
+          "if": {
+            "properties": {
+              "contrasts": {
+                "items": {
+                  "const": 0
+                }
+              }
+            }
+          },
+          "message": "contrasts 0 shows no grating, so its spatial frequencies are unread",
           "unused": [
             "visualStimulus.spatialFrequencyStartCpd",
             "visualStimulus.spatialFrequencyEndCpd"
-          ],
-          "when": "contrasts"
+          ]
         },
         {
-          "is": 0,
+          "if": {
+            "properties": {
+              "auditoryStimulus.amplitude": {
+                "const": 0
+              }
+            }
+          },
+          "message": "auditoryStimulus.amplitude 0 plays no tone, so its azimuths are unread",
           "unused": [
             "auditoryStimulus.initialAzimuthsDeg"
-          ],
-          "when": "auditoryStimulus.amplitude"
+          ]
         },
         {
-          "is": 1,
+          "if": {
+            "properties": {
+              "autoRewardProbability": {
+                "const": 1
+              }
+            }
+          },
+          "message": "autoRewardProbability 1 rewards every trial, so the lick limits are unread",
           "unused": [
             "wrongLickLimit",
             "rewardCeilingHz"
-          ],
-          "when": "autoRewardProbability"
+          ]
         },
         {
-          "is": 0,
+          "if": {
+            "properties": {
+              "stimulusOffProbability": {
+                "const": 0
+              }
+            }
+          },
+          "message": "stimulusOffProbability 0 never cuts a stimulus, so stimulusOff is unread",
           "unused": [
             "stimulusOff.trackFractions",
             "stimulusOff.stimuli"
-          ],
-          "when": "stimulusOffProbability"
+          ]
+        }
+      ],
+      "x-trial-types": [
+        {
+          "if": {
+            "properties": {
+              "contrasts": {
+                "contains": {
+                  "exclusiveMinimum": 0
+                }
+              },
+              "auditoryStimulus.amplitude": {
+                "contains": {
+                  "exclusiveMinimum": 0
+                }
+              }
+            }
+          },
+          "trialType": "audiovisualCoherent"
+        },
+        {
+          "if": {
+            "properties": {
+              "contrasts": {
+                "contains": {
+                  "exclusiveMinimum": 0
+                }
+              }
+            }
+          },
+          "trialType": "visual"
+        },
+        {
+          "if": {
+            "properties": {
+              "auditoryStimulus.amplitude": {
+                "contains": {
+                  "exclusiveMinimum": 0
+                }
+              }
+            }
+          },
+          "trialType": "auditory"
+        },
+        {
+          "trialType": "neutral"
         }
       ]
     },

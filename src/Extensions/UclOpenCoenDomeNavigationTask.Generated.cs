@@ -1187,12 +1187,12 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// One kind of trial in the mix (coen-dome-decision-making's shape): its label, its relative weight, its condition-level
+    /// One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level
     ///values (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a
     ///list field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"One kind of trial in the mix (coen-dome-decision-making's shape): its label, its relative weight, its condition-level
+    [System.ComponentModel.DescriptionAttribute(@"One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level
     values (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a
     list field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
@@ -1200,7 +1200,7 @@ namespace UclOpenCoenDomeNavigationTask
     public partial class TrialCondition
     {
     
-        private TrialLabel _label;
+        private TrialType _trialType;
     
         private int _weight;
     
@@ -1215,29 +1215,29 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected TrialCondition(TrialCondition other)
         {
-            _label = other._label;
+            _trialType = other._trialType;
             _weight = other._weight;
             _pairs = other._pairs;
             _set = other._set;
         }
     
         /// <summary>
-        /// The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (derive_label) unless chosen; it names rows and analysis groups and drives nothing
+        /// The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("label", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="label")]
+        [Newtonsoft.Json.JsonPropertyAttribute("trialType", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialType")]
         [System.ComponentModel.DescriptionAttribute("The condition\'s name, logged as each trial\'s trialType: derived from its contrast" +
-            "s and amplitude (derive_label) unless chosen; it names rows and analysis groups " +
-            "and drives nothing")]
-        public TrialLabel Label
+            "s and amplitude (x-trial-types, derive_trial_type) unless chosen; it names rows " +
+            "and analysis groups and drives nothing")]
+        public TrialType TrialType
         {
             get
             {
-                return _label;
+                return _trialType;
             }
             set
             {
-                _label = value;
+                _trialType = value;
             }
         }
     
@@ -1261,14 +1261,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Groups of x-conditionFields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently
+        /// Groups of x-condition-fields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("pairs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="pairs")]
-        [System.ComponentModel.DescriptionAttribute("Groups of x-conditionFields paths whose lists (the set\'s, else the task\'s) have e" +
-            "qual length and share one picked index per trial; unpaired lists are picked inde" +
-            "pendently")]
+        [System.ComponentModel.DescriptionAttribute("Groups of x-condition-fields paths whose lists (the set\'s, else the task\'s) have " +
+            "equal length and share one picked index per trial; unpaired lists are picked ind" +
+            "ependently")]
         public System.Collections.Generic.List<System.Collections.Generic.List<string>> Pairs
         {
             get
@@ -1282,13 +1282,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Condition-level values by dotted path (x-conditionFields); the rest are the task's
+        /// Condition-level values by dotted path (x-condition-fields); the rest are the task's
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("set")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="set")]
-        [System.ComponentModel.DescriptionAttribute("Condition-level values by dotted path (x-conditionFields); the rest are the task\'" +
-            "s")]
+        [System.ComponentModel.DescriptionAttribute("Condition-level values by dotted path (x-condition-fields); the rest are the task" +
+            "\'s")]
         public object Set
         {
             get
@@ -1313,7 +1313,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Label = " + _label + ", ");
+            stringBuilder.Append("TrialType = " + _trialType + ", ");
             stringBuilder.Append("Weight = " + _weight + ", ");
             stringBuilder.Append("Pairs = " + _pairs + ", ");
             stringBuilder.Append("Set = " + _set);
@@ -1332,33 +1332,6 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("}");
             return stringBuilder.ToString();
         }
-    }
-
-
-    /// <summary>
-    /// A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_label);
-    ///coen-dome-decision-making's words.
-    /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-    public enum TrialLabel
-    {
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="visual")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visual")]
-        Visual = 0,
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="auditory")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
-        Auditory = 1,
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="audiovisualCoherent")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisualCoherent")]
-        AudiovisualCoherent = 2,
-    
-        [System.Runtime.Serialization.EnumMemberAttribute(Value="neutral")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="neutral")]
-        Neutral = 3,
     }
 
 
@@ -1525,6 +1498,33 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("}");
             return stringBuilder.ToString();
         }
+    }
+
+
+    /// <summary>
+    /// A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_trial_type);
+    ///coen-dome-decision-making's words.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+    public enum TrialType
+    {
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="visual")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visual")]
+        Visual = 0,
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="auditory")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditory")]
+        Auditory = 1,
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="audiovisualCoherent")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="audiovisualCoherent")]
+        AudiovisualCoherent = 2,
+    
+        [System.Runtime.Serialization.EnumMemberAttribute(Value="neutral")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="neutral")]
+        Neutral = 3,
     }
 
 
@@ -1730,12 +1730,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-conditionFields: what it shows, its reward, auto-reward and laser-on chances); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index
+        /// The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-condition-fields: what it shows, its reward, auto-reward and laser-on chances); its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("trialConditions", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialConditions")]
-        [System.ComponentModel.DescriptionAttribute(@"The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-conditionFields: what it shows, its reward, auto-reward and laser-on chances); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index")]
+        [System.ComponentModel.DescriptionAttribute(@"The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-condition-fields: what it shows, its reward, auto-reward and laser-on chances); its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index")]
         public System.Collections.Generic.List<TrialCondition> TrialConditions
         {
             get

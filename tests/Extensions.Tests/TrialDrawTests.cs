@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenRigs.Trials;
 using OpenRigs.Devices.Rigs;
 using OpenRigs.Devices.Zapit;
@@ -223,23 +223,23 @@ public class TrialDrawTests
         }
     }
 
-    static readonly TrialLabel[] Labels = { TrialLabel.Visual, TrialLabel.Auditory, TrialLabel.AudiovisualCoherent };
+    static readonly TrialType[] Labels = { TrialType.Visual, TrialType.Auditory, TrialType.AudiovisualCoherent };
 
     /// <summary>What a label's condition sets in the task file: visual the tone off, auditory the grating off, audiovisualCoherent nothing.</summary>
-    static Dictionary<object, object> Shows(TrialLabel label)
+    static Dictionary<object, object> Shows(TrialType label)
     {
-        if (label == TrialLabel.Visual) return new Dictionary<object, object> { { "auditoryStimulus.amplitude", 0.0 } };
-        if (label == TrialLabel.Auditory) return new Dictionary<object, object> { { "contrasts", new List<object> { 0.0 } } };
+        if (label == TrialType.Visual) return new Dictionary<object, object> { { "auditoryStimulus.amplitude", 0.0 } };
+        if (label == TrialType.Auditory) return new Dictionary<object, object> { { "contrasts", new List<object> { 0.0 } } };
         return new Dictionary<object, object>();
     }
 
     /// <summary>One condition per label, as the task file's (visual, auditory, audiovisualCoherent), with these weights.</summary>
     static List<TrialCondition> Conditions(int visual, int auditory, int coherent)
     {
-        return new[] { visual, auditory, coherent }.Select((w, i) => new TrialCondition { Label = Labels[i], Weight = w, Set = Shows(Labels[i]) }).ToList();
+        return new[] { visual, auditory, coherent }.Select((w, i) => new TrialCondition { TrialType = Labels[i], Weight = w, Set = Shows(Labels[i]) }).ToList();
     }
 
-    static string Name(TrialCondition condition) { return TrialDraw.Name(condition.Label); }
+    static string Name(TrialCondition condition) { return TrialDraw.Name(condition.TrialType); }
 
     [TestMethod]
     public void TheWeightsAreHonouredAndEachTrialLogsItsCondition()
@@ -247,7 +247,7 @@ public class TrialDrawTests
         // Two conditions of one type are told apart by trialCondition, their index; a seeded run follows the weights.
         var task = Fixture.Task(3);
         task.TrialConditions = Conditions(1, 2, 0);
-        task.TrialConditions.Add(new TrialCondition { Label = TrialLabel.Visual, Weight = 5, Set = Shows(TrialLabel.Visual) });
+        task.TrialConditions.Add(new TrialCondition { TrialType = TrialType.Visual, Weight = 5, Set = Shows(TrialType.Visual) });
         var draw = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 4000).Select(i => draw.Next()).ToList();
         var weights = new[] { 1, 2, 0, 5 };
@@ -257,7 +257,7 @@ public class TrialDrawTests
         }
         Assert.IsTrue(trials.All(t => t.trialType == Name(task.TrialConditions[t.trialCondition])));
         task.TrialConditions = Conditions(0, 0, 0);
-        task.TrialConditions.Add(new TrialCondition { Label = TrialLabel.Visual, Weight = 1 });
+        task.TrialConditions.Add(new TrialCondition { TrialType = TrialType.Visual, Weight = 1 });
         var rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);
@@ -271,7 +271,7 @@ public class TrialDrawTests
         // the next trial's (the loop draws ahead). Rows are matched by trialNumber: Wheel can end a trial in its own call.
         var task = Fixture.Task(3);
         task.TrialConditions = Conditions(1, 2, 1);
-        task.TrialConditions.Add(new TrialCondition { Label = TrialLabel.Visual, Weight = 3 });
+        task.TrialConditions.Add(new TrialCondition { TrialType = TrialType.Visual, Weight = 3 });
         var rig = new Rig(Fixture.Setup(task));
         var seen = new HashSet<int>();
         for (int i = 0; i < 30; i++)
@@ -335,7 +335,7 @@ public class TrialDrawTests
             Tuple.Create(new List<TrialCondition>(), "trialConditions needs a condition"),
             Tuple.Create(Conditions(0, 0, 0), "trialConditions needs a condition with a weight above 0"),
             Tuple.Create(Conditions(-1, 2, 0), "trialConditions[0] (visual): its weight is below 0"),
-            Tuple.Create(setting("rewardFloorHz", 2.0), "trialConditions[1] (auditory) sets or pairs rewardFloorHz, which is not a condition field (x-conditionFields)"),
+            Tuple.Create(setting("rewardFloorHz", 2.0), "trialConditions[1] (auditory) sets or pairs rewardFloorHz, which is not a condition field (x-condition-fields)"),
             Tuple.Create(setting("optogenetics.laserOnProbability", 0.5), "trialConditions[1] (auditory) sets optogenetics.laserOnProbability with optogenetics off"),
             Tuple.Create(setting("reward.rewardSizeUl", 0.0), "trialConditions[1] (auditory): reward.rewardSizeUl must be above 0 and at most 20 ul"),
             Tuple.Create(setting("autoRewardProbability", 2.0), "trialConditions[1] (auditory): autoRewardProbability is 2, not from 0 to 1"),
@@ -372,7 +372,7 @@ public class TrialDrawTests
         notMap[1].Set = "5";
         StringAssert.Contains(refusal(notMap), "trialConditions[1] (auditory): its set is not a map");
         // 2200 conditions of the cap's weight sum past int, which random.Next cannot take.
-        var heavy = Enumerable.Range(0, 2200).Select(i => new TrialCondition { Label = TrialLabel.Visual, Weight = TrialDraw.MaxWeight }).ToList();
+        var heavy = Enumerable.Range(0, 2200).Select(i => new TrialCondition { TrialType = TrialType.Visual, Weight = TrialDraw.MaxWeight }).ToList();
         StringAssert.Contains(refusal(heavy), "weights add to more than 2147483647");
     }
 
@@ -380,10 +380,10 @@ public class TrialDrawTests
     public void OneConditionAtTheCapAndManyConditionsAreDrawnAsWritten()
     {
         var task = Fixture.Task(3);
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = TrialLabel.Auditory, Weight = TrialDraw.MaxWeight } };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Auditory, Weight = TrialDraw.MaxWeight } };
         var one = Fixture.Draw(task);
         Assert.IsTrue(Enumerable.Range(0, 30).Select(i => one.Next()).All(t => t.trialCondition == 0 && t.trialType == "auditory"));
-        task.TrialConditions = Enumerable.Range(0, 120).Select(i => new TrialCondition { Label = Labels[i % 3], Weight = 1, Set = Shows(Labels[i % 3]) }).ToList();
+        task.TrialConditions = Enumerable.Range(0, 120).Select(i => new TrialCondition { TrialType = Labels[i % 3], Weight = 1, Set = Shows(Labels[i % 3]) }).ToList();
         var many = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 3000).Select(i => many.Next()).ToList();
         Assert.IsTrue(trials.All(t => t.trialType == TrialDraw.Name(Labels[t.trialCondition % 3])));
@@ -391,10 +391,10 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void TheTaskFilesConditionsAreReadByTheirYamlNamesAndDrawWhatTheirLabelsSay()
+    public void TheTaskFilesConditionsAreReadByTheirYamlNamesAndDrawWhatTheirTrialTypesSay()
     {
         var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-corridor.yml"))
-            .Replace("- { label: visual, weight: 0,", "- { label: visual, weight: 2,");
+            .Replace("- { trialType: visual, weight: 0,", "- { trialType: visual, weight: 2,");
         foreach (var task in new[] { new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters, TrialDraw.Read(text).TaskParameters })
         {
             CollectionAssert.AreEqual(new[] { "visual:2", "auditory:1", "audiovisualCoherent:0" }, task.TrialConditions.Select(c => Name(c) + ":" + c.Weight).ToArray());
@@ -414,7 +414,7 @@ public class TrialDrawTests
     {
         // A condition labelled visual but setting a dim grating and a quiet tone shows both, as set; the label is only logged.
         var task = Fixture.Task(1);
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = TrialLabel.Visual, Weight = 1, Set = new Dictionary<object, object> { { "contrasts", new List<object> { 0.5 } }, { "auditoryStimulus.amplitude", 0.25 } } } };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Visual, Weight = 1, Set = new Dictionary<object, object> { { "contrasts", new List<object> { 0.5 } }, { "auditoryStimulus.amplitude", 0.25 } } } };
         var rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         var pip = rig.RunTo(TrialEventKind.Update).Update;
@@ -427,7 +427,7 @@ public class TrialDrawTests
         Assert.AreEqual(0.5, row.visualContrast);
         Assert.AreEqual(0.25, row.auditoryAmplitude);
         // Neither: a neutral trial runs the track with nothing shown.
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = TrialLabel.Neutral, Weight = 1, Set = new Dictionary<object, object> { { "contrasts", new List<object> { 0.0 } }, { "auditoryStimulus.amplitude", 0.0 } } } };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Neutral, Weight = 1, Set = new Dictionary<object, object> { { "contrasts", new List<object> { 0.0 } }, { "auditoryStimulus.amplitude", 0.0 } } } };
         rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         pip = rig.RunTo(TrialEventKind.Update).Update;
@@ -441,7 +441,7 @@ public class TrialDrawTests
         var task = Fixture.Task(1);
         Func<bool, List<Trial>> trials = pair =>
         {
-            task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = TrialLabel.AudiovisualCoherent, Weight = 1,
+            task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.AudiovisualCoherent, Weight = 1,
                 Set = new Dictionary<object, object> { { "contrasts", new List<object> { 0.25, 0.5 } }, { "auditoryStimulus.amplitude", new List<object> { 0.5, 1.0 } } },
                 Pairs = pair ? new List<List<string>> { new List<string> { "contrasts", "auditoryStimulus.amplitude" } } : new List<List<string>>() } };
             var draw = Fixture.Draw(task);
@@ -463,8 +463,8 @@ public class TrialDrawTests
         var task = Fixture.Task(1);
         task.TrialConditions = new List<TrialCondition>
         {
-            new TrialCondition { Label = TrialLabel.Auditory, Weight = 1, Set = new Dictionary<object, object> { { "auditoryStimulus.amplitude", new List<object> { 0.5, 2.0 } } } },
-            new TrialCondition { Label = TrialLabel.Visual, Weight = 0, Set = new Dictionary<object, object> { { "auditoryStimulus.amplitude", 3.0 } } },
+            new TrialCondition { TrialType = TrialType.Auditory, Weight = 1, Set = new Dictionary<object, object> { { "auditoryStimulus.amplitude", new List<object> { 0.5, 2.0 } } } },
+            new TrialCondition { TrialType = TrialType.Visual, Weight = 0, Set = new Dictionary<object, object> { { "auditoryStimulus.amplitude", 3.0 } } },
         };
         var loudest = Fixture.Setup(task).Loudest;
         Assert.AreEqual(2.0, loudest.Amplitude);
@@ -472,30 +472,15 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void TheConditionFieldsAndRulesAreTheSchemas()
+    public void TheConditionFieldsAreTheSchemas()
     {
         var schema = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(Path.Combine(Fixture.Repo(), "src", "DataSchemas", "ucl_open_coen_dome_navigation_task.json")));
         var parameters = schema["$defs"]["UclOpenCoenDomeNavigationTaskParameters"];
-        CollectionAssert.AreEqual(TrialDraw.ConditionFields, parameters["x-conditionFields"].ToObject<string[]>());
-        var rules = Newtonsoft.Json.Linq.JToken.FromObject(TrialDraw.Rules, Newtonsoft.Json.JsonSerializer.Create(new Newtonsoft.Json.JsonSerializerSettings { NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore }));
-        Assert.IsTrue(Newtonsoft.Json.Linq.JToken.DeepEquals(parameters["x-rules"], rules), rules.ToString());
+        CollectionAssert.AreEqual(TrialDraw.ConditionFields, parameters["x-condition-fields"].ToObject<string[]>());
     }
 
     [TestMethod]
-    public void ARuleIsCheckedOnTheTaskAndOnEachCombination()
-    {
-        // The corridor's rules say only what goes unread; a `then` rule is checked as coen-dome-decision-making's are.
-        var rule = new[] { new ConditionRule { when = "contrasts", @is = 0, then = new Dictionary<string, object> { { "auditoryStimulus.amplitude", 1 } } } };
-        var task = Fixture.Task(1);
-        task.Contrasts = new List<double> { 0 };
-        task.AuditoryStimulus.Amplitude = 0.5;
-        CollectionAssert.AreEqual(new[] { "contrasts 0 needs auditoryStimulus.amplitude 1 (x-rules)" }, TrialDraw.RuleProblems(task, null, rule).ToArray());
-        Assert.AreEqual(0, TrialDraw.RuleProblems(task, new TrialConditionCombination { Contrasts = new List<double> { 0, 1 }, Amplitude = 0.5 }, rule).Count());
-        Assert.AreEqual(0, TrialDraw.RuleProblems(task).Count());
-    }
-
-    [TestMethod]
-    public void TheTaskFilesConditionsShowWhatTheirLabelsSayAndLogIt()
+    public void TheTaskFilesConditionsShowWhatTheirTrialTypesSayAndLogIt()
     {
         foreach (var label in Labels)
         {
@@ -566,9 +551,9 @@ public class TrialDrawTests
         Fixture.Opto(task);
         task.TrialConditions = new List<TrialCondition>
         {
-            new TrialCondition { Label = TrialLabel.Auditory, Weight = 1, Set = new Dictionary<object, object> {
+            new TrialCondition { TrialType = TrialType.Auditory, Weight = 1, Set = new Dictionary<object, object> {
                 { "reward.rewardSizeUl", new List<object> { 2.0, 4.0 } }, { "autoRewardProbability", 1.0 }, { "optogenetics.laserOnProbability", 0.0 } } },
-            new TrialCondition { Label = TrialLabel.Visual, Weight = 1, Set = new Dictionary<object, object> {
+            new TrialCondition { TrialType = TrialType.Visual, Weight = 1, Set = new Dictionary<object, object> {
                 { "auditoryStimulus.amplitude", 0.0 }, { "optogenetics.laserOnProbability", 1.0 } } },
         };
         var draw = Fixture.Draw(task);
@@ -589,7 +574,7 @@ public class TrialDrawTests
         Assert.AreEqual(Trial.AllSpeakersChannel, all.speakerChannel);
         Assert.IsTrue(double.IsNaN(all.auditoryAzimuthDeg) && double.IsNaN(all.auditoryElevationDeg) && all.auditoryAmplitude == 1);
         // A number: rig.yml's speaker nearest it.
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = TrialLabel.Auditory, Weight = 1,
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Auditory, Weight = 1,
             Set = new Dictionary<object, object> { { "auditoryStimulus.initialAzimuthsDeg", new List<object> { -70.0, "all", 20.0 } } } } };
         var draw = Fixture.Draw(task);
         var picked = Enumerable.Range(0, 200).Select(_ => draw.Next()).Select(t => t.speakerChannel + ":" + t.auditoryAzimuthDeg + ":" + t.auditoryElevationDeg).Distinct().OrderBy(x => x).ToArray();

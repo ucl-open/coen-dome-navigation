@@ -1,4 +1,4 @@
-﻿"""The task file's schema: config/task-abstract-corridor.yml, which rig-control copies at launch and again at Go with the
+"""The task file's schema: config/task-abstract-corridor.yml, which rig-control copies at launch and again at Go with the
 form's edits; the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest. Ported from Tom Childs' auditory-vr-corridor task.py.
 
 The stage is a stage of the lab's Mouse Curriculum, recorded only as the task file's curriculum
@@ -8,9 +8,9 @@ sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made 
 (`uv run generate-waveforms`), not the task file's. The pips play at auditoryStimulus.amplitude (1 the files as stored,
 -58.1 dBFS RMS); the other sounds at the task file's levelDbfs (dBFS RMS: rewardTone, backgroundNoise and penalty.sound).
 
-What a trial shows and offers is its trial condition's (the condition fields, x-conditionFields: contrasts and
+What a trial shows and offers is its trial condition's (the condition fields, x-condition-fields: contrasts and
 auditoryStimulus.amplitude, each 0 for none, auditoryStimulus.initialAzimuthsDeg, reward.rewardSizeUl, autoRewardProbability and
-optogenetics.laserOnProbability); its label names it (trialType) and drives nothing."""
+optogenetics.laserOnProbability); its trialType names it and drives nothing."""
 
 import copy
 import json
@@ -176,8 +176,8 @@ class OptogeneticsSettings(Optogenetics):
         return self
 
 
-class TrialLabel(StrEnum):
-    """A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_label);
+class TrialType(StrEnum):
+    """A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_trial_type);
     coen-dome-decision-making's words."""
 
     VISUAL = "visual"
@@ -186,7 +186,7 @@ class TrialLabel(StrEnum):
     NEUTRAL = "neutral"
 
 
-# The fields a condition may set (the schema's x-conditionFields; TrialDraw.ConditionFields, a test holds both): what
+# The fields a condition may set (the schema's x-condition-fields; TrialDraw.ConditionFields, a test holds both): what
 # TrialDraw.Next alone reads per trial, coen-dome-decision-making's where the corridor has them. A condition's blank takes the
 # stage's, then the task's value.
 CONDITION_FIELDS = (
@@ -197,24 +197,27 @@ CONDITION_FIELDS = (
     "reward.rewardSizeUl",
     "autoRewardProbability",
 )
-# Where one setting limits another (the schema's x-rules; TrialDraw.Rules, a test holds both), as
-# coen-dome-decision-making's: when the path `when` is `is` (a list: every entry is), each `then` path must be its value,
-# each `oneOf` path one of its values, and the `unused` paths are not read. No corridor setting limits another, so its
-# rules only say what goes unread.
+# Where one setting limits another (the schema's x-rules, JSON Schema over dotted paths; open_rigs.rigs.conditions
+# evaluates them), as coen-dome-decision-making's. No corridor setting limits another, so its rules only say what goes unread.
 RULES = (
-    {"when": "contrasts", "is": 0, "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"]},
-    {"when": "auditoryStimulus.amplitude", "is": 0, "unused": ["auditoryStimulus.initialAzimuthsDeg"]},
-    {"when": "autoRewardProbability", "is": 1, "unused": ["wrongLickLimit", "rewardCeilingHz"]},
-    {"when": "stimulusOffProbability", "is": 0, "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"]},
+    {"if": {"properties": {"contrasts": {"items": {"const": 0}}}}, "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"],
+     "message": "contrasts 0 shows no grating, so its spatial frequencies are unread"},
+    {"if": {"properties": {"auditoryStimulus.amplitude": {"const": 0}}}, "unused": ["auditoryStimulus.initialAzimuthsDeg"],
+     "message": "auditoryStimulus.amplitude 0 plays no tone, so its azimuths are unread"},
+    {"if": {"properties": {"autoRewardProbability": {"const": 1}}}, "unused": ["wrongLickLimit", "rewardCeilingHz"],
+     "message": "autoRewardProbability 1 rewards every trial, so the lick limits are unread"},
+    {"if": {"properties": {"stimulusOffProbability": {"const": 0}}}, "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"],
+     "message": "stimulusOffProbability 0 never cuts a stimulus, so stimulusOff is unread"},
 )
-# How a condition is named (the schema's x-labels, open_rigs.rigs.conditions' format; derive_label), coen-dome-decision-making's
-# without its targets or azimuths: first match wins. The grating shown (a contrast above 0) and the tone heard (an amplitude
-# above 0): both audiovisualCoherent, one alone visual or auditory, neither neutral.
-LABELS = (
-    {"label": "audiovisualCoherent", "anyAbove": {"contrasts": 0, "auditoryStimulus.amplitude": 0}},
-    {"label": "visual", "anyAbove": {"contrasts": 0}},
-    {"label": "auditory", "anyAbove": {"auditoryStimulus.amplitude": 0}},
-    {"label": "neutral"},
+# How a condition is named (the schema's x-trial-types; derive_trial_type), coen-dome-decision-making's without its targets
+# or azimuths: first match wins, on the condition's values each as a list. The grating shown (a contrast above 0) and the
+# tone heard (an amplitude above 0): both audiovisualCoherent, one alone visual or auditory, neither neutral.
+_ABOVE_0 = {"contains": {"exclusiveMinimum": 0}}
+TRIAL_TYPES = (
+    {"trialType": "audiovisualCoherent", "if": {"properties": {"contrasts": _ABOVE_0, "auditoryStimulus.amplitude": _ABOVE_0}}},
+    {"trialType": "visual", "if": {"properties": {"contrasts": _ABOVE_0}}},
+    {"trialType": "auditory", "if": {"properties": {"auditoryStimulus.amplitude": _ABOVE_0}}},
+    {"trialType": "neutral"},
 )
 # The most combinations one condition may expand into (TrialDraw.MaxCombinations).
 MAX_COMBINATIONS = 64
@@ -233,27 +236,6 @@ def _put(data: dict, dotted, value: Any) -> None:
     if key not in data:
         raise KeyError(dotted)
     data[key] = value
-
-
-def _is(value: Any, expected: Any) -> bool:
-    if isinstance(value, list):
-        return bool(value) and all(v == expected for v in value)
-    return value == expected
-
-
-def rule_problems(values: dict, rules=RULES) -> list[str]:
-    """What breaks the rules in a task's values (by alias, as JSON)."""
-    problems = []
-    for rule in rules:
-        if not _is(_get(values, rule["when"]), rule["is"]):
-            continue
-        for path, expected in rule.get("then", {}).items():
-            if _get(values, path) != expected:
-                problems.append(f"{rule['when']} {rule['is']} needs {path} {expected} (x-rules)")
-        for path, allowed in rule.get("oneOf", {}).items():
-            if _get(values, path) not in allowed:
-                problems.append(f"{rule['when']} {rule['is']} needs {path} one of {', '.join(map(str, allowed))} (x-rules)")
-    return problems
 
 
 def _options(base: dict, values: dict[str, Any], path) -> list:
@@ -284,26 +266,26 @@ def condition_combinations(base: dict, values: dict[str, Any], pairs: list[list[
 
 
 class TrialCondition(TaskBlock):
-    """One kind of trial in the mix (coen-dome-decision-making's shape): its label, its relative weight, its condition-level
+    """One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level
     values (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a
     list field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial."""
 
     model_config = ConfigDict(extra="forbid")
 
-    label: TrialLabel = Field(
-        description="The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (derive_label) unless chosen; it names rows and analysis groups and drives nothing"
+    trial_type: TrialType = Field(
+        description="The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing"
     )
     weight: int = Field(ge=0, le=1_000_000, description="Relative draw weight: each new trial picks a condition with these as relative chances")
     pairs: list[list[String]] = Field(
         default_factory=list,
-        description="Groups of x-conditionFields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
+        description="Groups of x-condition-fields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
     )
-    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-conditionFields); the rest are the task's")
+    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-condition-fields); the rest are the task's")
 
 
-def derive_label(task: "UclOpenCoenDomeNavigationTaskParameters", condition: TrialCondition) -> str:
-    """A condition's label from its settings (its set over the task's), by LABELS (x-labels)."""
-    return conditions.derive_label(LABELS, task.model_dump(by_alias=True, mode="json"), condition.set, condition.pairs)
+def derive_trial_type(task: "UclOpenCoenDomeNavigationTaskParameters", condition: TrialCondition) -> str:
+    """A condition's trialType from its settings (its set over the task's), by TRIAL_TYPES (x-trial-types)."""
+    return conditions.derive_trial_type(TRIAL_TYPES, task.model_dump(by_alias=True, mode="json"), condition.set, condition.pairs)
 
 
 class Curriculum(TaskBlock):
@@ -327,7 +309,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
 
     A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
-    model_config = ConfigDict(json_schema_extra={"x-conditionFields": list(CONDITION_FIELDS), "x-rules": [dict(rule) for rule in RULES], "x-labels": [dict(label) for label in LABELS]})
+    model_config = ConfigDict(json_schema_extra={"x-condition-fields": list(CONDITION_FIELDS), "x-rules": list(RULES), "x-trial-types": list(TRIAL_TYPES)})
 
     reward: RewardSettings = Field(description="Reward delivery parameters")
 
@@ -335,8 +317,8 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         min_length=1,
         description=(
             "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
-            "trial, then draws as the task's values with the condition's set over them (x-conditionFields: what it shows, its reward, auto-reward and laser-on chances); "
-            "its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index"
+            "trial, then draws as the task's values with the condition's set over them (x-condition-fields: what it shows, its reward, auto-reward and laser-on chances); "
+            "its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index"
         ),
         json_schema_extra={"x-whole": True},
     )
@@ -383,7 +365,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
     @model_validator(mode="after")
     def _weights_and_rules(self):
         # TrialDraw.CheckTask's same rules: x-rules on the task's own values (each combination's in _conditions_run), the weights' sum.
-        problems = rule_problems(self.model_dump(by_alias=True, mode="json"))
+        problems = [f"{p} (x-rules)" for p in conditions.rule_problems(RULES, self.model_dump(by_alias=True, mode="json"))]
         if problems:
             raise ValueError("; ".join(problems))
         if not sum(condition.weight for condition in self.trial_conditions) > 0:
@@ -400,11 +382,11 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
             return self
         base = self.model_dump(by_alias=True, mode="json")
         for i, condition in enumerate(self.trial_conditions):
-            where = f"trial_conditions[{i}] ({condition.label.value})"
+            where = f"trial_conditions[{i}] ({condition.trial_type.value})"
             paired = [path for group in condition.pairs for path in group]
             for path in [*condition.set, *paired]:
                 if path not in CONDITION_FIELDS:
-                    raise ValueError(f"{where} sets or pairs {path}, which is not a condition field (x-conditionFields)")
+                    raise ValueError(f"{where} sets or pairs {path}, which is not a condition field (x-condition-fields)")
                 if path.startswith("optogenetics.") and not self.optogenetics.enabled:
                     raise ValueError(f"{where} sets {path} with optogenetics off")
             if len(set(paired)) < len(paired) or any(len(group) < 2 for group in condition.pairs):
@@ -421,7 +403,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
                 data = copy.deepcopy(base)
                 for path, value in combo.items():
                     _put(data, path, value)
-                data["trialConditions"] = [{"label": condition.label.value, "weight": 1}]
+                data["trialConditions"] = [{"trialType": condition.trial_type.value, "weight": 1}]
                 try:
                     type(self).model_validate(data, context={"condition": True})
                 except ValidationError as e:

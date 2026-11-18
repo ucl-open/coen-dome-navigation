@@ -11,13 +11,13 @@
 taskParameters:
   rngSeed: null               # null = the workflow draws one at Go; each seed used is a RngSeed event in WorkflowData_Events
   # The trial mix, one whole value: each condition's relative chance and what its trials show, its set over the task's
-  # values (x-conditionFields: contrasts, 0 no grating; auditoryStimulus.amplitude, 0 no tone; auditoryStimulus.initialAzimuthsDeg;
+  # values (x-condition-fields: contrasts, 0 no grating; auditoryStimulus.amplitude, 0 no tone; auditoryStimulus.initialAzimuthsDeg;
   # reward.rewardSizeUl; autoRewardProbability; optogenetics.laserOnProbability), its pairs picking listed values together;
-  # its label names it (trialType). A curriculum stage's conditions replace it; Setup edits only the weights.
+  # its trialType names it. A curriculum stage's conditions replace it; Setup edits only the weights.
   trialConditions:
-    - { label: visual, weight: 0, set: { auditoryStimulus.amplitude: 0 } }
-    - { label: auditory, weight: 1, set: { contrasts: [0] } }
-    - { label: audiovisualCoherent, weight: 0, set: {} }
+    - { trialType: visual, weight: 0, set: { auditoryStimulus.amplitude: 0 } }
+    - { trialType: auditory, weight: 1, set: { contrasts: [0] } }
+    - { trialType: audiovisualCoherent, weight: 0, set: {} }
   reward:
     rewardSizeUl: 3.0         # ul on the left spout's valve, planned from its calibration
   # The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms). The pips play at an amplitude

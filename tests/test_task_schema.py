@@ -15,16 +15,16 @@ from ucl_open_coen_dome_navigation.task import (
     STEP_SECONDS,
     LASER_MAX_MARGIN_SECONDS,
     CONDITION_FIELDS,
-    LABELS,
     MAX_WEIGHT_SUM,
     RULES,
     OptogeneticsSettings,
-    TrialLabel,
+    TRIAL_TYPES,
+    TrialType,
     UclOpenCoenDomeNavigationTaskLogic,
     UclOpenCoenDomeNavigationTaskParameters,
-    derive_label,
-    rule_problems,
+    derive_trial_type,
 )
+from open_rigs.rigs.conditions import unused_paths
 
 ROOT = Path(__file__).parent.parent
 TASK = ROOT / "config" / "task-abstract-corridor.yml"
@@ -78,82 +78,80 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     params = task()["taskParameters"]
     assert "modality" not in params and "trialWeights" not in params
     assert params["trialConditions"] == [
-        {"label": "visual", "weight": 0, "set": {"auditoryStimulus.amplitude": 0}},
-        {"label": "auditory", "weight": 1, "set": {"contrasts": [0]}},
-        {"label": "audiovisualCoherent", "weight": 0, "set": {}},
+        {"trialType": "visual", "weight": 0, "set": {"auditoryStimulus.amplitude": 0}},
+        {"trialType": "auditory", "weight": 1, "set": {"contrasts": [0]}},
+        {"trialType": "audiovisualCoherent", "weight": 0, "set": {}},
     ]
     assert params["contrasts"] == [1.0] and params["auditoryStimulus"] == {"amplitude": 1, "initialAzimuthsDeg": ["all"]}
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    assert [derive_label(model, c) for c in model.trial_conditions] == [c.label.value for c in model.trial_conditions]
+    assert [derive_trial_type(model, c) for c in model.trial_conditions] == [c.trial_type.value for c in model.trial_conditions]
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
     params_schema = schema["$defs"]["UclOpenCoenDomeNavigationTaskParameters"]
-    # app-rig-control reads both dome tasks one way: x-conditionFields the allow-list (TrialDraw.ConditionFields), x-rules the
-    # rules (TrialDraw.Rules); a C# test holds both to the schema.
+    # app-rig-control reads both dome tasks one way: x-condition-fields the allow-list (TrialDraw.ConditionFields, a C# test
+    # holds it to the schema), x-rules the rules, x-trial-types the names.
     # decision-making's condition fields where the corridor has them (Pip, 18 Nov 2026).
-    assert params_schema["x-conditionFields"] == list(CONDITION_FIELDS) == [
+    assert params_schema["x-condition-fields"] == list(CONDITION_FIELDS) == [
         "contrasts", "auditoryStimulus.amplitude", "auditoryStimulus.initialAzimuthsDeg", "optogenetics.laserOnProbability", "reward.rewardSizeUl", "autoRewardProbability"]
     # initialAzimuthsDeg's items a number or "all", oneOf as decision-making's (Bonsai.Sgen's List<object>).
     azimuths = schema["$defs"]["AuditoryStimulus"]["properties"]["initialAzimuthsDeg"]
     assert azimuths["default"] == ["all"] and azimuths["items"] == {"oneOf": [{"type": "number"}, {"const": "all", "type": "string"}]}
-    assert params_schema["x-rules"] == [dict(rule) for rule in RULES]
-    assert params_schema["x-labels"] == [dict(label) for label in LABELS]
+    assert params_schema["x-rules"] == list(RULES)
+    assert params_schema["x-trial-types"] == list(TRIAL_TYPES)
     assert params_schema["properties"]["trialConditions"]["x-whole"] is True
-    assert [label.value for label in TrialLabel] == schema["$defs"]["TrialLabel"]["enum"] == ["visual", "auditory", "audiovisualCoherent", "neutral"]
+    assert [t.value for t in TrialType] == schema["$defs"]["TrialType"]["enum"] == ["visual", "auditory", "audiovisualCoherent", "neutral"]
 
 
 def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
-    # The curriculum's path A visual, path B auditory: a stage's conditions say what its trials show, whatever their label.
+    # The curriculum's path A visual, path B auditory: a stage's conditions say what its trials show, whatever their trialType.
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"label": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": 0, "contrasts": [0.5, 1.0]}}]
+    params["trialConditions"] = [{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": 0, "contrasts": [0.5, 1.0]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    params["trialConditions"] = [{"label": "auditory", "weight": 1, "set": {"contrasts": [0], "auditoryStimulus.amplitude": [0.5, 1]}}]
+    params["trialConditions"] = [{"trialType": "auditory", "weight": 1, "set": {"contrasts": [0], "auditoryStimulus.amplitude": [0.5, 1]}}]
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    assert derive_label(model, model.trial_conditions[0]) == "auditory"
+    assert derive_trial_type(model, model.trial_conditions[0]) == "auditory"
 
 
-@pytest.mark.parametrize("set_, label", [
+@pytest.mark.parametrize("set_, trial_type", [
     ({}, "audiovisualCoherent"), ({"contrasts": [0]}, "auditory"), ({"auditoryStimulus.amplitude": 0}, "visual"),
     ({"contrasts": [0], "auditoryStimulus.amplitude": 0}, "neutral"), ({"contrasts": [0, 0.5], "auditoryStimulus.amplitude": [0, 2]}, "audiovisualCoherent"),
     ({"contrasts": [0, 0.5]}, "audiovisualCoherent"), ({"contrasts": [0, 0], "auditoryStimulus.amplitude": [0, 0.5]}, "auditory"),
     ({"auditoryStimulus.initialAzimuthsDeg": [0]}, "audiovisualCoherent"), ({"contrasts": [0], "auditoryStimulus.initialAzimuthsDeg": ["all"]}, "auditory"),
     ({"contrasts": [0.5], "auditoryStimulus.amplitude": [0, 0]}, "visual")])
-def test_the_label_is_derived_from_what_the_condition_shows(set_, label):
-    model = UclOpenCoenDomeNavigationTaskParameters.model_validate({**task()["taskParameters"], "trialConditions": [{"label": "neutral", "weight": 1, "set": set_}]})
-    assert derive_label(model, model.trial_conditions[0]) == label
+def test_the_trial_type_is_derived_from_what_the_condition_shows(set_, trial_type):
+    model = UclOpenCoenDomeNavigationTaskParameters.model_validate({**task()["taskParameters"], "trialConditions": [{"trialType": "neutral", "weight": 1, "set": set_}]})
+    assert derive_trial_type(model, model.trial_conditions[0]) == trial_type
 
 
-def test_a_rule_s_then_and_one_of_are_checked():
-    # The corridor's rules only say what goes unread; rule_problems checks a then or oneOf as coen-dome-decision-making's does.
+def test_the_rules_say_what_goes_unread():
+    # The corridor's rules only say what goes unread (open_rigs.rigs.conditions evaluates them).
     values = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"]).model_dump(by_alias=True, mode="json")
-    assert rule_problems(values) == []
-    values["contrasts"] = [0, 0]
-    rules = [{"when": "contrasts", "is": 0, "then": {"auditoryStimulus.amplitude": 2}, "oneOf": {"wrongLickLimit": [5]}}]
-    assert rule_problems(values, rules) == ["contrasts 0 needs auditoryStimulus.amplitude 2 (x-rules)", "contrasts 0 needs wrongLickLimit one of 5 (x-rules)"]
+    values.update(contrasts=[0, 0], autoRewardProbability=0.5)
+    assert unused_paths(RULES, values) == {"visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd", "stimulusOff.trackFractions", "stimulusOff.stimuli"}
 
 
 @pytest.mark.parametrize(
     "conditions, match",
     [
         ([], "at least 1 item"),
-        ([{"label": "auditory", "weight": 0}], "weight above 0"),
-        ([{"label": "auditory", "weight": -1}], "greater than or equal"),
-        ([{"label": "auditory", "weight": 1000001}], "less than or equal"),
-        ([{"label": "audiovisualConflict", "weight": 1}], "Input should be 'visual', 'auditory', 'audiovisualCoherent' or 'neutral'"),
-        ([{"label": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets or pairs rewardSizeUl, which is not a condition field"),
-        ([{"label": "visual", "weight": 1, "set": {"optogenetics.laserOnProbability": 1}}], r"sets optogenetics.laserOnProbability with optogenetics off"),
-        ([{"label": "visual", "weight": 1, "set": {"reward.rewardSizeUl": 0}}], r"(?s)with \{'reward.rewardSizeUl': 0\}.*greater than 0"),
-        ([{"label": "visual", "weight": 1, "set": {"autoRewardProbability": 2}}], r"less than or equal to 1"),
-        ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": [200]}}], r"outside \[-180, 180\]"),
-        ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": ["left"]}}], r"Input should be 'all'"),
-        ([{"label": "visual", "weight": 1, "colour": 1}], "Extra inputs"),
-        ([{"label": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": -1}}], r"(?s)trial_conditions\[0\] \(visual\) with .*greater than or equal to 0"),
-        ([{"label": "visual", "weight": 1, "set": {"contrasts": [0.5, -1]}}], r"(?s)with \{'contrasts': \[-1\]\}.*contrasts must each be 0 or more"),
-        ([{"label": "visual", "weight": 1, "set": {"contrasts": []}}], "contrasts is an empty list"),
-        ([{"label": "visual", "weight": 1, "set": {"contrasts": [0.5, 1], "auditoryStimulus.amplitude": [1]}, "pairs": [["contrasts", "auditoryStimulus.amplitude"]]}],
+        ([{"trialType": "auditory", "weight": 0}], "weight above 0"),
+        ([{"trialType": "auditory", "weight": -1}], "greater than or equal"),
+        ([{"trialType": "auditory", "weight": 1000001}], "less than or equal"),
+        ([{"trialType": "audiovisualConflict", "weight": 1}], "Input should be 'visual', 'auditory', 'audiovisualCoherent' or 'neutral'"),
+        ([{"trialType": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets or pairs rewardSizeUl, which is not a condition field"),
+        ([{"trialType": "visual", "weight": 1, "set": {"optogenetics.laserOnProbability": 1}}], r"sets optogenetics.laserOnProbability with optogenetics off"),
+        ([{"trialType": "visual", "weight": 1, "set": {"reward.rewardSizeUl": 0}}], r"(?s)with \{'reward.rewardSizeUl': 0\}.*greater than 0"),
+        ([{"trialType": "visual", "weight": 1, "set": {"autoRewardProbability": 2}}], r"less than or equal to 1"),
+        ([{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": [200]}}], r"outside \[-180, 180\]"),
+        ([{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": ["left"]}}], r"Input should be 'all'"),
+        ([{"trialType": "visual", "weight": 1, "colour": 1}], "Extra inputs"),
+        ([{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": -1}}], r"(?s)trial_conditions\[0\] \(visual\) with .*greater than or equal to 0"),
+        ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [0.5, -1]}}], r"(?s)with \{'contrasts': \[-1\]\}.*contrasts must each be 0 or more"),
+        ([{"trialType": "visual", "weight": 1, "set": {"contrasts": []}}], "contrasts is an empty list"),
+        ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [0.5, 1], "auditoryStimulus.amplitude": [1]}, "pairs": [["contrasts", "auditoryStimulus.amplitude"]]}],
          "paired lists must be equally long"),
-        ([{"label": "visual", "weight": 1, "pairs": [["contrasts"]]}], "each pairs group needs two paths or more"),
-        ([{"label": "visual", "weight": 1, "set": {"contrasts": [i / 10 for i in range(1, 10)], "auditoryStimulus.amplitude": [i / 10 for i in range(1, 9)]}}],
+        ([{"trialType": "visual", "weight": 1, "pairs": [["contrasts"]]}], "each pairs group needs two paths or more"),
+        ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [i / 10 for i in range(1, 10)], "auditoryStimulus.amplitude": [i / 10 for i in range(1, 9)]}}],
          "expands into 72 combinations, more than 64"),
     ],
 )
@@ -169,7 +167,7 @@ def test_weights_may_add_to_the_draw_s_int_and_no_more():
     logic = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
     assert MAX_WEIGHT_SUM == 2**31 - 1 and "Sum(c => (long)c.Weight) > int.MaxValue" in logic
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"label": "visual", "weight": 1000000}] * 2147 + [{"label": "auditory", "weight": 483647}]
+    params["trialConditions"] = [{"trialType": "visual", "weight": 1000000}] * 2147 + [{"trialType": "auditory", "weight": 483647}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     params["trialConditions"][-1]["weight"] = 483648
     with pytest.raises(pydantic.ValidationError, match=f"weights add to more than {MAX_WEIGHT_SUM}"):
@@ -178,7 +176,7 @@ def test_weights_may_add_to_the_draw_s_int_and_no_more():
 
 def test_a_condition_s_set_may_be_left_out_and_the_mix_is_required():
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"label": "audiovisualCoherent", "weight": 3}]
+    params["trialConditions"] = [{"trialType": "audiovisualCoherent", "weight": 3}]
     assert UclOpenCoenDomeNavigationTaskParameters.model_validate(params).trial_conditions[0].set == {}
     del params["trialConditions"]
     with pytest.raises(pydantic.ValidationError, match="trialConditions"):
@@ -337,7 +335,8 @@ def test_the_committed_task_schema_is_the_model_s():
 
 def _property_names(node) -> set[str]:
     if isinstance(node, dict):
-        return set(node.get("properties", {})) | {n for v in node.values() for n in _property_names(v)}
+        # x-rules and x-trial-types hold subschemas over dotted paths, not fields.
+        return set(node.get("properties", {})) | {n for k, v in node.items() if not k.startswith("x-") for n in _property_names(v)}
     return {n for v in node for n in _property_names(v)} if isinstance(node, list) else set()
 
 
@@ -533,7 +532,7 @@ def test_the_task_file_dumps_back_unchanged():
 
 def test_a_condition_sets_its_reward_auto_reward_and_where_the_pips_play():
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"label": "auditory", "weight": 1, "set": {
+    params["trialConditions"] = [{"trialType": "auditory", "weight": 1, "set": {
         "contrasts": [0], "reward.rewardSizeUl": [2, 4], "autoRewardProbability": 0, "auditoryStimulus.initialAzimuthsDeg": [-60, "all"]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     assert params["auditoryStimulus"]["initialAzimuthsDeg"] == ["all"]   # the task file's: every speaker, as before
