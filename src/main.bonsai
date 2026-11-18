@@ -32,7 +32,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the parameter a controller may change until Go (TrainingStage; the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath); the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go; TrainingStage (OpenRigs.Control) publishes TrainingStage at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its trainingPipeline the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go. TaskFile publishes the stage as TrainingCodeVersion (code-version, like S03A-k7f2, from the task file's trainingPipeline) at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -47,16 +47,7 @@
               <SessionId />
               <LaunchId />
               <ControlEndpoint>@tcp://127.0.0.1:5561</ControlEndpoint>
-              <Parameters>
-                <Parameter>
-                  <Name>TrainingStage</Name>
-                  <Value>0</Value>
-                  <Description>The id of the training pipeline stage to run (K:\config\training-pipelines\coen-dome-navigation\task-abstract-corridor.yml), 0 to 99: rig-control writes that stage's values into the task file with its id as trainingPipeline.id, and Go stops the workflow when the two differ.</Description>
-                  <Minimum>0</Minimum>
-                  <Maximum>99</Maximum>
-                  <WholeNumber>true</WholeNumber>
-                </Parameter>
-              </Parameters>
+              <Parameters />
               <Commands />
             </Expression>
             <Expression xsi:type="ExternalizedMapping">
@@ -66,7 +57,6 @@
               <SubjectId />
               <TaskPath>..\config\task-abstract-corridor.yml</TaskPath>
             </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:TrainingStage.bonsai" />
           </Nodes>
           <Edges>
             <Edge From="0" To="2" Label="Source1" />
@@ -78,7 +68,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskFile</Name>
-        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\sounds\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with the stage, rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create: a stage past the table, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is ConnectForTask's refusal.</Description>
+        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\sounds\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create: a trainingPipeline empty or malformed, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is ConnectForTask's refusal.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -138,9 +128,6 @@
               <Name>TaskConfig</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>TrainingStage</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
               <Name>RigConfigs</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
@@ -156,6 +143,21 @@
             <Expression xsi:type="rx:AsyncSubject">
               <Name>TrialRules</Name>
             </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TrialRules</Name>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>TrainingCodeVersion</Selector>
+            </Expression>
+            <Expression xsi:type="rx:AsyncSubject">
+              <Name>TrainingCodeVersion</Name>
+              <Description>The stage as code-version (S03A-k7f2) from the task file's trainingPipeline, found well formed by CheckTaskAtGo.</Description>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="orcl:ReportMetric">
+                <orcl:Name>trainingStage</orcl:Name>
+              </Combinator>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
@@ -168,15 +170,17 @@
             <Edge From="8" To="9" Label="Source1" />
             <Edge From="9" To="10" Label="Source1" />
             <Edge From="10" To="11" Label="Source1" />
-            <Edge From="16" To="20" Label="Source1" />
-            <Edge From="17" To="20" Label="Source2" />
-            <Edge From="18" To="20" Label="Source3" />
+            <Edge From="16" To="19" Label="Source1" />
+            <Edge From="17" To="19" Label="Source2" />
+            <Edge From="18" To="19" Label="Source3" />
+            <Edge From="19" To="20" Label="Source1" />
             <Edge From="20" To="21" Label="Source1" />
-            <Edge From="21" To="22" Label="Source1" />
+            <Edge From="22" To="23" Label="Source1" />
+            <Edge From="23" To="24" Label="Source1" />
+            <Edge From="24" To="25" Label="Source1" />
             <Edge From="12" To="13" Label="Source1" />
             <Edge From="13" To="14" Label="Source1" />
             <Edge From="14" To="15" Label="Source1" />
-            <Edge From="19" To="20" Label="Source4" />
           </Edges>
         </Workflow>
       </Expression>
@@ -445,7 +449,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Status</Name>
-        <Description>The current trial's facts as metrics, named as WorkflowData_Trials's columns (trialNumber, trialType, rewardOfferedUl, laserCondition; the trainingStage is TrainingStage's), at each trial's start; rig-control computes counts and performance from the trial rows.</Description>
+        <Description>The current trial's facts as metrics, named as WorkflowData_Trials's columns (trialNumber, trialType, rewardOfferedUl, laserCondition; the trainingStage, code-version, is TaskFile's), at each trial's start; rig-control computes counts and performance from the trial rows.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">

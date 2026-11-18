@@ -108,23 +108,26 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     int nextStep, wrongLicks;
     double auditoryOffPositionCm, visualOffPositionCm;  // where each switched off this trial; NaN: it never did
 
-    public TrialRules(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
+    public TrialRules(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
     {
         this.task = task;
         this.sweep = sweep;
-        draw = new TrialDraw(task, stage, sweep, zapitConditionCount);
+        draw = new TrialDraw(task, sweep, zapitConditionCount);
         var opto = task.Optogenetics;
         // Every StartStimulus continuous: the laser on from the trigger until the outcome or LaserCap, the trigger line
         // (and the masking light on it) held triggerHoldSeconds past the outcome, the next trial armed once it falls.
         laser = opto.Enabled ? LaserTiming.UntilOutcome(hardwareTriggered, opto.TriggerHoldSeconds, opto.LaserMaxSeconds) : null;
     }
 
-    /// <summary>The rules for a task file's stage with the sweep and Zapit's hardware triggering; throws naming every
+    /// <summary>The rules for a task file with the sweep and Zapit's hardware triggering; throws naming every
     /// problem (TrialDraw.CheckTask).</summary>
-    public static TrialRules Create(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
+    public static TrialRules Create(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount)
     {
-        return new TrialRules(task, stage, sweep, hardwareTriggered, zapitConditionCount);
+        return new TrialRules(task, sweep, hardwareTriggered, zapitConditionCount);
     }
+
+    /// <summary>The stage as code-version (S03A-k7f2) from the task file's trainingPipeline, which the check has found well formed.</summary>
+    public string TrainingCodeVersion { get { return task.TrainingPipeline.Code + "-" + task.TrainingPipeline.Version; } }
 
     /// <summary>The laser in an optogenetics experiment (the trigger line only rises in one); null without.</summary>
     public LaserTiming Laser { get { return laser; } }
@@ -310,32 +313,38 @@ public class TrialDraw
     /// <summary>The seed the random stream started from: the task's rngSeed, or one drawn when it is null.</summary>
     public int Seed { get; private set; }
 
-    public TrialDraw(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep, Func<string, int> zapitConditionCount)
+    public TrialDraw(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, Func<string, int> zapitConditionCount)
     {
         this.task = task;
-        CheckTask(task, stage, sweep);
+        CheckTask(task, sweep);
         var opto = task.Optogenetics;
         if (opto.Enabled) conditionCount = zapitConditionCount != null ? zapitConditionCount(opto.ZapitConditionsPath) : ZapitConditions.Check(opto.ZapitConditionsPath);
         Seed = RngSeed.Resolve(task.RngSeed);
         random = new Random(Seed);
     }
 
-    /// <summary>Checks the task can be run as the stage with the sweep: its values came from that stage of the training
-    /// pipeline (trainingPipeline.id, filled by rig-control, equals the TrainingStage setting, so one stage's values never
-    /// run under another's id), what pydantic would check (Bonsai reads the task file without it) and what only the
-    /// sweep can say; throws naming every problem.</summary>
-    public static void CheckTask(UclOpenCoenDomeNavigationTaskParameters task, int stage, Sweep sweep)
+    /// <summary>What is wrong with a trainingPipeline (null when present and well formed: an id of 0 or more, a code like S03A, a
+    /// 4-character version, a path of one capital letter, a label and a sha256), else the reason.</summary>
+    public static string PipelineProblem(TrainingPipeline pipeline)
     {
-        var pipeline = task.TrainingPipeline;
-        // No id or no sha256: not filled by rig-control, so the summary could not say which pipeline ran (as decision-making)
-        if (pipeline == null || !pipeline.Id.HasValue || string.IsNullOrEmpty(pipeline.Sha256))
-        {
-            throw new InvalidOperationException(string.Format("TrainingStage is {0}, but the task file's trainingPipeline names no stage or no pipeline sha256: rig-control fills it from the training pipeline at launch.", stage));
-        }
-        if (pipeline.Id.Value != stage)
-        {
-            throw new InvalidOperationException(string.Format("TrainingStage is {0}, but the task file's values are training pipeline stage {1}'s (trainingPipeline.id): one stage's values never run under another's id.", stage, pipeline.Id.Value));
-        }
+        if (pipeline == null) return "is empty";
+        var bad = new List<string>();
+        if (pipeline.Id < 0) bad.Add("id " + pipeline.Id + " is below 0");
+        if (pipeline.Code == null || !System.Text.RegularExpressions.Regex.IsMatch(pipeline.Code, @"^S\d{2}[A-Z]$")) bad.Add("code '" + pipeline.Code + "' is not like S03A");
+        if (pipeline.Version == null || !System.Text.RegularExpressions.Regex.IsMatch(pipeline.Version, "^[abcdefghjkmnpqrstuvwxyz23456789]{4}$")) bad.Add("version '" + pipeline.Version + "' is not 4 characters of abcdefghjkmnpqrstuvwxyz23456789");
+        if (pipeline.Path == null || !System.Text.RegularExpressions.Regex.IsMatch(pipeline.Path, "^[A-Z]$")) bad.Add("path '" + pipeline.Path + "' is not one capital letter");
+        if (string.IsNullOrEmpty(pipeline.Label)) bad.Add("label is empty");
+        if (string.IsNullOrEmpty(pipeline.Sha256)) bad.Add("sha256 is empty");
+        return bad.Count == 0 ? null : "is malformed (" + string.Join("; ", bad) + ")";
+    }
+
+    /// <summary>Checks the task can be run with the sweep: its trainingPipeline (the only record of the stage, filled by
+    /// rig-control) is present and well formed, what pydantic would check (Bonsai reads the task file without it) and what only the
+    /// sweep can say; throws naming every problem.</summary>
+    public static void CheckTask(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep)
+    {
+        var pipelineProblem = PipelineProblem(task.TrainingPipeline);
+        if (pipelineProblem != null) throw new InvalidOperationException("The task file's trainingPipeline " + pipelineProblem + ": rig-control fills it from the training pipeline at launch.");
         var problems = new List<string>();
         // A NaN or infinite value (YAML's .nan or .inf) would hold the trial start or a penalty timeout for ever, with no error.
         Action<string, double, bool> number = (name, value, aboveZero) =>
@@ -452,13 +461,13 @@ public class TrialDraw
 }
 
 [Combinator]
-[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (task file, TrainingStage, rig.yml, sweep). Stops the workflow on a task whose trainingPipeline.id or sha256 is missing or whose id is not the TrainingStage, a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
+[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (task file, rig.yml, sweep). Stops the workflow on a task whose trainingPipeline is empty or malformed, a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CheckTaskAtGo
 {
-    public IObservable<TrialRules> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, int, LabRig, Sweep>> source)
+    public IObservable<TrialRules> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, LabRig, Sweep>> source)
     {
-        return source.Select(x => TrialRules.Create(x.Item1.TaskParameters, x.Item2, x.Item4, x.Item3.Zapit != null && x.Item3.Zapit.HardwareTriggered, null));
+        return source.Select(x => TrialRules.Create(x.Item1.TaskParameters, x.Item3, x.Item2.Zapit != null && x.Item2.Zapit.HardwareTriggered, null));
     }
 }
 

@@ -41,16 +41,16 @@ def test_the_stages_are_the_pipeline_s_and_the_file_has_stage_0_s_values():
     # at launch); the file holds the defaults, stage 0's (Zone Reward, Drift), and an empty trainingPipeline.
     params = task()["taskParameters"]
     assert "trainingStages" not in params
-    assert params["trainingPipeline"] == {"id": None, "label": None, "sha256": None}
+    assert params["trainingPipeline"] is None
     stage_0 = {"rewardFloorHz": 18000, "rewardCeilingHz": 25000, "autoRewardProbability": 1.0, "wrongLickLimit": 0, "lickQuietSeconds": 0,
                "responseWindowSeconds": None, "wheelGain": 8.0, "autoProgressPerSecond": 0.04, "stimulusOffProbability": 0.0}
     assert {key: params[key] for key in stage_0} == stage_0
     assert (params["trialStructure"]["wheelQuietSeconds"], params["trialStructure"]["wheelQuietCm"]) == (0, 0)
 
 
-@pytest.mark.parametrize("pipeline", ["absent", {}, {"id": None, "label": None, "sha256": None}, {"id": 3, "label": "Ceiling In", "sha256": "ab12"}])
+@pytest.mark.parametrize("pipeline", ["absent", None, {"id": 3, "code": "S03A", "version": "k7f2", "path": "A", "label": "Ceiling In", "sha256": "ab12"}])
 def test_training_pipeline_is_optional_in_the_model_and_the_schema(pipeline):
-    # rig-control fills it at launch; Go (TrialLogic.cs CheckTask) refuses it missing or naming another stage.
+    # rig-control fills it at launch; Go (TrialLogic.cs CheckTask) refuses it missing or malformed.
     doc = task()
     if pipeline == "absent":
         del doc["taskParameters"]["trainingPipeline"]
@@ -276,10 +276,16 @@ def test_the_generated_csharp_has_every_schema_field():
     assert names == _property_names(json.loads(SCHEMA.read_text(encoding="utf-8")))
 
 
-def test_training_stage_takes_any_pipeline_id_up_to_99():
-    # TrainingStage carries the pipeline stage's id (ids are never reused); rig-control's page refuses one above 99.
-    declared = re.search(r"<Name>TrainingStage</Name>.*?<Maximum>(\d+)</Maximum>", (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig"), re.S)
-    assert int(declared.group(1)) == 99
+@pytest.mark.parametrize("key, bad", [("id", -1), ("code", "S3A"), ("code", "s03a"), ("code", "S03AB"), ("version", "k7f"), ("version", "k7f1"), ("version", "K7F2"),
+                                      ("path", "a"), ("path", "AB"), ("label", None), ("sha256", None)])
+def test_a_malformed_training_pipeline_is_refused_by_the_model_and_the_schema(key, bad):
+    # The only record of the stage, exactly the fields rig-control writes, each checked; no TrainingStage parameter.
+    doc = task()
+    doc["taskParameters"]["trainingPipeline"] = {**{"id": 3, "code": "S03A", "version": "k7f2", "path": "A", "label": "Ceiling In", "sha256": "ab12"}, key: bad}
+    with pytest.raises(pydantic.ValidationError):
+        UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
+    assert list(jsonschema.Draft202012Validator(_closed(json.loads(SCHEMA.read_text(encoding="utf-8")))).iter_errors(doc)) != []
+    assert "TrainingStage" not in (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
 
 
 def test_a_reward_over_the_cap_is_refused():

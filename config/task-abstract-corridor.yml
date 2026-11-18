@@ -65,6 +65,6 @@ taskParameters:
   wheelGain: 8.0              # track cm per wheel cm
   autoProgressPerSecond: 0.04   # of the track per second on its own: the whole track in 25 s
   stimulusOffProbability: 0.0
-  # The pipeline stage these values came from: rig-control fills it at launch, and Go refuses a task whose id is
-  # missing or differs from the Training Stage setting. Empty here.
-  trainingPipeline: { id: null, label: null, sha256: null }
+  # The pipeline stage these values came from, the task file's only record of the stage: rig-control fills it at launch
+  # (id, code, version, path, label, sha256), and Go refuses a task whose trainingPipeline is empty or malformed. Empty here.
+  trainingPipeline:

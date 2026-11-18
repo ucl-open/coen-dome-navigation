@@ -1,9 +1,9 @@
 ﻿"""The task file's schema: config/task-abstract-corridor.yml, which rig-control copies at launch and again at Go with the
 form's edits; the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest. Ported from Tom Childs' auditory-vr-corridor task.py.
 
-The stage is the TrainingStage experiment setting, the id of a stage of the lab's training pipeline
+The stage is a stage of the lab's training pipeline, recorded only as the task file's trainingPipeline
 (K:\\config\\training-pipelines\\coen-dome-navigation\\task-abstract-corridor.yml): rig-control writes that stage's values
-over this file's flat values at launch and fills trainingPipeline; trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
+over this file's flat values at launch and fills trainingPipeline (id, code, version, path, label, sha256); trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
 sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made with the tone files
 (`uv run generate-waveforms`), not the task file's; every sound's level is the task file's (levelDbfs, in dBFS
 RMS: auditoryStimulus, rewardTone, backgroundNoise and penalty.sound)."""
@@ -153,11 +153,15 @@ class TrialCondition(TaskBlock):
 
 
 class TrainingPipeline(TaskBlock):
-    """The training pipeline stage the values came from, filled by rig-control at launch; empty in the repo's task files."""
+    """The training pipeline stage the values came from, and the task file's only record of the stage: filled by rig-control
+    at launch; empty in the repo's task files. Bonsai only records it."""
 
-    id: int | None = Field(default=None, description="The stage's id in the pipeline, which the TrainingStage setting must equal (Go refuses otherwise)")
-    label: String | None = Field(default=None, description="The stage's label in the pipeline")
-    sha256: String | None = Field(default=None, description="The sha256 of the pipeline file's text rig-control ran it from")
+    id: int = Field(ge=0, description="The stage's id in the pipeline, fixed and hidden: never shown to the experimenter")
+    code: String = Field(pattern=r"^S\d{2}[A-Z]$", description="The stage's code in the pipeline, S then two digits then a capital letter (S03A)")
+    version: String = Field(pattern=r"^[abcdefghjkmnpqrstuvwxyz23456789]{4}$", description="The stage's version, 4 characters from abcdefghjkmnpqrstuvwxyz23456789 (k7f2)")
+    path: String = Field(pattern=r"^[A-Z]$", description="The stage's path in the pipeline, one capital letter (A)")
+    label: String = Field(description="The stage's label in the pipeline")
+    sha256: String = Field(description="The sha256 of the pipeline file's text rig-control ran it from")
 
 
 class RewardSettings(RewardSize):
@@ -211,7 +215,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
     stimulus_off_probability: Double = Field(default=0.0, ge=0, le=1, description="Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial")
     training_pipeline: TrainingPipeline | None = Field(
         default=None,
-        description="The training pipeline stage these values came from (id, label, sha256 of the pipeline file), filled by rig-control at launch; Go refuses a task whose id is missing or differs from the TrainingStage setting",
+        description="The training pipeline stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose trainingPipeline is empty or malformed",
     )
 
     @model_validator(mode="after")

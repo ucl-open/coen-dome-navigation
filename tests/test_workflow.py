@@ -70,9 +70,15 @@ def test_the_launch_properties():
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
     # trialType as coen-dome-decision-making reports it: the view's type_metric.
-    assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition"}
-    # trainingStage is OpenRigs.Control's TrainingStage's.
-    assert lint.training_stage_problems(WORKFLOW) == []
+    assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition", "trainingStage"}
+    # trainingStage is TaskFile's: the task file's trainingPipeline as code-version, found well formed by CheckTaskAtGo.
+    assert "TrainingStage" not in TEXT
+    nodes, edges = _scope(group("TaskFile"))
+    (subject,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "TrainingCodeVersion"]
+    (source,) = [a for a, b, *_ in edges if b == subject]
+    assert nodes[source].get(XSI) == "MemberSelector" and nodes[source].findtext(W + "Selector") == "TrainingCodeVersion"
+    (metric,) = [b for a, b, *_ in edges if a == subject]
+    assert "trainingStage" in ET.tostring(nodes[metric], encoding="unicode")
 
 
 def test_stimulus_state_reaches_disk_row_by_row():
@@ -350,7 +356,7 @@ def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
     assert "ExperimentGo" not in labels
     (setup,) = [i for i, n in enumerate(nodes) if "ext:CheckTaskAtGo" in combinators(n)]
     zip_ = next(a for a, b in edges if b == setup)
-    assert [nodes[a].findtext(W + "Name") for a, b in sorted(edges, key=lambda e: e[0]) if b == zip_] == ["TaskConfig", "TrainingStage", "RigConfigs", "Sweep"]
+    assert [nodes[a].findtext(W + "Name") for a, b in sorted(edges, key=lambda e: e[0]) if b == zip_] == ["TaskConfig", "RigConfigs", "Sweep"]
     assert "SweepFile" not in ET.tostring(nodes[setup], encoding="unicode")
     # The pips' reader takes its rate and its 50 ms pip's length from the sweep, not typed values.
     nodes, upstream = _audio_chain("PipBuffers")

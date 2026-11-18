@@ -62,8 +62,14 @@ static class Fixture
         task.WheelGain = v[6].Value;
         task.AutoProgressPerSecond = v[7].Value;
         task.StimulusOffProbability = v[8].Value;
-        task.TrainingPipeline = new TrainingPipeline { Id = stage, Label = "stage " + stage, Sha256 = "test" };
+        task.TrainingPipeline = Pipeline(stage);
         return task;
+    }
+
+    /// <summary>A well formed trainingPipeline for a stage (id, code S0nA, a fixed version, path A).</summary>
+    public static TrainingPipeline Pipeline(int id)
+    {
+        return new TrainingPipeline { Id = id, Code = "S0" + id + "A", Version = "k7f2", Path = "A", Label = "stage " + id, Sha256 = "test" };
     }
 
     public static Sweep Sweep()
@@ -71,14 +77,14 @@ static class Fixture
         return global::Sweep.Load(Path.Combine(Repo(), "src", "sounds", "sweep.json"));
     }
 
-    public static TrialRules Setup(UclOpenCoenDomeNavigationTaskParameters task, int stage, bool hardware = true)
+    public static TrialRules Setup(UclOpenCoenDomeNavigationTaskParameters task, bool hardware = true)
     {
-        return TrialRules.Create(task, stage, Sweep(), hardware, path => 4);
+        return TrialRules.Create(task, Sweep(), hardware, path => 4);
     }
 
-    public static TrialDraw Draw(UclOpenCoenDomeNavigationTaskParameters task, int stage)
+    public static TrialDraw Draw(UclOpenCoenDomeNavigationTaskParameters task)
     {
-        return new TrialDraw(task, stage, Sweep(), path => 4);
+        return new TrialDraw(task, Sweep(), path => 4);
     }
 
     public static void Opto(UclOpenCoenDomeNavigationTaskParameters task)
@@ -146,25 +152,33 @@ public class TrialDrawTests
     {
         // As coen-dome-decision-making's, no public mutable fields, the checks in TrialDraw.CheckTask.
         Assert.AreEqual(0, typeof(TrialRules).GetFields(BindingFlags.Public | BindingFlags.Instance).Length);
-        TrialDraw.CheckTask(Fixture.Task(2), 2, Fixture.Sweep());
+        TrialDraw.CheckTask(Fixture.Task(2), Fixture.Sweep());
     }
 
     [TestMethod]
-    public void OneStagesValuesNeverRunUnderAnothersId()
+    public void TheTrainingPipelineIsTheTaskFilesOnlyRecordOfTheStage()
     {
-        // trainingPipeline names the stage the values came from; Go refuses any other TrainingStage, and a task file
-        // rig-control has not filled (the repo's, its trainingPipeline empty).
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.Task(2), 3)).Message, "TrainingStage is 3, but the task file's values are training pipeline stage 2's");
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.FromFile(), 0)).Message, "trainingPipeline names no stage");
-        var noId = Fixture.Task(0);
-        noId.TrainingPipeline.Id = null;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(noId, 0)).Message, "trainingPipeline names no stage");
-        var noSha = Fixture.Task(0);  // the summary could not say which pipeline ran (audit 17 Nov 2026, as decision-making)
-        noSha.TrainingPipeline.Sha256 = null;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(noSha, 0)).Message, "trainingPipeline names no stage");
-        var task = Fixture.Task(0);
-        task.TrainingPipeline.Id = 42;   // an id past the old rows: the pipeline's ids are never reused
-        Fixture.Setup(task, 42);
+        // Go refuses a task file rig-control has not filled (the repo's, its trainingPipeline empty) or filled malformed.
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.FromFile())).Message, "The task file's trainingPipeline is empty");
+        foreach (var field in new[] { "code", "version", "path", "label", "sha256", "id" })
+        {
+            var task = Fixture.Task(0);
+            switch (field)
+            {
+                case "code": task.TrainingPipeline.Code = "S3A"; break;
+                case "version": task.TrainingPipeline.Version = "k7f1"; break;
+                case "path": task.TrainingPipeline.Path = "a"; break;
+                case "label": task.TrainingPipeline.Label = ""; break;
+                case "sha256": task.TrainingPipeline.Sha256 = null; break;
+                case "id": task.TrainingPipeline.Id = -1; break;
+            }
+            var message = Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message;
+            StringAssert.Contains(message, "The task file's trainingPipeline is malformed (");
+            StringAssert.Contains(message, field == "id" ? "id -1" : field);
+        }
+        var big = Fixture.Task(0);
+        big.TrainingPipeline.Id = 42;   // an id past the old rows: the pipeline's ids are never reused
+        Assert.AreEqual("S00A-k7f2", Fixture.Setup(big).TrainingCodeVersion);
     }
 
     [TestMethod]
@@ -173,7 +187,7 @@ public class TrialDrawTests
         var logic = new UclOpenCoenDomeNavigationTaskLogic { TaskParameters = Fixture.Task() };
         var rig = new LabRig();   // rig.yml with no zapit block: Zapit is null
         Assert.IsNull(rig.Zapit);
-        var rules = new CheckTaskAtGo().Process(Observable.Return(Tuple.Create(logic, 0, rig, Fixture.Sweep()))).Wait();
+        var rules = new CheckTaskAtGo().Process(Observable.Return(Tuple.Create(logic, rig, Fixture.Sweep()))).Wait();
         Assert.IsNull(rules.Laser);
     }
 
@@ -182,14 +196,14 @@ public class TrialDrawTests
     {
         var task = Fixture.Task(0);
         task.TrialStructure.TrackLengthsCm.Clear();
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 0)).Message, "trackLengthsCm");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, "trackLengthsCm");
     }
 
     [TestMethod]
     public void TheSameSeedDrawsTheSameTrials()
     {
-        var a = Fixture.Draw(Fixture.Task(5), 5);
-        var b = Fixture.Draw(Fixture.Task(5), 5);
+        var a = Fixture.Draw(Fixture.Task(5));
+        var b = Fixture.Draw(Fixture.Task(5));
         for (int i = 0; i < 50; i++)
         {
             var x = a.Next();
@@ -214,7 +228,7 @@ public class TrialDrawTests
         var task = Fixture.Task(3);
         task.TrialConditions = Conditions(1, 2, 0);
         task.TrialConditions.Add(new TrialCondition { Label = "visual", Weight = 5 });
-        var draw = Fixture.Draw(task, 3);
+        var draw = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 4000).Select(i => draw.Next()).ToList();
         var weights = new[] { 1, 2, 0, 5 };
         for (int i = 0; i < weights.Length; i++)
@@ -224,7 +238,7 @@ public class TrialDrawTests
         Assert.IsTrue(trials.All(t => t.trialType == task.TrialConditions[t.trialCondition].Label));
         task.TrialConditions = Conditions(0, 0, 0);
         task.TrialConditions.Add(new TrialCondition { Label = "visual", Weight = 1 });
-        var rig = new Rig(Fixture.Setup(task, 3));
+        var rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);
         Assert.AreEqual(3, rig.RunTo(TrialEventKind.Outcome).Outcome.Row.Value.trialCondition, "the row logs it");
@@ -238,7 +252,7 @@ public class TrialDrawTests
         var task = Fixture.Task(3);
         task.TrialConditions = Conditions(1, 2, 1);
         task.TrialConditions.Add(new TrialCondition { Label = "visual", Weight = 3 });
-        var rig = new Rig(Fixture.Setup(task, 3));
+        var rig = new Rig(Fixture.Setup(task));
         var seen = new HashSet<int>();
         for (int i = 0; i < 30; i++)
         {
@@ -265,18 +279,18 @@ public class TrialDrawTests
     {
         // The task file: auditory alone, as before trialConditions
         var task = Fixture.Task(3);
-        var file = Fixture.Draw(task, 3);
+        var file = Fixture.Draw(task);
         for (int i = 0; i < 100; i++) Assert.AreEqual("auditory", file.Next().trialType);
         task.TrialConditions = Conditions(0, 1, 3);   // weights edited on Setup
-        var draw = Fixture.Draw(task, 3);
+        var draw = Fixture.Draw(task);
         var types = Enumerable.Range(0, 4000).Select(i => draw.Next().trialType).ToList();
         Assert.AreEqual(0, types.Count(t => t == "visual"));   // weight 0: never
         Assert.AreEqual(0.75, types.Count(t => t == "audiovisualCoherent") / 4000.0, 0.03);
         Assert.AreEqual(1000, types.Count(t => t == "auditory"), 120);
-        var again = Fixture.Draw(task, 3);   // the same seed: the same types
+        var again = Fixture.Draw(task);   // the same seed: the same types
         CollectionAssert.AreEqual(types, Enumerable.Range(0, 4000).Select(i => again.Next().trialType).ToList());
         task.RngSeed = 2;
-        var other = Fixture.Draw(task, 3);
+        var other = Fixture.Draw(task);
         CollectionAssert.AreNotEqual(types, Enumerable.Range(0, 4000).Select(i => other.Next().trialType).ToList());
     }
 
@@ -299,7 +313,7 @@ public class TrialDrawTests
         {
             var task = Fixture.Task(2);
             task.TrialConditions = c.Item1;
-            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message, c.Item2);
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, c.Item2);
         }
     }
 
@@ -310,7 +324,7 @@ public class TrialDrawTests
         {
             var task = Fixture.Task(2);
             task.TrialConditions = c;
-            return Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message;
+            return Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message;
         };
         StringAssert.Contains(refusal(Conditions(TrialDraw.MaxWeight + 1, 1, 0)), "trialConditions[0] (visual): its weight is above 1000000");
         var notMap = Conditions(0, 1, 0);
@@ -326,10 +340,10 @@ public class TrialDrawTests
     {
         var task = Fixture.Task(3);
         task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = "auditory", Weight = TrialDraw.MaxWeight } };
-        var one = Fixture.Draw(task, 3);
+        var one = Fixture.Draw(task);
         Assert.IsTrue(Enumerable.Range(0, 30).Select(i => one.Next()).All(t => t.trialCondition == 0 && t.trialType == "auditory"));
         task.TrialConditions = Enumerable.Range(0, 120).Select(i => new TrialCondition { Label = TrialDraw.TypeNames[i % 3], Weight = 1 }).ToList();
-        var many = Fixture.Draw(task, 3);
+        var many = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 3000).Select(i => many.Next()).ToList();
         Assert.IsTrue(trials.All(t => t.trialType == TrialDraw.TypeNames[t.trialCondition % 3]));
         Assert.AreEqual(120, trials.Select(t => t.trialCondition).Distinct().Count());
@@ -353,7 +367,7 @@ public class TrialDrawTests
         {
             var task = Fixture.Task(1);
             task.TrialConditions = Conditions(type == "visual" ? 1 : 0, type == "auditory" ? 1 : 0, type == "audiovisualCoherent" ? 1 : 0);
-            var rig = new Rig(Fixture.Setup(task, 1));
+            var rig = new Rig(Fixture.Setup(task));
             rig.RunTo(TrialEventKind.Start);
             var pip = rig.RunTo(TrialEventKind.Update).Update;
             Assert.AreEqual(type == "visual" ? 0.0 : 1.0, pip.ToneGain, type);
@@ -366,7 +380,7 @@ public class TrialDrawTests
     [TestMethod]
     public void TheIntervalIsDrawnBeforeEveryTrialTheFirstToo()
     {
-        var draw = Fixture.Draw(Fixture.Task(0), 0);
+        var draw = Fixture.Draw(Fixture.Task(0));
         for (int i = 0; i < 100; i++)
         {
             var iti = draw.Next().itiSeconds;
@@ -377,11 +391,11 @@ public class TrialDrawTests
     [TestMethod]
     public void TheWheelRunsTheTrackOverTheStagesGainAndStimulusOffFollowsItsProbability()
     {
-        var draw = Fixture.Draw(Fixture.Task(0), 0);
+        var draw = Fixture.Draw(Fixture.Task(0));
         var drawn = Enumerable.Range(0, 200).Select(_ => draw.Next()).ToList();
         CollectionAssert.AreEqual(new[] { 10.0, 12.5, 15.0 }, drawn.Select(t => t.trackLengthCm).Distinct().OrderBy(l => l).ToList());   // 80, 100, 120 track cm at wheelGain 8
         Assert.IsTrue(drawn.All(t => t.wheelGain == 8));
-        draw = Fixture.Draw(Fixture.Task(5), 5);
+        draw = Fixture.Draw(Fixture.Task(5));
         var trials = Enumerable.Range(0, 2000).Select(_ => draw.Next()).ToList();
         var off = trials.Where(t => !double.IsNaN(t.stimulusOffFraction)).ToList();
         Assert.AreEqual(0.16, off.Count / 2000.0, 0.03);
@@ -395,14 +409,14 @@ public class TrialDrawTests
     {
         var task = Fixture.Task(4);
         Fixture.Opto(task);
-        var draw = Fixture.Draw(task, 4);
+        var draw = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 500).Select(_ => draw.Next()).ToList();
         Assert.IsTrue(trials.All(t => t.laserCondition >= 1 && t.laserCondition <= 4));
         Assert.IsTrue(trials.Take(20).All(t => !t.laserOn));
         Assert.IsTrue(trials.Where(t => !t.laserOn).All(t => t.laserPowerMw == 0));
         Assert.IsTrue(trials.Where(t => t.laserOn).All(t => t.laserPowerMw == 2.0));
         Assert.AreEqual(0.4, trials.Skip(20).Count(t => t.laserOn) / 480.0, 0.07);
-        var rules = Fixture.Setup(task, 4);
+        var rules = Fixture.Setup(task);
         Assert.IsTrue(trials.All(t => t.firstPipStep == 2 && rules.Timing(t).Laser && rules.Timing(t).LaserToStimulusSeconds == 0.1));
         Assert.IsTrue(rules.Laser.HardwareTriggered);   // armed during the interval
     }
@@ -413,7 +427,7 @@ public class TrialDrawTests
         // Only the test mouse runs there: lib-open-rigs' ConnectZapit refuses a real one (RequireZapitHardwareTrigger).
         var task = Fixture.Task(4);
         Fixture.Opto(task);
-        Assert.IsFalse(Fixture.Setup(task, 4, false).Laser.HardwareTriggered);
+        Assert.IsFalse(Fixture.Setup(task, false).Laser.HardwareTriggered);
     }
 
     [TestMethod]
@@ -424,23 +438,23 @@ public class TrialDrawTests
             var task = Fixture.Task(4);
             Fixture.Opto(task);
             task.Optogenetics.LaserToStimulusSeconds = seconds;
-            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message, "laserToStimulusSeconds");
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, "laserToStimulusSeconds");
         }
         var ok = Fixture.Task(4);
         Fixture.Opto(ok);
         ok.Optogenetics.LaserToStimulusSeconds = 0.2;
-        Assert.AreEqual(4, Fixture.Draw(ok, 4).Next().firstPipStep);
+        Assert.AreEqual(4, Fixture.Draw(ok).Next().firstPipStep);
         ok.Optogenetics.LaserToStimulusSeconds = -0.5;   // after the first pip: the first pip at the trial start, the trigger 10 steps later
-        var late = Fixture.Draw(ok, 4).Next();
-        Assert.IsTrue(late.firstPipStep == 0 && Fixture.Setup(ok, 4).Timing(late).LaserToStimulusSeconds == -0.5);
+        var late = Fixture.Draw(ok).Next();
+        Assert.IsTrue(late.firstPipStep == 0 && Fixture.Setup(ok).Timing(late).LaserToStimulusSeconds == -0.5);
         ok.Optogenetics.LaserToStimulusSeconds = -12.05;  // past stage 4's 12 s limit
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok, 4)).Message, "responseWindowSeconds");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(ok)).Message, "responseWindowSeconds");
         ok.Optogenetics.LaserToStimulusSeconds = -2.05;   // past the 2 s on a stage without one
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.Stage(ok, 2), 2)).Message, "without responseWindowSeconds");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.Stage(ok, 2))).Message, "without responseWindowSeconds");
         var tight = Fixture.Task(1);
         tight.TrialStructure.ItiMinSeconds = 0.35;
         tight.Optogenetics.LaserToStimulusSeconds = 0.2;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(tight, 1)).Message, "reply margin");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(tight)).Message, "reply margin");
     }
 
     [TestMethod]
@@ -448,11 +462,11 @@ public class TrialDrawTests
     {
         var task = Fixture.Task(1);
         task.TrialStructure.WheelQuietSeconds = 1;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "trialStructure.wheelQuietSeconds 1 and wheelQuietCm 0 are both above 0 (the wheel's quiet wait) or both 0 (off)");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, "trialStructure.wheelQuietSeconds 1 and wheelQuietCm 0 are both above 0 (the wheel's quiet wait) or both 0 (off)");
         task.TrialStructure.WheelQuietCm = 2;
-        Fixture.Setup(task, 1);
+        Fixture.Setup(task);
         task.LickQuietSeconds = -1;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 1)).Message, "lickQuietSeconds is -1, not from 0 to 10 s");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, "lickQuietSeconds is -1, not from 0 to 10 s");
     }
 
     [TestMethod]
@@ -468,13 +482,13 @@ public class TrialDrawTests
         {
             var task = Fixture.Task(4);
             c.Value(task);
-            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4), c.Key).Message, c.Key);
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task), c.Key).Message, c.Key);
         }
         var atMax = Fixture.Task(4);
         atMax.LickQuietSeconds = 10;
         atMax.TrialStructure.WheelQuietSeconds = 10;
         atMax.TrialStructure.WheelQuietCm = 20;
-        Fixture.Setup(atMax, 4);
+        Fixture.Setup(atMax);
     }
 
     [TestMethod]
@@ -498,7 +512,7 @@ public class TrialDrawTests
         {
             var task = Fixture.Task(4);
             c.Value(task);
-            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4), c.Key).Message, c.Key);
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task), c.Key).Message, c.Key);
         }
     }
 
@@ -528,8 +542,8 @@ public class TrialDrawTests
         var task = Fixture.Task(4);
         Fixture.Opto(task);
         task.Optogenetics.LaserMaxSeconds = 12.0;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message, "laserMaxSeconds");
-        Fixture.Setup(Fixture.Stage(task, 2), 2);   // the chosen stage's window alone: stage 2 has none
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, "laserMaxSeconds");
+        Fixture.Setup(Fixture.Stage(task, 2));   // the chosen stage's window alone: stage 2 has none
     }
 }
 
@@ -540,7 +554,7 @@ public class TrialRulesTests
     [TestMethod]
     public void TheFirstTrialWaitsItsIntervalAndPipsEvery50MsFromTheLead()
     {
-        var rig = new Rig(Fixture.Setup(Fixture.Task(1), 1));
+        var rig = new Rig(Fixture.Setup(Fixture.Task(1)));
         rig.Now = 100;
         var start = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(100.001 + start.Trial.itiSeconds - 0.1, start.Seconds, 1e-9);   // the trial start: the interval's end less the 0.1 s lead
@@ -555,7 +569,7 @@ public class TrialRulesTests
     public void ReachingTheZoneOnStage1IsRewardedAndTheNextIntervalRunsFromTheOutcome()
     {
         var task = Fixture.Task(1);
-        var rig = new Rig(Fixture.Setup(task, 1));
+        var rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);   // the end of a short track: the sweep's end
         var outcome = rig.RunTo(TrialEventKind.Outcome);
@@ -575,7 +589,7 @@ public class TrialRulesTests
     [TestMethod]
     public void Stage0AutoProgressesIntoTheZoneWithoutRunning()
     {
-        var rig = new Rig(Fixture.Setup(Fixture.Task(0), 0));
+        var rig = new Rig(Fixture.Setup(Fixture.Task(0)));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.AreEqual("FrequencyReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz >= 18000);
@@ -589,7 +603,7 @@ public class TrialRulesTests
         var task = Fixture.Task(0);
         task.AutoProgressPerSecond = 0.2;   // the whole track in 5 s
         task.VisualStimulus.SpatialFrequencyStartCpd = 0.05;
-        var rig = new Rig(Fixture.Setup(task, 0));
+        var rig = new Rig(Fixture.Setup(task));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         var first = rig.Events.First(e => e.Kind == TrialEventKind.Update).Update.Row;
         Assert.AreEqual(0.05, first.visualSpatialFrequencyCpd, 0.005);   // progressed a little by the first pip, after the lead
@@ -602,14 +616,14 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(4);
         task.AutoRewardProbability = 0.5;
-        var draw = Fixture.Draw(task, 4);
+        var draw = Fixture.Draw(task);
         var auto = Enumerable.Range(0, 400).Count(i => draw.Next().autoReward);
         Assert.IsTrue(auto > 150 && auto < 250, auto.ToString());
-        Assert.IsTrue(Enumerable.Range(0, 50).All(i => Fixture.Draw(Fixture.Task(1), 1).Next().autoReward));
-        var never = Fixture.Draw(Fixture.Task(4), 4);
+        Assert.IsTrue(Enumerable.Range(0, 50).All(i => Fixture.Draw(Fixture.Task(1)).Next().autoReward));
+        var never = Fixture.Draw(Fixture.Task(4));
         Assert.IsFalse(Enumerable.Range(0, 50).Any(i => never.Next().autoReward));
         task.AutoRewardProbability = 1.5;
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message, "autoRewardProbability is 1.5, not from 0 to 1");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, "autoRewardProbability is 1.5, not from 0 to 1");
     }
 
     [TestMethod]
@@ -618,7 +632,7 @@ public class TrialRulesTests
         var task = Fixture.Task(4);
         task.TrialStructure.ItiMaxSeconds = task.TrialStructure.ItiMinSeconds - 0.5;
         task.ResponseWindowSeconds = 0;
-        var message = Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 4)).Message;
+        var message = Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message;
         StringAssert.Contains(message, "trialStructure.itiMaxSeconds (");
         StringAssert.Contains(message, "responseWindowSeconds is 0, not a finite number above 0");
     }
@@ -628,7 +642,7 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(4);
         task.AutoRewardProbability = 1;
-        var rig = new Rig(Fixture.Setup(task, 4));
+        var rig = new Rig(Fixture.Setup(task));
         var start = rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.1);
         rig.Lick();                                         // ignored on an auto-reward trial
@@ -644,7 +658,7 @@ public class TrialRulesTests
     public void ALickInTheZoneIsRewardedAndOutsideCountsTowardTheLimit()
     {
         var task = Fixture.Task(4);
-        var rig = new Rig(Fixture.Setup(task, 4));  // zone 15248-21248 Hz, 5 wrong licks
+        var rig = new Rig(Fixture.Setup(task));  // zone 15248-21248 Hz, 5 wrong licks
         rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.2);
         for (int i = 0; i < 4; i++) rig.Lick();
@@ -676,8 +690,8 @@ public class TrialRulesTests
     [TestMethod]
     public void ARightLickHoldsTheStartAndNeverAnswers()
     {
-        var iti = new Rig(Fixture.Setup(Fixture.Task(4), 4)).RunTo(TrialEventKind.Start).Trial.itiSeconds;
-        var r = new Rig(Fixture.Setup(Fixture.Task(4), 4));
+        var iti = new Rig(Fixture.Setup(Fixture.Task(4))).RunTo(TrialEventKind.Start).Trial.itiSeconds;
+        var r = new Rig(Fixture.Setup(Fixture.Task(4)));
         var at = Math.Round(0.001 + iti - 0.5, 3);
         r.Until(at);
         r.Lick(1);                                          // the right spout, late in the interval: the start a quiet second later
@@ -691,11 +705,11 @@ public class TrialRulesTests
     [TestMethod]
     public void TheQuietWaitRestartsWithEachLick()
     {
-        var quiet = new Rig(Fixture.Setup(Fixture.Task(4), 4));
+        var quiet = new Rig(Fixture.Setup(Fixture.Task(4)));
         var start = quiet.RunTo(TrialEventKind.Start);   // a quiet mouse: the start at the interval's end less the lead
         var iti = start.Trial.itiSeconds;
         Assert.AreEqual(0.001 + iti - 0.1, start.Seconds, 1e-9);
-        var r = new Rig(Fixture.Setup(Fixture.Task(4), 4));
+        var r = new Rig(Fixture.Setup(Fixture.Task(4)));
         r.Until(Math.Round(0.001 + iti - 0.5, 3));
         r.Lick();                                           // licked late in the interval: the start a quiet second later
         r.Until(Math.Round(r.Now + 0.3, 3));
@@ -719,12 +733,12 @@ public class TrialRulesTests
         var task = Fixture.Task(1);
         task.TrialStructure.WheelQuietSeconds = 1.0;
         task.TrialStructure.WheelQuietCm = 1.0;
-        var still = new Rig(Fixture.Setup(task, 1));
+        var still = new Rig(Fixture.Setup(task));
         still.Wheel(50);
         var start = still.RunTo(TrialEventKind.Start);
         var iti = start.Trial.itiSeconds;
         Assert.AreEqual(0.001 + iti - 0.1, start.Seconds, 1e-9);
-        var rock = new Rig(Fixture.Setup(task, 1));
+        var rock = new Rig(Fixture.Setup(task));
         rock.Wheel(50);
         rock.Until(Math.Round(iti - 0.5, 3));
         rock.Wheel(50.6);                                   // 0.6 cm forward: within 1 cm
@@ -734,7 +748,7 @@ public class TrialRulesTests
         Assert.AreEqual(Math.Round(iti - 0.5, 3) + 1.0, started.Seconds, 1e-9);
 
         // 0.3 cm every 0.4 s up to the start: past 1 cm in all, never more than 0.9 cm within a second, so no delay.
-        var fidget = new Rig(Fixture.Setup(task, 1));
+        var fidget = new Rig(Fixture.Setup(task));
         fidget.Wheel(50);
         for (int i = 1; i <= 4; i++)
         {
@@ -747,8 +761,8 @@ public class TrialRulesTests
     [TestMethod]
     public void AHeldContactHoldsTheTrialStartUntilReleased()
     {
-        var r = new Rig(Fixture.Setup(Fixture.Task(4), 4));  // lickQuietSeconds 1
-        var iti = new Rig(Fixture.Setup(Fixture.Task(4), 4)).RunTo(TrialEventKind.Start).Trial.itiSeconds;
+        var r = new Rig(Fixture.Setup(Fixture.Task(4)));  // lickQuietSeconds 1
+        var iti = new Rig(Fixture.Setup(Fixture.Task(4))).RunTo(TrialEventKind.Start).Trial.itiSeconds;
         r.Until(0.5);
         r.Touch(true);            // a paw on the spout, held past the interval's end
         r.Until(Math.Round(iti + 2, 3));
@@ -760,13 +774,13 @@ public class TrialRulesTests
     [TestMethod]
     public void ZapitAddsNoTimeAndTheTriggerIsSignedFromTheFirstPip()
     {
-        var plain = new Rig(Fixture.Setup(Fixture.Task(1), 1)).RunTo(TrialEventKind.Start);
+        var plain = new Rig(Fixture.Setup(Fixture.Task(1))).RunTo(TrialEventKind.Start);
         foreach (var lead in new[] { 0.1, 0.0, -0.5 })
         {
             var task = Fixture.Task(1);
             Fixture.Opto(task);
             task.Optogenetics.LaserToStimulusSeconds = lead;
-            var rig = new Rig(Fixture.Setup(task, 1));
+            var rig = new Rig(Fixture.Setup(task));
             var arm = rig.RunTo(TrialEventKind.Arm);
             Assert.AreEqual(0.001, arm.Seconds, 1e-9);       // armed at the interval's start
             rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 });
@@ -789,7 +803,7 @@ public class TrialRulesTests
         task.Optogenetics.LaserToStimulusSeconds = -0.5;   // the trigger half a second after the first pip
         task.Optogenetics.TrialsBeforeLaser = 0;
         task.Optogenetics.LaserOnProbability = 1;
-        var rig = new Rig(Fixture.Setup(task, 4));
+        var rig = new Rig(Fixture.Setup(task));
         var arm = rig.RunTo(TrialEventKind.Arm);
         rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = 1 });
         rig.RunTo(TrialEventKind.Start);
@@ -812,7 +826,7 @@ public class TrialRulesTests
             Fixture.Opto(task);
             task.Optogenetics.TrialsBeforeLaser = 0;
             task.Optogenetics.LaserOnProbability = probability;
-            var rig = new Rig(Fixture.Setup(task, 4));
+            var rig = new Rig(Fixture.Setup(task));
             var arm = rig.RunTo(TrialEventKind.Arm);
             rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 });
             var trigger = rig.RunTo(TrialEventKind.Trigger);
@@ -827,7 +841,7 @@ public class TrialRulesTests
     [TestMethod]
     public void LaserTriggerTimeIsNaNWithoutOptogenetics()
     {
-        var rig = new Rig(Fixture.Setup(Fixture.Task(1), 1));
+        var rig = new Rig(Fixture.Setup(Fixture.Task(1)));
         rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);
         var outcome = rig.RunTo(TrialEventKind.Outcome);
@@ -852,7 +866,7 @@ public class TrialRulesTests
     [TestMethod]
     public void AResponseWindowEndingInTheZoneIsPenalised()
     {
-        var rig = new Rig(Fixture.Setup(Fixture.Task(4), 4));
+        var rig = new Rig(Fixture.Setup(Fixture.Task(4)));
         var start = rig.RunTo(TrialEventKind.Start);
         rig.Wheel(start.Trial.trackLengthCm * 0.85);
         var outcome = rig.RunTo(TrialEventKind.Outcome);
@@ -866,7 +880,7 @@ public class TrialRulesTests
     [TestMethod]
     public void TheEndOfTheTrackEndsTheTrial()
     {
-        var rig = new Rig(Fixture.Setup(Fixture.Task(2), 2));
+        var rig = new Rig(Fixture.Setup(Fixture.Task(2)));
         var start = rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.1);
         rig.Wheel(start.Trial.trackLengthCm + 5);
@@ -879,7 +893,7 @@ public class TrialRulesTests
     public void AStimulusOffTrialSwitchesOffItsListedStimuliPastItsTrackFraction()
     {
         // The tone alone listed: it goes off once the mouse has run half the track; the grating stays on.
-        var setup = Fixture.Setup(Fixture.Task(3), 3);
+        var setup = Fixture.Setup(Fixture.Task(3));
         var rig = new Rig(setup);
         var start = rig.RunTo(TrialEventKind.Start);
         start.Trial.stimulusOffFraction = 0.5;
@@ -907,7 +921,7 @@ public class TrialRulesTests
     [TestMethod]
     public void AnOrdinaryTrialLogsNoOffPosition()
     {
-        var rig = new Rig(Fixture.Setup(Fixture.Task(2), 2));
+        var rig = new Rig(Fixture.Setup(Fixture.Task(2)));
         var start = rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.1);
         rig.Wheel(start.Trial.trackLengthCm + 5);
@@ -920,11 +934,11 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(4);
         Fixture.Opto(task);
-        var rig = new Rig(Fixture.Setup(task, 4));
+        var rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Arm);
         var error = Assert.ThrowsException<InvalidOperationException>(() => rig.RunTo(TrialEventKind.Trigger));
         StringAssert.Contains(error.Message, "had not answered trial 1's StartStimulus by its trigger");
-        var wrong = new Rig(Fixture.Setup(task, 4));
+        var wrong = new Rig(Fixture.Setup(task));
         wrong.RunTo(TrialEventKind.Arm);
         Assert.ThrowsException<InvalidOperationException>(() => wrong.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }));
     }
@@ -938,7 +952,7 @@ public class TrialRulesTests
         Fixture.Opto(task);
         task.Optogenetics.TrialsBeforeLaser = 0;
         task.Optogenetics.LaserOnProbability = 1;
-        Func<Rig> armed = () => { var r = new Rig(Fixture.Setup(task, 4)); r.RunTo(TrialEventKind.Arm); return r; };
+        Func<Rig> armed = () => { var r = new Rig(Fixture.Setup(task)); r.RunTo(TrialEventKind.Arm); return r; };
         var rig = armed();
         var trial = rig.Loop.Trial;
         Assert.IsTrue(trial.laserOn);
@@ -965,11 +979,11 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(4);
         Fixture.Opto(task);
-        var rig = new Rig(Fixture.Setup(task, 4, false));
+        var rig = new Rig(Fixture.Setup(task, false));
         rig.RunTo(TrialEventKind.Trigger);
         Assert.IsFalse(rig.Events.Any(e => e.Kind == TrialEventKind.Arm));
         Assert.ThrowsException<InvalidOperationException>(() => rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = 99 }));
-        var right = new Rig(Fixture.Setup(task, 4, false));
+        var right = new Rig(Fixture.Setup(task, false));
         var trigger = right.RunTo(TrialEventKind.Trigger);
         right.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = trigger.Trial.laserCondition, LaserOn = trigger.Trial.laserOn ? 1 : 0 });
     }
@@ -979,7 +993,7 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(2);
         Fixture.Opto(task);
-        var rig = new Rig(Fixture.Setup(task, 2, false));
+        var rig = new Rig(Fixture.Setup(task, false));
         var start = rig.RunTo(TrialEventKind.Start);
         var cap = rig.RunTo(TrialEventKind.LaserCap);
         Assert.AreEqual(start.Seconds + 12.5, cap.Seconds, 0.0011);   // from the trigger, at the trial start with the 0.1 s lead
@@ -992,7 +1006,7 @@ public class TrialRulesTests
         // that crosses the floor (18 kHz) passes a 20 kHz ceiling.
         var task = Fixture.Task(0);
         task.RewardCeilingHz = 20000;
-        var rig = new Rig(Fixture.Setup(task, 0));
+        var rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 6.0);
         double cm = 0;
@@ -1015,7 +1029,7 @@ public class TrialRulesTests
     [TestMethod]
     public void AfterAGapInTheHarpClockOnlyTheLatestStepPips()
     {
-        var rig = new Rig(Fixture.Setup(Fixture.Task(3), 3));
+        var rig = new Rig(Fixture.Setup(Fixture.Task(3)));
         var start = rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.2);
         var seen = rig.Events.Count;
@@ -1031,8 +1045,8 @@ public class TrialRulesTests
     [TestMethod]
     public void TheTriggerLineIsHeldOnlyInAnOptogeneticsExperiment()
     {
-        var off = Fixture.Setup(Fixture.Task(3), 3);
-        Assert.IsFalse(Fixture.Draw(Fixture.Task(3), 3).Next().optogenetics);
+        var off = Fixture.Setup(Fixture.Task(3));
+        Assert.IsFalse(Fixture.Draw(Fixture.Task(3)).Next().optogenetics);
         Assert.IsNull(off.Laser);
         var plain = new Rig(off);
         var ended = plain.RunTo(TrialEventKind.Outcome);
@@ -1040,8 +1054,8 @@ public class TrialRulesTests
         Assert.IsFalse(plain.Events.Any(e => e.Kind == TrialEventKind.Trigger || e.Kind == TrialEventKind.TriggerOff || e.Kind == TrialEventKind.Arm));
         var task = Fixture.Task(3);
         Fixture.Opto(task);
-        var on = Fixture.Setup(task, 3);
-        Assert.IsTrue(Fixture.Draw(task, 3).Next().optogenetics);
+        var on = Fixture.Setup(task);
+        Assert.IsTrue(Fixture.Draw(task).Next().optogenetics);
         Assert.AreEqual(1.0, on.Laser.TriggerHoldSeconds);
     }
 
@@ -1053,7 +1067,7 @@ public class TrialRulesTests
         var task = Fixture.Task(4);
         Fixture.Opto(task);
         task.Penalty.TimeoutSeconds = 0;   // the next interval from the outcome: armed once the line falls, not at its start
-        var rig = new Rig(Fixture.Setup(task, 4));
+        var rig = new Rig(Fixture.Setup(task));
         var arm = rig.RunTo(TrialEventKind.Arm);
         rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 });
         rig.RunTo(TrialEventKind.Trigger);
@@ -1070,8 +1084,8 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(0);
         task.Optogenetics.TriggerHoldSeconds = 2.0;
-        Fixture.Setup(task, 0);   // without optogenetics the line stays low, so the hold is not read
+        Fixture.Setup(task);   // without optogenetics the line stays low, so the hold is not read
         Fixture.Opto(task);
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 0)).Message, "triggerHoldSeconds");
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, "triggerHoldSeconds");
     }
 }

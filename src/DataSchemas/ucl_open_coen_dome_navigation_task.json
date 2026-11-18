@@ -247,36 +247,51 @@
       "type": "object"
     },
     "TrainingPipeline": {
-      "description": "The training pipeline stage the values came from, filled by rig-control at launch; empty in the repo's task files.",
+      "description": "The training pipeline stage the values came from, and the task file's only record of the stage: filled by rig-control\nat launch; empty in the repo's task files. Bonsai only records it.",
       "properties": {
         "id": {
-          "default": null,
-          "description": "The stage's id in the pipeline, which the TrainingStage setting must equal (Go refuses otherwise)",
+          "description": "The stage's id in the pipeline, fixed and hidden: never shown to the experimenter",
+          "minimum": 0,
           "title": "Id",
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": "integer"
+        },
+        "code": {
+          "description": "The stage's code in the pipeline, S then two digits then a capital letter (S03A)",
+          "pattern": "^S\\d{2}[A-Z]$",
+          "title": "Code",
+          "type": "string"
+        },
+        "version": {
+          "description": "The stage's version, 4 characters from abcdefghjkmnpqrstuvwxyz23456789 (k7f2)",
+          "pattern": "^[abcdefghjkmnpqrstuvwxyz23456789]{4}$",
+          "title": "Version",
+          "type": "string"
+        },
+        "path": {
+          "description": "The stage's path in the pipeline, one capital letter (A)",
+          "pattern": "^[A-Z]$",
+          "title": "Path",
+          "type": "string"
         },
         "label": {
-          "default": null,
           "description": "The stage's label in the pipeline",
           "title": "Label",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "sha256": {
-          "default": null,
           "description": "The sha256 of the pipeline file's text rig-control ran it from",
           "title": "Sha256",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         }
       },
+      "required": [
+        "id",
+        "code",
+        "version",
+        "path",
+        "label",
+        "sha256"
+      ],
       "title": "TrainingPipeline",
       "type": "object"
     },
@@ -569,7 +584,7 @@
             }
           ],
           "default": null,
-          "description": "The training pipeline stage these values came from (id, label, sha256 of the pipeline file), filled by rig-control at launch; Go refuses a task whose id is missing or differs from the TrainingStage setting",
+          "description": "The training pipeline stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose trainingPipeline is empty or malformed",
           "title": "TrainingPipeline"
         }
       },
