@@ -91,7 +91,8 @@ public class StimulusFrame
 {
     public StimulusStateRow Row;
     public int Bin;              // the tone file's row
-    public double ToneGain;      // the trial's auditoryAmplitude, or 0 when switched off (StimulusStateRow.auditoryOn)
+    public double ToneGain;      // the trial's auditoryAmplitude, or 0 when switched off (StimulusStateRow.auditoryAmplitude)
+    public int SpeakerChannel;   // the one speaker the pip plays on; Trial.AllSpeakersChannel every speaker, -1 none (ToneGain 0)
     public double GratingOpacity; // 1, or 0 when switched off (StimulusStateRow.visualOn) or at contrast 0
     public double GratingContrast; // the trial's visualContrast
 }
@@ -132,8 +133,9 @@ public class PipSet
     /// <summary>The number of pips.</summary>
     public int Count { get { return buffers.Count; } }
 
-    /// <summary>A pip's buffer at an amplitude: its speakers' rows scaled, the sync copy kept; silent at 0.</summary>
-    public Mat Buffer(int bin, double amplitude)
+    /// <summary>A pip's buffer at an amplitude on every speaker (a channel below 0, Trial.AllSpeakersChannel) or one speaker's
+    /// channel, the other speakers silent: its speakers' rows scaled, the sync copy kept; silent at 0.</summary>
+    public Mat Buffer(int bin, double amplitude, int channel = -1)
     {
         var buffer = buffers[bin];
         if (amplitude == 0)
@@ -143,15 +145,16 @@ public class PipSet
             return silent;
         }
         if (!(amplitude <= Largest)) throw new InvalidOperationException("A pip asks for amplitude " + amplitude + ", above the " + Largest + " the pips were checked for at Go (LayOutPips).");
-        return amplitude == 1 ? buffer : Scale(buffer, amplitude);
+        if (channel >= 0 && !channels.Contains(channel)) throw new InvalidOperationException("A pip asks for channel " + channel + ", which no rig.yml speaker is on.");
+        return amplitude == 1 && channel < 0 ? buffer : Scale(buffer, amplitude, channel);
     }
 
-    Mat Scale(Mat buffer, double amplitude)
+    Mat Scale(Mat buffer, double amplitude, int only = -1)
     {
         var scaled = buffer.Clone();
         foreach (var channel in channels)
         {
-            using (var row = scaled.GetRow(channel)) CV.ConvertScale(row, row, amplitude, 0);
+            using (var row = scaled.GetRow(channel)) CV.ConvertScale(row, row, only < 0 || channel == only ? amplitude : 0, 0);
         }
         return scaled;
     }
@@ -163,7 +166,7 @@ public class StimulusStateRow
     public int trialNumber;
     public double positionCm;
     public double auditoryFrequencyHz;
-    public bool auditoryOn;          // false once a stimulus-off trial has switched the tone off
+    public double auditoryAmplitude; // the pip's amplitude: the trial's auditoryAmplitude, 0 while a stimulus-off trial has the tone off
     public double visualSpatialFrequencyCpd;
     public bool visualOn;            // false once a stimulus-off trial has switched the grating off
 }
@@ -210,12 +213,12 @@ public class LayOutPips
 }
 
 [Combinator]
-[Description("A pip's buffer for the mixer: the laid-out pip for the pip's bin at its ToneGain, the trial's auditoryAmplitude (input: the pip's Update event and the PipSet); silent when ToneGain is 0.")]
+[Description("A pip's buffer for the mixer: the laid-out pip for the pip's bin at its ToneGain, the trial's auditoryAmplitude, on every speaker or the trial's one (SpeakerChannel) (input: the pip's Update event and the PipSet); silent when ToneGain is 0.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class PipBuffer
 {
     public IObservable<Mat> Process(IObservable<Tuple<TrialEvent<Trial, StimulusFrame, TrialOutcome>, PipSet>> source)
     {
-        return source.Select(x => x.Item2.Buffer(x.Item1.Update.Bin, x.Item1.Update.ToneGain));
+        return source.Select(x => x.Item2.Buffer(x.Item1.Update.Bin, x.Item1.Update.ToneGain, x.Item1.Update.SpeakerChannel));
     }
 }

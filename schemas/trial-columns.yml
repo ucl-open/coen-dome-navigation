@@ -70,7 +70,7 @@ rewardOfferedUl:
   type: double
   unit: ul
   description: "Microlitres a reward on this trial gives, on every trial whether or not it was rewarded: the size the task drew for it (the task file's rewardSizeUl, or a larger reward where the task has one); 0 on a trial that offers none. rewarded says whether it was given; what was delivered is RewardDelivered in WorkflowData_Events."
-  note: The task file's rewardSizeUl, on every trial.
+  note: The trial's condition's reward.rewardSizeUl (a condition field since 18 Nov 2026; the task file's before), on every trial.
 rewarded:
   type: bool
   description: "True when the trial's outcome delivered its reward (rewardOfferedUl, at outcomeTime): the value the workflow's reward command is made from. Which outcomes are rewarded is the task's (its note)."
@@ -103,7 +103,7 @@ trialCondition:
 outcomeReason:
   type: string
   values: [FrequencyReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]
-  description: Why the trial ended - the reward frequency reached (on an auto-reward trial, drawn with the stage's autoRewardProbability, every trial of stages 0 and 1), a lick in the reward zone, too many wrong licks, the end of the stage's response window (responseWindowSeconds after the first pip), or the end of the track.
+  description: Why the trial ended - the reward frequency reached (on an auto-reward trial, drawn with the trial's condition's autoRewardProbability, every trial of stages 0 and 1), a lick in the reward zone, too many wrong licks, the end of the stage's response window (responseWindowSeconds after the first pip), or the end of the track.
 trackLengthCm:
   type: double
   unit: cm
@@ -133,7 +133,7 @@ visualOffPositionCm:
   description: Position along the track where the grating switched off on a stimulus-off trial (drawn with the stage's stimulusOffProbability, at one of stimulusOff.trackFractions of trackLengthCm, with visual in stimulusOff.stimuli); NaN when it never did.
 autoRewarded:
   type: bool
-  description: True when an auto-reward trial (drawn with the stage's autoRewardProbability) was rewarded, on reaching the reward zone's floor with no lick needed (outcomeReason FrequencyReached).
+  description: True when an auto-reward trial (drawn with the trial's condition's autoRewardProbability) was rewarded, on reaching the reward zone's floor with no lick needed (outcomeReason FrequencyReached).
 visualContrast:
   type: double
   description: Grating contrast as BonVision's Contrast, 1 full contrast; 0 when no grating showed (drawn from the trial's condition's contrasts).
@@ -142,3 +142,14 @@ auditoryAmplitude:
   type: double
   description: The tone's amplitude, the task's auditoryStimulus.amplitude for the trial's condition - the scale of the pips' samples as stored (1 the files as stored, -58.1 dBFS RMS before equalisation); 0 when no tone played.
   history: Added in the trial-type split (Nov 2026); before it every tone played at auditoryStimulus.levelDbfs -58.1, the same loudness as amplitude 1.
+  note: The trial's amplitude even where a stimulus-off trial switched the tone off part way (auditoryOffPositionCm); each pip's own amplitude, 0 once switched off, is WorkflowData_StimulusState's auditoryAmplitude.
+auditoryAzimuthDeg:
+  type: double
+  unit: deg
+  description: Azimuth of the speaker that played, rig.yml's nearest to the location drawn; NaN when none played.
+  note: The pips' one speaker, rig.yml's nearest (at elevation 0) to the azimuth picked from the condition's auditoryStimulus.startAzimuthsDeg; NaN with auditoryAmplitude above 0 when the pick was all, every speaker at once (the corridor's sound before 18 Nov 2026, and its default).
+auditoryElevationDeg:
+  type: double
+  unit: deg
+  description: Elevation of the speaker that played; NaN when none played.
+  note: NaN with auditoryAmplitude above 0 when every speaker played (startAzimuthsDeg all).

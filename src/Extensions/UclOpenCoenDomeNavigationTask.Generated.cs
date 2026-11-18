@@ -120,11 +120,13 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// The tone sweep's pips (src/sounds/all_waveforms.bin), on every rig.yml speaker, each equalised for its speaker.
+    /// The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the
+    ///picked start azimuth is "all", else on rig.yml's speaker nearest it (at elevation 0).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/sounds/all_waveforms.bin), on every rig.yml speaker, e" +
-        "ach equalised for its speaker.")]
+    [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/sounds/all_waveforms.bin), each equalised for its spea" +
+        "ker: on every rig.yml speaker where the\npicked start azimuth is \"all\", else on r" +
+        "ig.yml\'s speaker nearest it (at elevation 0).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class AuditoryStimulus
@@ -132,14 +134,18 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _amplitude;
     
+        private System.Collections.Generic.List<object> _startAzimuthsDeg;
+    
         public AuditoryStimulus()
         {
             _amplitude = 1D;
+            _startAzimuthsDeg = new System.Collections.Generic.List<object>();
         }
     
         protected AuditoryStimulus(AuditoryStimulus other)
         {
             _amplitude = other._amplitude;
+            _startAzimuthsDeg = other._startAzimuthsDeg;
         }
     
         /// <summary>
@@ -160,6 +166,25 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
+        /// <summary>
+        /// Where the pips play, one picked per trial: "all" on every rig.yml speaker at once (the corridor's sound, logged auditoryAzimuthDeg NaN with an amplitude above 0); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevation 0, logged as that speaker's auditoryAzimuthDeg and auditoryElevationDeg. Unused where the amplitude is 0
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("startAzimuthsDeg")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="startAzimuthsDeg")]
+        [System.ComponentModel.DescriptionAttribute(@"Where the pips play, one picked per trial: ""all"" on every rig.yml speaker at once (the corridor's sound, logged auditoryAzimuthDeg NaN with an amplitude above 0); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevation 0, logged as that speaker's auditoryAzimuthDeg and auditoryElevationDeg. Unused where the amplitude is 0")]
+        public System.Collections.Generic.List<object> StartAzimuthsDeg
+        {
+            get
+            {
+                return _startAzimuthsDeg;
+            }
+            set
+            {
+                _startAzimuthsDeg = value;
+            }
+        }
+    
         public System.IObservable<AuditoryStimulus> Generate()
         {
             return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new AuditoryStimulus(this)));
@@ -172,7 +197,8 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Amplitude = " + _amplitude);
+            stringBuilder.Append("Amplitude = " + _amplitude + ", ");
+            stringBuilder.Append("StartAzimuthsDeg = " + _startAzimuthsDeg);
             return true;
         }
     
@@ -1704,12 +1730,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (what it shows: contrasts, auditoryStimulus.amplitude); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index
+        /// The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-conditionFields: what it shows, its reward, auto-reward and laser-on chances); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("trialConditions", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialConditions")]
-        [System.ComponentModel.DescriptionAttribute(@"The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (what it shows: contrasts, auditoryStimulus.amplitude); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index")]
+        [System.ComponentModel.DescriptionAttribute(@"The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-conditionFields: what it shows, its reward, auto-reward and laser-on chances); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index")]
         public System.Collections.Generic.List<TrialCondition> TrialConditions
         {
             get

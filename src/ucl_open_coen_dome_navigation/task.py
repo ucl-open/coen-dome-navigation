@@ -8,14 +8,15 @@ sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made 
 (`uv run generate-waveforms`), not the task file's. The pips play at auditoryStimulus.amplitude (1 the files as stored,
 -58.1 dBFS RMS); the other sounds at the task file's levelDbfs (dBFS RMS: rewardTone, backgroundNoise and penalty.sound).
 
-What a trial shows is its trial condition's (the condition fields, x-conditionFields: contrasts and
-auditoryStimulus.amplitude, each 0 for none); its label names it (trialType) and drives nothing."""
+What a trial shows and offers is its trial condition's (the condition fields, x-conditionFields: contrasts and
+auditoryStimulus.amplitude, each 0 for none, auditoryStimulus.startAzimuthsDeg, reward.rewardSizeUl, autoRewardProbability and
+optogenetics.laserOnProbability); its label names it (trialType) and drives nothing."""
 
 import copy
 import json
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 # Integers are int: open_rigs' Int carries its own range, which drops a Field's ge or gt.
 from open_rigs.core.base import Double, String
@@ -36,7 +37,7 @@ from open_rigs.core.task import (
     WheelQuietWait,
 )
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
-from pydantic import ConfigDict, Field, ValidationError, ValidationInfo, field_validator, model_validator
+from pydantic import ConfigDict, Field, ValidationError, ValidationInfo, WithJsonSchema, field_validator, model_validator
 
 from ucl_open_coen_dome_navigation import __semver__
 
@@ -69,8 +70,15 @@ class VisualStimulus(TaskBlock):
     spatial_frequency_end_cpd: Double = Field(default=0.3, gt=0, description="The grating's spatial frequency at the track's end, in cycles per degree")
 
 
+ALL_SPEAKERS = "all"  # an auditoryStimulus.startAzimuthsDeg item: every rig.yml speaker plays (TrialDraw.AllSpeakers)
+# A sound azimuth or "all", as coen-dome-decision-making's. oneOf, not pydantic's anyOf: Bonsai.Sgen makes an empty class of
+# an anyOf item, object of a oneOf.
+SoundAzimuth = Annotated[Double | Literal["all"], WithJsonSchema({"oneOf": [{"type": "number"}, {"const": ALL_SPEAKERS, "type": "string"}]})]
+
+
 class AuditoryStimulus(TaskBlock):
-    """The tone sweep's pips (src/sounds/all_waveforms.bin), on every rig.yml speaker, each equalised for its speaker."""
+    """The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the
+    picked start azimuth is "all", else on rig.yml's speaker nearest it (at elevation 0)."""
 
     amplitude: Double = Field(
         default=1.0,
@@ -81,6 +89,24 @@ class AuditoryStimulus(TaskBlock):
             "after equalisation on any speaker; dB SPL is unknown until the speakers' SPL calibration"
         ),
     )
+    start_azimuths_deg: list[SoundAzimuth] = Field(
+        default=[ALL_SPEAKERS],
+        min_length=1,
+        description=(
+            "Where the pips play, one picked per trial: \"all\" on every rig.yml speaker at once (the corridor's sound, logged "
+            "auditoryAzimuthDeg NaN with an amplitude above 0); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's "
+            "speaker nearest it at elevation 0, logged as that speaker's auditoryAzimuthDeg and auditoryElevationDeg. Unused where the amplitude is 0"
+        ),
+    )
+
+    @field_validator("start_azimuths_deg")
+    @classmethod
+    def _in_range(cls, value: list) -> list:
+        # TrialDraw.CheckTask's same rule.
+        for azimuth in value:
+            if azimuth != ALL_SPEAKERS and not -180 <= azimuth <= 180:
+                raise ValueError(f"start_azimuths_deg value {azimuth} is outside [-180, 180]")
+        return value
 
 
 class StimulusOff(TaskBlock):
@@ -160,14 +186,23 @@ class TrialLabel(StrEnum):
 
 
 # The fields a condition may set (the schema's x-conditionFields; TrialDraw.ConditionFields, a test holds both): what
-# TrialDraw.Next alone reads per trial. A condition's blank takes the stage's, then the task's value.
-CONDITION_FIELDS = ("contrasts", "auditoryStimulus.amplitude")
+# TrialDraw.Next alone reads per trial, coen-dome-decision-making's where the corridor has them. A condition's blank takes the
+# stage's, then the task's value.
+CONDITION_FIELDS = (
+    "contrasts",
+    "auditoryStimulus.amplitude",
+    "auditoryStimulus.startAzimuthsDeg",
+    "optogenetics.laserOnProbability",
+    "reward.rewardSizeUl",
+    "autoRewardProbability",
+)
 # Where one setting limits another (the schema's x-rules; TrialDraw.Rules, a test holds both), as
 # coen-dome-decision-making's: when the path `when` is `is` (a list: every entry is), each `then` path must be its value,
 # each `oneOf` path one of its values, and the `unused` paths are not read. No corridor setting limits another, so its
 # rules only say what goes unread.
 RULES = (
     {"when": "contrasts", "is": 0, "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"]},
+    {"when": "auditoryStimulus.amplitude", "is": 0, "unused": ["auditoryStimulus.startAzimuthsDeg"]},
     {"when": "autoRewardProbability", "is": 1, "unused": ["wrongLickLimit", "rewardCeilingHz"]},
     {"when": "stimulusOffProbability", "is": 0, "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"]},
 )
@@ -299,7 +334,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         min_length=1,
         description=(
             "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
-            "trial, then draws as the task's values with the condition's set over them (what it shows: contrasts, auditoryStimulus.amplitude); "
+            "trial, then draws as the task's values with the condition's set over them (x-conditionFields: what it shows, its reward, auto-reward and laser-on chances); "
             "its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index"
         ),
         json_schema_extra={"x-whole": True},
@@ -369,6 +404,8 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
             for path in [*condition.set, *paired]:
                 if path not in CONDITION_FIELDS:
                     raise ValueError(f"{where} sets or pairs {path}, which is not a condition field (x-conditionFields)")
+                if path.startswith("optogenetics.") and not self.optogenetics.enabled:
+                    raise ValueError(f"{where} sets {path} with optogenetics off")
             if len(set(paired)) < len(paired) or any(len(group) < 2 for group in condition.pairs):
                 raise ValueError(f"{where}: each pairs group needs two paths or more, each path in one group")
             if not condition.set and not condition.pairs:

@@ -33,4 +33,6 @@ public class TrialRow
     public bool autoRewarded;
     public double visualContrast;       // 0: no grating
     public double auditoryAmplitude;    // 0: no tone
+    public double auditoryAzimuthDeg;   // the one speaker's; NaN on every speaker or with no tone
+    public double auditoryElevationDeg;
 }

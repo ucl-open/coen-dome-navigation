@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AuditoryStimulus": {
-      "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), on every rig.yml speaker, each equalised for its speaker.",
+      "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the\npicked start azimuth is \"all\", else on rig.yml's speaker nearest it (at elevation 0).",
       "properties": {
         "amplitude": {
           "default": 1.0,
@@ -9,6 +9,26 @@
           "minimum": 0,
           "title": "Amplitude",
           "type": "number"
+        },
+        "startAzimuthsDeg": {
+          "default": [
+            "all"
+          ],
+          "description": "Where the pips play, one picked per trial: \"all\" on every rig.yml speaker at once (the corridor's sound, logged auditoryAzimuthDeg NaN with an amplitude above 0); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevation 0, logged as that speaker's auditoryAzimuthDeg and auditoryElevationDeg. Unused where the amplitude is 0",
+          "items": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "const": "all",
+                "type": "string"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "StartAzimuthsDeg",
+          "type": "array"
         }
       },
       "title": "AuditoryStimulus",
@@ -474,7 +494,7 @@
           "title": "Reward"
         },
         "trialConditions": {
-          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (what it shows: contrasts, auditoryStimulus.amplitude); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index",
+          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-conditionFields: what it shows, its reward, auto-reward and laser-on chances); its label is trialType in the trial row. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index",
           "items": {
             "$ref": "#/$defs/TrialCondition"
           },
@@ -486,7 +506,10 @@
         "auditoryStimulus": {
           "$ref": "#/$defs/AuditoryStimulus",
           "default": {
-            "amplitude": 1.0
+            "amplitude": 1.0,
+            "startAzimuthsDeg": [
+              "all"
+            ]
           },
           "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), each played at amplitude"
         },
@@ -620,7 +643,11 @@
       "type": "object",
       "x-conditionFields": [
         "contrasts",
-        "auditoryStimulus.amplitude"
+        "auditoryStimulus.amplitude",
+        "auditoryStimulus.startAzimuthsDeg",
+        "optogenetics.laserOnProbability",
+        "reward.rewardSizeUl",
+        "autoRewardProbability"
       ],
       "x-rules": [
         {
@@ -630,6 +657,13 @@
             "visualStimulus.spatialFrequencyEndCpd"
           ],
           "when": "contrasts"
+        },
+        {
+          "is": 0,
+          "unused": [
+            "auditoryStimulus.startAzimuthsDeg"
+          ],
+          "when": "auditoryStimulus.amplitude"
         },
         {
           "is": 1,

@@ -79,12 +79,20 @@ static class Fixture
 
     public static TrialRules Setup(UclOpenCoenDomeNavigationTaskParameters task, bool hardware = true)
     {
-        return TrialRules.Create(task, Sweep(), hardware, path => 4);
+        return TrialRules.Create(task, Sweep(), hardware, path => 4, Speakers());
     }
 
-    public static TrialDraw Draw(UclOpenCoenDomeNavigationTaskParameters task)
+    public static TrialDraw Draw(UclOpenCoenDomeNavigationTaskParameters task, bool speakers = true)
     {
-        return new TrialDraw(task, Sweep(), path => 4);
+        return new TrialDraw(task, Sweep(), path => 4, speakers ? Speakers() : null);
+    }
+
+    /// <summary>rig.yml's speakerArray: left (-90 deg, channel 0), right (90, channel 1) and centre (0, channel 2), all at
+    /// elevation 15.</summary>
+    public static EqualisedSpeakerArray Speakers()
+    {
+        Func<double, int, Speaker> at = (azimuth, channel) => new Speaker { Position = new SphericalPosition { Azimuth = azimuth, Elevation = 15 }, Channel = channel };
+        return new EqualisedSpeakerArray { Speakers = new Dictionary<string, Speaker> { { "left", at(-90, 0) }, { "right", at(90, 1) }, { "centre", at(0, 2) } } };
     }
 
     public static void Opto(UclOpenCoenDomeNavigationTaskParameters task)
@@ -327,7 +335,12 @@ public class TrialDrawTests
             Tuple.Create(new List<TrialCondition>(), "trialConditions needs a condition"),
             Tuple.Create(Conditions(0, 0, 0), "trialConditions needs a condition with a weight above 0"),
             Tuple.Create(Conditions(-1, 2, 0), "trialConditions[0] (visual): its weight is below 0"),
-            Tuple.Create(setting("reward.rewardSizeUl", 2.0), "trialConditions[1] (auditory) sets or pairs reward.rewardSizeUl, which is not a condition field (x-conditionFields)"),
+            Tuple.Create(setting("rewardFloorHz", 2.0), "trialConditions[1] (auditory) sets or pairs rewardFloorHz, which is not a condition field (x-conditionFields)"),
+            Tuple.Create(setting("optogenetics.laserOnProbability", 0.5), "trialConditions[1] (auditory) sets optogenetics.laserOnProbability with optogenetics off"),
+            Tuple.Create(setting("reward.rewardSizeUl", 0.0), "trialConditions[1] (auditory): reward.rewardSizeUl must be above 0 and at most 20 ul"),
+            Tuple.Create(setting("autoRewardProbability", 2.0), "trialConditions[1] (auditory): autoRewardProbability is 2, not from 0 to 1"),
+            Tuple.Create(setting("auditoryStimulus.startAzimuthsDeg", new List<object> { "left" }), "trialConditions[1] (auditory): auditoryStimulus.startAzimuthsDeg value 'left' is not a number or all"),
+            Tuple.Create(setting("auditoryStimulus.startAzimuthsDeg", new List<object> { 200.0 }), "trialConditions[1] (auditory): auditoryStimulus.startAzimuthsDeg must each be all or a number in [-180, 180]"),
             Tuple.Create(setting("auditoryStimulus.amplitude", -1.0), "trialConditions[1] (auditory): auditoryStimulus.amplitude must be a finite number, 0 or more"),
             Tuple.Create(setting("auditoryStimulus.amplitude", "loud"), "trialConditions[1] (auditory): auditoryStimulus.amplitude value 'loud' is not a number"),
             Tuple.Create(setting("contrasts", 0.5), "trialConditions[1] (auditory): contrasts must be a list"),
@@ -544,6 +557,58 @@ public class TrialDrawTests
         var rules = Fixture.Setup(task);
         Assert.IsTrue(trials.All(t => t.firstPipStep == 2 && rules.Timing(t).Laser && rules.Timing(t).LaserToStimulusSeconds == 0.1));
         Assert.IsTrue(rules.Laser.HardwareTriggered);   // armed during the interval
+    }
+
+    [TestMethod]
+    public void AConditionSetsTheRewardAutoRewardAndLaserOnChances()
+    {
+        var task = Fixture.Task(4);
+        Fixture.Opto(task);
+        task.TrialConditions = new List<TrialCondition>
+        {
+            new TrialCondition { Label = TrialLabel.Auditory, Weight = 1, Set = new Dictionary<object, object> {
+                { "reward.rewardSizeUl", new List<object> { 2.0, 4.0 } }, { "autoRewardProbability", 1.0 }, { "optogenetics.laserOnProbability", 0.0 } } },
+            new TrialCondition { Label = TrialLabel.Visual, Weight = 1, Set = new Dictionary<object, object> {
+                { "auditoryStimulus.amplitude", 0.0 }, { "optogenetics.laserOnProbability", 1.0 } } },
+        };
+        var draw = Fixture.Draw(task);
+        var trials = Enumerable.Range(0, 400).Select(_ => draw.Next()).Skip(20).ToList();
+        var auditory = trials.Where(t => t.trialCondition == 0).ToList();
+        var visual = trials.Where(t => t.trialCondition == 1).ToList();
+        CollectionAssert.AreEquivalent(new[] { 2.0, 4.0 }, auditory.Select(t => t.rewardOfferedUl).Distinct().ToArray());
+        Assert.IsTrue(auditory.All(t => t.autoReward && !t.laserOn));
+        Assert.IsTrue(visual.All(t => t.rewardOfferedUl == 3.0 && !t.autoReward && t.laserOn));
+    }
+
+    [TestMethod]
+    public void ThePipsPlayOnEverySpeakerOrTheOneNearestThePickedAzimuth()
+    {
+        // all (the task file's): every speaker, logged NaN with an amplitude above 0, as before startAzimuthsDeg.
+        var task = Fixture.Task(1);
+        var all = Fixture.Draw(task).Next();
+        Assert.AreEqual(Trial.AllSpeakersChannel, all.speakerChannel);
+        Assert.IsTrue(double.IsNaN(all.auditoryAzimuthDeg) && double.IsNaN(all.auditoryElevationDeg) && all.auditoryAmplitude == 1);
+        // A number: rig.yml's speaker nearest it.
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = TrialLabel.Auditory, Weight = 1,
+            Set = new Dictionary<object, object> { { "auditoryStimulus.startAzimuthsDeg", new List<object> { -70.0, "all", 20.0 } } } } };
+        var draw = Fixture.Draw(task);
+        var picked = Enumerable.Range(0, 200).Select(_ => draw.Next()).Select(t => t.speakerChannel + ":" + t.auditoryAzimuthDeg + ":" + t.auditoryElevationDeg).Distinct().OrderBy(x => x).ToArray();
+        CollectionAssert.AreEqual(new[] { "0:-90:15", "-2:NaN:NaN", "2:0:15" }.OrderBy(x => x).ToArray(), picked);
+        // Silent: no speaker, NaN.
+        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.amplitude", 0.0 }, { "auditoryStimulus.startAzimuthsDeg", new List<object> { 20.0 } } };
+        var silent = Fixture.Draw(task).Next();
+        Assert.AreEqual(-1, silent.speakerChannel);
+        Assert.IsTrue(double.IsNaN(silent.auditoryAzimuthDeg));
+        // A number on a rig without speakers is refused at Go.
+        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.startAzimuthsDeg", new List<object> { 20.0 } } };
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Draw(task, false)).Message, "names an azimuth but rig.yml has no speakerArray.speakers");
+        // The trial row logs the speaker; the pip carries its channel to PipBuffer.
+        var rig = new Rig(Fixture.Setup(Fixture.Task(1)));
+        var start = rig.RunTo(TrialEventKind.Start);
+        start.Trial.speakerChannel = 2;
+        start.Trial.auditoryAzimuthDeg = 0;
+        rig.Until(rig.Now + 0.3);
+        Assert.AreEqual(2, rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update.SpeakerChannel);
     }
 
     [TestMethod]
@@ -1027,19 +1092,19 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.1);
         var before = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(1.0, before.ToneGain);
-        Assert.IsTrue(before.Row.auditoryOn && before.Row.visualOn);
+        Assert.IsTrue(before.Row.auditoryAmplitude == 1 && before.Row.visualOn);
         rig.Wheel(start.Trial.trackLengthCm * 0.7);
         rig.Until(rig.Now + 0.1);
         var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(0.0, pip.ToneGain);
-        Assert.IsFalse(pip.Row.auditoryOn);
+        Assert.AreEqual(0.0, pip.Row.auditoryAmplitude);   // the cut, in each pip's row (and auditoryOffPositionCm)
         Assert.IsTrue(pip.Row.visualOn);
         rig.Wheel(start.Trial.trackLengthCm + 5);
         var row = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
         Assert.AreEqual(pip.Row.positionCm, row.auditoryOffPositionCm, 1e-9);
         Assert.IsTrue(double.IsNaN(row.visualOffPositionCm));
-        // Bools, so WorkflowData_StimulusState says True or False, as the lab's other bool columns.
-        Assert.AreEqual(typeof(bool), typeof(StimulusStateRow).GetField("auditoryOn").FieldType);
+        Assert.AreEqual(1.0, row.auditoryAmplitude);   // the trial's amplitude; the pips' rows say where it was cut
+        Assert.IsNull(typeof(StimulusStateRow).GetField("auditoryOn"));
         Assert.AreEqual(typeof(bool), typeof(StimulusStateRow).GetField("visualOn").FieldType);
     }
 
