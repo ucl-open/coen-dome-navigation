@@ -304,6 +304,38 @@ public class TrialDrawTests
     }
 
     [TestMethod]
+    public void TheWeightCapASetThatIsNotAMapAndWeightsTooBigToSumAreRefusedAtGo()
+    {
+        Func<List<TrialCondition>, string> refusal = c =>
+        {
+            var task = Fixture.Task(2);
+            task.TrialConditions = c;
+            return Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task, 2)).Message;
+        };
+        StringAssert.Contains(refusal(Conditions(TrialDraw.MaxWeight + 1, 1, 0)), "trialConditions[0] (visual): its weight is above 1000000");
+        var notMap = Conditions(0, 1, 0);
+        notMap[1].Set = "5";
+        StringAssert.Contains(refusal(notMap), "trialConditions[1] (auditory): its set is not a map");
+        // 2200 conditions of the cap's weight sum past int, which random.Next cannot take.
+        var heavy = Enumerable.Range(0, 2200).Select(i => new TrialCondition { Type = "visual", Weight = TrialDraw.MaxWeight }).ToList();
+        StringAssert.Contains(refusal(heavy), "weights add to more than 2147483647");
+    }
+
+    [TestMethod]
+    public void OneConditionAtTheCapAndManyConditionsAreDrawnAsWritten()
+    {
+        var task = Fixture.Task(3);
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Type = "auditory", Weight = TrialDraw.MaxWeight } };
+        var one = Fixture.Draw(task, 3);
+        Assert.IsTrue(Enumerable.Range(0, 30).Select(i => one.Next()).All(t => t.trialCondition == 0 && t.trialType == "auditory"));
+        task.TrialConditions = Enumerable.Range(0, 120).Select(i => new TrialCondition { Type = TrialDraw.TypeNames[i % 3], Weight = 1 }).ToList();
+        var many = Fixture.Draw(task, 3);
+        var trials = Enumerable.Range(0, 3000).Select(i => many.Next()).ToList();
+        Assert.IsTrue(trials.All(t => t.trialType == TrialDraw.TypeNames[t.trialCondition % 3]));
+        Assert.AreEqual(120, trials.Select(t => t.trialCondition).Distinct().Count());
+    }
+
+    [TestMethod]
     public void TheTaskFilesConditionsAreReadByTheirYamlNames()
     {
         var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-corridor.yml"))

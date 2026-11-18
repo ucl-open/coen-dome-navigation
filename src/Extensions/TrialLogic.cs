@@ -297,6 +297,7 @@ public class TrialDraw
             else if (c.Set != null) problems.Add(where + ": its set is not a map");
         }
         if (conditions.Sum(c => (long)c.Weight) <= 0) problems.Add("trialConditions needs a condition with a weight above 0");
+        if (conditions.Sum(c => (long)c.Weight) > int.MaxValue) problems.Add("trialConditions' weights add to more than " + int.MaxValue + ", the most the draw can sum");
         return problems;
     }
 

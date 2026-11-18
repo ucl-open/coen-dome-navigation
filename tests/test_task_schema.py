@@ -87,6 +87,7 @@ def test_the_task_file_s_conditions_are_its_old_weights():
         ([], "at least 1 item"),
         ([{"type": "auditory", "weight": 0}], "weight above 0"),
         ([{"type": "auditory", "weight": -1}], "greater than or equal"),
+        ([{"type": "auditory", "weight": 1000001}], "less than or equal"),
         ([{"type": "auditory", "weight": 1}, {"type": "neutral", "weight": 0}], r"trial_conditions\[1\] \(neutral\): its type is not one of visual, auditory, audiovisualCoherent"),
         ([{"type": "audiovisualConflict", "weight": 1}], "its type is not one of"),
         ([{"type": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets rewardSizeUl, which is not a condition field of visual"),
