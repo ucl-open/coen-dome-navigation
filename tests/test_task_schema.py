@@ -24,10 +24,11 @@ from ucl_open_coen_dome_navigation.task import (
     TRIAL_TYPES,
     TrialType,
     UclOpenCoenDomeNavigationTaskLogic,
+    condition_combinations,
     UclOpenCoenDomeNavigationTaskParameters,
     derive_trial_type,
 )
-from open_rigs.rigs.conditions import MAX_COMBINATIONS, condition_combinations, flatten, unused_paths
+from open_rigs.rigs.conditions import MAX_COMBINATIONS, flatten, unused_paths
 
 ROOT = Path(__file__).parent.parent
 TASK = ROOT / "config" / "task-abstract-corridor.yml"
@@ -190,7 +191,7 @@ def test_a_condition_may_set_any_field_but_a_session_field_and_every_list_expand
 def test_combinations_are_ordered_by_path_the_first_changing_fastest():
     # TrialDraw.BuildConditions' order, logged as trialCombination.
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"])
-    combos = condition_combinations(model.model_dump(by_alias=True, mode="json"), {"contrasts": [0.5, 1]}, list_fields=LIST_FIELDS)
+    combos = condition_combinations(model.model_dump(by_alias=True, mode="json"), {"contrasts": [0.5, 1]})
     assert len(combos) == 12 and combos[:3] == [
         {"auditoryStimulus.initialAzimuthsDeg": ["all"], "contrasts": [0.5], "stimulusOff.trackFractions": [0.4], "trialStructure.trackLengthsCm": [80.0]},
         {"auditoryStimulus.initialAzimuthsDeg": ["all"], "contrasts": [1], "stimulusOff.trackFractions": [0.4], "trialStructure.trackLengthsCm": [80.0]},
