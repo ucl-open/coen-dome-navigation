@@ -289,11 +289,12 @@ public class TrialDraw
             var where = string.Format("trialConditions[{0}] ({1})", i, c.Type);
             if (!TypeNames.Contains(c.Type)) problems.Add(where + ": its type is not one of " + string.Join(", ", TypeNames));
             if (c.Weight < 0) problems.Add(where + ": its weight is below 0");
+            if (c.Weight > 1000000) problems.Add(where + ": its weight is above 1000000");
             var set = c.Set as System.Collections.IDictionary;
             if (set != null) foreach (var path in set.Keys) problems.Add(where + " sets " + path + ", which is not a condition field of " + c.Type + " (x-conditionFields)");
             else if (c.Set != null) problems.Add(where + ": its set is not a map");
         }
-        if (conditions.Sum(c => c.Weight) <= 0) problems.Add("trialConditions needs a condition with a weight above 0");
+        if (conditions.Sum(c => (long)c.Weight) <= 0) problems.Add("trialConditions needs a condition with a weight above 0");
         return problems;
     }
 

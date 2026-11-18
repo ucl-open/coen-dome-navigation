@@ -145,7 +145,7 @@ class TrialCondition(TaskBlock):
     model_config = ConfigDict(extra="forbid")
 
     type: String = Field(description="The trial type, what the trial shows: visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both)")
-    weight: int = Field(ge=0, description="Relative draw weight: each new trial picks a condition with these as relative chances")
+    weight: int = Field(ge=0, le=1_000_000, description="Relative draw weight: each new trial picks a condition with these as relative chances")
     set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-conditionFields' paths that apply to the type); none in this task yet")
 
 
