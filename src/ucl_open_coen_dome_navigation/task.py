@@ -1,9 +1,9 @@
 ﻿"""The task file's schema: config/task-abstract-corridor.yml, which rig-control copies at launch and again at Go with the
 form's edits; the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest. Ported from Tom Childs' auditory-vr-corridor task.py.
 
-The stage is a stage of the lab's training pipeline, recorded only as the task file's trainingPipeline
-(K:\\config\\training-pipelines\\coen-dome-navigation\\task-abstract-corridor.yml): rig-control writes that stage's values
-over this file's flat values at launch and fills trainingPipeline (id, code, version, path, label, sha256); trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
+The stage is a stage of the lab's Mouse Curriculum, recorded only as the task file's curriculum
+(K:\\config\\curricula\\coen-dome-navigation\\task-abstract-corridor.conditions.yml): rig-control writes that stage's values
+over this file's flat values at launch and fills curriculum (id, code, version, path, label, sha256); trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
 sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made with the tone files
 (`uv run generate-waveforms`), not the task file's; every sound's level is the task file's (levelDbfs, in dBFS
 RMS: auditoryStimulus, rewardTone, backgroundNoise and penalty.sound)."""
@@ -152,16 +152,16 @@ class TrialCondition(TaskBlock):
     set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-conditionFields); none in this task yet")
 
 
-class TrainingPipeline(TaskBlock):
-    """The training pipeline stage the values came from, and the task file's only record of the stage: filled by rig-control
+class Curriculum(TaskBlock):
+    """The Mouse Curriculum stage the values came from, and the task file's only record of the stage: filled by rig-control
     at launch; empty in the repo's task files. Bonsai only records it."""
 
-    id: int = Field(ge=0, description="The stage's id in the pipeline, fixed and hidden: never shown to the experimenter")
-    code: String = Field(pattern=r"^S\d{2}[A-Z]$", description="The stage's code in the pipeline, S then two digits then a capital letter (S03A)")
+    id: int = Field(ge=0, description="The stage's id in the curriculum, fixed and hidden: never shown to the experimenter")
+    code: String = Field(pattern=r"^S\d{2}[A-Z]$", description="The stage's code in the curriculum, S then two digits then a capital letter (S03A)")
     version: String = Field(pattern=r"^[abcdefghjkmnpqrstuvwxyz23456789]{4}$", description="The stage's version, 4 characters from abcdefghjkmnpqrstuvwxyz23456789 (k7f2)")
-    path: String = Field(pattern=r"^[A-Z]$", description="The stage's path in the pipeline, one capital letter (A)")
-    label: String = Field(description="The stage's label in the pipeline")
-    sha256: String = Field(description="The sha256 of the pipeline file's text rig-control ran it from")
+    path: String = Field(pattern=r"^[A-Z]$", description="The stage's path in the curriculum, one capital letter (A)")
+    label: String = Field(description="The stage's label in the curriculum")
+    sha256: String = Field(description="The sha256 of the curriculum file's text rig-control ran it from")
 
 
 class RewardSettings(RewardSize):
@@ -181,7 +181,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         min_length=1,
         description=(
             "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
-            "trial, and shows its label (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a pipeline "
+            "trial, and shows its label (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a curriculum "
             "stage's conditions replace it; the trialCondition column is its 0-based index"
         ),
         json_schema_extra={"x-whole": True},
@@ -213,9 +213,9 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         description="Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
     )
     stimulus_off_probability: Double = Field(default=0.0, ge=0, le=1, description="Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial")
-    training_pipeline: TrainingPipeline | None = Field(
+    curriculum: Curriculum | None = Field(
         default=None,
-        description="The training pipeline stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose trainingPipeline is empty or malformed",
+        description="The Mouse Curriculum stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
     )
 
     @model_validator(mode="after")

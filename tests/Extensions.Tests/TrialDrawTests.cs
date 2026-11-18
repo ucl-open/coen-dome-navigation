@@ -20,7 +20,7 @@ static class Fixture
         return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(here), "..", ".."));
     }
 
-    /// <summary>The task file as written (its trainingPipeline empty), seeded.</summary>
+    /// <summary>The task file as written (its curriculum empty), seeded.</summary>
     public static UclOpenCoenDomeNavigationTaskParameters FromFile()
     {
         var text = File.ReadAllText(Path.Combine(Repo(), "config", "task-abstract-corridor.yml"));
@@ -29,14 +29,14 @@ static class Fixture
         return task;
     }
 
-    /// <summary>The task file as rig-control writes it for a pipeline stage: that stage's values over the file's, and
-    /// trainingPipeline naming it.</summary>
+    /// <summary>The task file as rig-control writes it for a curriculum stage: that stage's values over the file's, and
+    /// curriculum naming it.</summary>
     public static UclOpenCoenDomeNavigationTaskParameters Task(int stage = 0)
     {
         return Stage(FromFile(), stage);
     }
 
-    // The stages of the lab's pipeline (K:\config\training-pipelines\coen-dome-navigation\task-abstract-corridor.yml)
+    // The stages of the lab's curriculum (K:\config\curricula\coen-dome-navigation\task-abstract-corridor.conditions.yml)
     // when the rows left the task file, by id: rewardFloorHz, rewardCeilingHz, autoRewardProbability, wrongLickLimit,
     // lickQuietSeconds, responseWindowSeconds, wheelGain, autoProgressPerSecond, stimulusOffProbability.
     static readonly double?[][] Stages =
@@ -49,7 +49,7 @@ static class Fixture
         new double?[] { 15248, 21248, 0, 5, 1, 12, 1, 0, 0.16 },    // Stimulus Off
     };
 
-    /// <summary>The task with a pipeline stage's values written over it, as rig-control does at launch.</summary>
+    /// <summary>The task with a curriculum stage's values written over it, as rig-control does at launch.</summary>
     public static UclOpenCoenDomeNavigationTaskParameters Stage(UclOpenCoenDomeNavigationTaskParameters task, int stage)
     {
         var v = Stages[stage];
@@ -62,14 +62,14 @@ static class Fixture
         task.WheelGain = v[6].Value;
         task.AutoProgressPerSecond = v[7].Value;
         task.StimulusOffProbability = v[8].Value;
-        task.TrainingPipeline = Pipeline(stage);
+        task.Curriculum = Curriculum(stage);
         return task;
     }
 
-    /// <summary>A well formed trainingPipeline for a stage (id, code S0nA, a fixed version, path A).</summary>
-    public static TrainingPipeline Pipeline(int id)
+    /// <summary>A well formed curriculum for a stage (id, code S0nA, a fixed version, path A).</summary>
+    public static Curriculum Curriculum(int id)
     {
-        return new TrainingPipeline { Id = id, Code = "S0" + id + "A", Version = "k7f2", Path = "A", Label = "stage " + id, Sha256 = "test" };
+        return new Curriculum { Id = id, Code = "S0" + id + "A", Version = "k7f2", Path = "A", Label = "stage " + id, Sha256 = "test" };
     }
 
     public static Sweep Sweep()
@@ -156,28 +156,28 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void TheTrainingPipelineIsTheTaskFilesOnlyRecordOfTheStage()
+    public void TheCurriculumIsTheTaskFilesOnlyRecordOfTheStage()
     {
-        // Go refuses a task file rig-control has not filled (the repo's, its trainingPipeline empty) or filled malformed.
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.FromFile())).Message, "The task file's trainingPipeline is empty");
+        // Go refuses a task file rig-control has not filled (the repo's, its curriculum empty) or filled malformed.
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.FromFile())).Message, "The task file's curriculum is empty");
         foreach (var field in new[] { "code", "version", "path", "label", "sha256", "id" })
         {
             var task = Fixture.Task(0);
             switch (field)
             {
-                case "code": task.TrainingPipeline.Code = "S3A"; break;
-                case "version": task.TrainingPipeline.Version = "k7f1"; break;
-                case "path": task.TrainingPipeline.Path = "a"; break;
-                case "label": task.TrainingPipeline.Label = ""; break;
-                case "sha256": task.TrainingPipeline.Sha256 = null; break;
-                case "id": task.TrainingPipeline.Id = -1; break;
+                case "code": task.Curriculum.Code = "S3A"; break;
+                case "version": task.Curriculum.Version = "k7f1"; break;
+                case "path": task.Curriculum.Path = "a"; break;
+                case "label": task.Curriculum.Label = ""; break;
+                case "sha256": task.Curriculum.Sha256 = null; break;
+                case "id": task.Curriculum.Id = -1; break;
             }
             var message = Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message;
-            StringAssert.Contains(message, "The task file's trainingPipeline is malformed (");
+            StringAssert.Contains(message, "The task file's curriculum is malformed (");
             StringAssert.Contains(message, field == "id" ? "id -1" : field);
         }
         var big = Fixture.Task(0);
-        big.TrainingPipeline.Id = 42;   // an id past the old rows: the pipeline's ids are never reused
+        big.Curriculum.Id = 42;   // an id past the old rows: the curriculum's ids are never reused
         Assert.AreEqual("S00A-k7f2", Fixture.Setup(big).TrainingCodeVersion);
     }
 

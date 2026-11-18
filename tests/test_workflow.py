@@ -71,7 +71,7 @@ def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
     # trialType as coen-dome-decision-making reports it: the view's type_metric.
     assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition", "trainingStage"}
-    # trainingStage is TaskFile's: the task file's trainingPipeline as code-version, found well formed by CheckTaskAtGo.
+    # trainingStage is TaskFile's: the task file's curriculum as code-version, found well formed by CheckTaskAtGo.
     assert "TrainingStage" not in TEXT
     nodes, edges = _scope(group("TaskFile"))
     (subject,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "TrainingCodeVersion"]

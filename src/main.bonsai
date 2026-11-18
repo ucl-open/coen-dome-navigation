@@ -32,7 +32,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its trainingPipeline the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go. TaskFile publishes the stage as TrainingCodeVersion (code-version, like S03A-k7f2, from the task file's trainingPipeline) at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its curriculum the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go. TaskFile publishes the stage as TrainingCodeVersion (code-version, like S03A-k7f2, from the task file's curriculum) at Go and reports it as the metric trainingStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="ExternalizedMapping">
@@ -68,7 +68,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskFile</Name>
-        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\sounds\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create: a trainingPipeline empty or malformed, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is ConnectForTask's refusal.</Description>
+        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\sounds\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskConfig, and checks it with rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create: a curriculum empty or malformed, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is ConnectForTask's refusal.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -151,7 +151,7 @@
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>TrainingCodeVersion</Name>
-              <Description>The stage as code-version (S03A-k7f2) from the task file's trainingPipeline, found well formed by CheckTaskAtGo.</Description>
+              <Description>The stage as code-version (S03A-k7f2) from the task file's curriculum, found well formed by CheckTaskAtGo.</Description>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="orcl:ReportMetric">
