@@ -10,8 +10,7 @@ using TrialEventOf = OpenRigs.Trials.TrialEvent<Trial, StimulusFrame, TrialOutco
 
 /// <summary>The task files app-rig-control writes at launch (tests\fixtures\handover, golden files its tests\test_handover.py
 /// writes for every stage of the share's curricula; HANDOVER_DIR names another folder, as its scripts\mutation_check.py
-/// does), each read as the workflow reads it (ReadTask) and drawn by this repo's C#: the draw, the old trial types' meaning,
-/// and the trials run by lib-open-rigs' TrialLoop with a pretend mouse running and licking at random, each logged row
+/// does), each read as the workflow reads it (ReadTask) and drawn by this repo's C#: the draw and the trials run by lib-open-rigs' TrialLoop with a pretend mouse running and licking at random, each logged row
 /// checked. The share's curriculum has one condition per stage, so the weights' shares prove little here; the combinations'
 /// shares (track lengths) do.</summary>
 [TestClass]
@@ -19,16 +18,6 @@ public class HandoverTests
 {
     const int Draws = 5000;   // trials drawn per file for the shares
     const int Run = 200;      // trials run through the loop per file
-
-    // What each old trial type showed (app-rig-control's OLD_CORRIDOR): the grating's contrast and the tone's amplitude on or
-    // off. Convert-on-read keeps the old type's name as the trialType.
-    static readonly Dictionary<string, bool[]> OldShows = new Dictionary<string, bool[]>
-    {
-        { "visual", new[] { true, false } },
-        { "auditory", new[] { false, true } },
-        { "audiovisualCoherent", new[] { true, true } },
-        { "neutral", new[] { false, false } },
-    };
 
     // Each golden file's name and task as ReadTask reads it, rngSeed set to 1 (app-rig-control leaves it null for the
     // workflow to draw), with the file's conditions as written, read apart from the draw's own reader: (trialType, weight).
@@ -99,8 +88,7 @@ public class HandoverTests
         }
     }
 
-    // One trial against its combination (the file's values as BuildConditions picked them): its trialType the file's and
-    // what its old type showed, the grating's contrast, the tone's amplitude on the speaker nearest its azimuth (NaN silent or
+    // One trial against its combination (the file's values as BuildConditions picked them): its trialType the file's, the grating's contrast, the tone's amplitude on the speaker nearest its azimuth (NaN silent or
     // at all), the track (track cm over the wheel gain) and the reward.
     static void Check(string file, List<TrialConditionDraw> built, string trialType, int condition, int combinationId, double contrast,
         double amplitude, double auditoryAzimuth, double trackLengthCm, double wheelGain, double rewardOfferedUl)
@@ -118,9 +106,6 @@ public class HandoverTests
         Assert.AreEqual(c.TrialStructure.TrackLengthsCm[0] / c.WheelGain, trackLengthCm, 1e-9, where);
         Assert.AreEqual(c.WheelGain, wheelGain, where);
         Assert.AreEqual(c.Reward.RewardSizeUl, rewardOfferedUl, where);
-        // Item 2: what the old type showed
-        Assert.IsTrue(OldShows.ContainsKey(trialType), where + ": no old type " + trialType);
-        CollectionAssert.AreEqual(OldShows[trialType], new[] { contrast > 0, amplitude > 0 }, where + ": grating and tone on or off");
     }
 
     [TestMethod]

@@ -66,8 +66,7 @@ public class PipSetTests
     [TestMethod]
     public void AmplitudeOneIsTheLoudnessThePipsPlayedAtBefore()
     {
-        // Before the trial-type split the pips were SpeakerBuffer's at auditoryStimulus.levelDbfs -58.1 (SpeakerSet.Buffer); each
-        // file is now stored at -58.1 dBFS RMS, so amplitude 1, the file as stored, plays the same samples on every channel,
+        // Each file is stored at -58.1 dBFS RMS, so amplitude 1, the file as stored, plays the same samples on every channel,
         // the sync copy included.
         var speakers = Speakers();
         var pips = Pips();

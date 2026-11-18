@@ -3,7 +3,7 @@
 # own trial log; open_rigs.trial_log reads it from there.
 #
 # Each column: type (int, double, bool or string), and where they apply values (the strings it may hold),
-# unit, description (what it is), note (this task's detail) and history (what recorded data held before); copyOf, a task
+# unit, description (what it is), and note (this task's detail); copyOf, a task
 # path (dotted) the column copies from the trial's Settings_Combinations row (else Settings_Task), and nanWhen {column,
 # equals}, the rows where it is NaN instead, which open_rigs.trial_log checks on every load. The names and types must also be in the lab's
 # Data Dictionary (K:\config\data-dictionary.json, edited on app-rig-control's Lab Names page): app-rig-control checks
@@ -27,7 +27,6 @@ harpTime:
   type: double
   unit: s
   description: Harp time the row was complete, when the outcome was known (outcomeTime). The lab's time column, first in every log (lib-open-rigs specs/logging.md, section 4); a trial's moments are read from their own columns.
-  history: Tom Childs' TrialLog was stamped 2 s after the outcome.
 trialNumber:
   type: int
   description: The trial's number in the experiment, from 1.
@@ -35,7 +34,6 @@ trialType:
   type: string
   values: [visual, auditory, audiovisualCoherent, neutral]
   description: The label of the trial's condition (trialCondition), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryAmplitude). By default it is derived from the condition's settings - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither) - but a curriculum may choose another.
-  history: Before the trial-type split (Nov 2026) the condition's label drove what the trial showed (visual, auditory, audiovisualCoherent), at contrast 1 and the pips' one level, so the label alone says what those trials showed.
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
@@ -102,11 +100,10 @@ laserTriggerTime:
   description: "Harp time the workflow raised the Zapit trigger line (the laser, or at 0 mW the galvos and masking light alone): the first tick of the 1 ms Harp clock at or after laserToStimulusSeconds before the stimulus was due. NaN without optogenetics and on a trial that ended before its trigger, so a laser-off trial (a time, laserPowerMw 0) and one answered first (NaN) differ."
 trialCondition:
   type: int
-  description: The 0-based index of the trial's condition in trialConditions of the task file as run (Settings_Task), which gives its label, weight and condition-level values (set); before 18 Nov 2026 the label was named type. A repeat keeps the condition of the trial it repeats.
+  description: The 0-based index of the trial's condition in trialConditions of the task file as run (Settings_Task), which gives its trialType, weight and condition-level values (set). A repeat keeps the condition of the trial it repeats.
 trialCombinationId:
   type: int
   description: The trial's row in the experiment's Settings_Combinations (0-based, session-wide) - the combination it was drawn from, every list pick (each list cell of the condition's set and each list field, contrasts, the initial azimuths, the track lengths and the stimulus-off fractions, one entry; pairs zipped), whose values that differ between combinations or from Settings_Task are the row's values. The row's trialCondition and trialType are this trial's.
-  history: Added 18 Nov 2026 with Settings_Combinations, replacing trialCombination (briefly logged that day, the index within the condition); before it, the track length and stimulus-off fraction were drawn per trial apart from the condition.
 outcomeReason:
   type: string
   values: [FrequencyReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]
@@ -145,12 +142,10 @@ autoRewarded:
 visualContrast:
   type: double
   description: Grating contrast as BonVision's Contrast, 1 full contrast; 0 when no grating showed (drawn from the trial's condition's contrasts).
-  history: Added in the trial-type split (Nov 2026); before it a trial showing the grating showed it at contrast 1.
   copyOf: contrasts
 auditoryAmplitude:
   type: double
   description: The tone's amplitude, the task's auditoryStimulus.amplitude for the trial's condition - the scale of the pips' samples as stored (1 the files as stored, -58.1 dBFS RMS before equalisation); 0 when no tone played.
-  history: Added in the trial-type split (Nov 2026); before it every tone played at auditoryStimulus.levelDbfs -58.1, the same loudness as amplitude 1.
   note: The trial's amplitude even where a stimulus-off trial switched the tone off part way (auditoryOffPositionCm); each pip's own amplitude, 0 once switched off, is WorkflowData_StimulusState's auditoryAmplitude.
 auditoryAzimuthDeg:
   type: double
