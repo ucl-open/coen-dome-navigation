@@ -275,6 +275,8 @@ public class TrialDraw
     public const string AudiovisualCoherent = "audiovisualCoherent"; // both
     /// <summary>The trial types the corridor shows, the trial row's trialType and trialConditions' types (coen-dome-decision-making's names).</summary>
     public static readonly string[] TypeNames = { Visual, Auditory, AudiovisualCoherent };
+    /// <summary>The most a condition's weight may be (task.py's TrialCondition.weight le), so the weights' sum stays an int.</summary>
+    public const int MaxWeight = 1000000;
 
     /// <summary>What is wrong with the task's trialConditions (task.py's rules): a type the corridor does not show, a set
     /// (the corridor has no condition fields yet, x-conditionFields), a weight below 0, none above 0.</summary>
@@ -289,7 +291,7 @@ public class TrialDraw
             var where = string.Format("trialConditions[{0}] ({1})", i, c.Type);
             if (!TypeNames.Contains(c.Type)) problems.Add(where + ": its type is not one of " + string.Join(", ", TypeNames));
             if (c.Weight < 0) problems.Add(where + ": its weight is below 0");
-            if (c.Weight > 1000000) problems.Add(where + ": its weight is above 1000000");
+            if (c.Weight > MaxWeight) problems.Add(where + ": its weight is above " + MaxWeight);
             var set = c.Set as System.Collections.IDictionary;
             if (set != null) foreach (var path in set.Keys) problems.Add(where + " sets " + path + ", which is not a condition field of " + c.Type + " (x-conditionFields)");
             else if (c.Set != null) problems.Add(where + ": its set is not a map");
