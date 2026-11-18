@@ -100,6 +100,10 @@ laserTriggerTime:
 trialCondition:
   type: int
   description: The 0-based index of the trial's condition in trialConditions of the task file as run (Settings_Task), which gives its label, weight and condition-level values (set); before 18 Nov 2026 the label was named type. A repeat keeps the condition of the trial it repeats.
+trialCombination:
+  type: int
+  description: The 0-based index of the trial's combination within its condition (trialCondition) - every list pick it drew, each list cell of the condition's set and each list field (contrasts, the initial azimuths, the track lengths and the stimulus-off fractions, the set's or the task's) one entry, pairs zipped, combined by path with the first pick changing fastest (task.py condition_combinations); with trialCondition and the task file as run it gives every value the trial was drawn from.
+  history: Added 18 Nov 2026; before it, the track length and stimulus-off fraction were drawn per trial apart from the condition.
 outcomeReason:
   type: string
   values: [FrequencyReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]

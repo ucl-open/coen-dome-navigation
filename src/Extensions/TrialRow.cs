@@ -22,6 +22,7 @@ public class TrialRow
     public double laserPowerMw;
     public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
     public int trialCondition;          // the 0-based index of its condition in the task's trialConditions
+    public int trialCombination;        // the 0-based index of its combination within the condition
     public string outcomeReason;
     public double trackLengthCm;
     public double wheelGain;

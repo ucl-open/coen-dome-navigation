@@ -1189,12 +1189,12 @@ namespace UclOpenCoenDomeNavigationTask
     /// <summary>
     /// One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level
     ///values (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a
-    ///list field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial.
+    ///list field's list (LIST_FIELDS), at any level, one entry picked per trial. Paired lists share one picked index per trial.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute(@"One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level
     values (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a
-    list field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial.")]
+    list field's list (LIST_FIELDS), at any level, one entry picked per trial. Paired lists share one picked index per trial.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrialCondition
@@ -1261,14 +1261,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Groups of x-condition-fields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently
+        /// Groups of paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("pairs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="pairs")]
-        [System.ComponentModel.DescriptionAttribute("Groups of x-condition-fields paths whose lists (the set\'s, else the task\'s) have " +
-            "equal length and share one picked index per trial; unpaired lists are picked ind" +
-            "ependently")]
+        [System.ComponentModel.DescriptionAttribute("Groups of paths whose lists (the set\'s, else the task\'s) have equal length and sh" +
+            "are one picked index per trial; unpaired lists are picked independently")]
         public System.Collections.Generic.List<System.Collections.Generic.List<string>> Pairs
         {
             get
@@ -1282,13 +1281,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Condition-level values by dotted path (x-condition-fields); the rest are the task's
+        /// Condition-level values by dotted path, any field but x-session-fields'; the rest are the task's
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("set")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="set")]
-        [System.ComponentModel.DescriptionAttribute("Condition-level values by dotted path (x-condition-fields); the rest are the task" +
-            "\'s")]
+        [System.ComponentModel.DescriptionAttribute("Condition-level values by dotted path, any field but x-session-fields\'; the rest " +
+            "are the task\'s")]
         public object Set
         {
             get
@@ -1730,12 +1729,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-condition-fields: what it shows, its reward, auto-reward and laser-on chances); its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index
+        /// The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("trialConditions", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trialConditions")]
-        [System.ComponentModel.DescriptionAttribute(@"The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-condition-fields: what it shows, its reward, auto-reward and laser-on chances); its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index")]
+        [System.ComponentModel.DescriptionAttribute(@"The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index")]
         public System.Collections.Generic.List<TrialCondition> TrialConditions
         {
             get

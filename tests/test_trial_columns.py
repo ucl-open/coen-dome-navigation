@@ -22,6 +22,15 @@ def test_every_outcome_reason_the_rules_write_is_listed():
     assert sorted(listed) == sorted(written)
 
 
+def test_the_combination_is_logged_beside_the_condition():
+    # trialCombination, the index in the condition's combinations (TrialDraw.BuildConditions' order), follows trialCondition.
+    root = Path(__file__).parents[1]
+    names = list(yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8")))
+    assert names[names.index("trialCondition") + 1] == "trialCombination"
+    row = (root / "src" / "Extensions" / "TrialRow.cs").read_text(encoding="utf-8")
+    assert re.search(r"int trialCondition;.*\n\s+public int trialCombination;", row)
+
+
 def test_the_trial_types_are_the_conditions_and_decision_making_s():
     # trialType holds the drawn condition's trialType: its values are those trialConditions may hold, in
     # coen-dome-decision-making's words.

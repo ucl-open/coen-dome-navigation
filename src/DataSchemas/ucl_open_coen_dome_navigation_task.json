@@ -308,7 +308,8 @@
           },
           "minItems": 1,
           "title": "Stimuli",
-          "type": "array"
+          "type": "array",
+          "x-whole": true
         }
       },
       "title": "StimulusOff",
@@ -316,7 +317,7 @@
     },
     "TrialCondition": {
       "additionalProperties": false,
-      "description": "One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level\nvalues (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a\nlist field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial.",
+      "description": "One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level\nvalues (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a\nlist field's list (LIST_FIELDS), at any level, one entry picked per trial. Paired lists share one picked index per trial.",
       "properties": {
         "trialType": {
           "$ref": "#/$defs/TrialType",
@@ -330,7 +331,7 @@
           "type": "integer"
         },
         "pairs": {
-          "description": "Groups of x-condition-fields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
+          "description": "Groups of paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
           "items": {
             "items": {
               "type": "string"
@@ -342,7 +343,7 @@
         },
         "set": {
           "additionalProperties": true,
-          "description": "Condition-level values by dotted path (x-condition-fields); the rest are the task's",
+          "description": "Condition-level values by dotted path, any field but x-session-fields'; the rest are the task's",
           "title": "Set",
           "type": "object"
         }
@@ -493,7 +494,7 @@
           "title": "Reward"
         },
         "trialConditions": {
-          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then draws as the task's values with the condition's set over them (x-condition-fields: what it shows, its reward, auto-reward and laser-on chances); its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index",
+          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index",
           "items": {
             "$ref": "#/$defs/TrialCondition"
           },
@@ -640,14 +641,8 @@
       ],
       "title": "UclOpenCoenDomeNavigationTaskParameters",
       "type": "object",
-      "x-condition-fields": [
-        "contrasts",
-        "auditoryStimulus.amplitude",
-        "auditoryStimulus.initialAzimuthsDeg",
-        "optogenetics.laserOnProbability",
-        "reward.rewardSizeUl",
-        "autoRewardProbability"
-      ],
+      "x-max-combinations": 1024,
+      "x-required-conditions": [],
       "x-rules": [
         {
           "if": {
@@ -718,6 +713,18 @@
             "stimulusOff.stimuli"
           ]
         }
+      ],
+      "x-session-fields": [
+        "rngSeed",
+        "curriculum",
+        "trialConditions",
+        "backgroundNoise",
+        "penalty.sound.levelDbfs",
+        "rewardTone",
+        "optogenetics.enabled",
+        "optogenetics.zapitConditionsPath",
+        "optogenetics.laserMaxSeconds",
+        "optogenetics.triggerHoldSeconds"
       ],
       "x-trial-types": [
         {

@@ -8,9 +8,10 @@ sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made 
 (`uv run generate-waveforms`), not the task file's. The pips play at auditoryStimulus.amplitude (1 the files as stored,
 -58.1 dBFS RMS); the other sounds at the task file's levelDbfs (dBFS RMS: rewardTone, backgroundNoise and penalty.sound).
 
-What a trial shows and offers is its trial condition's (the condition fields, x-condition-fields: contrasts and
-auditoryStimulus.amplitude, each 0 for none, auditoryStimulus.initialAzimuthsDeg, reward.rewardSizeUl, autoRewardProbability and
-optogenetics.laserOnProbability); its trialType names it and drives nothing."""
+What a trial shows and offers is its trial condition's combination: a condition may set any field but the session fields
+(x-session-fields, SESSION_FIELDS), and every list field (LIST_FIELDS: contrasts, the initial azimuths, the track lengths and
+the stimulus-off fractions) expands into its combinations, one entry each; the draw reads every value per trial from the
+trial's combination (its index the trialCombination column). Its trialType names it and drives nothing."""
 
 import copy
 import json
@@ -127,6 +128,7 @@ class StimulusOff(TaskBlock):
         default=["auditory", "visual"],
         min_length=1,
         description="The stimuli that switch off on a stimulus-off trial: auditory (the tone), visual (the grating) or both",
+        json_schema_extra={"x-whole": True},
     )
 
     @field_validator("track_fractions")
@@ -186,17 +188,21 @@ class TrialType(StrEnum):
     NEUTRAL = "neutral"
 
 
-# The fields a condition may set (the schema's x-condition-fields; TrialDraw.ConditionFields, a test holds both): what
-# TrialDraw.Next alone reads per trial, coen-dome-decision-making's where the corridor has them. A condition's blank takes the
-# stage's, then the task's value.
-CONDITION_FIELDS = (
-    "contrasts",
-    "auditoryStimulus.amplitude",
-    "auditoryStimulus.initialAzimuthsDeg",
-    "optogenetics.laserOnProbability",
-    "reward.rewardSizeUl",
-    "autoRewardProbability",
-)
+# The session fields (the schema's x-session-fields; TaskSchema.SessionFields, generated): what cannot change per trial, so
+# a condition may not set it (the path or any path under it). A condition may set every other field: the draw reads it per
+# trial from the trial's combination. A condition's blank takes the stage's, then the task's value.
+SESSION_FIELDS = {
+    "rngSeed": "seeds the one random stream every trial is drawn from, at Go",
+    "curriculum": "the stage these values are: one per task file",
+    "trialConditions": "the mix the conditions are",
+    "backgroundNoise": "plays without a break from Ready, before the first trial",
+    "penalty.sound.levelDbfs": "the penalty sound's buffer is laid out once at Go (OpenRigs.Audio PlayPenaltySound)",
+    "rewardTone": "the reward tone's buffer is laid out once at Go, at its levelDbfs",
+    "optogenetics.enabled": "Zapit is connected and its conditions file loaded at Go",
+    "optogenetics.zapitConditionsPath": "the conditions file loaded in Zapit and counted at Go",
+    "optogenetics.laserMaxSeconds": "the trial loop's laser cap and backstop (lib-open-rigs LaserTiming.UntilOutcome) are fixed at Go",
+    "optogenetics.triggerHoldSeconds": "the trial loop's trigger hold (lib-open-rigs LaserTiming.UntilOutcome) is fixed at Go",
+}
 
 
 def _if(schemas: dict) -> dict:
@@ -226,8 +232,9 @@ TRIAL_TYPES = (
     {"trialType": "auditory", "if": _if({"auditoryStimulus.amplitude": _ABOVE_0})},
     {"trialType": "neutral"},
 )
-# The most combinations one condition may expand into (TrialDraw.MaxCombinations).
-MAX_COMBINATIONS = 64
+# What some weighted condition must draw (the schema's x-required-conditions; open_rigs.rigs.conditions.required_problems):
+# nothing, as the corridor has no target.
+REQUIRED = ()
 
 
 def _get(data: dict, dotted) -> Any:
@@ -246,16 +253,20 @@ def _put(data: dict, dotted, value: Any) -> None:
 
 
 def _options(base: dict, values: dict[str, Any], path) -> list:
-    # A cell's picks: a list field's entries, each a one-entry list; a scalar field's list, else its one value.
+    # A cell's picks: a list field's entries, each a one-entry list; a scalar field's list, else its one value (a whole
+    # list, x-whole, is one value).
     value = values[path] if path in values else _get(base, path)
-    if isinstance(_get(base, path), list):
+    if path in LIST_FIELDS:
         return [[entry] for entry in value] if isinstance(value, list) else [value]
-    return value if isinstance(value, list) else [value]
+    return value if isinstance(value, list) and not isinstance(_get(base, path), list) else [value]
 
 
 def condition_combinations(base: dict, values: dict[str, Any], pairs: list[list[str]] = ()) -> list[dict[str, Any]]:
-    """Every combination of a condition's set and pairs (coen-dome-decision-making's): each pair group's lists zipped (equal
-    lengths), each other list cell one pick, all combined as a product; a list field's entry is a one-entry list."""
+    """Every combination of a condition (coen-dome-decision-making's): each pairs group's lists zipped (equal lengths), then
+    by path each other list cell of its set and every list field (LIST_FIELDS, the set's or the task's list) one pick, all
+    combined as a product, the first cell's pick changing fastest (TrialDraw.BuildConditions' order, whose index is the
+    trialCombination column). A list field's entry is a one-entry list, so the draw's chances are those of picking each
+    list's entry per trial."""
     cells: list[tuple[tuple[str, ...], list[tuple]]] = []
     paired = [path for group in pairs for path in group]
     for group in pairs:
@@ -263,19 +274,24 @@ def condition_combinations(base: dict, values: dict[str, Any], pairs: list[list[
         if len({len(options) for options in lists}) > 1:
             raise ValueError(f"pairs {group} have lists of lengths {', '.join(str(len(options)) for options in lists)}; paired lists must be equally long")
         cells.append((tuple(group), list(zip(*lists))))
-    cells += [((path,), [(option,) for option in _options(base, values, path)]) for path in values if path not in paired]
+    cells += [((path,), [(option,) for option in _options(base, values, path)]) for path in sorted({*values, *LIST_FIELDS} - {*paired})]
     combos: list[dict[str, Any]] = [{}]
     for paths, options in cells:
         if not options:
             raise ValueError(f"{', '.join(paths)} is an empty list")
-        combos = [{**combo, **dict(zip(paths, option))} for combo in combos for option in options]
+        combos = [{**combo, **dict(zip(paths, option))} for option in options for combo in combos]
     return combos
+
+
+def session_field(path) -> str | None:
+    """The session field a dotted path is or lies under (SESSION_FIELDS), else None."""
+    return next((field for field in SESSION_FIELDS if path == field or path.startswith(field + ".")), None)
 
 
 class TrialCondition(TaskBlock):
     """One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level
     values (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a
-    list field's list (contrasts) one entry picked per trial. Paired lists share one picked index per trial."""
+    list field's list (LIST_FIELDS), at any level, one entry picked per trial. Paired lists share one picked index per trial."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -285,9 +301,9 @@ class TrialCondition(TaskBlock):
     weight: int = Field(ge=0, le=1_000_000, description="Relative draw weight: each new trial picks a condition with these as relative chances")
     pairs: list[list[String]] = Field(
         default_factory=list,
-        description="Groups of x-condition-fields paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
+        description="Groups of paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
     )
-    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-condition-fields); the rest are the task's")
+    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path, any field but x-session-fields'; the rest are the task's")
 
 
 def derive_trial_type(task: "UclOpenCoenDomeNavigationTaskParameters", condition: TrialCondition) -> str:
@@ -316,7 +332,8 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
 
     A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
-    model_config = ConfigDict(json_schema_extra={"x-condition-fields": list(CONDITION_FIELDS), "x-rules": list(RULES), "x-trial-types": list(TRIAL_TYPES)})
+    model_config = ConfigDict(json_schema_extra={"x-session-fields": list(SESSION_FIELDS), "x-rules": list(RULES), "x-trial-types": list(TRIAL_TYPES),
+                                                  "x-required-conditions": list(REQUIRED), "x-max-combinations": conditions.MAX_COMBINATIONS})
 
     reward: RewardSettings = Field(description="Reward delivery parameters")
 
@@ -324,7 +341,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         min_length=1,
         description=(
             "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
-            "trial, then draws as the task's values with the condition's set over them (x-condition-fields: what it shows, its reward, auto-reward and laser-on chances); "
+            "trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; "
             "its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index"
         ),
         json_schema_extra={"x-whole": True},
@@ -384,38 +401,52 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
     @model_validator(mode="after")
     def _conditions_run(self, info: ValidationInfo):
         # TrialDraw's same build: each condition's set and pairs over the task's values, every combination (at most
-        # MAX_COMBINATIONS), each a task that must validate.
+        # MAX_COMBINATIONS), each a task that must validate; then x-required-conditions on the weighted combinations.
         if (info.context or {}).get("condition"):
             return self
         base = self.model_dump(by_alias=True, mode="json")
+        leaves = conditions.flatten(base)
+        drawn, built = [], {}   # built: each distinct set and pairs' combinations, checked once
         for i, condition in enumerate(self.trial_conditions):
             where = f"trial_conditions[{i}] ({condition.trial_type.value})"
             paired = [path for group in condition.pairs for path in group]
             for path in [*condition.set, *paired]:
-                if path not in CONDITION_FIELDS:
-                    raise ValueError(f"{where} sets or pairs {path}, which is not a condition field (x-condition-fields)")
+                if field := session_field(path):
+                    raise ValueError(f"{where} sets or pairs {path}, a session field (x-session-fields: {field} {SESSION_FIELDS[field]})")
+                if path not in leaves:
+                    raise ValueError(f"{where} sets or pairs {path}, which is not a task field")
                 if path.startswith("optogenetics.") and not self.optogenetics.enabled:
                     raise ValueError(f"{where} sets {path} with optogenetics off")
             if len(set(paired)) < len(paired) or any(len(group) < 2 for group in condition.pairs):
                 raise ValueError(f"{where}: each pairs group needs two paths or more, each path in one group")
-            if not condition.set and not condition.pairs:
-                continue
-            try:
-                combos = condition_combinations(base, condition.set, condition.pairs)
-            except ValueError as e:
-                raise ValueError(f"{where}: {e}") from None
-            if len(combos) > MAX_COMBINATIONS:
-                raise ValueError(f"{where} expands into {len(combos)} combinations, more than {MAX_COMBINATIONS}")
-            for combo in combos:
-                data = copy.deepcopy(base)
-                for path, value in combo.items():
-                    _put(data, path, value)
-                data["trialConditions"] = [{"trialType": condition.trial_type.value, "weight": 1}]
-                try:
-                    type(self).model_validate(data, context={"condition": True})
-                except ValidationError as e:
-                    raise ValueError(f"{where} with {combo}: {e}") from None
+            key = json.dumps([condition.set, condition.pairs], sort_keys=True)
+            if key not in built:
+                built[key] = self._combinations(base, condition, where)
+            drawn += built[key] * (condition.weight > 0)
+        if problems := conditions.required_problems(list(REQUIRED), base, drawn):
+            raise ValueError("; ".join(f"{problem} (x-required-conditions)" for problem in problems))
         return self
+
+    def _combinations(self, base: dict, condition: TrialCondition, where) -> list[dict]:
+        """A condition's combinations as tasks' values (by alias, as JSON), each checked as a task."""
+        try:
+            combos = condition_combinations(base, condition.set, condition.pairs)
+        except ValueError as e:
+            raise ValueError(f"{where}: {e}") from None
+        if len(combos) > conditions.MAX_COMBINATIONS:
+            raise ValueError(f"{where} expands into {len(combos)} combinations, more than {conditions.MAX_COMBINATIONS} (x-max-combinations)")
+        tasks = []
+        for combo in combos:
+            data = copy.deepcopy(base)
+            for path, value in combo.items():
+                _put(data, path, value)
+            data["trialConditions"] = [{"trialType": condition.trial_type.value, "weight": 1}]
+            try:
+                type(self).model_validate(data, context={"condition": True})
+            except ValidationError as e:
+                raise ValueError(f"{where} with {combo}: {e}") from None
+            tasks.append(data)
+        return tasks
 
     @model_validator(mode="after")
     def _zone_ordered(self):
@@ -462,6 +493,10 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         if self.reward_floor_hz <= made["sweepStartHz"] or self.reward_ceiling_hz > made["sweepEndHz"]:
             raise ValueError(f"the reward zone is not inside the sweep ({made['sweepStartHz']} to {made['sweepEndHz']} Hz, src/sounds/sweep.json)")
         return self
+
+
+# The list fields one entry of which each trial draws (open_rigs.rigs.conditions.pick_lists).
+LIST_FIELDS = conditions.pick_lists(UclOpenCoenDomeNavigationTaskParameters.model_json_schema(by_alias=True))
 
 
 class UclOpenCoenDomeNavigationTaskLogic(Task):

@@ -328,31 +328,39 @@ public class TrialDrawTests
         unequal[1].Pairs = new List<List<string>> { new List<string> { "contrasts", "auditoryStimulus.amplitude" } };
         var alone = Conditions(0, 1, 0);
         alone[1].Pairs = new List<List<string>> { new List<string> { "contrasts" } };
-        var many = setting("contrasts", Enumerable.Range(1, 9).Select(i => (object)(i / 10.0)).ToList());
-        ((Dictionary<object, object>)many[1].Set)["auditoryStimulus.amplitude"] = Enumerable.Range(1, 8).Select(i => (object)(i / 10.0)).ToList();
+        var many = setting("contrasts", Enumerable.Range(1, 33).Select(i => (object)(i / 100.0)).ToList());
+        ((Dictionary<object, object>)many[1].Set)["auditoryStimulus.amplitude"] = Enumerable.Range(1, 32).Select(i => (object)(i / 100.0)).ToList();
         var cases = new[]
         {
             Tuple.Create(new List<TrialCondition>(), "trialConditions needs a condition"),
             Tuple.Create(Conditions(0, 0, 0), "trialConditions needs a condition with a weight above 0"),
             Tuple.Create(Conditions(-1, 2, 0), "trialConditions[0] (visual): its weight is below 0"),
-            Tuple.Create(setting("rewardFloorHz", 2.0), "trialConditions[1] (auditory) sets or pairs rewardFloorHz, which is not a condition field (x-condition-fields)"),
+            Tuple.Create(setting("rngSeed", 2.0), "trialConditions[1] (auditory) sets or pairs rngSeed, a session field (x-session-fields: rngSeed)"),
+            Tuple.Create(setting("optogenetics.laserMaxSeconds", 2.0), "trialConditions[1] (auditory) sets or pairs optogenetics.laserMaxSeconds, a session field (x-session-fields: optogenetics.laserMaxSeconds)"),
+            Tuple.Create(setting("rewardTone.levelDbfs", -30.0), "trialConditions[1] (auditory) sets or pairs rewardTone.levelDbfs, a session field (x-session-fields: rewardTone)"),
+            Tuple.Create(setting("trialStructure.lengthCm", 2.0), "trialConditions[1] (auditory) sets or pairs trialStructure.lengthCm, which is not a task field"),
+            Tuple.Create(setting("trialStructure", 2.0), "trialConditions[1] (auditory) sets or pairs trialStructure, which is not a task field"),
+            Tuple.Create(setting("rewardFloorHz", 2.0), "trialConditions[1] (auditory): the reward zone (2 to 25000 Hz) is not inside the sweep"),
             Tuple.Create(setting("optogenetics.laserOnProbability", 0.5), "trialConditions[1] (auditory) sets optogenetics.laserOnProbability with optogenetics off"),
             Tuple.Create(setting("reward.rewardSizeUl", 0.0), "trialConditions[1] (auditory): reward.rewardSizeUl must be above 0 and at most 20 ul"),
             Tuple.Create(setting("autoRewardProbability", 2.0), "trialConditions[1] (auditory): autoRewardProbability is 2, not from 0 to 1"),
-            Tuple.Create(setting("auditoryStimulus.initialAzimuthsDeg", new List<object> { "left" }), "trialConditions[1] (auditory): auditoryStimulus.initialAzimuthsDeg value 'left' is not a number or all"),
+            Tuple.Create(setting("auditoryStimulus.initialAzimuthsDeg", new List<object> { "left" }), "trialConditions[1] (auditory): auditoryStimulus.initialAzimuthsDeg must each be all or a number in [-180, 180]"),
             Tuple.Create(setting("auditoryStimulus.initialAzimuthsDeg", new List<object> { 200.0 }), "trialConditions[1] (auditory): auditoryStimulus.initialAzimuthsDeg must each be all or a number in [-180, 180]"),
             Tuple.Create(setting("auditoryStimulus.amplitude", -1.0), "trialConditions[1] (auditory): auditoryStimulus.amplitude must be a finite number, 0 or more"),
-            Tuple.Create(setting("auditoryStimulus.amplitude", "loud"), "trialConditions[1] (auditory): auditoryStimulus.amplitude value 'loud' is not a number"),
-            Tuple.Create(setting("contrasts", 0.5), "trialConditions[1] (auditory): contrasts must be a list"),
+            Tuple.Create(setting("auditoryStimulus.amplitude", "loud"), "trialConditions[1] (auditory): its values do not read as the task's fields"),
+            Tuple.Create(setting("contrasts", 0.5), "trialConditions[1] (auditory): its values do not read as the task's fields"),
             Tuple.Create(setting("contrasts", new List<object> { 0.5, -1.0 }), "trialConditions[1] (auditory) with contrasts [-1]: contrasts must each be a finite number, 0 or more"),
             Tuple.Create(setting("contrasts", new List<object>()), "trialConditions[1] (auditory): contrasts is an empty list"),
             Tuple.Create(unequal, "trialConditions[1] (auditory): pairs [contrasts, auditoryStimulus.amplitude] have lists of lengths 2, 1; paired lists must be equally long"),
             Tuple.Create(alone, "trialConditions[1] (auditory): each pairs group needs two paths or more"),
-            Tuple.Create(many, "trialConditions[1] (auditory) expands into 72 combinations, more than 64"),
+            Tuple.Create(many, "trialConditions[1] (auditory) expands into 1056 combinations, more than 1024 (x-max-combinations)"),
         };
         foreach (var c in cases)
         {
             var task = Fixture.Task(2);
+            // One track length and one fraction, so a combination is named by the condition's own picks alone.
+            task.TrialStructure.TrackLengthsCm = new List<double> { 100 };
+            task.StimulusOff.TrackFractions = new List<double> { 0.5 };
             task.TrialConditions = c.Item1;
             StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, c.Item2);
         }
@@ -403,7 +411,9 @@ public class TrialDrawTests
             var built = TrialDraw.BuildConditions(task, problems);
             Assert.AreEqual(0, problems.Count, string.Join("; ", problems));
             // visual: the grating at the task's contrast, no tone; auditory: the tone at amplitude 1, no grating; both.
-            CollectionAssert.AreEqual(new[] { "1:0", "0:1", "1:1" }, built.Select(c => c.Combinations.Single()).Select(m => string.Join(",", m.Contrasts) + ":" + m.Amplitude).ToArray());
+            // Each expands into the task's 3 track lengths times its 2 stimulus-off fractions.
+            CollectionAssert.AreEqual(new[] { "1:0", "0:1", "1:1" }, built.Select(c => c.Combinations[0].Task).Select(m => string.Join(",", m.Contrasts) + ":" + m.AuditoryStimulus.Amplitude).ToArray());
+            Assert.IsTrue(built.All(c => c.Combinations.Count == 6));
         }
         // ReadTask keeps a set value a number, so Settings_Task logs it as one (the typed read's text would log "0").
         Assert.IsNotInstanceOfType(((System.Collections.IDictionary)TrialDraw.Read(text).TaskParameters.TrialConditions[0].Set)["auditoryStimulus.amplitude"], typeof(string));
@@ -468,15 +478,38 @@ public class TrialDrawTests
         };
         var loudest = Fixture.Setup(task).Loudest;
         Assert.AreEqual(2.0, loudest.Amplitude);
-        Assert.AreEqual("trialConditions[0] (auditory) with auditoryStimulus.amplitude 2", loudest.Where);
+        Assert.AreEqual("trialConditions[0] (auditory) with auditoryStimulus.amplitude 2, stimulusOff.trackFractions [0.4], trialStructure.trackLengthsCm [80]", loudest.Where);
     }
 
     [TestMethod]
-    public void TheConditionFieldsAreTheSchemas()
+    public void TheSessionFieldsAndTheCapAreTheSchemas()
     {
         var schema = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(Path.Combine(Fixture.Repo(), "src", "DataSchemas", "ucl_open_coen_dome_navigation_task.json")));
         var parameters = schema["$defs"]["UclOpenCoenDomeNavigationTaskParameters"];
-        CollectionAssert.AreEqual(TrialDraw.ConditionFields, parameters["x-condition-fields"].ToObject<string[]>());
+        CollectionAssert.AreEqual(TaskSchema.SessionFields, parameters["x-session-fields"].ToObject<string[]>());
+        Assert.AreEqual(TaskSchema.MaxCombinations, parameters["x-max-combinations"].ToObject<int>());
+    }
+
+    [TestMethod]
+    public void EachTrialReadsItsCombinationAndLogsItsIndex()
+    {
+        var task = Fixture.Task(2);
+        task.StimulusOff.TrackFractions = new List<double> { 0.5 };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Auditory, Weight = 1,
+            Set = new Dictionary<object, object> { { "trialStructure.trackLengthsCm", new List<object> { 40.0, 80.0 } }, { "wheelGain", 2.0 }, { "penalty.timeoutSeconds", 0.5 } } } };
+        var draw = Fixture.Draw(task);
+        var trials = Enumerable.Range(0, 200).Select(i => draw.Next()).ToList();
+        // The lengths are the one list with a choice: combination 0 draws 40 track cm, 1 draws 80, each at the condition's gain.
+        Assert.IsTrue(trials.All(t => t.trackLengthCm == (t.trialCombination == 0 ? 20 : 40) && t.wheelGain == 2));
+        CollectionAssert.AreEquivalent(new[] { 0, 1 }, trials.Select(t => t.trialCombination).Distinct().ToArray());
+        var rig = new Rig(Fixture.Setup(task));
+        var trial = rig.RunTo(TrialEventKind.Start).Trial;
+        rig.RunTo(TrialEventKind.Update);
+        rig.Wheel(1000);
+        var outcome = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome;
+        Assert.AreEqual(trial.trialCombination, outcome.Row.Value.trialCombination);
+        // Run to the track's end: penalised, with the condition's timeout.
+        Assert.AreEqual(0.5, outcome.PenaltyTimeoutSeconds);
     }
 
     [TestMethod]

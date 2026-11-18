@@ -44,7 +44,7 @@ def test_the_shared_blocks_replace_the_local_copies():
     assert not includes & {lint.SPEAKER_MIXER, lint.PROJECTOR_DISPLAY}
     assert not [p for p in includes if p.startswith("Extensions")]
     assert sorted(p.name for p in (ROOT / "src" / "Extensions").iterdir()) == [
-        "README.md", "Sweep.cs", "TrialLogic.cs", "TrialRow.cs", "UclOpenCoenDomeNavigationTask.Generated.cs"]
+        "README.md", "Sweep.cs", "TaskSchema.Generated.cs", "TrialLogic.cs", "TrialRow.cs", "UclOpenCoenDomeNavigationTask.Generated.cs"]
     assert "Disable" not in {e.get(XSI) for e in MAIN.iter(W + "Expression")}
 
 

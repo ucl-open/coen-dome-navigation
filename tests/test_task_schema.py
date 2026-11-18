@@ -14,17 +14,21 @@ from ucl_open_coen_dome_navigation import waveforms
 from ucl_open_coen_dome_navigation.task import (
     STEP_SECONDS,
     LASER_MAX_MARGIN_SECONDS,
-    CONDITION_FIELDS,
+    LIST_FIELDS,
+    REQUIRED,
+    SESSION_FIELDS,
+    session_field,
     MAX_WEIGHT_SUM,
     RULES,
     OptogeneticsSettings,
     TRIAL_TYPES,
     TrialType,
     UclOpenCoenDomeNavigationTaskLogic,
+    condition_combinations,
     UclOpenCoenDomeNavigationTaskParameters,
     derive_trial_type,
 )
-from open_rigs.rigs.conditions import unused_paths
+from open_rigs.rigs.conditions import MAX_COMBINATIONS, flatten, unused_paths
 
 ROOT = Path(__file__).parent.parent
 TASK = ROOT / "config" / "task-abstract-corridor.yml"
@@ -88,11 +92,19 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
     params_schema = schema["$defs"]["UclOpenCoenDomeNavigationTaskParameters"]
-    # app-rig-control reads both dome tasks one way: x-condition-fields the allow-list (TrialDraw.ConditionFields, a C# test
-    # holds it to the schema), x-rules the rules, x-trial-types the names.
-    # decision-making's condition fields where the corridor has them (Pip, 18 Nov 2026).
-    assert params_schema["x-condition-fields"] == list(CONDITION_FIELDS) == [
-        "contrasts", "auditoryStimulus.amplitude", "auditoryStimulus.initialAzimuthsDeg", "optogenetics.laserOnProbability", "reward.rewardSizeUl", "autoRewardProbability"]
+    # app-rig-control reads both dome tasks one way: x-session-fields what a condition may not set (TaskSchema.SessionFields,
+    # a C# test holds it to the schema), x-rules the rules, x-trial-types the names, x-required-conditions none (no target),
+    # x-max-combinations the cap; every array but an x-whole one is a list field, one entry per combination.
+    assert params_schema["x-session-fields"] == list(SESSION_FIELDS) and "x-condition-fields" not in params_schema
+    assert params_schema["x-required-conditions"] == list(REQUIRED) == []
+    assert params_schema["x-max-combinations"] == MAX_COMBINATIONS == 1024
+    assert LIST_FIELDS == ["auditoryStimulus.initialAzimuthsDeg", "contrasts", "stimulusOff.trackFractions", "trialStructure.trackLengthsCm"]
+    assert schema["$defs"]["StimulusOff"]["properties"]["stimuli"]["x-whole"] is True
+    # Every path a rule or trial type names is a task field, and none a session field; every session field is one.
+    leaves = set(flatten(model.model_dump(by_alias=True, mode="json")))
+    named = {path for entry in [*RULES, *TRIAL_TYPES] for path in [*entry.get("if", {}).get("properties", {}), *entry.get("unused", [])]}
+    assert named <= leaves and {session_field(path) for path in named} == {None}
+    assert {session_field(leaf) for leaf in leaves} - {None} == set(SESSION_FIELDS)
     # initialAzimuthsDeg's items a number or "all", oneOf as decision-making's (Bonsai.Sgen's List<object>).
     azimuths = schema["$defs"]["AuditoryStimulus"]["properties"]["initialAzimuthsDeg"]
     assert azimuths["default"] == ["all"] and azimuths["items"] == {"oneOf": [{"type": "number"}, {"const": "all", "type": "string"}]}
@@ -138,21 +150,25 @@ def test_the_rules_say_what_goes_unread():
         ([{"trialType": "auditory", "weight": -1}], "greater than or equal"),
         ([{"trialType": "auditory", "weight": 1000001}], "less than or equal"),
         ([{"trialType": "audiovisualConflict", "weight": 1}], "Input should be 'visual', 'auditory', 'audiovisualCoherent' or 'neutral'"),
-        ([{"trialType": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets or pairs rewardSizeUl, which is not a condition field"),
+        ([{"trialType": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets or pairs rewardSizeUl, which is not a task field"),
+        ([{"trialType": "visual", "weight": 1, "set": {"rngSeed": 2}}], r"sets or pairs rngSeed, a session field \(x-session-fields: rngSeed "),
+        ([{"trialType": "visual", "weight": 1, "set": {"rewardTone.levelDbfs": -30}}], r"sets or pairs rewardTone.levelDbfs, a session field \(x-session-fields: rewardTone "),
+        ([{"trialType": "visual", "weight": 1, "set": {"optogenetics.triggerHoldSeconds": 1}}], r"a session field \(x-session-fields: optogenetics.triggerHoldSeconds "),
         ([{"trialType": "visual", "weight": 1, "set": {"optogenetics.laserOnProbability": 1}}], r"sets optogenetics.laserOnProbability with optogenetics off"),
-        ([{"trialType": "visual", "weight": 1, "set": {"reward.rewardSizeUl": 0}}], r"(?s)with \{'reward.rewardSizeUl': 0\}.*greater than 0"),
+        ([{"trialType": "visual", "weight": 1, "set": {"reward.rewardSizeUl": 0}}], r"(?s)with \{.*'reward.rewardSizeUl': 0.*greater than 0"),
         ([{"trialType": "visual", "weight": 1, "set": {"autoRewardProbability": 2}}], r"less than or equal to 1"),
         ([{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": [200]}}], r"outside \[-180, 180\]"),
         ([{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": ["left"]}}], r"Input should be 'all'"),
         ([{"trialType": "visual", "weight": 1, "colour": 1}], "Extra inputs"),
         ([{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": -1}}], r"(?s)trial_conditions\[0\] \(visual\) with .*greater than or equal to 0"),
-        ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [0.5, -1]}}], r"(?s)with \{'contrasts': \[-1\]\}.*contrasts must each be 0 or more"),
+        ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [0.5, -1]}}], r"(?s)with \{.*'contrasts': \[-1\].*contrasts must each be 0 or more"),
         ([{"trialType": "visual", "weight": 1, "set": {"contrasts": []}}], "contrasts is an empty list"),
         ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [0.5, 1], "auditoryStimulus.amplitude": [1]}, "pairs": [["contrasts", "auditoryStimulus.amplitude"]]}],
          "paired lists must be equally long"),
         ([{"trialType": "visual", "weight": 1, "pairs": [["contrasts"]]}], "each pairs group needs two paths or more"),
-        ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [i / 10 for i in range(1, 10)], "auditoryStimulus.amplitude": [i / 10 for i in range(1, 9)]}}],
-         "expands into 72 combinations, more than 64"),
+        # Every list field expands too: the task's 3 track lengths and 2 stimulus-off fractions times the set's 1 x 171.
+        ([{"trialType": "visual", "weight": 1, "set": {"contrasts": [1], "auditoryStimulus.amplitude": [i / 100 for i in range(1, 172)]}}],
+         r"expands into 1026 combinations, more than 1024 \(x-max-combinations\)"),
     ],
 )
 def test_conditions_need_a_weight_a_label_and_what_they_set_to_run(conditions, match):
@@ -160,6 +176,33 @@ def test_conditions_need_a_weight_a_label_and_what_they_set_to_run(conditions, m
     params["trialConditions"] = conditions
     with pytest.raises(pydantic.ValidationError, match=match):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+
+
+def test_a_condition_may_set_any_field_but_a_session_field_and_every_list_expands():
+    params = task()["taskParameters"]
+    params["trialConditions"] = [{"trialType": "visual", "weight": 1, "set": {"wheelGain": 2, "trialStructure.trackLengthsCm": [40, 60], "penalty.timeoutSeconds": 2,
+                                                                              "visualStimulus.spatialFrequencyEndCpd": 0.6, "rewardFloorHz": 15000}}]
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+    # 171 amplitudes times the task's 6 track and fraction picks is 1026; 170 is 1020, within the cap.
+    params["trialConditions"] = [{"trialType": "visual", "weight": 1, "set": {"auditoryStimulus.amplitude": [i / 100 for i in range(1, 171)]}}]
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+
+
+def test_combinations_are_ordered_by_path_the_first_changing_fastest():
+    # TrialDraw.BuildConditions' order, logged as trialCombination.
+    model = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"])
+    combos = condition_combinations(model.model_dump(by_alias=True, mode="json"), {"contrasts": [0.5, 1]})
+    assert len(combos) == 12 and combos[:3] == [
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "contrasts": [0.5], "stimulusOff.trackFractions": [0.4], "trialStructure.trackLengthsCm": [80.0]},
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "contrasts": [1], "stimulusOff.trackFractions": [0.4], "trialStructure.trackLengthsCm": [80.0]},
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "contrasts": [0.5], "stimulusOff.trackFractions": [0.6], "trialStructure.trackLengthsCm": [80.0]}]
+
+
+def test_the_committed_task_schema_cs_is_the_schema_s():
+    # TrialDraw reads x-session-fields, x-max-combinations and the list fields from TaskSchema, generated with the schema.
+    from ucl_open_coen_dome_navigation.regenerate import task_schema_cs
+
+    assert (ROOT / "src" / "Extensions" / "TaskSchema.Generated.cs").read_text(encoding="utf-8") == task_schema_cs()
 
 
 def test_weights_may_add_to_the_draw_s_int_and_no_more():
