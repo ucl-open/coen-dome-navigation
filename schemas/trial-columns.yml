@@ -32,7 +32,7 @@ trialNumber:
 trialType:
   type: string
   values: [visual, auditory, audiovisualCoherent]
-  description: What the trial showed, in words (TrialDraw.TypeNames; coen-dome-decision-making's names and the types of the task file's trialConditions) - visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both together), its condition's type (trialCondition), each trial's condition drawn with the conditions' weights as relative chances. audiovisualConflict and neutral are not defined in this task yet.
+  description: What the trial showed, in words (TrialDraw.TypeNames; coen-dome-decision-making's names and the labels of the task file's trialConditions) - visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both together), its condition's label (trialCondition), each trial's condition drawn with the conditions' weights as relative chances. audiovisualConflict and neutral are not defined in this task yet.
 outcome:
   type: string
   values: [Correct, Incorrect, NoResponse]
@@ -98,7 +98,7 @@ laserTriggerTime:
   description: "Harp time the workflow raised the Zapit trigger line (the laser, or at 0 mW the galvos and masking light alone): the first tick of the 1 ms Harp clock at or after laserToStimulusSeconds before the stimulus was due. NaN without optogenetics and on a trial that ended before its trigger, so a laser-off trial (a time, laserPowerMw 0) and one answered first (NaN) differ."
 trialCondition:
   type: int
-  description: The 0-based index of the trial's condition in trialConditions of the task file as run (Settings_Task), which gives its type, weight and condition-level values (set). A repeat keeps the condition of the trial it repeats.
+  description: The 0-based index of the trial's condition in trialConditions of the task file as run (Settings_Task), which gives its label, weight and condition-level values (set); before 18 Nov 2026 the label was named type. A repeat keeps the condition of the trial it repeats.
 outcomeReason:
   type: string
   values: [FrequencyReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]

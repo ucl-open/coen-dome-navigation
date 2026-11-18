@@ -204,7 +204,7 @@ public class TrialDrawTests
     /// <summary>One condition per type, set empty, in the task file's order (visual, auditory, audiovisualCoherent).</summary>
     static List<TrialCondition> Conditions(int visual, int auditory, int coherent)
     {
-        return new[] { visual, auditory, coherent }.Select((w, i) => new TrialCondition { Type = TrialDraw.TypeNames[i], Weight = w, Set = new Dictionary<object, object>() }).ToList();
+        return new[] { visual, auditory, coherent }.Select((w, i) => new TrialCondition { Label = TrialDraw.TypeNames[i], Weight = w, Set = new Dictionary<object, object>() }).ToList();
     }
 
     [TestMethod]
@@ -213,7 +213,7 @@ public class TrialDrawTests
         // Two conditions of one type are told apart by trialCondition, their index; a seeded run follows the weights.
         var task = Fixture.Task(3);
         task.TrialConditions = Conditions(1, 2, 0);
-        task.TrialConditions.Add(new TrialCondition { Type = "visual", Weight = 5 });
+        task.TrialConditions.Add(new TrialCondition { Label = "visual", Weight = 5 });
         var draw = Fixture.Draw(task, 3);
         var trials = Enumerable.Range(0, 4000).Select(i => draw.Next()).ToList();
         var weights = new[] { 1, 2, 0, 5 };
@@ -221,9 +221,9 @@ public class TrialDrawTests
         {
             Assert.AreEqual(weights[i] / 8.0, trials.Count(t => t.trialCondition == i) / 4000.0, 0.02, "condition " + i);
         }
-        Assert.IsTrue(trials.All(t => t.trialType == task.TrialConditions[t.trialCondition].Type));
+        Assert.IsTrue(trials.All(t => t.trialType == task.TrialConditions[t.trialCondition].Label));
         task.TrialConditions = Conditions(0, 0, 0);
-        task.TrialConditions.Add(new TrialCondition { Type = "visual", Weight = 1 });
+        task.TrialConditions.Add(new TrialCondition { Label = "visual", Weight = 1 });
         var rig = new Rig(Fixture.Setup(task, 3));
         rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);
@@ -237,7 +237,7 @@ public class TrialDrawTests
         // the next trial's (the loop draws ahead). Rows are matched by trialNumber: Wheel can end a trial in its own call.
         var task = Fixture.Task(3);
         task.TrialConditions = Conditions(1, 2, 1);
-        task.TrialConditions.Add(new TrialCondition { Type = "visual", Weight = 3 });
+        task.TrialConditions.Add(new TrialCondition { Label = "visual", Weight = 3 });
         var rig = new Rig(Fixture.Setup(task, 3));
         var seen = new HashSet<int>();
         for (int i = 0; i < 30; i++)
@@ -254,7 +254,7 @@ public class TrialDrawTests
             if (!ended()) rig.Until(rig.Now + 60, ended);
             var row = rig.Events[at].Outcome.Row.Value;
             Assert.AreEqual(start.trialCondition, row.trialCondition, "trial " + start.trialNumber);
-            Assert.AreEqual(task.TrialConditions[row.trialCondition].Type, row.trialType, "trial " + start.trialNumber);
+            Assert.AreEqual(task.TrialConditions[row.trialCondition].Label, row.trialType, "trial " + start.trialNumber);
             seen.Add(row.trialCondition);
         }
         CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, seen.ToArray());
@@ -284,7 +284,7 @@ public class TrialDrawTests
     public void ConditionsAllZeroNegativeOfAnUndefinedTypeOrWithASetAreRefused()
     {
         var conflict = Conditions(0, 1, 0);
-        conflict.Add(new TrialCondition { Type = "audiovisualConflict", Weight = 1 });
+        conflict.Add(new TrialCondition { Label = "audiovisualConflict", Weight = 1 });
         var set = Conditions(0, 1, 0);
         set[1].Set = new Dictionary<object, object> { { "reward.rewardSizeUl", 2.0 } };
         var cases = new[]
@@ -292,8 +292,8 @@ public class TrialDrawTests
             Tuple.Create(new List<TrialCondition>(), "trialConditions needs a condition"),
             Tuple.Create(Conditions(0, 0, 0), "trialConditions needs a condition with a weight above 0"),
             Tuple.Create(Conditions(-1, 2, 0), "trialConditions[0] (visual): its weight is below 0"),
-            Tuple.Create(conflict, "trialConditions[3] (audiovisualConflict): its type is not one of visual, auditory, audiovisualCoherent"),
-            Tuple.Create(set, "trialConditions[1] (auditory) sets reward.rewardSizeUl, which is not a condition field of auditory (x-conditionFields)"),
+            Tuple.Create(conflict, "trialConditions[3] (audiovisualConflict): its label is not one of visual, auditory, audiovisualCoherent"),
+            Tuple.Create(set, "trialConditions[1] (auditory) sets reward.rewardSizeUl, which is not a condition field (x-conditionFields)"),
         };
         foreach (var c in cases)
         {
@@ -317,7 +317,7 @@ public class TrialDrawTests
         notMap[1].Set = "5";
         StringAssert.Contains(refusal(notMap), "trialConditions[1] (auditory): its set is not a map");
         // 2200 conditions of the cap's weight sum past int, which random.Next cannot take.
-        var heavy = Enumerable.Range(0, 2200).Select(i => new TrialCondition { Type = "visual", Weight = TrialDraw.MaxWeight }).ToList();
+        var heavy = Enumerable.Range(0, 2200).Select(i => new TrialCondition { Label = "visual", Weight = TrialDraw.MaxWeight }).ToList();
         StringAssert.Contains(refusal(heavy), "weights add to more than 2147483647");
     }
 
@@ -325,10 +325,10 @@ public class TrialDrawTests
     public void OneConditionAtTheCapAndManyConditionsAreDrawnAsWritten()
     {
         var task = Fixture.Task(3);
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Type = "auditory", Weight = TrialDraw.MaxWeight } };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Label = "auditory", Weight = TrialDraw.MaxWeight } };
         var one = Fixture.Draw(task, 3);
         Assert.IsTrue(Enumerable.Range(0, 30).Select(i => one.Next()).All(t => t.trialCondition == 0 && t.trialType == "auditory"));
-        task.TrialConditions = Enumerable.Range(0, 120).Select(i => new TrialCondition { Type = TrialDraw.TypeNames[i % 3], Weight = 1 }).ToList();
+        task.TrialConditions = Enumerable.Range(0, 120).Select(i => new TrialCondition { Label = TrialDraw.TypeNames[i % 3], Weight = 1 }).ToList();
         var many = Fixture.Draw(task, 3);
         var trials = Enumerable.Range(0, 3000).Select(i => many.Next()).ToList();
         Assert.IsTrue(trials.All(t => t.trialType == TrialDraw.TypeNames[t.trialCondition % 3]));
@@ -339,9 +339,9 @@ public class TrialDrawTests
     public void TheTaskFilesConditionsAreReadByTheirYamlNames()
     {
         var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-corridor.yml"))
-            .Replace("- { type: visual, weight: 0, set: {} }", "- { type: visual, weight: 2, set: {} }");
+            .Replace("- { label: visual, weight: 0, set: {} }", "- { label: visual, weight: 2, set: {} }");
         var task = new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
-        CollectionAssert.AreEqual(new[] { "visual:2", "auditory:1", "audiovisualCoherent:0" }, task.TrialConditions.Select(c => c.Type + ":" + c.Weight).ToArray());
+        CollectionAssert.AreEqual(new[] { "visual:2", "auditory:1", "audiovisualCoherent:0" }, task.TrialConditions.Select(c => c.Label + ":" + c.Weight).ToArray());
         Assert.AreEqual(0, ((System.Collections.IDictionary)task.TrialConditions[0].Set).Count, "set: {} reads as an empty map");
         Assert.AreEqual(0, TrialDraw.ConditionProblems(task).Count);
     }

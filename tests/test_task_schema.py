@@ -73,26 +73,26 @@ def test_the_task_file_s_conditions_are_its_old_weights():
     params = task()["taskParameters"]
     assert "modality" not in params and "trialWeights" not in params
     assert params["trialConditions"] == [
-        {"type": "visual", "weight": 0, "set": {}}, {"type": "auditory", "weight": 1, "set": {}}, {"type": "audiovisualCoherent", "weight": 0, "set": {}}]
+        {"label": "visual", "weight": 0, "set": {}}, {"label": "auditory", "weight": 1, "set": {}}, {"label": "audiovisualCoherent", "weight": 0, "set": {}}]
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
     params_schema = schema["$defs"]["UclOpenCoenDomeNavigationTaskParameters"]
-    assert params_schema["x-conditionFields"] == {} == CONDITION_FIELDS
+    assert params_schema["x-conditionFields"] == [] == list(CONDITION_FIELDS) and params_schema["x-rules"] == []
     assert params_schema["properties"]["trialConditions"]["x-whole"] is True
-    assert list(TRIAL_TYPES) == [t["type"] for t in params["trialConditions"]]
+    assert list(TRIAL_TYPES) == [t["label"] for t in params["trialConditions"]]
 
 
 @pytest.mark.parametrize(
     "conditions, match",
     [
         ([], "at least 1 item"),
-        ([{"type": "auditory", "weight": 0}], "weight above 0"),
-        ([{"type": "auditory", "weight": -1}], "greater than or equal"),
-        ([{"type": "auditory", "weight": 1000001}], "less than or equal"),
-        ([{"type": "auditory", "weight": 1}, {"type": "neutral", "weight": 0}], r"trial_conditions\[1\] \(neutral\): its type is not one of visual, auditory, audiovisualCoherent"),
-        ([{"type": "audiovisualConflict", "weight": 1}], "its type is not one of"),
-        ([{"type": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets rewardSizeUl, which is not a condition field of visual"),
-        ([{"type": "visual", "weight": 1, "colour": 1}], "Extra inputs"),
+        ([{"label": "auditory", "weight": 0}], "weight above 0"),
+        ([{"label": "auditory", "weight": -1}], "greater than or equal"),
+        ([{"label": "auditory", "weight": 1000001}], "less than or equal"),
+        ([{"label": "auditory", "weight": 1}, {"label": "neutral", "weight": 0}], r"trial_conditions\[1\] \(neutral\): its label is not one of visual, auditory, audiovisualCoherent"),
+        ([{"label": "audiovisualConflict", "weight": 1}], "its label is not one of"),
+        ([{"label": "visual", "weight": 1, "set": {"rewardSizeUl": 2}}], r"sets or pairs rewardSizeUl, which is not a condition field"),
+        ([{"label": "visual", "weight": 1, "colour": 1}], "Extra inputs"),
     ],
 )
 def test_conditions_need_a_weight_a_shown_type_and_an_empty_set(conditions, match):
@@ -107,7 +107,7 @@ def test_weights_may_add_to_the_draw_s_int_and_no_more():
     logic = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
     assert MAX_WEIGHT_SUM == 2**31 - 1 and "Sum(c => (long)c.Weight) > int.MaxValue" in logic
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"type": "visual", "weight": 1000000}] * 2147 + [{"type": "auditory", "weight": 483647}]
+    params["trialConditions"] = [{"label": "visual", "weight": 1000000}] * 2147 + [{"label": "auditory", "weight": 483647}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     params["trialConditions"][-1]["weight"] = 483648
     with pytest.raises(pydantic.ValidationError, match=f"weights add to more than {MAX_WEIGHT_SUM}"):
@@ -116,7 +116,7 @@ def test_weights_may_add_to_the_draw_s_int_and_no_more():
 
 def test_a_condition_s_set_may_be_left_out_and_the_mix_is_required():
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"type": "audiovisualCoherent", "weight": 3}]
+    params["trialConditions"] = [{"label": "audiovisualCoherent", "weight": 3}]
     assert UclOpenCoenDomeNavigationTaskParameters.model_validate(params).trial_conditions[0].set == {}
     del params["trialConditions"]
     with pytest.raises(pydantic.ValidationError, match="trialConditions"):

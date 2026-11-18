@@ -273,13 +273,13 @@ public class TrialDraw
     public const string Visual = "visual";                           // the grating alone
     public const string Auditory = "auditory";                       // the tone sweep alone
     public const string AudiovisualCoherent = "audiovisualCoherent"; // both
-    /// <summary>The trial types the corridor shows, the trial row's trialType and trialConditions' types (coen-dome-decision-making's names).</summary>
+    /// <summary>The trial types the corridor shows, the trial row's trialType and trialConditions' labels (coen-dome-decision-making's names).</summary>
     public static readonly string[] TypeNames = { Visual, Auditory, AudiovisualCoherent };
     /// <summary>The most a condition's weight may be (task.py's TrialCondition.weight le), so the weights' sum stays an int.</summary>
     public const int MaxWeight = 1000000;
 
-    /// <summary>What is wrong with the task's trialConditions (task.py's rules): a type the corridor does not show, a set
-    /// (the corridor has no condition fields yet, x-conditionFields), a weight below 0, none above 0.</summary>
+    /// <summary>What is wrong with the task's trialConditions (task.py's rules): a label the corridor does not show, a set
+    /// or pairs (the corridor has no condition fields yet, x-conditionFields), a weight below 0, none above 0.</summary>
     public static List<string> ConditionProblems(UclOpenCoenDomeNavigationTaskParameters task)
     {
         var problems = new List<string>();
@@ -288,13 +288,14 @@ public class TrialDraw
         for (int i = 0; i < conditions.Count; i++)
         {
             var c = conditions[i];
-            var where = string.Format("trialConditions[{0}] ({1})", i, c.Type);
-            if (!TypeNames.Contains(c.Type)) problems.Add(where + ": its type is not one of " + string.Join(", ", TypeNames));
+            var where = string.Format("trialConditions[{0}] ({1})", i, c.Label);
+            if (!TypeNames.Contains(c.Label)) problems.Add(where + ": its label is not one of " + string.Join(", ", TypeNames));
             if (c.Weight < 0) problems.Add(where + ": its weight is below 0");
             if (c.Weight > MaxWeight) problems.Add(where + ": its weight is above " + MaxWeight);
             var set = c.Set as System.Collections.IDictionary;
-            if (set != null) foreach (var path in set.Keys) problems.Add(where + " sets " + path + ", which is not a condition field of " + c.Type + " (x-conditionFields)");
+            if (set != null) foreach (var path in set.Keys) problems.Add(where + " sets " + path + ", which is not a condition field (x-conditionFields)");
             else if (c.Set != null) problems.Add(where + ": its set is not a map");
+            foreach (var path in (c.Pairs ?? new List<List<string>>()).Where(g => g != null).SelectMany(g => g)) problems.Add(where + " pairs " + path + ", which is not a condition field (x-conditionFields)");
         }
         if (conditions.Sum(c => (long)c.Weight) <= 0) problems.Add("trialConditions needs a condition with a weight above 0");
         if (conditions.Sum(c => (long)c.Weight) > int.MaxValue) problems.Add("trialConditions' weights add to more than " + int.MaxValue + ", the most the draw can sum");
@@ -431,7 +432,7 @@ public class TrialDraw
             t.laserMaxSeconds = opto.LaserMaxSeconds;
         }
         t.trialCondition = WeightedCondition();
-        t.trialType = task.TrialConditions[t.trialCondition].Type;
+        t.trialType = task.TrialConditions[t.trialCondition].Label;
         t.autoReward = random.NextDouble() < task.AutoRewardProbability;   // so 1 is every trial and 0 none
         return t;
     }

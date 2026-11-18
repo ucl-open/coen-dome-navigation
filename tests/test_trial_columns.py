@@ -23,7 +23,7 @@ def test_every_outcome_reason_the_rules_write_is_listed():
 
 
 def test_the_trial_types_are_the_draw_s_names_and_decision_making_s():
-    # trialType holds the drawn condition's type: its values are TrialDraw.TypeNames, the types trialConditions may hold,
+    # trialType holds the drawn condition's label: its values are TrialDraw.TypeNames, the labels trialConditions may hold,
     # in coen-dome-decision-making's names.
     root = Path(__file__).parents[1]
     listed = yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))["trialType"]["values"]

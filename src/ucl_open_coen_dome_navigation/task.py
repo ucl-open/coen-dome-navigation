@@ -134,20 +134,22 @@ class OptogeneticsSettings(Optogenetics):
 # The trial types the corridor shows (TrialDraw.TypeNames), in coen-dome-decision-making's names; its audiovisualConflict
 # and neutral are not defined here yet.
 TRIAL_TYPES = ("visual", "auditory", "audiovisualCoherent")
-# The fields a pipeline may make condition-level (its conditionFields), each with the trial types it applies to: none yet,
-# so every condition's set is empty. The schema's x-conditionFields, as coen-dome-decision-making's.
-CONDITION_FIELDS: dict[str, tuple[str, ...]] = {}
+# The fields a condition may set (the schema's x-conditionFields, a list as coen-dome-decision-making's): none yet, so every
+# condition's set and pairs are empty; nor any rules linking them (x-rules).
+CONDITION_FIELDS: tuple[str, ...] = ()
 
 
 class TrialCondition(TaskBlock):
-    """One kind of trial in the mix: its type, its relative weight and its condition-level values (set), by dotted path,
-    as coen-dome-decision-making's. The corridor has no condition fields yet (x-conditionFields is empty), so set is empty."""
+    """One kind of trial in the mix: its label, its relative weight, its condition-level values (set) by dotted path and its
+    pairs, coen-dome-decision-making's shape. The corridor has no condition fields yet (x-conditionFields is empty), so set and
+    pairs are empty, and the label (one of TRIAL_TYPES) is what the corridor shows."""
 
     model_config = ConfigDict(extra="forbid")
 
-    type: String = Field(description="The trial type, what the trial shows: visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both)")
+    label: String = Field(description="What the trial shows, logged as trialType: visual (the grating alone), auditory (the tone sweep alone) or audiovisualCoherent (both); here it drives the draw, as no condition field does yet")
     weight: int = Field(ge=0, le=1_000_000, description="Relative draw weight: each new trial picks a condition with these as relative chances")
-    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-conditionFields' paths that apply to the type); none in this task yet")
+    pairs: list[list[String]] = Field(default_factory=list, description="Groups of x-conditionFields paths whose lists share one pick per trial; none in this task yet")
+    set: dict[str, Any] = Field(default_factory=dict, description="Condition-level values by dotted path (x-conditionFields); none in this task yet")
 
 
 class TrainingPipeline(TaskBlock):
@@ -167,7 +169,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
 
     A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
-    model_config = ConfigDict(json_schema_extra={"x-conditionFields": {path: list(types) for path, types in CONDITION_FIELDS.items()}})
+    model_config = ConfigDict(json_schema_extra={"x-conditionFields": list(CONDITION_FIELDS), "x-rules": []})
 
     reward: RewardSettings = Field(description="Reward delivery parameters")
 
@@ -175,7 +177,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
         min_length=1,
         description=(
             "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
-            "trial, and shows its type (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a pipeline "
+            "trial, and shows its label (visual, auditory or audiovisualCoherent; trialType in the trial row). One whole value: a pipeline "
             "stage's conditions replace it; the trialCondition column is its 0-based index"
         ),
         json_schema_extra={"x-whole": True},
@@ -216,12 +218,12 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
     def _conditions(self):
         # TrialDraw.CheckTask's same rules.
         for i, condition in enumerate(self.trial_conditions):
-            where = f"trial_conditions[{i}] ({condition.type})"
-            if condition.type not in TRIAL_TYPES:
-                raise ValueError(f"{where}: its type is not one of {', '.join(TRIAL_TYPES)}")
-            for path in condition.set:
-                if condition.type not in CONDITION_FIELDS.get(path, ()):
-                    raise ValueError(f"{where} sets {path}, which is not a condition field of {condition.type} (x-conditionFields)")
+            where = f"trial_conditions[{i}] ({condition.label})"
+            if condition.label not in TRIAL_TYPES:
+                raise ValueError(f"{where}: its label is not one of {', '.join(TRIAL_TYPES)}")
+            for path in [*condition.set, *(path for group in condition.pairs for path in group)]:
+                if path not in CONDITION_FIELDS:
+                    raise ValueError(f"{where} sets or pairs {path}, which is not a condition field (x-conditionFields)")
         if not sum(condition.weight for condition in self.trial_conditions) > 0:
             raise ValueError("trial_conditions needs a condition with a weight above 0")
         if sum(condition.weight for condition in self.trial_conditions) > MAX_WEIGHT_SUM:
