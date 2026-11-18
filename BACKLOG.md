@@ -5,6 +5,7 @@ What is still to do, then what has been decided and why. Closed work, audit roun
 ## Open
 
 - The trial loop (lib-open-rigs' `TrialLoop`, 16 Nov 2026) is unproven on a rig: a no-mouse test run (the `test` mouse, optogenetics on and off) before any mouse runs on it. Check that the trials, pips, rewards, penalty sound and trial rows run as before, the ZapitTrigger line rises and falls as before (it now falls at the loop's `TriggerOff`, not a HarpDelay), and every trial row passes `summarise-experiment`.
+- Design question after the release (Pip, 18 Nov 2026): Python draws the trial sequence at launch (from conditions, weights and the seed) and writes it into the task file as an explicit list, as open-rigs' own tutorial does (`trials=[...]`); Bonsai plays it and keeps only adaptive behaviour (repeat-on-incorrect, navigation's sweep). Would remove the C# draw, the last duplicate, and make what runs inspectable before Go.
 - On a rig, with the `test` mouse (BLUE-OPTO-2 first; Pip at the rig):
   - The background noise heard from Ready; every sound's loudness at the mouse, now each speaker's filter equalises the pips and reward tone.
   - `config\main.layout` saved in the editor on a machine with the Spinnaker SDK, then committed (`.bonsai\Setup.ps1` copies it).

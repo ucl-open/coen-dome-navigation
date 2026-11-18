@@ -197,16 +197,23 @@ CONDITION_FIELDS = (
     "reward.rewardSizeUl",
     "autoRewardProbability",
 )
+
+
+def _if(schemas: dict) -> dict:
+    """An if over these paths, required: JSON Schema passes a missing path's properties vacuously."""
+    return {"properties": schemas, "required": list(schemas)}
+
+
 # Where one setting limits another (the schema's x-rules, JSON Schema over dotted paths; open_rigs.rigs.conditions
 # evaluates them), as coen-dome-decision-making's. No corridor setting limits another, so its rules only say what goes unread.
 RULES = (
-    {"if": {"properties": {"contrasts": {"items": {"const": 0}}}}, "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"],
+    {"if": _if({"contrasts": {"items": {"const": 0}}}), "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"],
      "message": "contrasts 0 shows no grating, so its spatial frequencies are unread"},
-    {"if": {"properties": {"auditoryStimulus.amplitude": {"const": 0}}}, "unused": ["auditoryStimulus.initialAzimuthsDeg"],
+    {"if": _if({"auditoryStimulus.amplitude": {"const": 0}}), "unused": ["auditoryStimulus.initialAzimuthsDeg"],
      "message": "auditoryStimulus.amplitude 0 plays no tone, so its azimuths are unread"},
-    {"if": {"properties": {"autoRewardProbability": {"const": 1}}}, "unused": ["wrongLickLimit", "rewardCeilingHz"],
+    {"if": _if({"autoRewardProbability": {"const": 1}}), "unused": ["wrongLickLimit", "rewardCeilingHz"],
      "message": "autoRewardProbability 1 rewards every trial, so the lick limits are unread"},
-    {"if": {"properties": {"stimulusOffProbability": {"const": 0}}}, "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"],
+    {"if": _if({"stimulusOffProbability": {"const": 0}}), "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"],
      "message": "stimulusOffProbability 0 never cuts a stimulus, so stimulusOff is unread"},
 )
 # How a condition is named (the schema's x-trial-types; derive_trial_type), coen-dome-decision-making's without its targets
@@ -214,9 +221,9 @@ RULES = (
 # tone heard (an amplitude above 0): both audiovisualCoherent, one alone visual or auditory, neither neutral.
 _ABOVE_0 = {"contains": {"exclusiveMinimum": 0}}
 TRIAL_TYPES = (
-    {"trialType": "audiovisualCoherent", "if": {"properties": {"contrasts": _ABOVE_0, "auditoryStimulus.amplitude": _ABOVE_0}}},
-    {"trialType": "visual", "if": {"properties": {"contrasts": _ABOVE_0}}},
-    {"trialType": "auditory", "if": {"properties": {"auditoryStimulus.amplitude": _ABOVE_0}}},
+    {"trialType": "audiovisualCoherent", "if": _if({"contrasts": _ABOVE_0, "auditoryStimulus.amplitude": _ABOVE_0})},
+    {"trialType": "visual", "if": _if({"contrasts": _ABOVE_0})},
+    {"trialType": "auditory", "if": _if({"auditoryStimulus.amplitude": _ABOVE_0})},
     {"trialType": "neutral"},
 )
 # The most combinations one condition may expand into (TrialDraw.MaxCombinations).

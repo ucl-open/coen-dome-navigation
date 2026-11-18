@@ -657,7 +657,10 @@
                   "const": 0
                 }
               }
-            }
+            },
+            "required": [
+              "contrasts"
+            ]
           },
           "message": "contrasts 0 shows no grating, so its spatial frequencies are unread",
           "unused": [
@@ -671,7 +674,10 @@
               "auditoryStimulus.amplitude": {
                 "const": 0
               }
-            }
+            },
+            "required": [
+              "auditoryStimulus.amplitude"
+            ]
           },
           "message": "auditoryStimulus.amplitude 0 plays no tone, so its azimuths are unread",
           "unused": [
@@ -684,7 +690,10 @@
               "autoRewardProbability": {
                 "const": 1
               }
-            }
+            },
+            "required": [
+              "autoRewardProbability"
+            ]
           },
           "message": "autoRewardProbability 1 rewards every trial, so the lick limits are unread",
           "unused": [
@@ -698,7 +707,10 @@
               "stimulusOffProbability": {
                 "const": 0
               }
-            }
+            },
+            "required": [
+              "stimulusOffProbability"
+            ]
           },
           "message": "stimulusOffProbability 0 never cuts a stimulus, so stimulusOff is unread",
           "unused": [
@@ -721,7 +733,11 @@
                   "exclusiveMinimum": 0
                 }
               }
-            }
+            },
+            "required": [
+              "contrasts",
+              "auditoryStimulus.amplitude"
+            ]
           },
           "trialType": "audiovisualCoherent"
         },
@@ -733,7 +749,10 @@
                   "exclusiveMinimum": 0
                 }
               }
-            }
+            },
+            "required": [
+              "contrasts"
+            ]
           },
           "trialType": "visual"
         },
@@ -745,7 +764,10 @@
                   "exclusiveMinimum": 0
                 }
               }
-            }
+            },
+            "required": [
+              "auditoryStimulus.amplitude"
+            ]
           },
           "trialType": "auditory"
         },
