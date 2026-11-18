@@ -649,6 +649,30 @@
         "reward.rewardSizeUl",
         "autoRewardProbability"
       ],
+      "x-labels": [
+        {
+          "anyAbove": {
+            "auditoryStimulus.amplitude": 0,
+            "contrasts": 0
+          },
+          "label": "audiovisualCoherent"
+        },
+        {
+          "anyAbove": {
+            "contrasts": 0
+          },
+          "label": "visual"
+        },
+        {
+          "anyAbove": {
+            "auditoryStimulus.amplitude": 0
+          },
+          "label": "auditory"
+        },
+        {
+          "label": "neutral"
+        }
+      ],
       "x-rules": [
         {
           "is": 0,

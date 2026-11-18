@@ -15,6 +15,7 @@ from ucl_open_coen_dome_navigation.task import (
     STEP_SECONDS,
     LASER_MAX_MARGIN_SECONDS,
     CONDITION_FIELDS,
+    LABELS,
     MAX_WEIGHT_SUM,
     RULES,
     OptogeneticsSettings,
@@ -96,6 +97,7 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     azimuths = schema["$defs"]["AuditoryStimulus"]["properties"]["initialAzimuthsDeg"]
     assert azimuths["default"] == ["all"] and azimuths["items"] == {"oneOf": [{"type": "number"}, {"const": "all", "type": "string"}]}
     assert params_schema["x-rules"] == [dict(rule) for rule in RULES]
+    assert params_schema["x-labels"] == [dict(label) for label in LABELS]
     assert params_schema["properties"]["trialConditions"]["x-whole"] is True
     assert [label.value for label in TrialLabel] == schema["$defs"]["TrialLabel"]["enum"] == ["visual", "auditory", "audiovisualCoherent", "neutral"]
 
@@ -112,7 +114,10 @@ def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
 
 @pytest.mark.parametrize("set_, label", [
     ({}, "audiovisualCoherent"), ({"contrasts": [0]}, "auditory"), ({"auditoryStimulus.amplitude": 0}, "visual"),
-    ({"contrasts": [0], "auditoryStimulus.amplitude": 0}, "neutral"), ({"contrasts": [0, 0.5], "auditoryStimulus.amplitude": [0, 2]}, "audiovisualCoherent")])
+    ({"contrasts": [0], "auditoryStimulus.amplitude": 0}, "neutral"), ({"contrasts": [0, 0.5], "auditoryStimulus.amplitude": [0, 2]}, "audiovisualCoherent"),
+    ({"contrasts": [0, 0.5]}, "audiovisualCoherent"), ({"contrasts": [0, 0], "auditoryStimulus.amplitude": [0, 0.5]}, "auditory"),
+    ({"auditoryStimulus.initialAzimuthsDeg": [0]}, "audiovisualCoherent"), ({"contrasts": [0], "auditoryStimulus.initialAzimuthsDeg": ["all"]}, "auditory"),
+    ({"contrasts": [0.5], "auditoryStimulus.amplitude": [0, 0]}, "visual")])
 def test_the_label_is_derived_from_what_the_condition_shows(set_, label):
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate({**task()["taskParameters"], "trialConditions": [{"label": "neutral", "weight": 1, "set": set_}]})
     assert derive_label(model, model.trial_conditions[0]) == label

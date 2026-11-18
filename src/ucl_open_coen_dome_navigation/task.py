@@ -37,6 +37,7 @@ from open_rigs.core.task import (
     WheelQuietWait,
 )
 from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
+from open_rigs.rigs import conditions
 from pydantic import ConfigDict, Field, ValidationError, ValidationInfo, WithJsonSchema, field_validator, model_validator
 
 from ucl_open_coen_dome_navigation import __semver__
@@ -206,6 +207,15 @@ RULES = (
     {"when": "autoRewardProbability", "is": 1, "unused": ["wrongLickLimit", "rewardCeilingHz"]},
     {"when": "stimulusOffProbability", "is": 0, "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"]},
 )
+# How a condition is named (the schema's x-labels, open_rigs.rigs.conditions' format; derive_label), coen-dome-decision-making's
+# without its targets or azimuths: first match wins. The grating shown (a contrast above 0) and the tone heard (an amplitude
+# above 0): both audiovisualCoherent, one alone visual or auditory, neither neutral.
+LABELS = (
+    {"label": "audiovisualCoherent", "anyAbove": {"contrasts": 0, "auditoryStimulus.amplitude": 0}},
+    {"label": "visual", "anyAbove": {"contrasts": 0}},
+    {"label": "auditory", "anyAbove": {"auditoryStimulus.amplitude": 0}},
+    {"label": "neutral"},
+)
 # The most combinations one condition may expand into (TrialDraw.MaxCombinations).
 MAX_COMBINATIONS = 64
 
@@ -292,17 +302,8 @@ class TrialCondition(TaskBlock):
 
 
 def derive_label(task: "UclOpenCoenDomeNavigationTaskParameters", condition: TrialCondition) -> str:
-    """A condition's label from its settings (its set over the task's): the grating shown (a contrast above 0) and the tone
-    heard (an amplitude above 0): both audiovisualCoherent, one alone visual or auditory, neither neutral."""
-    base = task.model_dump(by_alias=True, mode="json")
-
-    def value(path) -> list:
-        found = condition.set.get(path, _get(base, path))
-        return found if isinstance(found, list) else [found]
-
-    grating = any(contrast > 0 for contrast in value("contrasts"))
-    sound = any(amplitude > 0 for amplitude in value("auditoryStimulus.amplitude"))
-    return "audiovisualCoherent" if grating and sound else "visual" if grating else "auditory" if sound else "neutral"
+    """A condition's label from its settings (its set over the task's), by LABELS (x-labels)."""
+    return conditions.derive_label(LABELS, task.model_dump(by_alias=True, mode="json"), condition.set, condition.pairs)
 
 
 class Curriculum(TaskBlock):
@@ -326,7 +327,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
 
     A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
-    model_config = ConfigDict(json_schema_extra={"x-conditionFields": list(CONDITION_FIELDS), "x-rules": [dict(rule) for rule in RULES]})
+    model_config = ConfigDict(json_schema_extra={"x-conditionFields": list(CONDITION_FIELDS), "x-rules": [dict(rule) for rule in RULES], "x-labels": [dict(label) for label in LABELS]})
 
     reward: RewardSettings = Field(description="Reward delivery parameters")
 
