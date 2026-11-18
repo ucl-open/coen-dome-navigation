@@ -15,6 +15,7 @@ from ucl_open_coen_dome_navigation.task import (
     STEP_SECONDS,
     LASER_MAX_MARGIN_SECONDS,
     CONDITION_FIELDS,
+    MAX_WEIGHT_SUM,
     TRIAL_TYPES,
     OptogeneticsSettings,
     UclOpenCoenDomeNavigationTaskLogic,
@@ -98,6 +99,18 @@ def test_conditions_need_a_weight_a_shown_type_and_an_empty_set(conditions, matc
     params = task()["taskParameters"]
     params["trialConditions"] = conditions
     with pytest.raises(pydantic.ValidationError, match=match):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+
+
+def test_weights_may_add_to_the_draw_s_int_and_no_more():
+    # Go refuses the same sum (TrialDraw.CheckTask's int.MaxValue): 2147 conditions at the cap and one of 483647 make it exactly.
+    logic = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
+    assert MAX_WEIGHT_SUM == 2**31 - 1 and "Sum(c => (long)c.Weight) > int.MaxValue" in logic
+    params = task()["taskParameters"]
+    params["trialConditions"] = [{"type": "visual", "weight": 1000000}] * 2147 + [{"type": "auditory", "weight": 483647}]
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
+    params["trialConditions"][-1]["weight"] = 483648
+    with pytest.raises(pydantic.ValidationError, match=f"weights add to more than {MAX_WEIGHT_SUM}"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 

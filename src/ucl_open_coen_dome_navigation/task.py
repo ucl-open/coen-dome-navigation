@@ -40,6 +40,7 @@ STEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (TrialLog
 LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (responseWindowSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
 MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole steps (TrialLogic.cs MaxLeadSeconds)
 UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without responseWindowSeconds (TrialLogic.cs)
+MAX_WEIGHT_SUM = 2147483647  # the most trial_conditions' weights may add to: the draw sums them as an int (TrialLogic.cs int.MaxValue)
 
 SWEEP_FILE = Path(__file__).resolve().parents[1] / "sounds" / "sweep.json"  # src/sounds/sweep.json
 
@@ -223,6 +224,8 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
                     raise ValueError(f"{where} sets {path}, which is not a condition field of {condition.type} (x-conditionFields)")
         if not sum(condition.weight for condition in self.trial_conditions) > 0:
             raise ValueError("trial_conditions needs a condition with a weight above 0")
+        if sum(condition.weight for condition in self.trial_conditions) > MAX_WEIGHT_SUM:
+            raise ValueError(f"trial_conditions' weights add to more than {MAX_WEIGHT_SUM}, the most the draw can sum")
         return self
 
     @model_validator(mode="after")
