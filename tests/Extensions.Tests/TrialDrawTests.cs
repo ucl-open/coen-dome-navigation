@@ -160,7 +160,7 @@ public class TrialDrawTests
     {
         // As coen-dome-decision-making's, no public mutable fields, the checks in TrialDraw.CheckTask.
         Assert.AreEqual(0, typeof(TrialRules).GetFields(BindingFlags.Public | BindingFlags.Instance).Length);
-        TrialDraw.CheckTask(Fixture.Task(2), Fixture.Sweep());
+        TrialDraw.CheckTask(Fixture.Task(2), Fixture.Sweep(), Fixture.Speakers());
     }
 
     [TestMethod]
@@ -193,7 +193,7 @@ public class TrialDrawTests
     public void ARigWithoutAZapitBlockMakesTheRulesWhenTheLaserIsOff()
     {
         var logic = new UclOpenCoenDomeNavigationTaskLogic { TaskParameters = Fixture.Task() };
-        var rig = new LabRig();   // rig.yml with no zapit block: Zapit is null
+        var rig = new LabRig { SpeakerArray = Fixture.Speakers() };   // rig.yml with no zapit block: Zapit is null
         Assert.IsNull(rig.Zapit);
         var rules = new CheckTaskAtGo().Process(Observable.Return(Tuple.Create(logic, rig, Fixture.Sweep()))).Wait();
         Assert.IsNull(rules.Laser);
@@ -599,9 +599,15 @@ public class TrialDrawTests
         var silent = Fixture.Draw(task).Next();
         Assert.AreEqual(-1, silent.speakerChannel);
         Assert.IsTrue(double.IsNaN(silent.auditoryAzimuthDeg));
-        // A number on a rig without speakers is refused at Go.
-        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.initialAzimuthsDeg", new List<object> { 20.0 } } };
-        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Draw(task, false)).Message, "names an azimuth but rig.yml has no speakerArray.speakers");
+        // A number or all on a rig without speakers is refused at Go; silent, it is not.
+        foreach (var azimuth in new object[] { 20.0, "all" })
+        {
+            task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.initialAzimuthsDeg", new List<object> { azimuth } } };
+            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Draw(task, false)).Message, "rig.yml has no speakerArray.speakers to play auditoryStimulus.initialAzimuthsDeg on");
+        }
+        task.AuditoryStimulus.Amplitude = 0;
+        task.TrialConditions[0].Set = new Dictionary<object, object>();
+        Fixture.Draw(task, false);
         // The trial row logs the speaker; the pip carries its channel to PipBuffer.
         var rig = new Rig(Fixture.Setup(Fixture.Task(1)));
         var start = rig.RunTo(TrialEventKind.Start);

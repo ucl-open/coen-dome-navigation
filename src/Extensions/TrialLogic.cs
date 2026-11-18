@@ -624,8 +624,8 @@ public class TrialDraw
         if (!(c.Amplitude >= 0) || double.IsInfinity(c.Amplitude)) yield return "auditoryStimulus.amplitude must be a finite number, 0 or more";
         if (c.InitialAzimuths == null || c.InitialAzimuths.Count == 0 || c.InitialAzimuths.Any(a => !(a as string == AllSpeakers || a is double && (double)a >= -180 && (double)a <= 180)))
             yield return "auditoryStimulus.initialAzimuthsDeg must each be all or a number in [-180, 180], at least one";
-        else if (c.Amplitude > 0 && c.InitialAzimuths.Any(a => a is double) && (speakers == null || speakers.Speakers == null || speakers.Speakers.Count == 0))
-            yield return "auditoryStimulus.initialAzimuthsDeg names an azimuth but rig.yml has no speakerArray.speakers";
+        else if (c.Amplitude > 0 && (speakers == null || speakers.Speakers == null || speakers.Speakers.Count == 0))
+            yield return "rig.yml has no speakerArray.speakers to play auditoryStimulus.initialAzimuthsDeg on";
         if (!(c.RewardSizeUl > 0 && c.RewardSizeUl <= LoadRewardLine.DefaultMaxRewardUl)) yield return string.Format("reward.rewardSizeUl must be above 0 and at most {0} ul", LoadRewardLine.DefaultMaxRewardUl);
         foreach (var p in TaskBlocks.AutoRewardProblems(c.AutoRewardProbability)) yield return p;
         if (!(c.LaserOnProbability >= 0 && c.LaserOnProbability <= 1)) yield return "optogenetics.laserOnProbability must be in [0, 1]";

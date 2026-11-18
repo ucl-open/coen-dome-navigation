@@ -64,3 +64,7 @@ What is still to do, then what has been decided and why. Closed work, audit roun
 ### Trial-conditions audit round 2 (18 Nov 2026): not recommended
 
 - A condition with no `weight` reads as 0 at Go (the typed read), where coen-dome-decision-making refuses it from the text: CheckTask has no node tree here, and the schema app-rig-control checks at launch requires `weight`.
+
+### Audit 18 Nov 2026: not recommended
+
+- Amplitude only for the stimulus sounds: reward tone, background and penalty stay levelDbfs (lib-open-rigs' shared blocks; the plan settled it).
