@@ -237,16 +237,17 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         // The tone switched off plays at amplitude 0, logged so in each pip's row.
         var auditoryOff = off && trial.auditoryOff;
         var visualOn = !(off && trial.visualOff);
+        var contrast = visualOn ? trial.visualContrast : 0;
         if (auditoryOff && double.IsNaN(auditoryOffPositionCm)) auditoryOffPositionCm = position;
         if (!visualOn && double.IsNaN(visualOffPositionCm)) visualOffPositionCm = position;
         var gain = auditoryOff ? 0 : trial.auditoryAmplitude;
         return new StimulusFrame
         {
-            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, auditoryFrequencyHz = tone, auditoryAmplitude = gain, visualSpatialFrequencyCpd = grating, visualOn = visualOn },
+            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = position, auditoryFrequencyHz = tone, auditoryAmplitude = gain, visualSpatialFrequencyCpd = grating, visualContrast = contrast },
             Bin = sweep.BinOf(tone),
             ToneGain = gain,
             SpeakerChannel = trial.speakerChannel,
-            GratingOpacity = visualOn && trial.visualContrast > 0 ? 1 : 0,
+            GratingOpacity = contrast > 0 ? 1 : 0,
             GratingContrast = trial.visualContrast
         };
     }

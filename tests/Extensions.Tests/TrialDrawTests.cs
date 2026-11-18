@@ -1080,6 +1080,24 @@ public class TrialRulesTests
     }
 
     [TestMethod]
+    public void AStimulusOffTrialCutsTheGratingsVisualContrastToZero()
+    {
+        var rig = new Rig(Fixture.Setup(Fixture.Task(3)));
+        var start = rig.RunTo(TrialEventKind.Start);
+        start.Trial.visualContrast = 0.5;
+        start.Trial.stimulusOffFraction = 0.5;
+        start.Trial.visualOff = true;
+        rig.Wheel(start.Trial.trackLengthCm * 0.3);
+        rig.Until(rig.Now + 0.1);
+        Assert.AreEqual(0.5, rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update.Row.visualContrast);
+        rig.Wheel(start.Trial.trackLengthCm * 0.7);
+        rig.Until(rig.Now + 0.1);
+        var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
+        Assert.AreEqual(0.0, pip.Row.visualContrast);
+        Assert.AreEqual(0.0, pip.GratingOpacity);
+    }
+
+    [TestMethod]
     public void AStimulusOffTrialSwitchesOffItsListedStimuliPastItsTrackFraction()
     {
         // The tone alone listed: it goes off once the mouse has run half the track; the grating stays on.
@@ -1092,20 +1110,21 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.1);
         var before = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(1.0, before.ToneGain);
-        Assert.IsTrue(before.Row.auditoryAmplitude == 1 && before.Row.visualOn);
+        Assert.IsTrue(before.Row.auditoryAmplitude == 1 && before.Row.visualContrast == start.Trial.visualContrast);
         rig.Wheel(start.Trial.trackLengthCm * 0.7);
         rig.Until(rig.Now + 0.1);
         var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(0.0, pip.ToneGain);
         Assert.AreEqual(0.0, pip.Row.auditoryAmplitude);   // the cut, in each pip's row (and auditoryOffPositionCm)
-        Assert.IsTrue(pip.Row.visualOn);
+        Assert.AreEqual(start.Trial.visualContrast, pip.Row.visualContrast);   // the grating stays on
         rig.Wheel(start.Trial.trackLengthCm + 5);
         var row = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
         Assert.AreEqual(pip.Row.positionCm, row.auditoryOffPositionCm, 1e-9);
         Assert.IsTrue(double.IsNaN(row.visualOffPositionCm));
         Assert.AreEqual(1.0, row.auditoryAmplitude);   // the trial's amplitude; the pips' rows say where it was cut
         Assert.IsNull(typeof(StimulusStateRow).GetField("auditoryOn"));
-        Assert.AreEqual(typeof(bool), typeof(StimulusStateRow).GetField("visualOn").FieldType);
+        Assert.IsNull(typeof(StimulusStateRow).GetField("visualOn"));
+        Assert.AreEqual(typeof(double), typeof(StimulusStateRow).GetField("visualContrast").FieldType);
     }
 
     [TestMethod]

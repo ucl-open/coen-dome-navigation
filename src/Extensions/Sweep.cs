@@ -93,7 +93,7 @@ public class StimulusFrame
     public int Bin;              // the tone file's row
     public double ToneGain;      // the trial's auditoryAmplitude, or 0 when switched off (StimulusStateRow.auditoryAmplitude)
     public int SpeakerChannel;   // the one speaker the pip plays on; Trial.AllSpeakersChannel every speaker, -1 none (ToneGain 0)
-    public double GratingOpacity; // 1, or 0 when switched off (StimulusStateRow.visualOn) or at contrast 0
+    public double GratingOpacity; // 1, or 0 when switched off (StimulusStateRow.visualContrast) or at contrast 0
     public double GratingContrast; // the trial's visualContrast
 }
 
@@ -168,7 +168,7 @@ public class StimulusStateRow
     public double auditoryFrequencyHz;
     public double auditoryAmplitude; // the pip's amplitude: the trial's auditoryAmplitude, 0 while a stimulus-off trial has the tone off
     public double visualSpatialFrequencyCpd;
-    public bool visualOn;            // false once a stimulus-off trial has switched the grating off
+    public double visualContrast;    // the contrast shown: the trial's visualContrast, 0 once a stimulus-off trial has switched the grating off
 }
 
 [Combinator]
