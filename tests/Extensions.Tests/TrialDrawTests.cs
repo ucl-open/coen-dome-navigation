@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenRigs.Core;
 using OpenRigs.Trials;
 using OpenRigs.Devices.Rigs;
 using OpenRigs.Devices.Zapit;
@@ -11,6 +12,7 @@ using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.Serialization;
+using TrialConditionDraw = OpenRigs.Trials.TrialConditionDraw<UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskParameters>;
 using TrialEventOf = OpenRigs.Trials.TrialEvent<Trial, StimulusFrame, TrialOutcome>;
 
 static class Fixture
@@ -239,7 +241,7 @@ public class TrialDrawTests
         return new[] { visual, auditory, coherent }.Select((w, i) => new TrialCondition { TrialType = Labels[i], Weight = w, Set = Shows(Labels[i]) }).ToList();
     }
 
-    static string Name(TrialCondition condition) { return TrialDraw.Name(condition.TrialType); }
+    static string Name(TrialCondition condition) { return EnumNames.Name(condition.TrialType); }
 
     [TestMethod]
     public void TheWeightsAreHonouredAndEachTrialLogsItsCondition()
@@ -377,12 +379,12 @@ public class TrialDrawTests
             task.TrialConditions = c;
             return Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message;
         };
-        StringAssert.Contains(refusal(Conditions(TrialDraw.MaxWeight + 1, 1, 0)), "trialConditions[0] (visual): its weight is above 1000000");
+        StringAssert.Contains(refusal(Conditions(TrialConditions.MaxWeight + 1, 1, 0)), "trialConditions[0] (visual): its weight is above 1000000");
         var notMap = Conditions(0, 1, 0);
         notMap[1].Set = "5";
         StringAssert.Contains(refusal(notMap), "trialConditions[1] (auditory): its set is not a map");
         // 2200 conditions of the cap's weight sum past int, which random.Next cannot take.
-        var heavy = Enumerable.Range(0, 2200).Select(i => new TrialCondition { TrialType = TrialType.Visual, Weight = TrialDraw.MaxWeight }).ToList();
+        var heavy = Enumerable.Range(0, 2200).Select(i => new TrialCondition { TrialType = TrialType.Visual, Weight = TrialConditions.MaxWeight }).ToList();
         StringAssert.Contains(refusal(heavy), "weights add to more than 2147483647");
     }
 
@@ -390,13 +392,13 @@ public class TrialDrawTests
     public void OneConditionAtTheCapAndManyConditionsAreDrawnAsWritten()
     {
         var task = Fixture.Task(3);
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Auditory, Weight = TrialDraw.MaxWeight } };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Auditory, Weight = TrialConditions.MaxWeight } };
         var one = Fixture.Draw(task);
         Assert.IsTrue(Enumerable.Range(0, 30).Select(i => one.Next()).All(t => t.trialCondition == 0 && t.trialType == "auditory"));
         task.TrialConditions = Enumerable.Range(0, 120).Select(i => new TrialCondition { TrialType = Labels[i % 3], Weight = 1, Set = Shows(Labels[i % 3]) }).ToList();
         var many = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 3000).Select(i => many.Next()).ToList();
-        Assert.IsTrue(trials.All(t => t.trialType == TrialDraw.Name(Labels[t.trialCondition % 3])));
+        Assert.IsTrue(trials.All(t => t.trialType == EnumNames.Name(Labels[t.trialCondition % 3])));
         Assert.AreEqual(120, trials.Select(t => t.trialCondition).Distinct().Count());
     }
 
@@ -405,7 +407,7 @@ public class TrialDrawTests
     {
         var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-corridor.yml"))
             .Replace("- { trialType: visual, weight: 0,", "- { trialType: visual, weight: 2,");
-        foreach (var task in new[] { new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters, TrialDraw.Read(text).TaskParameters })
+        foreach (var task in new[] { new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters, TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters })
         {
             CollectionAssert.AreEqual(new[] { "visual:2", "auditory:1", "audiovisualCoherent:0" }, task.TrialConditions.Select(c => Name(c) + ":" + c.Weight).ToArray());
             Assert.AreEqual(0, ((System.Collections.IDictionary)task.TrialConditions[2].Set).Count, "set: {} reads as an empty map");
@@ -418,7 +420,7 @@ public class TrialDrawTests
             Assert.IsTrue(built.All(c => c.Combinations.Count == 6));
         }
         // ReadTask keeps a set value a number, so Settings_Task logs it as one (the typed read's text would log "0").
-        Assert.IsNotInstanceOfType(((System.Collections.IDictionary)TrialDraw.Read(text).TaskParameters.TrialConditions[0].Set)["auditoryStimulus.amplitude"], typeof(string));
+        Assert.IsNotInstanceOfType(((System.Collections.IDictionary)TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters.TrialConditions[0].Set)["auditoryStimulus.amplitude"], typeof(string));
     }
 
     [TestMethod]
@@ -542,7 +544,7 @@ public class TrialDrawTests
     {
         foreach (var label in Labels)
         {
-            var type = TrialDraw.Name(label);
+            var type = EnumNames.Name(label);
             var task = Fixture.Task(1);
             task.TrialConditions = Conditions(type == "visual" ? 1 : 0, type == "auditory" ? 1 : 0, type == "audiovisualCoherent" ? 1 : 0);
             var rig = new Rig(Fixture.Setup(task));
@@ -629,7 +631,7 @@ public class TrialDrawTests
         // all (the task file's): every speaker, logged NaN with an amplitude above 0, as before initialAzimuthsDeg.
         var task = Fixture.Task(1);
         var all = Fixture.Draw(task).Next();
-        Assert.AreEqual(Trial.AllSpeakersChannel, all.speakerChannel);
+        Assert.AreEqual(SoundAzimuths.AllSpeakersChannel, all.speakerChannel);
         Assert.IsTrue(double.IsNaN(all.auditoryAzimuthDeg) && double.IsNaN(all.auditoryElevationDeg) && all.auditoryAmplitude == 1);
         // A number: rig.yml's speaker nearest it.
         task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Auditory, Weight = 1,

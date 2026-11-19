@@ -2,6 +2,7 @@
 using OpenCV.Net;
 using OpenRigs.Audio;
 using OpenRigs.Devices.Zapit;
+using OpenRigs.Trials;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -100,7 +101,7 @@ public class PipSetTests
         using (var r = right.GetRow(1)) using (var h = half.GetRow(1)) Assert.AreEqual(0, MaxDifference(r, h));
         using (var l = right.GetRow(0)) Assert.AreEqual(0, CV.CountNonZero(l));
         using (var sync = one.GetRow(3)) using (var s = right.GetRow(3)) Assert.AreEqual(0, MaxDifference(sync, s));
-        Assert.AreEqual(0, MaxDifference(one, set.Buffer(40, 1, Trial.AllSpeakersChannel)));
+        Assert.AreEqual(0, MaxDifference(one, set.Buffer(40, 1, SoundAzimuths.AllSpeakersChannel)));
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => set.Buffer(40, 1, 2)).Message, "no rig.yml speaker is on");
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => set.Buffer(40, 3)).Message, "above the 2 the pips were checked for at Go");
     }

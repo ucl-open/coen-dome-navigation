@@ -92,7 +92,7 @@ public class StimulusFrame
     public StimulusStateRow Row;
     public int Bin;              // the tone file's row
     public double ToneGain;      // the trial's auditoryAmplitude, or 0 when switched off (StimulusStateRow.auditoryAmplitude)
-    public int SpeakerChannel;   // the one speaker the pip plays on; Trial.AllSpeakersChannel every speaker, -1 none (ToneGain 0)
+    public int SpeakerChannel;   // the one speaker the pip plays on; SoundAzimuths.AllSpeakersChannel every speaker, -1 none (ToneGain 0)
     public GratingState Grating; // what the grating shows (GratingStates)
 }
 
@@ -140,7 +140,7 @@ public class PipSet
     /// <summary>The number of pips.</summary>
     public int Count { get { return buffers.Count; } }
 
-    /// <summary>A pip's buffer at an amplitude on every speaker (a channel below 0, Trial.AllSpeakersChannel) or one speaker's
+    /// <summary>A pip's buffer at an amplitude on every speaker (a channel below 0, SoundAzimuths.AllSpeakersChannel) or one speaker's
     /// channel, the other speakers silent: its speakers' rows scaled, the sync copy kept; silent at 0.</summary>
     public Mat Buffer(int bin, double amplitude, int channel = -1)
     {

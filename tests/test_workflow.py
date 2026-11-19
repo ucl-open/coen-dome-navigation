@@ -28,11 +28,9 @@ def combinators(element: ET.Element) -> list[str]:
 
 def test_no_wall_clock_wait_inside_task_logic():
     # No wall-clock wait inside TaskLogic but the laser cap's backstop (LaserBackstop), should the board stall.
-    logic = group("TaskLogic")
-    waits = [c for c in combinators(logic) if c in ("rx:Timer", "rx:Delay", "rx:Throttle", "rx:DelaySubscription", "rx:Timeout", "rx:Interval")]
-    assert waits == ["rx:Timer"]
+    assert lint.wall_clock_waits(WORKFLOW, allowed=["LaserOnUntilOutcome"]) == []
     assert combinators(group("LaserOnUntilOutcome")).count("rx:Timer") == 1
-    assert "ext:RunTrials" in combinators(logic)
+    assert "ext:RunTrials" in combinators(group("TaskLogic"))
 
 
 def test_the_shared_blocks_replace_the_local_copies():
@@ -44,7 +42,8 @@ def test_the_shared_blocks_replace_the_local_copies():
     assert not includes & {lint.SPEAKER_MIXER, lint.PROJECTOR_DISPLAY}
     assert not [p for p in includes if p.startswith("Extensions")]
     assert sorted(p.name for p in (ROOT / "src" / "Extensions").iterdir()) == [
-        "README.md", "Sweep.cs", "TaskSchema.Generated.cs", "TrialLogic.cs", "TrialRow.cs", "UclOpenCoenDomeNavigationTask.Generated.cs"]
+        "Curriculum.cs", "README.md", "Sweep.cs", "TaskSchema.Generated.cs", "TrialCondition.cs", "TrialLogic.cs", "TrialRow.cs",
+        "UclOpenCoenDomeNavigationTask.Generated.cs", "UclOpenCoenDomeNavigationTaskParameters.cs"]
     assert "Disable" not in {e.get(XSI) for e in MAIN.iter(W + "Expression")}
 
 

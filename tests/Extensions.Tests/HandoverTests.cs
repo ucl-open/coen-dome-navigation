@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenRigs.Core;
 using OpenRigs.Trials;
 using System;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using System.IO;
 using System.Linq;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.RepresentationModel;
+using TrialConditionDraw = OpenRigs.Trials.TrialConditionDraw<UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskParameters>;
 using TrialEventOf = OpenRigs.Trials.TrialEvent<Trial, StimulusFrame, TrialOutcome>;
 
 /// <summary>The task files app-rig-control writes at launch (tests\fixtures\handover, golden files its tests\test_handover.py
@@ -30,7 +32,7 @@ public class HandoverTests
         return files.Select(f =>
         {
             var text = File.ReadAllText(f);
-            var task = TrialDraw.Read(text).TaskParameters;
+            var task = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
             Assert.IsNull(task.RngSeed, f);
             task.RngSeed = 1;
             var stream = new YamlStream();
@@ -101,8 +103,8 @@ public class HandoverTests
         var c = combination.Task;
         Assert.AreEqual(c.Contrasts[0], contrast, where);
         Assert.AreEqual(c.AuditoryStimulus.Amplitude, amplitude, where);
-        var azimuth = TrialDraw.Azimuth(c.AuditoryStimulus.InitialAzimuthsDeg[0]);
-        Assert.AreEqual(amplitude > 0 && azimuth is double ? TrialDraw.NearestSpeaker(Fixture.Speakers(), (double)azimuth).Value.Position.Azimuth : double.NaN, auditoryAzimuth, where);
+        var azimuth = SoundAzimuths.Parse(c.AuditoryStimulus.InitialAzimuthsDeg[0]).Value;
+        Assert.AreEqual(amplitude > 0 && !double.IsNaN(azimuth) ? SoundAzimuths.NearestSpeaker(Fixture.Speakers(), azimuth, 0).Value.Position.Azimuth : double.NaN, auditoryAzimuth, where);
         Assert.AreEqual(c.TrialStructure.TrackLengthsCm[0] / c.WheelGain, trackLengthCm, 1e-9, where);
         Assert.AreEqual(c.WheelGain, wheelGain, where);
         Assert.AreEqual(c.Reward.RewardSizeUl, rewardOfferedUl, where);
@@ -176,7 +178,7 @@ public class HandoverTests
             }
             var json = new TrialRules(golden.Item2, Fixture.Sweep(), true, path => 2, Fixture.Speakers()).CombinationsJson;
             var built = Built(golden.Item1, golden.Item2);
-            var own = TrialDraw.Flatten(golden.Item2);
+            var own = TaskYaml.Flatten(golden.Item2, TaskSchema.ListFields);
             var rows = (Newtonsoft.Json.Linq.JArray)Newtonsoft.Json.Linq.JObject.Parse(json)["rows"];
             var combinations = built.SelectMany((c, i) => c.Combinations.Select(m => Tuple.Create(i, c, m))).ToList();
             Assert.AreEqual(combinations.Count, rows.Count, golden.Item1);
@@ -194,7 +196,7 @@ public class HandoverTests
                     Assert.IsTrue(allowed.Any(a => p.Name == a || p.Name.StartsWith(a + ".")), where + ": " + p.Name + " is no set, pairs or list-field path");
                 var rebuilt = new Dictionary<string, Newtonsoft.Json.Linq.JToken>(own);
                 foreach (var p in values.Properties()) rebuilt[p.Name] = p.Value;
-                var expected = TrialDraw.Flatten(combinations[n].Item3.Task);
+                var expected = TaskYaml.Flatten(combinations[n].Item3.Task, TaskSchema.ListFields);
                 CollectionAssert.AreEquivalent(expected.Keys.ToList(), rebuilt.Keys.ToList(), where);
                 foreach (var path in expected.Keys.Where(k => !TaskSchema.SessionFields.Any(f => k == f || k.StartsWith(f + "."))))
                     Assert.IsTrue(Newtonsoft.Json.Linq.JToken.DeepEquals(expected[path], rebuilt[path]), where + ": " + path);

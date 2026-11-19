@@ -17,17 +17,15 @@ from ucl_open_coen_dome_navigation.task import (
     LIST_FIELDS,
     REQUIRED,
     SESSION_FIELDS,
-    session_field,
-    MAX_WEIGHT_SUM,
     RULES,
     OptogeneticsSettings,
     TRIAL_TYPES,
     TrialType,
     UclOpenCoenDomeNavigationTaskLogic,
-    condition_combinations,
     UclOpenCoenDomeNavigationTaskParameters,
-    derive_trial_type,
 )
+from open_rigs.rigs import conditioned_task as ct
+from open_rigs.rigs.conditioned_task import MAX_WEIGHT_SUM, session_field
 from open_rigs.rigs.conditions import MAX_COMBINATIONS, flatten, unused_paths
 
 ROOT = Path(__file__).parent.parent
@@ -88,7 +86,7 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     ]
     assert params["contrasts"] == [1.0] and params["auditoryStimulus"] == {"amplitude": 1, "initialAzimuthsDeg": ["all"]}
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    assert [derive_trial_type(model, c) for c in model.trial_conditions] == [c.trial_type.value for c in model.trial_conditions]
+    assert [model.derive_trial_type(c) for c in model.trial_conditions] == [c.trial_type.value for c in model.trial_conditions]
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert "modality" not in SCHEMA.read_text(encoding="utf-8").lower()
     params_schema = schema["$defs"]["UclOpenCoenDomeNavigationTaskParameters"]
@@ -98,13 +96,13 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     assert params_schema["x-session-fields"] == list(SESSION_FIELDS) and "x-condition-fields" not in params_schema
     assert params_schema["x-required-conditions"] == list(REQUIRED) == []
     assert params_schema["x-max-combinations"] == MAX_COMBINATIONS == 1024
-    assert LIST_FIELDS == ["auditoryStimulus.initialAzimuthsDeg", "contrasts", "stimulusOff.trackFractions", "trialStructure.trackLengthsCm"]
+    assert list(LIST_FIELDS) == ["auditoryStimulus.initialAzimuthsDeg", "contrasts", "stimulusOff.trackFractions", "trialStructure.trackLengthsCm"]
     assert schema["$defs"]["StimulusOff"]["properties"]["stimuli"]["x-whole"] is True
     # Every path a rule or trial type names is a task field, and none a session field; every session field is one.
     leaves = set(flatten(model.model_dump(by_alias=True, mode="json")))
     named = {path for entry in [*RULES, *TRIAL_TYPES] for path in [*entry.get("if", {}).get("properties", {}), *entry.get("unused", [])]}
-    assert named <= leaves and {session_field(path) for path in named} == {None}
-    assert {session_field(leaf) for leaf in leaves} - {None} == set(SESSION_FIELDS)
+    assert named <= leaves and {session_field(path, SESSION_FIELDS) for path in named} == {None}
+    assert {session_field(leaf, SESSION_FIELDS) for leaf in leaves} - {None} == set(SESSION_FIELDS)
     # initialAzimuthsDeg's items a number or "all", oneOf as decision-making's (Bonsai.Sgen's List<object>).
     azimuths = schema["$defs"]["AuditoryStimulus"]["properties"]["initialAzimuthsDeg"]
     assert azimuths["default"] == ["all"] and azimuths["items"] == {"oneOf": [{"type": "number"}, {"const": "all", "type": "string"}]}
@@ -121,7 +119,7 @@ def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     params["trialConditions"] = [{"trialType": "auditory", "weight": 1, "set": {"contrasts": [0], "auditoryStimulus.amplitude": [0.5, 1]}}]
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    assert derive_trial_type(model, model.trial_conditions[0]) == "auditory"
+    assert model.derive_trial_type(model.trial_conditions[0]) == "auditory"
 
 
 @pytest.mark.parametrize("set_, trial_type", [
@@ -132,7 +130,7 @@ def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
     ({"contrasts": [0.5], "auditoryStimulus.amplitude": [0, 0]}, "visual")])
 def test_the_trial_type_is_derived_from_what_the_condition_shows(set_, trial_type):
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate({**task()["taskParameters"], "trialConditions": [{"trialType": "neutral", "weight": 1, "set": set_}]})
-    assert derive_trial_type(model, model.trial_conditions[0]) == trial_type
+    assert model.derive_trial_type(model.trial_conditions[0]) == trial_type
 
 
 def test_the_rules_say_what_goes_unread():
@@ -196,7 +194,7 @@ def test_a_condition_may_set_any_field_but_a_session_field_and_every_list_expand
 def test_combinations_are_ordered_by_path_the_first_changing_fastest():
     # TrialDraw.BuildConditions' order, Settings_Combinations' rows.
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"])
-    combos = condition_combinations(model.model_dump(by_alias=True, mode="json"), {"contrasts": [0.5, 1]})
+    combos = ct.condition_combinations(model.model_dump(by_alias=True, mode="json"), {"contrasts": [0.5, 1]}, [], LIST_FIELDS)
     assert len(combos) == 12 and combos[:3] == [
         {"auditoryStimulus.initialAzimuthsDeg": ["all"], "contrasts": [0.5], "stimulusOff.trackFractions": [0.4], "trialStructure.trackLengthsCm": [80.0]},
         {"auditoryStimulus.initialAzimuthsDeg": ["all"], "contrasts": [1], "stimulusOff.trackFractions": [0.4], "trialStructure.trackLengthsCm": [80.0]},
@@ -205,15 +203,12 @@ def test_combinations_are_ordered_by_path_the_first_changing_fastest():
 
 def test_the_committed_task_schema_cs_is_the_schema_s():
     # TrialDraw reads x-session-fields, x-max-combinations and the list fields from TaskSchema, generated with the schema.
-    from ucl_open_coen_dome_navigation.regenerate import task_schema_cs
-
-    assert (ROOT / "src" / "Extensions" / "TaskSchema.Generated.cs").read_text(encoding="utf-8") == task_schema_cs()
+    assert (ROOT / "src" / "Extensions" / "TaskSchema.Generated.cs").read_text(encoding="utf-8") == ct.task_schema_cs(SESSION_FIELDS, LIST_FIELDS)
 
 
 def test_weights_may_add_to_the_draw_s_int_and_no_more():
-    # Go refuses the same sum (TrialDraw.CheckTask's int.MaxValue): 2147 conditions at the cap and one of 483647 make it exactly.
-    logic = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
-    assert MAX_WEIGHT_SUM == 2**31 - 1 and "Sum(c => (long)c.Weight) > int.MaxValue" in logic
+    # Go refuses the same sum (OpenRigs.Trials TrialConditions.Build's int.MaxValue): 2147 conditions at the cap and one of 483647 make it exactly.
+    assert MAX_WEIGHT_SUM == 2**31 - 1
     params = task()["taskParameters"]
     params["trialConditions"] = [{"trialType": "visual", "weight": 1000000}] * 2147 + [{"trialType": "auditory", "weight": 483647}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
