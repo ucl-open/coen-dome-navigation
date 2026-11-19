@@ -79,10 +79,10 @@ rewarded:
 penaltyTimeoutSeconds:
   type: double
   unit: s
-  description: 'The timeout after this trial: the task''s penalty.timeoutSeconds when the trial was penalised, else 0. The next interval starts after it (itiStartTime).'
+  description: 'The timeout after this trial when it was penalised, else 0: the trial''s penalty.timeoutSeconds, or on a miss its penalty.noResponse.timeoutSeconds unless null. The next interval starts after it (itiStartTime).'
 penalised:
   type: bool
-  description: 'True when the trial was penalised: the task''s penalty timeout (penaltyTimeoutSeconds) and the penalty sound at the trial''s penalty.sound.levelDbfs (none when mute) followed its outcome. Which outcomes are penalised is the task''s (its note).'
+  description: 'True when the trial was penalised: the timeout (penaltyTimeoutSeconds) and the penalty sound at the trial''s penalty.sound.levelDbfs, or on a miss its penalty.noResponse.sound.levelDbfs unless null (none when mute), followed its outcome. Which trials are penalised, and which are misses, is the task''s (its note).'
   note: A trial that runs out of time or track with the outcome frequency in the reward zone, or ends outside the zone (TrialLogic.cs TrialRules.End).
 laserCondition:
   type: int

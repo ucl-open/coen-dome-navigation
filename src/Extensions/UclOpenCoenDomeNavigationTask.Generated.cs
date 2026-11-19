@@ -634,14 +634,16 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// What a wrong or missed trial costs: a timeout (the trial log's penaltyTimeoutSeconds), and the penalty sound with it
-    ///unless its level is mute. Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.
+    /// What a penalised trial costs: a timeout (the trial log's penaltyTimeoutSeconds), and the penalty sound with it
+    ///unless its level is mute. A penalised choice costs this block's own values, a penalised miss its noResponse override
+    ///(a null field the choice's). Each task decides which trials are penalised and which are misses; timeoutSeconds has no
+    ///lab default: each task file gives it.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("What a wrong or missed trial costs: a timeout (the trial log\'s penaltyTimeoutSeco" +
-        "nds), and the penalty sound with it\nunless its level is mute. Each task says whi" +
-        "ch trials are penalised; timeoutSeconds has no lab default: each task file gives" +
-        " it.")]
+    [System.ComponentModel.DescriptionAttribute(@"What a penalised trial costs: a timeout (the trial log's penaltyTimeoutSeconds), and the penalty sound with it
+    unless its level is mute. A penalised choice costs this block's own values, a penalised miss its noResponse override
+    (a null field the choice's). Each task decides which trials are penalised and which are misses; timeoutSeconds has no
+    lab default: each task file gives it.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Penalty
@@ -651,23 +653,28 @@ namespace UclOpenCoenDomeNavigationTask
     
         private PenaltySound _sound;
     
+        private PenaltyCost _noResponse;
+    
         public Penalty()
         {
             _sound = new PenaltySound();
+            _noResponse = new PenaltyCost();
         }
     
         protected Penalty(Penalty other)
         {
             _timeoutSeconds = other._timeoutSeconds;
             _sound = other._sound;
+            _noResponse = other._noResponse;
         }
     
         /// <summary>
-        /// Timeout after a penalised trial, in seconds; the next interval starts after it
+        /// Timeout after a penalised choice, in seconds, and after a penalised miss unless noResponse.timeoutSeconds sets its own; the next interval starts after it
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("timeoutSeconds", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeoutSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Timeout after a penalised trial, in seconds; the next interval starts after it")]
+        [System.ComponentModel.DescriptionAttribute("Timeout after a penalised choice, in seconds, and after a penalised miss unless n" +
+            "oResponse.timeoutSeconds sets its own; the next interval starts after it")]
         public double TimeoutSeconds
         {
             get
@@ -699,6 +706,26 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
+        /// <summary>
+        /// What a penalised miss costs where it differs from a penalised choice: each null field the choice's
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("noResponse")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="noResponse")]
+        [System.ComponentModel.DescriptionAttribute("What a penalised miss costs where it differs from a penalised choice: each null f" +
+            "ield the choice\'s")]
+        public PenaltyCost NoResponse
+        {
+            get
+            {
+                return _noResponse;
+            }
+            set
+            {
+                _noResponse = value;
+            }
+        }
+    
         public System.IObservable<Penalty> Generate()
         {
             return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Penalty(this)));
@@ -712,7 +739,178 @@ namespace UclOpenCoenDomeNavigationTask
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
             stringBuilder.Append("TimeoutSeconds = " + _timeoutSeconds + ", ");
+            stringBuilder.Append("Sound = " + _sound + ", ");
+            stringBuilder.Append("NoResponse = " + _noResponse);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// What a penalised miss costs, each field null for the penalised choice's (penalty's own): never null itself, so a
+    ///condition or a training stage can set any one of its fields by its dotted path.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("What a penalised miss costs, each field null for the penalised choice\'s (penalty\'" +
+        "s own): never null itself, so a\ncondition or a training stage can set any one of" +
+        " its fields by its dotted path.")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class PenaltyCost
+    {
+    
+        private double? _timeoutSeconds;
+    
+        private PenaltyCostSound _sound;
+    
+        public PenaltyCost()
+        {
+            _sound = new PenaltyCostSound();
+        }
+    
+        protected PenaltyCost(PenaltyCost other)
+        {
+            _timeoutSeconds = other._timeoutSeconds;
+            _sound = other._sound;
+        }
+    
+        /// <summary>
+        /// Timeout after a penalised miss, in seconds; null: penalty.timeoutSeconds
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("timeoutSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeoutSeconds")]
+        [System.ComponentModel.DescriptionAttribute("Timeout after a penalised miss, in seconds; null: penalty.timeoutSeconds")]
+        public double? TimeoutSeconds
+        {
+            get
+            {
+                return _timeoutSeconds;
+            }
+            set
+            {
+                _timeoutSeconds = value;
+            }
+        }
+    
+        /// <summary>
+        /// The penalty sound on a penalised miss
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("sound")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sound")]
+        [System.ComponentModel.DescriptionAttribute("The penalty sound on a penalised miss")]
+        public PenaltyCostSound Sound
+        {
+            get
+            {
+                return _sound;
+            }
+            set
+            {
+                _sound = value;
+            }
+        }
+    
+        public System.IObservable<PenaltyCost> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PenaltyCost(this)));
+        }
+    
+        public System.IObservable<PenaltyCost> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new PenaltyCost(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("TimeoutSeconds = " + _timeoutSeconds + ", ");
             stringBuilder.Append("Sound = " + _sound);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// A penalised miss's penalty sound: its level, or null for the penalised choice's (penalty.sound.levelDbfs).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute("A penalised miss\'s penalty sound: its level, or null for the penalised choice\'s (" +
+        "penalty.sound.levelDbfs).")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class PenaltyCostSound
+    {
+    
+        private object _levelDbfs;
+    
+        public PenaltyCostSound()
+        {
+        }
+    
+        protected PenaltyCostSound(PenaltyCostSound other)
+        {
+            _levelDbfs = other._levelDbfs;
+        }
+    
+        /// <summary>
+        /// The penalty sound's level on a penalised miss, in dBFS RMS as penalty.sound.levelDbfs; mute: no sound; null: penalty.sound.levelDbfs
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
+        [System.ComponentModel.DescriptionAttribute("The penalty sound\'s level on a penalised miss, in dBFS RMS as penalty.sound.level" +
+            "Dbfs; mute: no sound; null: penalty.sound.levelDbfs")]
+        public object LevelDbfs
+        {
+            get
+            {
+                return _levelDbfs;
+            }
+            set
+            {
+                _levelDbfs = value;
+            }
+        }
+    
+        public System.IObservable<PenaltyCostSound> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PenaltyCostSound(this)));
+        }
+    
+        public System.IObservable<PenaltyCostSound> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new PenaltyCostSound(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("LevelDbfs = " + _levelDbfs);
             return true;
         }
     
@@ -756,12 +954,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The penalty sound's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -30. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
+        /// The penalty sound's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -35. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute(@"The penalty sound's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -30. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
+        [System.ComponentModel.DescriptionAttribute(@"The penalty sound's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -35. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
         public object LevelDbfs
         {
             get
@@ -1786,13 +1984,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)
+        /// The timeout and penalty sound a penalised trial gets; one out of time or track (a miss) penalty.noResponse's where not null (open_rigs.core.task Penalty)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("penalty", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="penalty")]
-        [System.ComponentModel.DescriptionAttribute("The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty" +
-            ")")]
+        [System.ComponentModel.DescriptionAttribute("The timeout and penalty sound a penalised trial gets; one out of time or track (a" +
+            " miss) penalty.noResponse\'s where not null (open_rigs.core.task Penalty)")]
         public Penalty Penalty
         {
             get
@@ -2171,6 +2369,16 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<Penalty>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<PenaltyCost> source)
+        {
+            return Process<PenaltyCost>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<PenaltyCostSound> source)
+        {
+            return Process<PenaltyCostSound>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<PenaltySound> source)
         {
             return Process<PenaltySound>(source);
@@ -2230,6 +2438,8 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Curriculum>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyCost>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyCostSound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Reward>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
@@ -2313,6 +2523,16 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<Penalty>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<PenaltyCost> source)
+        {
+            return Process<PenaltyCost>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<PenaltyCostSound> source)
+        {
+            return Process<PenaltyCostSound>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<PenaltySound> source)
         {
             return Process<PenaltySound>(source);
@@ -2372,6 +2592,8 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Curriculum>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyCost>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyCostSound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Reward>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]

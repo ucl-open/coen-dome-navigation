@@ -269,7 +269,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask
     auto_reward_probability: Double = Field(
         default=1.0, ge=0, le=1, description="Probability that a trial is an auto-reward trial, rewarded on reaching the zone's floor without a lick; 0: never, 1: every trial"
     )
-    penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
+    penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets; one out of time or track (a miss) penalty.noResponse's where not null (open_rigs.core.task Penalty)")
     reward_tone: RewardTone = Field(
         default=RewardTone(), description="The reward tone (src/sounds/reward_tone.bin), played on a rewarded trial at its levelDbfs (open_rigs.core.task RewardTone, OpenRigs.Audio PlayRewardTone)"
     )

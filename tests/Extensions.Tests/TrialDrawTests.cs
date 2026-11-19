@@ -942,7 +942,7 @@ public class TrialRulesTests
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
         Assert.AreEqual(TrialOutcomes.Incorrect, outcome.Outcome.Row.Value.outcome);
         Assert.AreEqual("wrongLickLimit", outcome.Outcome.Row.Value.outcomeReason);
-        Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -45);
+        Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -35);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Rewarded, "penalised, unrewarded");
         Assert.AreEqual(3.0, outcome.Outcome.Row.Value.rewardOfferedUl, "the offer kept on a trial not rewarded");
         Assert.AreEqual(2.0, outcome.Outcome.Row.Value.penaltyTimeoutSeconds);
@@ -1147,7 +1147,7 @@ public class TrialRulesTests
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.AreEqual("responseWindowEnd", outcome.Outcome.Row.Value.outcomeReason);
         Assert.AreEqual(TrialOutcomes.NoResponse, outcome.Outcome.Row.Value.outcome);
-        Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -45);
+        Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -35);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded);
         Assert.AreEqual(start.Seconds + 0.1 + 12.0, outcome.Seconds, 0.0011);
     }
@@ -1427,6 +1427,68 @@ public class TrialRulesTests
         StringAssert.Contains(message, "the reward zone (15248 to 25000 Hz) is not inside the track's tones (2000 to 24000 Hz)");
         task.RewardZoneMaxHz = 24000;
         Fixture.Setup(task);
+    }
+
+    [TestMethod]
+    public void ATrialThatRunsOutCostsPenaltyNoResponseWhereSetAndTheWrongLickLimitTheChoices()
+    {
+        // Out of track (ranOut, outcome noResponse): the miss's own timeout and level, the row logging the timeout used.
+        var task = Fixture.Task(2);
+        task.Penalty.NoResponse.TimeoutSeconds = 5;
+        task.Penalty.NoResponse.Sound.LevelDbfs = "mute";
+        var rig = new Rig(Fixture.Setup(task));
+        rig.RunTo(TrialEventKind.Start);
+        rig.Wheel(1000);
+        var ran = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome;
+        Assert.AreEqual(TrialOutcomes.NoResponse, ran.Row.Value.outcome);
+        Assert.IsTrue(ran.Penalised && ran.PenaltyTimeoutSeconds == 5 && ran.Row.Value.penaltyTimeoutSeconds == 5 && double.IsNaN(ran.PenaltyLevelDbfs));
+        // The wrong-lick limit is a choice: the block's own values whatever noResponse says.
+        task = Fixture.Task(4);
+        task.Penalty.NoResponse.TimeoutSeconds = 5;
+        task.Penalty.NoResponse.Sound.LevelDbfs = "mute";
+        rig = new Rig(Fixture.Setup(task));
+        rig.RunTo(TrialEventKind.Start);
+        rig.Until(rig.Now + 0.2);
+        for (int i = 0; i < 5; i++) rig.Lick();
+        var wrong = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome;
+        Assert.AreEqual("wrongLickLimit", wrong.Row.Value.outcomeReason);
+        Assert.IsTrue(wrong.Penalised && wrong.PenaltyTimeoutSeconds == 2 && wrong.Row.Value.penaltyTimeoutSeconds == 2 && wrong.PenaltyLevelDbfs == -35);
+    }
+
+    [TestMethod]
+    public void TheMaxPenaltyLevelCountsAMissesLevelSetByACondition()
+    {
+        var task = Fixture.Task(2);
+        task.TrialConditions = new List<TrialCondition>
+        {
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.0 } } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", -30.0 } } },
+            new TrialCondition { Weight = 0, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", -20.0 } } },
+        };
+        var rules = Fixture.Setup(task);
+        Assert.AreEqual(-30.0, rules.MaxPenaltyLevelDbfs, "the weight-0 condition's -20 is never drawn");
+        var rig = new Rig(rules);
+        var seen = new Dictionary<int, double>();
+        for (int i = 0; i < 12; i++)
+        {
+            rig.RunTo(TrialEventKind.Start);
+            rig.Wheel(1000 * (i + 1));
+            var outcome = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome;
+            seen[outcome.Row.Value.trialConditionId] = outcome.PenaltyLevelDbfs;
+        }
+        Assert.AreEqual(-30.0, seen[1], "the condition's miss level");
+        Assert.AreEqual(Fixture.Setup(Fixture.Task(2)).MaxPenaltyLevelDbfs, seen[0], "null: the choice's");
+    }
+
+    [TestMethod]
+    public void TheMissesOwnLevelAndTimeoutAreCheckedAsTheChoices()
+    {
+        var task = Fixture.Task(4);
+        task.Penalty.NoResponse.Sound.LevelDbfs = 0.0;
+        task.Penalty.NoResponse.TimeoutSeconds = double.NaN;
+        var message = Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message;
+        StringAssert.Contains(message, "penalty.noResponse.sound.levelDbfs (0) must be from -120 to -1 dBFS");
+        StringAssert.Contains(message, "penalty.noResponse.timeoutSeconds must be a finite number, 0 or more");
     }
 
     [TestMethod]

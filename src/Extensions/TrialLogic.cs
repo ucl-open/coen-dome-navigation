@@ -127,8 +127,9 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     /// <summary>The highest tone the task's conditions can draw (OpenRigs.Trials MaxSoundLevel.Of), for the pips' peak check (LayOutPips).</summary>
     public MaxSoundLevel MaxStimulusLevel { get { return MaxSoundLevel.Of(draw.Conditions, t => t.AuditoryStimulus.LevelDbfs); } }
 
-    /// <summary>The highest penalty.sound.levelDbfs any condition can draw (NaN: every one mute), PlayPenaltySound's buffer level.</summary>
-    public double MaxPenaltyLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.Penalty.Sound.LevelDbfs).LevelDbfs; } }
+    /// <summary>The highest penalty.sound.levelDbfs or penalty.noResponse.sound.levelDbfs any condition can draw (NaN: every one
+    /// mute), PlayPenaltySound's buffer level.</summary>
+    public double MaxPenaltyLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.Penalty.Sound.LevelDbfs, t => t.Penalty.NoResponse.Sound.LevelDbfs).LevelDbfs; } }
 
     /// <summary>The highest rewardTone.levelDbfs any condition can draw (NaN: every one mute), PlayRewardTone's buffer level.</summary>
     public double MaxRewardToneLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.RewardTone.LevelDbfs).LevelDbfs; } }
@@ -276,6 +277,9 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var rewarded = onTarget && (reason == "correctLick" || reason == "rewardZoneReached");
         var penalised = !onTarget || ranOut;
         var p = trial.values;
+        // What a penalised trial costs, resolved once for the row's timeout and the sound's level: a trial that ran out
+        // (a miss) penalty.noResponse's values where not null, else penalty.timeoutSeconds and penalty.sound.levelDbfs.
+        var cost = Penalties.Resolve(p.Penalty.TimeoutSeconds, p.Penalty.Sound.LevelDbfs, p.Penalty.NoResponse.TimeoutSeconds, p.Penalty.NoResponse.Sound.LevelDbfs, ranOut);
         // The shared block (trialNumber, the times, rewardOfferedUl, rewarded, the penalty, the laser) is lib-open-rigs';
         // the conditions, stimulus and autoReward blocks are the trial's (ConditionedTrial). Distances in track cm.
         var row = SharedTrialColumns.Fill(new TrialRow
@@ -298,8 +302,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             outcomeVisualSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             auditoryOffPositionCm = auditoryOffPositionCm,
             visualOffPositionCm = visualOffPositionCm
-        }, trial, times, trial.rewardOfferedUl, rewarded, penalised, p.Penalty.TimeoutSeconds);
-        return new TrialOutcome(row, SoundLevels.Parse(p.Penalty.Sound.LevelDbfs), SoundLevels.Parse(p.RewardTone.LevelDbfs));
+        }, trial, times, trial.rewardOfferedUl, rewarded, penalised, cost.TimeoutSeconds);
+        return new TrialOutcome(row, cost.LevelDbfs, SoundLevels.Parse(p.RewardTone.LevelDbfs));
     }
 }
 
@@ -453,6 +457,14 @@ public class TrialDraw
         var sound = task.AuditoryStimulus;
         Level(problems, "auditoryStimulus.levelDbfs", sound.LevelDbfs);
         Level(problems, "penalty.sound.levelDbfs", task.Penalty.Sound == null ? null : task.Penalty.Sound.LevelDbfs);
+        // A penalised miss's own cost (out of time or track): each field null (the choice's) or checked as the choice's.
+        var miss = task.Penalty.NoResponse;
+        if (miss == null || miss.Sound == null) problems.Add("penalty.noResponse and its sound must be given (their fields may be null)");
+        else
+        {
+            if (miss.Sound.LevelDbfs != null) Level(problems, "penalty.noResponse.sound.levelDbfs", miss.Sound.LevelDbfs);
+            if (miss.TimeoutSeconds.HasValue) number("penalty.noResponse.timeoutSeconds", miss.TimeoutSeconds.Value, false);
+        }
         Level(problems, "rewardTone.levelDbfs", task.RewardTone == null ? null : task.RewardTone.LevelDbfs);
         if (!(sound.ElevationDeg >= -90 && sound.ElevationDeg <= 90)) problems.Add("auditoryStimulus.elevationDeg must be in [-90, 90]");
         var azimuths = (sound.InitialAzimuthsDeg ?? new List<object>()).Select(SoundAzimuths.Parse).ToList();

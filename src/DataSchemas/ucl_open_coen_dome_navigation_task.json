@@ -182,10 +182,10 @@
       "type": "object"
     },
     "Penalty": {
-      "description": "What a wrong or missed trial costs: a timeout (the trial log's penaltyTimeoutSeconds), and the penalty sound with it\nunless its level is mute. Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.",
+      "description": "What a penalised trial costs: a timeout (the trial log's penaltyTimeoutSeconds), and the penalty sound with it\nunless its level is mute. A penalised choice costs this block's own values, a penalised miss its noResponse override\n(a null field the choice's). Each task decides which trials are penalised and which are misses; timeoutSeconds has no\nlab default: each task file gives it.",
       "properties": {
         "timeoutSeconds": {
-          "description": "Timeout after a penalised trial, in seconds; the next interval starts after it",
+          "description": "Timeout after a penalised choice, in seconds, and after a penalised miss unless noResponse.timeoutSeconds sets its own; the next interval starts after it",
           "minimum": 0,
           "title": "TimeoutSeconds",
           "type": "number"
@@ -193,10 +193,21 @@
         "sound": {
           "$ref": "#/$defs/PenaltySound",
           "default": {
-            "levelDbfs": -30.0
+            "levelDbfs": -35.0
           },
           "description": "The penalty sound, with every timeout",
           "title": "Sound"
+        },
+        "noResponse": {
+          "$ref": "#/$defs/PenaltyCost",
+          "default": {
+            "timeoutSeconds": null,
+            "sound": {
+              "levelDbfs": null
+            }
+          },
+          "description": "What a penalised miss costs where it differs from a penalised choice: each null field the choice's",
+          "title": "NoResponse"
         }
       },
       "required": [
@@ -205,12 +216,67 @@
       "title": "Penalty",
       "type": "object"
     },
+    "PenaltyCost": {
+      "description": "What a penalised miss costs, each field null for the penalised choice's (penalty's own): never null itself, so a\ncondition or a training stage can set any one of its fields by its dotted path.",
+      "properties": {
+        "timeoutSeconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Timeout after a penalised miss, in seconds; null: penalty.timeoutSeconds",
+          "title": "TimeoutSeconds"
+        },
+        "sound": {
+          "$ref": "#/$defs/PenaltyCostSound",
+          "default": {
+            "levelDbfs": null
+          },
+          "description": "The penalty sound on a penalised miss",
+          "title": "Sound"
+        }
+      },
+      "title": "PenaltyCost",
+      "type": "object"
+    },
+    "PenaltyCostSound": {
+      "description": "A penalised miss's penalty sound: its level, or null for the penalised choice's (penalty.sound.levelDbfs).",
+      "properties": {
+        "levelDbfs": {
+          "default": null,
+          "description": "The penalty sound's level on a penalised miss, in dBFS RMS as penalty.sound.levelDbfs; mute: no sound; null: penalty.sound.levelDbfs",
+          "oneOf": [
+            {
+              "maximum": -1.0,
+              "minimum": -120.0,
+              "type": "number"
+            },
+            {
+              "const": "mute",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "LevelDbfs"
+        }
+      },
+      "title": "PenaltyCostSound",
+      "type": "object"
+    },
     "PenaltySound": {
       "description": "The lab's penalty sound (OpenRigs.Audio PlayPenaltySound, the same in every task), on rig.yml's speakerArray.penaltySoundChannel alone,\nequalised for that speaker, at each penalised trial's levelDbfs.",
       "properties": {
         "levelDbfs": {
-          "default": -30.0,
-          "description": "The penalty sound's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -30. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
+          "default": -35.0,
+          "description": "The penalty sound's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -35. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
           "oneOf": [
             {
               "maximum": -1.0,
@@ -534,7 +600,7 @@
         },
         "penalty": {
           "$ref": "#/$defs/Penalty",
-          "description": "The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)"
+          "description": "The timeout and penalty sound a penalised trial gets; one out of time or track (a miss) penalty.noResponse's where not null (open_rigs.core.task Penalty)"
         },
         "rewardTone": {
           "$ref": "#/$defs/RewardTone",

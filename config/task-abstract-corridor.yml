@@ -48,6 +48,10 @@ taskParameters:
     timeoutSeconds: 2.0       # s after a penalised trial
     sound:                    # the lab's penalty sound (OpenRigs.Audio), on a penalised trial
       levelDbfs: -35          # dBFS RMS, on rig.yml's penaltySoundChannel alone; mute: none
+    noResponse:               # a trial out of time or track (a miss), where set; null: the values above
+      timeoutSeconds: null    # s; null: timeoutSeconds above
+      sound:
+        levelDbfs: null       # dBFS RMS or mute; null: sound.levelDbfs above
   rewardTone:                 # on a rewarded trial, every speaker
     levelDbfs: -55            # dBFS RMS; mute: none
   optogenetics:               # Zapit; the laser runs from the trigger to the outcome (or its cap, derived at Go), laser-off trials laser off
