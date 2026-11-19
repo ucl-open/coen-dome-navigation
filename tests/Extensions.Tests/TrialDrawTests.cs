@@ -41,7 +41,8 @@ static class Fixture
     // The stages of the lab's curriculum (K:\config\curricula\coen-dome-navigation\task-abstract-corridor.conditions.yml)
     // when the rows left the task file, by id: rewardZoneMinHz, rewardZoneMaxHz, autoRewardProbability, wrongLickLimit,
     // trialStructure.lickQuietSeconds, trialStructure.responseWindowSeconds, track.wheelGain, track.autoProgressPerSecond.
-    // Stage 5's stimulus-off trials are a second condition (weight 16, stimulusOff.stimuli both) beside the first (84).
+    // Stage 5's stimulus-off trials are a second condition (weight 16, stimulusOff.stimuli both, trackFractions 0.4 and 0.6)
+    // beside the first (84).
     static readonly double?[][] Stages =
     {
         new double?[] { 18000, 24000, 1, 0, 0, null, 8, 0.04 },  // Zone Reward, Drift
@@ -72,6 +73,7 @@ static class Fixture
             Func<Dictionary<object, object>> none = () => new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.0 } } };
             var off = none();
             off["stimulusOff.stimuli"] = "both";
+            off["stimulusOff.trackFractions"] = new List<object> { 0.4, 0.6 };
             task.TrialConditions = new List<TrialCondition>
             {
                 new TrialCondition { Weight = 84, Set = none() },
@@ -449,9 +451,9 @@ public class TrialDrawTests
             Assert.AreEqual(0, problems.Count, string.Join("; ", problems));
             CollectionAssert.AreEqual(new[] { 2, 1, 0 }, built.Select(c => c.Weight).ToArray());
             // visual: the grating at the task's contrast, no tone; auditory: the tone at its level, no grating; both.
-            // Each expands into the task's 3 track lengths times its 2 stimulus-off fractions.
+            // Each expands into the task's 3 track lengths times its 1 stimulus-off fraction (1.0, the default).
             CollectionAssert.AreEqual(new[] { "1:mute", "0:-55", "1:-55" }, built.Select(c => c.Combinations[0].Task).Select(m => string.Join(",", m.VisualStimulus.Contrasts) + ":" + Convert.ToString(m.AuditoryStimulus.LevelDbfs, System.Globalization.CultureInfo.InvariantCulture)).ToArray());
-            Assert.IsTrue(built.All(c => c.Combinations.Count == 6));
+            Assert.IsTrue(built.All(c => c.Combinations.Count == 3));
         }
         // ReadTask keeps a set value a number, so Settings_Task logs it as one (the typed read's text would log "0").
         var read = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
@@ -1514,6 +1516,33 @@ public class TrialRulesTests
         Assert.AreEqual(60, row2.auditoryOffPositionCm, 1e-9);   // the first pip after 30 wheel cm, past the half track (50 track cm)
         Assert.IsTrue(double.IsNaN(row2.visualOffPositionCm));
         Assert.AreEqual("audiovisualCoherentTruncated", row2.trialType);   // a stimulus-off condition's trialType takes Truncated
+    }
+
+    [TestMethod]
+    public void ACutPointOfOneNeverSwitchesAStimulusOff()
+    {
+        // 1.0 is the track's end: never during the trial, on a trial ended at the track's end (past 0.9995, which rounds
+        // to 1.000) and on an auto-reward trial whose last pip plays at the end; both off positions NaN.
+        foreach (var autoReward in new[] { 0.0, 1.0 })
+        {
+            var task = Fixture.Task(2);
+            task.Track.LengthsCm = new List<double> { 100 };
+            task.AutoRewardProbability = autoReward;
+            task.StimulusOff.TrackFractions = new List<double> { 1.0 };
+            task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "stimulusOff.stimuli", "both" } } } };
+            var rig = new Rig(Fixture.Setup(task));
+            var trial = rig.RunTo(TrialEventKind.Start).Trial;
+            Assert.IsTrue(double.IsNaN(trial.stimulusOffFraction));
+            rig.Wheel(trial.trackLengthWheelCm * 0.9996);
+            rig.Until(rig.Now + 0.1);
+            rig.Wheel(trial.trackLengthWheelCm + 1);
+            rig.Until(rig.Now + 0.2);
+            var outcome = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
+            var rows = rig.Events.Where(e => e.Kind == TrialEventKind.Update).Select(e => e.Update.Row).ToList();
+            Assert.IsTrue(rows.Count > 0);
+            Assert.IsTrue(rows.All(r => r.auditoryLevelDbfs.Equals(trial.auditoryLevelDbfs) && r.visualContrast == trial.visualContrast), "autoReward " + autoReward);
+            Assert.IsTrue(double.IsNaN(outcome.auditoryOffPositionCm) && double.IsNaN(outcome.visualOffPositionCm), "autoReward " + autoReward);
+        }
     }
 
     [TestMethod]

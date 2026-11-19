@@ -300,10 +300,9 @@
         },
         "trackFractions": {
           "default": [
-            0.4,
-            0.6
+            1.0
           ],
-          "description": "Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial",
+          "description": "Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial; 1 (the default) is the track's end, so never during the trial: a stimulus-off condition sets its own fractions",
           "items": {
             "type": "number"
           },
@@ -588,8 +587,7 @@
           "default": {
             "stimuli": "none",
             "trackFractions": [
-              0.4,
-              0.6
+              1.0
             ]
           },
           "description": "Which stimuli switch off part way along the track, and where"

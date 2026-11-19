@@ -18,6 +18,9 @@ taskParameters:
       visualStimulus.contrasts:
       - 0
       stimulusOff.stimuli: both
+      stimulusOff.trackFractions:
+      - 0.4
+      - 0.6
   trialStructure:
     itiMinSeconds: 2.0
     itiMaxSeconds: 3.0
@@ -66,5 +69,4 @@ taskParameters:
   stimulusOff:
     stimuli: none
     trackFractions:
-    - 0.4
-    - 0.6
+    - 1.0

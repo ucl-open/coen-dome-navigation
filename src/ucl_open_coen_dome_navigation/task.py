@@ -133,16 +133,19 @@ class StimulusOff(TaskBlock):
         description="The stimuli that switch off: none (an ordinary trial), auditory (the tone), visual (the grating) or both",
     )
     track_fractions: list[Double] = Field(
-        default=[0.4, 0.6],
+        default=[1.0],
         min_length=1,
-        description="Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial",
+        description=(
+            "Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial; 1 (the default) is the "
+            "track's end, so never during the trial: a stimulus-off condition sets its own fractions"
+        ),
     )
 
     @field_validator("track_fractions")
     @classmethod
     def _fractions_inside(cls, value: list[float]) -> list[float]:
-        if any(not 0 < fraction < 1 for fraction in value):
-            raise ValueError("stimulusOff track fractions must be between 0 and 1")
+        if any(not 0 < fraction <= 1 for fraction in value):
+            raise ValueError("stimulusOff track fractions must be above 0 and at most 1 (1: never during the trial)")
         return value
 
 

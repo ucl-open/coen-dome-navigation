@@ -1049,13 +1049,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial
+        /// Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial; 1 (the default) is the track's end, so never during the trial: a stimulus-off condition sets its own fractions
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("trackFractions")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackFractions")]
         [System.ComponentModel.DescriptionAttribute("Where the stimuli switch off, as a fraction of the trial\'s track length, one draw" +
-            "n per trial")]
+            "n per trial; 1 (the default) is the track\'s end, so never during the trial: a st" +
+            "imulus-off condition sets its own fractions")]
         public System.Collections.Generic.List<double> TrackFractions
         {
             get

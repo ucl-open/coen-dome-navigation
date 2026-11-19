@@ -476,8 +476,8 @@ public class TrialDraw
         var after = structure.ResponseWindowSeconds ?? TrialRules.UnlimitedWindowTriggerAfterSeconds;
         if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past the {2}", lead, after, structure.ResponseWindowSeconds.HasValue ? "responseWindowSeconds" : "limit without responseWindowSeconds"));
         var off = task.StimulusOff;
-        if (off.Stimuli != StimulusOffStimuli.None && (off.TrackFractions == null || off.TrackFractions.Count == 0 || off.TrackFractions.Any(f => !(f > 0 && f < 1))))
-            problems.Add("stimulusOff.stimuli is " + off.Stimuli + " but stimulusOff.trackFractions is empty or not all between 0 and 1");
+        if (off.Stimuli != StimulusOffStimuli.None && (off.TrackFractions == null || off.TrackFractions.Count == 0 || off.TrackFractions.Any(f => !(f > 0 && f <= 1))))
+            problems.Add("stimulusOff.stimuli is " + off.Stimuli + " but stimulusOff.trackFractions is empty or not all above 0 and at most 1");
         // The reward zone lies in the tones the track plays: above its start, at most its top (Sweep.TrackEndHz, 24 kHz).
         if (!(task.RewardZoneMinHz > sweep.StartHz && task.RewardZoneMinHz < task.RewardZoneMaxHz && task.RewardZoneMaxHz <= sweep.TrackEndHz)) problems.Add(string.Format("the reward zone ({0} to {1} Hz) is not inside the track's tones ({2} to {3} Hz)", task.RewardZoneMinHz, task.RewardZoneMaxHz, sweep.StartHz, sweep.TrackEndHz));
         var opto = task.Optogenetics;
@@ -503,9 +503,10 @@ public class TrialDraw
         var structure = p.TrialStructure;
         t.itiSeconds = structure.ItiMinSeconds + (structure.ItiMaxSeconds - structure.ItiMinSeconds) * random.NextDouble();  // trial 1 too, from the first clock tick, so Zapit is armed before its trigger
         t.trackLengthWheelCm = p.Track.LengthsCm[0] / p.Track.WheelGain;  // wheel cm to the end
-        // A stimulus-off trial's combination says which stimuli switch off and at which fraction.
+        // A stimulus-off trial's combination says which stimuli switch off and at which fraction. A fraction of 1 is the
+        // track's end, where the trial ends (or, on auto-reward, its last pip plays): never, so the trial is an ordinary one.
         var stimuli = p.StimulusOff.Stimuli;
-        var off = stimuli != StimulusOffStimuli.None;
+        var off = stimuli != StimulusOffStimuli.None && p.StimulusOff.TrackFractions[0] < 1;
         t.stimulusOffFraction = off ? p.StimulusOff.TrackFractions[0] : double.NaN;
         t.auditoryOff = stimuli == StimulusOffStimuli.Auditory || stimuli == StimulusOffStimuli.Both;
         t.visualOff = stimuli == StimulusOffStimuli.Visual || stimuli == StimulusOffStimuli.Both;

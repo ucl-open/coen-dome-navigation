@@ -61,5 +61,4 @@ taskParameters:
   stimulusOff:
     stimuli: none
     trackFractions:
-    - 0.4
-    - 0.6
+    - 1.0

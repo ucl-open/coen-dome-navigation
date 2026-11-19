@@ -1,4 +1,4 @@
-﻿import copy
+import copy
 import json
 import math
 import re
@@ -233,14 +233,14 @@ def test_a_stimulus_off_value_outside_the_four_is_refused():
         ([{"weight": 1, "set": {"visualStimulus.contrasts": [0.5, 1], "auditoryStimulus.levelDbfs": [-40]}, "pairs": [["visualStimulus.contrasts", "auditoryStimulus.levelDbfs"]]}],
          "paired lists must be equally long"),
         ([{"weight": 1, "pairs": [["visualStimulus.contrasts"]]}], "each pairs group needs two paths or more"),
-        # Every list field expands too: the task's 3 track lengths and 2 stimulus-off fractions times the set's 1 x 171.
-        ([{"weight": 1, "set": {"visualStimulus.contrasts": [1], "auditoryStimulus.levelDbfs": [-120 + i / 100 for i in range(171)]}}],
+        # Every list field expands too: the task's 3 track lengths and 1 stimulus-off fraction times the set's 1 x 342.
+        ([{"weight": 1, "set": {"visualStimulus.contrasts": [1], "auditoryStimulus.levelDbfs": [-120 + i / 100 for i in range(342)]}}],
          r"expands into 1026 combinations, more than 1024 \(x-max-combinations\)"),
-        # Counted before any is built, as TrialDraw.BuildConditions does: 6 x 1000^3 combinations would take hours and all
+        # Counted before any is built, as TrialDraw.BuildConditions does: 3 x 1000^3 combinations would take hours and all
         # memory to build.
         ([{"weight": 1, "set": {"auditoryStimulus.levelDbfs": [-120 + i / 1000 for i in range(1000)], "autoRewardProbability": [i / 1000 for i in range(1000)],
                                                       "reward.sizeUl": [1 + i / 1000 for i in range(1000)]}}],
-         r"expands into 6000000000 combinations"),
+         r"expands into 3000000000 combinations"),
     ],
 )
 def test_conditions_need_a_weight_and_what_they_set_to_run(conditions, match):
@@ -255,15 +255,16 @@ def test_a_condition_may_set_any_field_but_a_session_field_and_every_list_expand
     params["trialConditions"] = [{"weight": 1, "set": {"track.wheelGain": 2, "track.lengthsCm": [40, 60], "penalty.timeoutSeconds": 2,
                                                                               "visualStimulus.spatialFrequencyEndCpd": 0.6, "rewardZoneMinHz": 15000}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    # 171 levels times the task's 6 track and fraction picks is 1026; 170 is 1020, within the cap.
-    params["trialConditions"] = [{"weight": 1, "set": {"auditoryStimulus.levelDbfs": [-120 + i / 100 for i in range(170)]}}]
+    # 342 levels times the task's 3 track and fraction picks is 1026; 341 is 1023, within the cap.
+    params["trialConditions"] = [{"weight": 1, "set": {"auditoryStimulus.levelDbfs": [-120 + i / 100 for i in range(341)]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 
 def test_combinations_are_ordered_by_path_the_first_changing_fastest():
     # TrialDraw.BuildConditions' order, Settings_Combinations' rows.
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"])
-    combos = ct.condition_combinations(model.model_dump(by_alias=True, mode="json"), {"visualStimulus.contrasts": [0.5, 1]}, [], LIST_FIELDS)
+    combos = ct.condition_combinations(model.model_dump(by_alias=True, mode="json"),
+                                       {"visualStimulus.contrasts": [0.5, 1], "stimulusOff.trackFractions": [0.4, 0.6]}, [], LIST_FIELDS)
     assert len(combos) == 12 and combos[:3] == [
         {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusOff.trackFractions": [0.4], "track.lengthsCm": [80.0], "visualStimulus.contrasts": [0.5]},
         {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusOff.trackFractions": [0.6], "track.lengthsCm": [80.0], "visualStimulus.contrasts": [0.5]},
@@ -427,13 +428,21 @@ def test_the_task_s_own_blocks_refuse_inf_and_nan(block, key, value):
 @pytest.mark.parametrize(
     "key, value, match",
     [("stimuli", ["auditory"], "'none', 'auditory', 'visual' or 'both'"), ("stimuli", "tone", "'none', 'auditory', 'visual' or 'both'"),
-     ("trackFractions", [1.0], "between 0 and 1"), ("trackFractions", [], "at least 1")],
+     ("trackFractions", [1.01], "at most 1"), ("trackFractions", [0.0], "above 0"), ("trackFractions", [], "at least 1")],
 )
 def test_a_bad_stimulus_off_block_is_refused(key, value, match):
     doc = task()
     doc["taskParameters"]["stimulusOff"][key] = value
     with pytest.raises(pydantic.ValidationError, match=match):
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
+
+
+def test_the_default_cut_point_is_the_track_s_end():
+    """1.0 (the track's end, never during the trial) is the default and is taken, so a condition with stimuli none draws one
+    combination, not one per fraction."""
+    doc = task()
+    doc["taskParameters"]["stimulusOff"].pop("trackFractions")
+    assert UclOpenCoenDomeNavigationTaskLogic.model_validate(doc).task_parameters.stimulus_off.track_fractions == [1.0]
 
 
 @pytest.mark.parametrize("key, value, pair", [("lickQuietSeconds", 10.5, None), ("wheelQuietSeconds", 10.5, ("wheelQuietCm", 1)), ("wheelQuietCm", 20.5, ("wheelQuietSeconds", 1))])

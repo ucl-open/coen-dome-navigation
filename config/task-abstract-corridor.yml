@@ -68,4 +68,4 @@ taskParameters:
   wrongLickLimit: 0           # licks outside the zone that end the trial; 0: never
   stimulusOff:                # a condition's stimulus-off trials: stimuli none, auditory, visual or both
     stimuli: none
-    trackFractions: [0.4, 0.6]   # of the trial's track length, one drawn per trial
+    trackFractions: [1.0]        # of the trial's track length, one drawn per trial; 1.0: the track's end, never (a stimulus-off condition sets its own)

@@ -6,7 +6,6 @@
       "trialType": "auditory",
       "conditionWeight": 1,
       "values": {
-        "stimulusOff.trackFractions": 0.4,
         "track.lengthsCm": 80.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -17,8 +16,7 @@
       "trialType": "auditory",
       "conditionWeight": 1,
       "values": {
-        "stimulusOff.trackFractions": 0.6,
-        "track.lengthsCm": 80.0,
+        "track.lengthsCm": 100.0,
         "visualStimulus.contrasts": 0.0
       }
     },
@@ -28,40 +26,6 @@
       "trialType": "auditory",
       "conditionWeight": 1,
       "values": {
-        "stimulusOff.trackFractions": 0.4,
-        "track.lengthsCm": 100.0,
-        "visualStimulus.contrasts": 0.0
-      }
-    },
-    {
-      "trialCombinationId": 3,
-      "trialConditionId": 0,
-      "trialType": "auditory",
-      "conditionWeight": 1,
-      "values": {
-        "stimulusOff.trackFractions": 0.6,
-        "track.lengthsCm": 100.0,
-        "visualStimulus.contrasts": 0.0
-      }
-    },
-    {
-      "trialCombinationId": 4,
-      "trialConditionId": 0,
-      "trialType": "auditory",
-      "conditionWeight": 1,
-      "values": {
-        "stimulusOff.trackFractions": 0.4,
-        "track.lengthsCm": 120.0,
-        "visualStimulus.contrasts": 0.0
-      }
-    },
-    {
-      "trialCombinationId": 5,
-      "trialConditionId": 0,
-      "trialType": "auditory",
-      "conditionWeight": 1,
-      "values": {
-        "stimulusOff.trackFractions": 0.6,
         "track.lengthsCm": 120.0,
         "visualStimulus.contrasts": 0.0
       }
