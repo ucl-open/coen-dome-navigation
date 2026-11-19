@@ -140,7 +140,7 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
 
 
 def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
-    # The curriculum's path A visual, path B auditory: a stage's conditions say what its trials show, whatever their trialType.
+    # The curriculum's path A auditory, path B visual: a stage's conditions say what its trials show, whatever their trialType.
     params = task()["taskParameters"]
     params["trialConditions"] = [{"weight": 1, "set": {"auditoryStimulus.levelDbfs": "mute", "visualStimulus.contrasts": [0.5, 1.0]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
