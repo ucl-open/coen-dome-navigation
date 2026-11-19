@@ -583,5 +583,5 @@ requires-dist = [
 dev = [
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "pytest" },
-    { name = "pyyaml" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
 ]
