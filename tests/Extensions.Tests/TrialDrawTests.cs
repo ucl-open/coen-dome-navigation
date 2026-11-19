@@ -1513,6 +1513,7 @@ public class TrialRulesTests
         var row2 = rig2.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
         Assert.AreEqual(60, row2.auditoryOffPositionCm, 1e-9);   // the first pip after 30 wheel cm, past the half track (50 track cm)
         Assert.IsTrue(double.IsNaN(row2.visualOffPositionCm));
+        Assert.AreEqual("audiovisualCoherentTruncated", row2.trialType);   // a stimulus-off condition's trialType takes Truncated
     }
 
     [TestMethod]

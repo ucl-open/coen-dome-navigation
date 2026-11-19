@@ -42,7 +42,7 @@ def test_the_trial_types_are_the_ones_x_trial_types_derives():
     from ucl_open_coen_dome_navigation.task import TRIAL_TYPES
 
     assert sorted(listed) == sorted(rule["trialType"] for rule in TRIAL_TYPES)
-    assert set(listed) <= {"visual", "auditory", "audiovisualCoherent", "neutral"}
+    assert set(listed) <= {"visual", "auditory", "audiovisualCoherent", "neutral", "visualTruncated", "auditoryTruncated", "audiovisualCoherentTruncated"}
 
 
 def test_the_stimulus_state_columns_are_the_row_s_fields():

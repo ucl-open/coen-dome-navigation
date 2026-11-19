@@ -33,8 +33,8 @@ trialNumber:
   description: The trial's number in the experiment, from 1.
 trialType:
   type: string
-  values: [visual, auditory, audiovisualCoherent, neutral]
-  description: The label of the trial's condition (trialConditionId), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryLevelDbfs). Derived at Go from the condition's settings (the task's x-trial-types) - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither).
+  values: [visual, auditory, audiovisualCoherent, neutral, visualTruncated, auditoryTruncated, audiovisualCoherentTruncated]
+  description: The label of the trial's condition (trialConditionId), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryLevelDbfs). Derived at Go from the condition's settings (the task's x-trial-types) - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither); a condition whose stimulusOff.stimuli is not none takes Truncated after its name (visualTruncated, auditoryTruncated, audiovisualCoherentTruncated; neutral has no stimulus, so no truncated form).
 outcome:
   type: string
   values: [correct, incorrect, noResponse]

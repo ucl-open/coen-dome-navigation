@@ -157,7 +157,10 @@ def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
     ({"auditoryStimulus.initialAzimuthsDeg": [0]}, "audiovisualCoherent"), ({"visualStimulus.contrasts": [0], "auditoryStimulus.initialAzimuthsDeg": ["all"]}, "auditory"),
     ({"visualStimulus.contrasts": [0.5], "auditoryStimulus.levelDbfs": ["mute", "mute"]}, "visual"),
     ({"visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": -30}, "auditory"),
-    ({"visualStimulus.contrasts": [0.5], "auditoryStimulus.levelDbfs": -30}, "audiovisualCoherent")])
+    ({"visualStimulus.contrasts": [0.5], "auditoryStimulus.levelDbfs": -30}, "audiovisualCoherent"),
+    ({"stimulusOff.stimuli": "both"}, "audiovisualCoherentTruncated"), ({"stimulusOff.stimuli": "auditory", "visualStimulus.contrasts": [0]}, "auditoryTruncated"),
+    ({"stimulusOff.stimuli": "visual", "auditoryStimulus.levelDbfs": "mute"}, "visualTruncated"), ({"stimulusOff.stimuli": "none", "visualStimulus.contrasts": [0]}, "auditory"),
+    ({"stimulusOff.stimuli": "both", "visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": "mute"}, "neutral")])
 def test_the_trial_type_is_derived_from_what_the_condition_shows(set_, trial_type):
     # A grating shows at a contrast above 0 and a tone sounds at a number (ct.SOUNDING), not at mute: both audiovisualCoherent,
     # one alone visual or auditory, neither neutral; a list counts as shown when any entry shows.

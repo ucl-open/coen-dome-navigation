@@ -75,7 +75,7 @@
     {
       "trialCombinationId": 6,
       "trialConditionId": 1,
-      "trialType": "auditory",
+      "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
         "stimulusOff.stimuli": "both",
@@ -87,7 +87,7 @@
     {
       "trialCombinationId": 7,
       "trialConditionId": 1,
-      "trialType": "auditory",
+      "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
         "stimulusOff.stimuli": "both",
@@ -99,7 +99,7 @@
     {
       "trialCombinationId": 8,
       "trialConditionId": 1,
-      "trialType": "auditory",
+      "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
         "stimulusOff.stimuli": "both",
@@ -111,7 +111,7 @@
     {
       "trialCombinationId": 9,
       "trialConditionId": 1,
-      "trialType": "auditory",
+      "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
         "stimulusOff.stimuli": "both",
@@ -123,7 +123,7 @@
     {
       "trialCombinationId": 10,
       "trialConditionId": 1,
-      "trialType": "auditory",
+      "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
         "stimulusOff.stimuli": "both",
@@ -135,7 +135,7 @@
     {
       "trialCombinationId": 11,
       "trialConditionId": 1,
-      "trialType": "auditory",
+      "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
         "stimulusOff.stimuli": "both",

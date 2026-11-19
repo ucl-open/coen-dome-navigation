@@ -190,10 +190,15 @@ RULES = (
 # trialType: it names rows and analysis groups and drives nothing. coen-dome-decision-making's words without its targets or
 # azimuths (so no audiovisualConflict: the corridor has no side for the stimuli to disagree on): first match wins, on the
 # condition's values each as a list. The grating shown (a contrast above 0) and the tone heard (a level, not mute): both
-# audiovisualCoherent, one alone visual or auditory, neither neutral.
+# audiovisualCoherent, one alone visual or auditory, neither neutral. A condition whose stimulusOff.stimuli is not none
+# (a stimulus switches off) takes "Truncated" after its name, first: neutral has no stimulus, so no truncated form.
+_OFF = {"stimulusOff.stimuli": {"contains": {"enum": ["auditory", "visual", "both"]}}}
 TRIAL_TYPES = (
+    {"trialType": "audiovisualCoherentTruncated", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0, "auditoryStimulus.levelDbfs": ct.SOUNDING, **_OFF})},
     {"trialType": "audiovisualCoherent", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0, "auditoryStimulus.levelDbfs": ct.SOUNDING})},
+    {"trialType": "visualTruncated", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0, **_OFF})},
     {"trialType": "visual", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0})},
+    {"trialType": "auditoryTruncated", "if": ct.if_({"auditoryStimulus.levelDbfs": ct.SOUNDING, **_OFF})},
     {"trialType": "auditory", "if": ct.if_({"auditoryStimulus.levelDbfs": ct.SOUNDING})},
     {"trialType": "neutral"},
 )

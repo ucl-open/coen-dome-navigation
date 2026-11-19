@@ -699,6 +699,37 @@
                 "contains": {
                   "type": "number"
                 }
+              },
+              "stimulusOff.stimuli": {
+                "contains": {
+                  "enum": [
+                    "auditory",
+                    "visual",
+                    "both"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "visualStimulus.contrasts",
+              "auditoryStimulus.levelDbfs",
+              "stimulusOff.stimuli"
+            ]
+          },
+          "trialType": "audiovisualCoherentTruncated"
+        },
+        {
+          "if": {
+            "properties": {
+              "visualStimulus.contrasts": {
+                "contains": {
+                  "exclusiveMinimum": 0
+                }
+              },
+              "auditoryStimulus.levelDbfs": {
+                "contains": {
+                  "type": "number"
+                }
               }
             },
             "required": [
@@ -715,6 +746,31 @@
                 "contains": {
                   "exclusiveMinimum": 0
                 }
+              },
+              "stimulusOff.stimuli": {
+                "contains": {
+                  "enum": [
+                    "auditory",
+                    "visual",
+                    "both"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "visualStimulus.contrasts",
+              "stimulusOff.stimuli"
+            ]
+          },
+          "trialType": "visualTruncated"
+        },
+        {
+          "if": {
+            "properties": {
+              "visualStimulus.contrasts": {
+                "contains": {
+                  "exclusiveMinimum": 0
+                }
               }
             },
             "required": [
@@ -722,6 +778,31 @@
             ]
           },
           "trialType": "visual"
+        },
+        {
+          "if": {
+            "properties": {
+              "auditoryStimulus.levelDbfs": {
+                "contains": {
+                  "type": "number"
+                }
+              },
+              "stimulusOff.stimuli": {
+                "contains": {
+                  "enum": [
+                    "auditory",
+                    "visual",
+                    "both"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "auditoryStimulus.levelDbfs",
+              "stimulusOff.stimuli"
+            ]
+          },
+          "trialType": "auditoryTruncated"
         },
         {
           "if": {
