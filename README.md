@@ -26,7 +26,7 @@ Zapit (from Tom's `zapit-integration-v2`, 9 Nov 2026), on with the task file's `
 
 | Path | What |
 |---|---|
-| `src\main.bonsai` | The workflow, top level in data-flow order: ReadLabRig, Initialization (ExperimentControl, LaunchSettings), TaskFile, Declarations, ExperimentLogs, Hardware, Display, Audio, BackgroundNoise, ConnectForTask, Logging, Status, Rewards, RewardValve-Left, RewardValve-Right, TaskLogic, ExperimentRecords, LiveView; launch properties SubjectId, SessionId, LaunchId, TaskPath, DisplayDevice and ConfigRoot |
+| `src\main.bonsai` | The workflow, top level in data-flow order: ReadLabRig, ExperimentControl, LaunchSettings, TaskFile, Declarations, ExperimentLogs, DomeHardware, Display, Audio, BackgroundNoise, ConnectForTask, Logging, Status, Rewards, RewardValve-Left, RewardValve-Right, TaskLogic, ExperimentRecords, LiveView; launch properties SubjectId, SessionId, LaunchId, TaskPath, DisplayDevice and ConfigRoot |
 | `src\Extensions` | The task in tested C# (`tests\Extensions.Tests`): each trial's draw, timing and run along the virtual track, the rules lib-open-rigs' `TrialLoop` runs on the Harp clock (`TrialLogic.cs`), its row (`TrialRow.cs`) and the tone sweep (`Sweep.cs`); its README lists each file's classes |
 | `config\task-abstract-corridor.yml` | The task file rig-control copies at launch (read at Start for the background noise) and again at Go with the form's edits |
 | `schemas\trial-columns.yml` | What each `WorkflowData_Trials` column means |

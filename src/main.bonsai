@@ -26,45 +26,27 @@
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
         <Property Name="SubjectId" Description="The mouse's lab ID; the launch's own, from rig-control." />
+      </Expression>
+      <Expression xsi:type="ExternalizedMapping">
         <Property Name="SessionId" Description="The session number; the launch's own, from rig-control." />
         <Property Name="LaunchId" Description="The launcher's run id; the launch's own, from rig-control." />
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:ExperimentControl.bonsai">
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its curriculum the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from DomeHardware. TaskFile publishes the stage as CurriculumStage (code-version, like S03A-k7f2, from the task file's curriculum) at Go and reports it as the metric curriculumStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
+        <SubjectId />
+        <SessionId />
+        <LaunchId />
+        <ControlEndpoint>@tcp://127.0.0.1:5561</ControlEndpoint>
+        <Parameters />
+        <Commands />
+      </Expression>
+      <Expression xsi:type="ExternalizedMapping">
         <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Start for the background noise and again at Go with the form's edits; from the editor, config\task-abstract-corridor.yml." />
       </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Initialization</Name>
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its curriculum the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from Hardware. LaunchSettings (OpenRigs.Control) publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go. TaskFile publishes the stage as CurriculumStage (code-version, like S03A-k7f2, from the task file's curriculum) at Go and reports it as the metric curriculumStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="ExternalizedMapping">
-              <Property Name="SessionId" />
-              <Property Name="LaunchId" />
-            </Expression>
-            <Expression xsi:type="ExternalizedMapping">
-              <Property Name="SubjectId" />
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:ExperimentControl.bonsai">
-              <SubjectId />
-              <SessionId />
-              <LaunchId />
-              <ControlEndpoint>@tcp://127.0.0.1:5561</ControlEndpoint>
-              <Parameters />
-              <Commands />
-            </Expression>
-            <Expression xsi:type="ExternalizedMapping">
-              <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Start for the background noise and again at Go with the form's edits; from the editor, config\task-abstract-corridor.yml." />
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:LaunchSettings.bonsai">
-              <SubjectId />
-              <TaskPath>..\config\task-abstract-corridor.yml</TaskPath>
-            </Expression>
-          </Nodes>
-          <Edges>
-            <Edge From="0" To="2" Label="Source1" />
-            <Edge From="1" To="2" Label="Source2" />
-            <Edge From="1" To="4" Label="Source1" />
-            <Edge From="3" To="4" Label="Source2" />
-          </Edges>
-        </Workflow>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:LaunchSettings.bonsai">
+        <Description>Publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go (OpenRigs.Control).</Description>
+        <SubjectId />
+        <TaskPath>..\config\task-abstract-corridor.yml</TaskPath>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskFile</Name>
@@ -207,27 +189,13 @@
         </Workflow>
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:ExperimentLogs.bonsai">
-        <Description>The experiment folder at Go (PathPrefix), WorkflowData_Events, Settings_Rig, Settings_Experiment and the Recording phase. Before Hardware: every device's log waits for PathPrefix, so its definition must read nothing the devices define.</Description>
+        <Description>The experiment folder at Go (PathPrefix), WorkflowData_Events, Settings_Rig, Settings_Experiment and the Recording phase. Before DomeHardware: every device's log waits for PathPrefix, so its definition must read nothing the devices define.</Description>
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
         <Property Name="DisplayDevice" Description="The display the dome projector is on (DomeHardware's ProjectorDisplay); a launch property." />
       </Expression>
-      <Expression xsi:type="GroupWorkflow">
-        <Name>Hardware</Name>
-        <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, each logging itself; the cameras triggered once all three acquire; the speakers and their mixer; the projector, DisplayDevice a launch property), with Ready once the Harp clock is set, the spouts are homed, each camera has sent a frame and the mixer has started, and a stop naming what never came after 180 s.</Description>
-        <Workflow>
-          <Nodes>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
-              <Description>Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage, the three cameras, which start triggering once all three acquire, the speakers (SpeakerMixer) and the projector (ProjectorDisplay, stimuli on DrawStimuli).</Description>
-            </Expression>
-            <Expression xsi:type="ExternalizedMapping">
-              <Property Name="DisplayDevice" />
-            </Expression>
-          </Nodes>
-          <Edges>
-            <Edge From="1" To="0" Label="Source1" />
-          </Edges>
-        </Workflow>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
+        <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, each logging itself; the cameras triggered once all three acquire; the speakers and their mixer; the projector, DisplayDevice a launch property), with Ready once the Harp clock is set, the spouts are homed, each camera has sent a frame and the mixer has started, and a stop naming what never came after 180 s. Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage, the three cameras, which start triggering once all three acquire, the speakers (SpeakerMixer) and the projector (ProjectorDisplay, stimuli on DrawStimuli).</Description>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Display</Name>
@@ -416,7 +384,7 @@
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ConnectForTask.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything else written to the experiment folder (ExperimentLogs, before Hardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), WorkflowData_Trials and Zapit's logs (its replies as Events rows, Settings_ZapitConditions), Settings_Combinations (TrialRules.CombinationsJson, through LogDataSchema) every combination the conditions built at Go, each a row the trial log's trialCombinationId names, with the values that vary, LogWorkflowData the task's own WorkflowData_StimulusState; each device logs itself; Rewards logs each reward (RewardDelivered) and each RewardValve piece its calibration file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
+        <Description>Everything else written to the experiment folder (ExperimentLogs, before DomeHardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), WorkflowData_Trials and Zapit's logs (its replies as Events rows, Settings_ZapitConditions), Settings_Combinations (TrialRules.CombinationsJson, through LogDataSchema) every combination the conditions built at Go, each a row the trial log's trialCombinationId names, with the values that vary, LogWorkflowData the task's own WorkflowData_StimulusState; each device logs itself; Rewards logs each reward (RewardDelivered) and each RewardValve piece its calibration file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -984,8 +952,11 @@
     </Nodes>
     <Edges>
       <Edge From="0" To="1" Label="Source1" />
-      <Edge From="2" To="3" Label="Source1" />
-      <Edge From="7" To="8" Label="Source1" />
+      <Edge From="2" To="4" Label="Source1" />
+      <Edge From="3" To="4" Label="Source2" />
+      <Edge From="2" To="6" Label="Source1" />
+      <Edge From="5" To="6" Label="Source2" />
+      <Edge From="10" To="11" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>

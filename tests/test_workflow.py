@@ -223,7 +223,7 @@ def test_the_background_noise_is_the_shared_include():
 def test_the_speakers_are_declared_before_every_user():
     # A GroupWorkflow does not scope subjects; keep the declaration (DomeHardware's SpeakerMixer) ahead of its subscribers.
     top, _ = _scope(MAIN)
-    declared = next(i for i, n in enumerate(top) if n.findtext(W + "Name") == "Hardware")
+    declared = next(i for i, n in enumerate(top) if n.get("Path") == "OpenRigs.Devices:DomeHardware.bonsai")
     users = [i for i, n in enumerate(top) for s in n.iter(W + "Expression")
              if s.get(XSI) == "SubscribeSubject" and s.findtext(W + "Name") == "Speakers"]
     users += [i for i, n in enumerate(top) for s in n.iter(W + "Expression") if s.get("Path") in (lint.BACKGROUND_NOISE, lint.PLAY_PENALTY_SOUND)]
