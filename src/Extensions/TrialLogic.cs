@@ -281,7 +281,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var row = SharedTrialColumns.Fill(new TrialRow
         {
             trialType = trial.trialType,
-            outcome = rewarded ? TrialOutcomes.Correct : ranOut ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
+            // The zone reached is an auto-reward trial's (its licks ignored): the auto-reward answered it, outcome auto.
+            outcome = reason == "rewardZoneReached" ? TrialOutcomes.Auto : rewarded ? TrialOutcomes.Correct : ranOut ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
             trialConditionId = trial.trialConditionId,
             trialCombinationId = trial.trialCombinationId,
             visualContrast = trial.visualContrast,

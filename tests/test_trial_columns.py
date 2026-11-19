@@ -14,7 +14,7 @@ def test_the_trial_columns_start_with_the_shared_block():
     # The columns the shared blocks replaced are gone, and trial columns are camelCase outcomes.
     gone = {"penaltySoundOn", "wheelGain", "autoRewarded", "trialCondition", "auditoryAmplitude", "auditoryAzimuthDeg"}
     assert not gone & set(columns)
-    assert columns["outcome"]["values"] == ["correct", "incorrect", "noResponse"]
+    assert columns["outcome"]["values"] == ["correct", "incorrect", "noResponse", "auto"]
 
 def test_every_outcome_reason_the_rules_write_is_listed():
     # The outcomeReason values trial-columns.yml lists are the ones TrialLogic.cs writes.

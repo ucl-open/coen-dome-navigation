@@ -37,8 +37,8 @@ trialType:
   description: The label of the trial's condition (trialConditionId), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryLevelDbfs). Derived at Go from the condition's settings (the task's x-trial-types) - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither); a condition whose stimulusOff.stimuli is not none takes Truncated after its name (visualTruncated, auditoryTruncated, audiovisualCoherentTruncated; neutral has no stimulus, so no truncated form).
 outcome:
   type: string
-  values: [correct, incorrect, noResponse]
-  description: The trial's result - correct when rewarded, incorrect at the wrong-lick limit, noResponse at the end of the response window or of the track (outcomeReason says which). app-rig-control's Performance is correct over correct and incorrect (noResponse left out, its response rate shown beside it); Tom Childs' success rate was correct over all trials.
+  values: [correct, incorrect, noResponse, auto]
+  description: The trial's result - correct when rewarded on a lick in the reward zone, auto when an auto-reward trial reached the zone (the auto-reward answered it, no response of the mouse's own needed; rewarded, outcomeReason rewardZoneReached), incorrect at the wrong-lick limit, noResponse at the end of the response window or of the track (outcomeReason says which). app-rig-control's Performance is correct over correct and incorrect (noResponse and auto left out, its response rate shown beside it); Tom Childs' success rate was correct over all trials.
 itiStartTime:
   type: double
   unit: s
@@ -74,8 +74,8 @@ rewardOfferedUl:
   note: The trial's condition's reward.sizeUl, or sizeUl x reward.largeMultiplier on a large-reward trial (drawn with reward.largeProbability), on every trial.
 rewarded:
   type: bool
-  description: 'True when the trial''s outcome delivered its reward (rewardOfferedUl, at outcomeTime): the value the workflow''s reward command is made from. Which outcomes are rewarded is the task''s (its note).'
-  note: A trial that ends on a lick in the reward zone or with the zone reached (outcomeReason correctLick or rewardZoneReached, outcome correct), rewarded at the left spout.
+  description: 'True when the valve planned the trial''s reward (rewardOfferedUl; its RewardDelivered row in WorkflowData_Events, at outcomeTime); false on an outcome that earned it when the stop came first. Which outcomes are rewarded is the task''s (its note).'
+  note: A trial that ends on a lick in the reward zone (outcomeReason correctLick, outcome correct) or with the zone reached on an auto-reward trial (outcomeReason rewardZoneReached, outcome auto), rewarded at the left spout.
 penaltyTimeoutSeconds:
   type: double
   unit: s
@@ -126,8 +126,8 @@ auditoryElevationDeg:
   description: Elevation of the speaker that played; NaN when none or every speaker played, as auditoryInitialAzimuthDeg.
 autoReward:
   type: bool
-  description: 'True on an auto-reward trial (drawn with the task''s autoRewardProbability): one rewarded without a correct response; how, and so whether its reward came from the auto-reward, is the task''s (its note).'
-  note: 'An auto-reward trial is rewarded on the pip whose tone reaches the reward zone''s floor, no lick needed, its licks ignored (outcomeReason rewardZoneReached): its reward came from the auto-reward when rewarded.'
+  description: 'True on an auto-reward trial (drawn with the task''s autoRewardProbability): one rewarded without a correct response, its outcome auto when the auto-reward answered it with no response of the mouse''s own; how, and so whether its reward came from the auto-reward, is the task''s (its note).'
+  note: 'An auto-reward trial is rewarded on the pip whose tone reaches the reward zone''s floor, no lick needed, its licks ignored (outcomeReason rewardZoneReached, outcome auto): its reward came from the auto-reward when rewarded.'
 outcomeReason:
   type: string
   values: [rewardZoneReached, correctLick, wrongLickLimit, responseWindowEnd, trackEnd]

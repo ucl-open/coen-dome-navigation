@@ -849,7 +849,7 @@ public class TrialRulesTests
         rig.Wheel(1000);   // the end of a short track: the sweep's end
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.IsTrue(outcome.Outcome.Rewarded);
-        Assert.AreEqual(TrialOutcomes.Correct, outcome.Outcome.Row.Value.outcome);
+        Assert.AreEqual(TrialOutcomes.Auto, outcome.Outcome.Row.Value.outcome);   // the auto-reward answered it
         Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's reward.sizeUl, 3 ul
         Assert.IsTrue(outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Row.Value.penalised && outcome.Outcome.Row.Value.rewardOfferedUl == 3, "the row says what the valve did");
@@ -1314,7 +1314,7 @@ public class TrialRulesTests
         Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz > 20000, outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz.ToString());
         Assert.IsTrue(outcome.Outcome.Rewarded);
-        Assert.AreEqual(TrialOutcomes.Correct, outcome.Outcome.Row.Value.outcome);
+        Assert.AreEqual(TrialOutcomes.Auto, outcome.Outcome.Row.Value.outcome);
         Assert.IsFalse(outcome.Outcome.Penalised);
     }
 

@@ -419,7 +419,7 @@
               <Selector>Outcome</Selector>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Trials:TrialOutcomeEffects.bonsai">
-              <Description>Each outcome's row into TrialRow, a rewarded outcome's reward into RewardRequests (the left valve), the penalty sound (PlayPenaltySound) when penalised, at the trial's penalty.sound.levelDbfs (none when mute); the outcome passed on.</Description>
+              <Description>A rewarded outcome's reward into RewardRequests (the left valve) first, then each outcome's row into TrialRow, rewarded only when the valve's RewardDelivered came for it (RewardedAsDelivered), the penalty sound (PlayPenaltySound) when penalised, at the trial's penalty.sound.levelDbfs (none when mute); the outcome passed on.</Description>
             </Expression>
             <Expression xsi:type="rx:Condition">
               <Name>Rewarded?</Name>
