@@ -9,13 +9,11 @@ taskParameters:
     label: Stimulus Off
     sha256: handover
   trialConditions:
-  - trialType: auditory
-    weight: 84
+  - weight: 84
     set:
       visualStimulus.contrasts:
       - 0
-  - trialType: auditory
-    weight: 16
+  - weight: 16
     set:
       visualStimulus.contrasts:
       - 0

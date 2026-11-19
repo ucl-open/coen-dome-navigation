@@ -352,12 +352,8 @@
     },
     "TrialCondition": {
       "additionalProperties": false,
-      "description": "One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level\nvalues (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a\nlist field's list (LIST_FIELDS), at any level, one entry picked per trial. Paired lists share one picked index per trial.",
+      "description": "One kind of trial in the mix (coen-dome-decision-making's shape): its relative weight, its condition-level values (set)\nby dotted path and the lists it pairs; its trialType is derived from its contrasts and level (TRIAL_TYPES), never stored.\nA list in a scalar field's cell is one value picked per trial; a list field's list (LIST_FIELDS), at any level, one entry\npicked per trial. Paired lists share one picked index per trial.",
       "properties": {
-        "trialType": {
-          "$ref": "#/$defs/TrialType",
-          "description": "The condition's name, logged as each trial's trialType: derived from its contrasts and level (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing"
-        },
         "weight": {
           "description": "Relative draw weight: each new trial picks a condition with these as relative chances",
           "maximum": 1000000,
@@ -384,7 +380,6 @@
         }
       },
       "required": [
-        "trialType",
         "weight"
       ],
       "title": "TrialCondition",
@@ -451,18 +446,6 @@
       "title": "TrialStructure",
       "type": "object"
     },
-    "TrialType": {
-      "description": "A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_trial_type);\ncoen-dome-decision-making's words (audiovisualConflict no rule derives: a person names it).",
-      "enum": [
-        "visual",
-        "auditory",
-        "audiovisualCoherent",
-        "audiovisualConflict",
-        "neutral"
-      ],
-      "title": "TrialType",
-      "type": "string"
-    },
     "UclOpenCoenDomeNavigationTaskLogic": {
       "description": "Task logic definition for the coen-dome-navigation experiment.",
       "properties": {
@@ -517,7 +500,7 @@
           "title": "Curriculum"
         },
         "trialConditions": {
-          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialConditionId column is its 0-based index",
+          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; its trialType, derived from its values (x-trial-types), is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialConditionId column is its 0-based index",
           "items": {
             "$ref": "#/$defs/TrialCondition"
           },

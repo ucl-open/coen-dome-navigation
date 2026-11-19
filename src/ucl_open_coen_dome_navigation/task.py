@@ -12,11 +12,11 @@ constant level (open_rigs.core.task BACKGROUND_LEVEL_DBFS). The pips are stored 
 What a trial shows and offers is its trial condition's combination: a condition may set any field but the session fields
 (x-session-fields, SESSION_FIELDS), and every list field (LIST_FIELDS: the contrasts, the initial azimuths, the track lengths and
 the stimulus-off fractions) expands into its combinations, one entry each; the draw reads every value per trial from the
-trial's combination (its row of Settings_Combinations the trialCombinationId column). Its trialType names it and drives nothing."""
+trial's combination (its row of Settings_Combinations the trialCombinationId column). Its trialType, derived from its values
+(TRIAL_TYPES), names it and drives nothing."""
 
 import json
 import math
-from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
@@ -166,17 +166,6 @@ class OptogeneticsSettings(Optogenetics):
         return self
 
 
-class TrialType(StrEnum):
-    """A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_trial_type);
-    coen-dome-decision-making's words (audiovisualConflict no rule derives: a person names it)."""
-
-    VISUAL = "visual"
-    AUDITORY = "auditory"
-    AUDIOVISUAL_COHERENT = "audiovisualCoherent"
-    AUDIOVISUAL_CONFLICT = "audiovisualConflict"
-    NEUTRAL = "neutral"
-
-
 # The session fields (the schema's x-session-fields; TaskSchema.SessionFields, generated): what cannot change per trial, so
 # a condition may not set it (the path or any path under it). A condition may set every other field: the draw reads it per
 # trial from the trial's combination. A condition's blank takes the stage's, then the task's value.
@@ -197,9 +186,11 @@ RULES = (
     {"if": ct.if_({"stimulusOff.stimuli": {"const": "none"}}), "unused": ["stimulusOff.trackFractions"],
      "message": "stimulusOff.stimuli none switches nothing off, so its track fractions are unread"},
 )
-# How a condition is named (the schema's x-trial-types; derive_trial_type), coen-dome-decision-making's without its targets
-# or azimuths: first match wins, on the condition's values each as a list. The grating shown (a contrast above 0) and the
-# tone heard (a level, not mute): both audiovisualCoherent, one alone visual or auditory, neither neutral.
+# How a condition is named (the schema's x-trial-types; derive_trial_type, the C#'s TrialTypes.Derive at Go), logged as
+# trialType: it names rows and analysis groups and drives nothing. coen-dome-decision-making's words without its targets or
+# azimuths (so no audiovisualConflict: the corridor has no side for the stimuli to disagree on): first match wins, on the
+# condition's values each as a list. The grating shown (a contrast above 0) and the tone heard (a level, not mute): both
+# audiovisualCoherent, one alone visual or auditory, neither neutral.
 TRIAL_TYPES = (
     {"trialType": "audiovisualCoherent", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0, "auditoryStimulus.levelDbfs": ct.SOUNDING})},
     {"trialType": "visual", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0})},
@@ -211,14 +202,12 @@ TRIAL_TYPES = (
 REQUIRED = ()
 
 
-class TrialCondition(ct.TrialCondition[TrialType]):
-    """One kind of trial in the mix (coen-dome-decision-making's shape): its trialType, its relative weight, its condition-level
-    values (set) by dotted path and the lists it pairs. A list in a scalar field's cell is one value picked per trial; a
-    list field's list (LIST_FIELDS), at any level, one entry picked per trial. Paired lists share one picked index per trial."""
+class TrialCondition(ct.TrialCondition):
+    """One kind of trial in the mix (coen-dome-decision-making's shape): its relative weight, its condition-level values (set)
+    by dotted path and the lists it pairs; its trialType is derived from its contrasts and level (TRIAL_TYPES), never stored.
+    A list in a scalar field's cell is one value picked per trial; a list field's list (LIST_FIELDS), at any level, one entry
+    picked per trial. Paired lists share one picked index per trial."""
 
-    trial_type: TrialType = Field(
-        description="The condition's name, logged as each trial's trialType: derived from its contrasts and level (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing"
-    )
     pairs: list[list[String]] = Field(
         default_factory=list,
         description="Groups of paths whose lists (the set's, else the task's) have equal length and share one picked index per trial; unpaired lists are picked independently",
@@ -258,7 +247,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask
         description=(
             "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
             "trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; "
-            "its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialConditionId column is its 0-based index"
+            "its trialType, derived from its values (x-trial-types), is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialConditionId column is its 0-based index"
         ),
         json_schema_extra={"x-whole": True},
     )

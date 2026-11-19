@@ -306,7 +306,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 public class TrialDraw
 {
     /// <summary>What the draw reads from the task schema (TaskSchema, generated).</summary>
-    public static readonly ConditionsSchema Schema = new ConditionsSchema(TaskSchema.SessionFields, TaskSchema.ListFields, TaskSchema.MaxCombinations);
+    public static readonly ConditionsSchema Schema = new ConditionsSchema(TaskSchema.SessionFields, TaskSchema.ListFields, TaskSchema.MaxCombinations, TaskSchema.TrialTypes);
 
     /// <summary>Each trial condition as drawn (OpenRigs.Trials TrialConditions.Build, the Python build's rule): its set and
     /// pairs over the task's text, every combination read back, each combination's Id its row in Settings_Combinations. Adds a

@@ -15,12 +15,13 @@ taskParameters:
   # The trial mix, one whole value: each condition's relative chance and what its trials show, its set over the task's
   # values (any field but x-session-fields': visualStimulus.contrasts, 0 no grating; auditoryStimulus.levelDbfs, mute no
   # tone; ...), every list field one entry per combination (a row of Settings_Combinations, logged trialCombinationId), its
-  # pairs picking listed values together; its trialType names it. A curriculum stage's conditions replace it; Setup edits
+  # pairs picking listed values together; its trialType is derived from its values at Go (x-trial-types: visual,
+  # auditory, audiovisualCoherent below). A curriculum stage's conditions replace it; Setup edits
   # only the weights.
   trialConditions:
-    - { trialType: visual, weight: 0, set: { auditoryStimulus.levelDbfs: mute } }
-    - { trialType: auditory, weight: 1, set: { visualStimulus.contrasts: [0] } }
-    - { trialType: audiovisualCoherent, weight: 0, set: {} }
+    - { weight: 0, set: { auditoryStimulus.levelDbfs: mute } }
+    - { weight: 1, set: { visualStimulus.contrasts: [0] } }
+    - { weight: 0, set: {} }
   trialStructure:
     itiMinSeconds: 2.0        # from the outcome (after any timeout) to the first pip, drinking included:
     itiMaxSeconds: 3.0        # Tom's 2 s then 0 or 1 s, now drawn evenly between

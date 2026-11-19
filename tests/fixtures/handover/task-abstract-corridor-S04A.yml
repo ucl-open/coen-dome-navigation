@@ -9,8 +9,7 @@ taskParameters:
     label: Fewer Errors
     sha256: handover
   trialConditions:
-  - trialType: auditory
-    weight: 1
+  - weight: 1
     set:
       visualStimulus.contrasts:
       - 0

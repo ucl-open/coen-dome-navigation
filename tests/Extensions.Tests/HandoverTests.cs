@@ -23,12 +23,13 @@ public class HandoverTests
 
     // Each golden file (OpenRigs.Trials GoldenTaskFiles: its text, rngSeed set to 1, as app-rig-control leaves it null for
     // the workflow to draw), its task as ReadTask reads it, and its conditions as written, read apart from the draw's own
-    // reader: (trialType, weight).
+    // reader: their weights (a condition stores no trialType: it is derived, and test_combinations.py holds the derived one
+    // in Settings_Combinations to the Python build's).
     class Golden
     {
         public string Name, Text;
         public UclOpenCoenDomeNavigationTaskParameters Task;
-        public List<Tuple<string, int>> Written;
+        public List<int> Written;
     }
 
     static List<Golden> Goldens()
@@ -38,8 +39,8 @@ public class HandoverTests
             var stream = new YamlStream();
             stream.Load(new StringReader(f.Value));
             var root = (YamlMappingNode)((YamlMappingNode)stream.Documents[0].RootNode).Children[new YamlScalarNode("taskParameters")];
-            var written = ((YamlSequenceNode)root.Children[new YamlScalarNode("trialConditions")]).Children.Cast<YamlMappingNode>().Select(c => Tuple.Create(
-                ((YamlScalarNode)c.Children[new YamlScalarNode("trialType")]).Value, int.Parse(((YamlScalarNode)c.Children[new YamlScalarNode("weight")]).Value))).ToList();
+            var written = ((YamlSequenceNode)root.Children[new YamlScalarNode("trialConditions")]).Children.Cast<YamlMappingNode>().Select(c =>
+                int.Parse(((YamlScalarNode)c.Children[new YamlScalarNode("weight")]).Value)).ToList();
             return new Golden { Name = f.Key, Text = f.Value, Task = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(f.Value).TaskParameters, Written = written };
         }).ToList();
     }
@@ -57,8 +58,7 @@ public class HandoverTests
         foreach (var golden in Goldens())
         {
             var built = Built(golden);
-            CollectionAssert.AreEqual(golden.Written.Select(w => w.Item1).ToList(), built.Select(c => c.TrialType).ToList(), golden.Name);
-            CollectionAssert.AreEqual(golden.Written.Select(w => w.Item2).ToList(), built.Select(c => c.Weight).ToList(), golden.Name);
+            CollectionAssert.AreEqual(golden.Written, built.Select(c => c.Weight).ToList(), golden.Name);
         }
     }
 

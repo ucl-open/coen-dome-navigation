@@ -35,14 +35,15 @@ def test_the_combination_is_logged_beside_the_condition():
     assert re.search(r"int trialConditionId;.*\n\s+public int trialCombinationId;", row)
 
 
-def test_the_trial_types_are_the_conditions_and_decision_making_s():
-    # trialType holds the drawn condition's trialType: its values are those trialConditions may hold, in
+def test_the_trial_types_are_the_ones_x_trial_types_derives():
+    # trialType holds the drawn condition's derived trialType: its values are the names TRIAL_TYPES gives, in
     # coen-dome-decision-making's words.
     root = Path(__file__).parents[1]
     listed = yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))["trialType"]["values"]
-    from ucl_open_coen_dome_navigation.task import TrialType
+    from ucl_open_coen_dome_navigation.task import TRIAL_TYPES
 
-    assert listed == [t.value for t in TrialType] == ["visual", "auditory", "audiovisualCoherent", "audiovisualConflict", "neutral"]
+    assert sorted(listed) == sorted(rule["trialType"] for rule in TRIAL_TYPES)
+    assert set(listed) <= {"visual", "auditory", "audiovisualCoherent", "audiovisualConflict", "neutral"}
 
 
 def test_the_stimulus_state_columns_are_the_row_s_fields():
@@ -57,4 +58,7 @@ def test_the_stimulus_state_columns_are_the_row_s_fields():
     for name, column in columns.items():
         assert column["type"] in ("int", "double", "bool", "string") and column.get("description"), name
     assert columns["harpTime"]["unit"] == "s"
+    # ExperimentManifest copies it into manifest.json's stream_columns (ExperimentRecords' StreamColumns, NAV6).
+    workflow = (root / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
+    assert workflow.count(r"<StreamColumns>WorkflowData_StimulusState=schemas\stimulus-state-columns.yml</StreamColumns>") == 1
 

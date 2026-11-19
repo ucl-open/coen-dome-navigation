@@ -7,4 +7,6 @@ public static class TaskSchema
     public const int MaxCombinations = 1024;
     /// <summary>The list fields one entry of which each trial draws (open_rigs.rigs.conditions.pick_lists), by path.</summary>
     public static readonly string[] ListFields = { "auditoryStimulus.initialAzimuthsDeg", "stimulusOff.trackFractions", "track.lengthsCm", "visualStimulus.contrasts" };
+    /// <summary>x-trial-types as JSON: how a condition's trialType is derived from its values (OpenRigs.Trials TrialTypes).</summary>
+    public const string TrialTypes = @"[{""trialType"":""audiovisualCoherent"",""if"":{""properties"":{""visualStimulus.contrasts"":{""contains"":{""exclusiveMinimum"":0}},""auditoryStimulus.levelDbfs"":{""contains"":{""type"":""number""}}},""required"":[""visualStimulus.contrasts"",""auditoryStimulus.levelDbfs""]}},{""trialType"":""visual"",""if"":{""properties"":{""visualStimulus.contrasts"":{""contains"":{""exclusiveMinimum"":0}}},""required"":[""visualStimulus.contrasts""]}},{""trialType"":""auditory"",""if"":{""properties"":{""auditoryStimulus.levelDbfs"":{""contains"":{""type"":""number""}}},""required"":[""auditoryStimulus.levelDbfs""]}},{""trialType"":""neutral""}]";
 }
