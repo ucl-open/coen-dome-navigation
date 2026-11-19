@@ -409,54 +409,18 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Status</Name>
-        <Description>The current trial's facts as metrics, named as WorkflowData_Trials's columns (trialNumber, trialType, rewardOfferedUl, laserCondition; the curriculumStage, code-version, is TaskFile's), at each trial's start; rig-control computes counts and performance from the trial rows.</Description>
+        <Description>The current trial's facts as metrics, named as WorkflowData_Trials's columns, at each trial's start: the shared ones (OpenRigs.Control ReportTrialMetrics: trialNumber, trialType, rewardOfferedUl, laserCondition); the curriculumStage, code-version, is TaskFile's; rig-control computes counts and performance from the trial rows.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
               <Name>Trial</Name>
             </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>trialNumber</Selector>
-            </Expression>
             <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ReportMetric">
-                <orcl:Name>trialNumber</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>rewardOfferedUl</Selector>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ReportMetric">
-                <orcl:Name>rewardOfferedUl</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>laserCondition</Selector>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ReportMetric">
-                <orcl:Name>laserCondition</orcl:Name>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>trialType</Selector>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="orcl:ReportMetric">
-                <orcl:Name>trialType</orcl:Name>
-              </Combinator>
+              <Combinator xsi:type="orcl:ReportTrialMetrics" />
             </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="0" To="3" Label="Source1" />
-            <Edge From="3" To="4" Label="Source1" />
-            <Edge From="0" To="5" Label="Source1" />
-            <Edge From="5" To="6" Label="Source1" />
-            <Edge From="0" To="7" Label="Source1" />
-            <Edge From="7" To="8" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -805,11 +769,11 @@
                 <trl:Kind>Start</trl:Kind>
               </Combinator>
             </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>Trial.rngSeed</Selector>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="rx:WithLatestFrom" />
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogRngSeed.bonsai">
-              <Description>The seed every draw of the experiment follows from (the task file's rngSeed, or one drawn at Go when it is null), logged once at trial 1's start.</Description>
+              <Description>The seed every draw of the experiment follows from (TrialRules.Seed: the task file's rngSeed, or one drawn at Go when it is null), logged once at trial 1's start.</Description>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>TrialRules</Name>
@@ -839,6 +803,9 @@
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>Grating</Name>
+            </Expression>
+            <Expression xsi:type="MemberSelector">
+              <Selector>Item2.Seed</Selector>
             </Expression>
           </Nodes>
           <Edges>
@@ -875,7 +842,7 @@
             <Edge From="41" To="42" Label="Source1" />
             <Edge From="42" To="43" Label="Source1" />
             <Edge From="34" To="35" Label="Source1" />
-            <Edge From="43" To="44" Label="Source1" />
+            <Edge From="43" To="54" Label="Source1" />
             <Edge From="11" To="12" Label="Source1" />
             <Edge From="12" To="13" Label="Source1" />
             <Edge From="45" To="48" Label="Source1" />
@@ -889,6 +856,8 @@
             <Edge From="8" To="9" Label="Source1" />
             <Edge From="15" To="52" Label="Source1" />
             <Edge From="52" To="53" Label="Source1" />
+            <Edge From="45" To="43" Label="Source2" />
+            <Edge From="54" To="44" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

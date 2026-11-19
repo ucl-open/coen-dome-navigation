@@ -85,7 +85,6 @@ public class Trial : IZapitTrial
     public bool laserOn;
     public double laserPowerMw;         // 0 with the laser off
     public double laserMaxSeconds;      // the workflow's wall-clock backstop (LaserBackstop); the loop's LaserCap is TrialRules.Laser's
-    public int rngSeed;                 // the experiment's seed, for the RngSeed event
     internal UclOpenCoenDomeNavigationTaskParameters values;  // its combination's values, which the rules read per trial
 }
 
@@ -145,6 +144,10 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     /// <summary>Settings_Combinations' text (OpenRigs.Trials TrialConditions.CombinationsJson): every combination built at Go, each a row the trial
     /// log's trialCombinationId names; logged through LogDataSchema in the Logging group.</summary>
     public string CombinationsJson { get { return TrialConditions.CombinationsJson(task, draw.Conditions, TrialDraw.Schema); } }
+
+    /// <summary>The seed every draw follows from (TrialDraw.Seed: the task's rngSeed, or one drawn at Go when it is null),
+    /// logged once at trial 1's start (LogRngSeed).</summary>
+    public int Seed { get { return draw.Seed; } }
 
     /// <summary>The laser in an optogenetics experiment (the trigger line only rises in one); null without.</summary>
     public LaserTiming Laser { get { return laser; } }
@@ -453,7 +456,6 @@ public class TrialDraw
     {
         var t = new Trial();
         t.trialNumber = ++drawn;
-        t.rngSeed = Seed;
         // The condition, then one of its combinations (every list pick), whose values the trial draws from.
         t.trialCondition = WeightedCondition();
         var condition = conditions[t.trialCondition];

@@ -68,8 +68,13 @@ def test_the_launch_properties():
 
 def test_the_metrics_are_the_view_s():
     names = {c.findtext("{clr-namespace:OpenRigs.Control;assembly=OpenRigs.Control}Name") for c in MAIN.iter(W + "Combinator") if c.get(XSI) == "orcl:ReportMetric"}
-    # trialType as coen-dome-decision-making reports it: the view's type_metric.
-    assert names == {"trialNumber", "trialType", "rewardOfferedUl", "laserCondition", "curriculumStage"}
+    assert names == {"curriculumStage"}
+    # The shared ones (trialNumber, trialType as coen-dome-decision-making reports it: the view's type_metric, rewardOfferedUl,
+    # laserCondition), OpenRigs.Control's ReportTrialMetrics at its default Members, once, on each trial at its start.
+    nodes, edges = _scope(group("Status"))
+    (report,) = [i for i, n in enumerate(nodes) if n.find(W + "Combinator") is not None and n.find(W + "Combinator").get(XSI) == "orcl:ReportTrialMetrics"]
+    assert TEXT.count("orcl:ReportTrialMetrics") == 1 and "Members" not in ET.tostring(nodes[report], encoding="unicode")
+    assert [nodes[a].findtext(W + "Name") for a, b, *_ in edges if b == report] == ["Trial"]
     # curriculumStage is TaskFile's: the task file's curriculum as code-version, found well formed by CheckTaskAtGo.
     assert "TrainingStage" not in TEXT and "trainingStage" not in TEXT and "TrainingCodeVersion" not in TEXT
     nodes, edges = _scope(group("TaskFile"))
@@ -321,14 +326,15 @@ def test_no_fixed_width_pulse_reaches_a_reward_valve():
 
 
 def test_the_rng_seed_is_logged_at_trial_1s_start():
-    # OpenRigs.Logging's LogRngSeed at TaskLogic's top level, given each trial's seed from its Start.
+    # OpenRigs.Logging's LogRngSeed at TaskLogic's top level, given TrialRules' Seed at each trial's Start.
     assert lint.rng_seed_problems(WORKFLOW) == []
     nodes, edges = lint.scope(WORKFLOW.named("TaskLogic"))
     (log,) = [i for i, n in enumerate(nodes) if n.get("Path") == lint.LOG_RNG_SEED]
     (seed,) = [a for a, b, _ in edges if b == log]
-    (start,) = [a for a, b, _ in edges if b == seed]
-    assert nodes[seed].findtext(W + "Selector") == "Trial.rngSeed"
-    assert _picked(nodes, start) == "Start"
+    (pair,) = [a for a, b, _ in edges if b == seed]
+    assert nodes[seed].findtext(W + "Selector") == "Item2.Seed" and lint.kind(nodes[pair]) == "rx:WithLatestFrom"
+    sources = {label: a for a, b, label in edges if b == pair}
+    assert _picked(nodes, sources["Source1"]) == "Start" and nodes[sources["Source2"]].findtext(W + "Name") == "TrialRules"
 
 
 def test_every_device_is_opened_by_its_piece():
