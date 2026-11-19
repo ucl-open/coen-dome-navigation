@@ -1,0 +1,31 @@
+# What each WorkflowData_StimulusState column this workflow writes means, in trial-columns.yml's format: one row per tone pip
+# (every 50 ms from a trial's first pip to its outcome), StimulusStateRow in src\Extensions\Sweep.cs, in its order after
+# harpTime. A run stopped mid-trial leaves these rows for its last trial (open_rigs.rigs.trials summarise reads
+# trialNumber, auditoryLevelDbfs and visualContrast). The names must also be in the lab's Data Dictionary (its stream columns).
+
+harpTime:
+  type: double
+  unit: s
+  description: Harp time the pip was commanded, on the trial start's 50 ms grid.
+trialNumber:
+  type: int
+  description: The trial the pip belongs to (WorkflowData_Trials' trialNumber).
+positionCm:
+  type: double
+  unit: cm
+  description: The mouse's place along the track at the pip, in track cm - the wheel distance from the trial start, behind the start never counted and capped at the track's length, times the trial's track.wheelGain; the stimulus's own progress adds track.autoProgressPerSecond to it.
+auditoryFrequencyHz:
+  type: double
+  unit: Hz
+  description: The tone the pip played (or would have, when muted or switched off), from the track's progress on a log scale from sweep.json's startHz to its top.
+auditoryLevelDbfs:
+  type: double
+  unit: dBFS
+  description: The pip's level in dBFS RMS, the trial's auditoryLevelDbfs; NaN when no tone played (mute, or switched off on a stimulus-off trial).
+visualSpatialFrequencyCpd:
+  type: double
+  unit: cycles/deg
+  description: The grating's spatial frequency at the pip, from the track's progress on a log scale between visualStimulus.spatialFrequencyStartCpd and spatialFrequencyEndCpd.
+visualContrast:
+  type: double
+  description: The grating's contrast shown at the pip - the trial's visualContrast, 0 once a stimulus-off trial has switched the grating off.

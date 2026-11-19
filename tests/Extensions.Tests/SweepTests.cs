@@ -44,10 +44,10 @@ public class PipSetTests
 
     SpeakerSet Speakers() { return SpeakerSet.Load(Path.Combine(rig, "rig.yml"), "THIS-RIG"); }
 
-    // The committed pips, a Mat a row, as the workflow's MatrixReader reads all_waveforms.bin.
+    // The committed pips, a Mat a row, as the workflow's MatrixReader reads pips.bin.
     static IList<Mat> Pips()
     {
-        var bytes = File.ReadAllBytes(Path.Combine(Fixture.Repo(), "src", "sounds", "all_waveforms.bin"));
+        var bytes = File.ReadAllBytes(Path.Combine(Fixture.Repo(), "src", "sounds", "pips.bin"));
         var samples = new float[bytes.Length / 4];
         Buffer.BlockCopy(bytes, 0, samples, 0, bytes.Length);
         return Enumerable.Range(0, samples.Length / 2400).Select(i => Mat.FromArray(samples.Skip(i * 2400).Take(2400).ToArray(), 1, 2400, Depth.F32, 1)).ToList();
@@ -65,16 +65,17 @@ public class PipSetTests
     }
 
     [TestMethod]
-    public void AmplitudeOneIsTheLoudnessThePipsPlayedAtBefore()
+    public void ThePipLevelIsTheLoudnessThePipsPlayedAtBefore()
     {
-        // Each file is stored at -58.1 dBFS RMS, so amplitude 1, the file as stored, plays the same samples on every channel,
-        // the sync copy included.
+        // Each file is stored at -58.1 dBFS RMS, so that level, the file as stored (gain 1), plays the same samples on every
+        // channel, the sync copy included.
         var speakers = Speakers();
         var pips = Pips();
-        var set = PipSet.Create(speakers, pips, new LoudestSound { Amplitude = 1, Where = "test" });
+        var set = PipSet.Create(speakers, pips, new LoudestSound { LevelDbfs = -58.1, Where = "test" }, Fixture.Sweep());
+        Assert.AreEqual(1, set.Largest, 1e-9);
         for (int i = 0; i < pips.Count; i++)
         {
-            Assert.AreEqual(-58.1, SoundLevel.RmsDbfs(pips[i]), 1e-4, "pip " + i);
+            Assert.AreEqual(-58.1, SoundLevel.RmsDbfs(pips[i], 48000), 1e-4, "pip " + i);
             using (var before = speakers.Buffer(pips[i], null, -58.1, true, true))
             {
                 Assert.IsTrue(MaxDifference(before, set.Buffer(i, 1)) < 1e-9, "pip " + i);
@@ -83,10 +84,10 @@ public class PipSetTests
     }
 
     [TestMethod]
-    public void APipPlaysAtItsTrialsAmplitudeWithTheSyncCopyKept()
+    public void APipPlaysAtItsTrialsLevelWithTheSyncCopyKept()
     {
         var speakers = Speakers();
-        var set = PipSet.Create(speakers, Pips(), new LoudestSound { Amplitude = 2, Where = "test" });
+        var set = PipSet.Create(speakers, Pips(), new LoudestSound { LevelDbfs = -58.1 + 20 * Math.Log10(2), Where = "test" }, Fixture.Sweep());   // gain 2
         var one = set.Buffer(40, 1);
         var half = set.Buffer(40, 0.5);
         using (var left = one.GetRow(0)) using (var leftHalf = half.GetRow(0)) using (var expected = new Mat(left.Size, Depth.F32, 1))
@@ -107,11 +108,11 @@ public class PipSetTests
     }
 
     [TestMethod]
-    public void AnAmplitudeThatWouldClipStopsAtGoNamingTheCondition()
+    public void ALevelThatWouldClipStopsAtGoNamingTheCondition()
     {
-        var message = Assert.ThrowsException<InvalidOperationException>(() => PipSet.Create(Speakers(), Pips(), new LoudestSound { Amplitude = 2000, Where = "trialConditions[1] (auditory)" })).Message;
+        var message = Assert.ThrowsException<InvalidOperationException>(() => PipSet.Create(Speakers(), Pips(), new LoudestSound { LevelDbfs = -10, Where = "trialConditions[1] (auditory)" }, Fixture.Sweep())).Message;
         StringAssert.Contains(message, "trialConditions[1] (auditory)");
-        StringAssert.Contains(message, "amplitude 2000");
+        StringAssert.Contains(message, "-10 dBFS");
     }
 }
 
@@ -126,10 +127,21 @@ public class SweepTests
         Assert.AreEqual(25000, sweep.EndHz);
         Assert.AreEqual(100, sweep.Steps);
         Assert.AreEqual(48000, sweep.SampleRate);
-        Assert.AreEqual(2400, sweep.PipSamples);  // one row of all_waveforms.bin
-        Assert.AreEqual(0, sweep.BinOf(2000));
-        Assert.AreEqual(99, sweep.BinOf(25000));
-        Assert.AreEqual(99, sweep.BinOf(40000));
+        Assert.AreEqual(-58.1, sweep.PipLevelDbfs);
+        Assert.AreEqual(2400, sweep.PipSamples);  // one row of pips.bin
+        Assert.AreEqual(0, sweep.PipIndexOf(2000));
+        Assert.AreEqual(99, sweep.PipIndexOf(25000));
+        Assert.AreEqual(99, sweep.PipIndexOf(40000));
+    }
+
+    [TestMethod]
+    public void TheGainPlaysAPipAtALevelAndIsZeroForMute()
+    {
+        var sweep = Fixture.Sweep();
+        Assert.AreEqual(1, sweep.GainOf(-58.1), 1e-12);
+        Assert.AreEqual(2, sweep.GainOf(-58.1 + 20 * Math.Log10(2)), 1e-9);
+        Assert.AreEqual(0.5, sweep.GainOf(-58.1 - 20 * Math.Log10(2)), 1e-9);
+        Assert.AreEqual(0, sweep.GainOf(double.NaN));
     }
 
     [TestMethod]
@@ -145,7 +157,7 @@ public class SweepTests
         Assert.AreEqual(2000 * Math.Sqrt(12), sweep.FrequencyAt(0.5), 1e-6);
         Assert.AreEqual(0.817, Math.Round(sweep.FractionOf(15248), 3));  // stage 3-5 reward floor: 98.1 cm of a 120 cm track
         Assert.AreEqual(0.951, Math.Round(sweep.FractionOf(21248), 3));  // and its ceiling: 114.1 cm
-        Assert.AreEqual(97, sweep.BinOf(sweep.FrequencyAt(1)));           // the track's top tone is file row 97, as Tom's
+        Assert.AreEqual(97, sweep.PipIndexOf(sweep.FrequencyAt(1)));           // the track's top tone is file row 97, as Tom's
     }
 
     [TestMethod]
@@ -154,10 +166,15 @@ public class SweepTests
         var path = Path.GetTempFileName();
         try
         {
-            File.WriteAllText(path, "{\"sweepStartHz\": 2000, \"sweepSteps\": 100, \"pipLevelDbfs\": -58.1, \"sampleRate\": 48000}");
-            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => global::Sweep.Load(path)).Message, "sweepEndHz");
-            File.WriteAllText(path, "{\"sweepStartHz\": 2000, \"sweepEndHz\": 25000, \"sweepSteps\": 100, \"pipLevelDbfs\": -58.1}");
-            StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => global::Sweep.Load(path)).Message, "sampleRate");
+            foreach (var missing in new[] { "endHz", "pipLevelDbfs", "sampleRate" })
+            {
+                var json = new Dictionary<string, string> { { "startHz", "2000" }, { "endHz", "25000" }, { "steps", "100" }, { "pipLevelDbfs", "-58.1" }, { "sampleRate", "48000" } };
+                json.Remove(missing);
+                File.WriteAllText(path, "{" + string.Join(", ", json.Select(kv => "\"" + kv.Key + "\": " + kv.Value)) + "}");
+                var message = Assert.ThrowsException<InvalidOperationException>(() => global::Sweep.Load(path)).Message;
+                StringAssert.Contains(message, "holds no usable sweep");
+                StringAssert.Contains(message, missing);
+            }
         }
         finally { File.Delete(path); }
     }

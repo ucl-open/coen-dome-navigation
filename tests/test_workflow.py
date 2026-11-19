@@ -173,18 +173,37 @@ def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
 
 def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     # Each sound is one row laid out on rig.yml's channels, equalised for each speaker: the reward tone by OpenRigs.Audio's
-    # PlayRewardTone (SpeakerBuffer at rewardTone.levelDbfs on every speaker) on each rewarded outcome TrialOutcomeEffects
-    # passes on, from this repo's file; the pips by LayOutPips (PipSet: SpeakerSet.Layout on every speaker at amplitude 1,
-    # checked at the loudest amplitude the conditions draw, TrialRules.Loudest).
+    # PlayRewardTone (SpeakerBuffer at the loudest rewardTone.levelDbfs on every speaker, played at the trial's) on each rewarded
+    # outcome TrialOutcomeEffects passes on, its input the trial's RewardToneLevelDbfs, from this repo's file; the pips by
+    # LayOutPips (PipSet: SpeakerSet.Layout on every speaker as stored, checked at the loudest level the conditions draw,
+    # TrialRules.Loudest), fed Zip(Loudest, Sweep, Zip(Speakers, pips)).
     nodes, edges = _scope(group("TaskLogic"))
     (tone,) = [i for i, n in enumerate(nodes) if n.get("Path") == PLAY_REWARD_TONE]
     assert nodes[tone].findtext(W + "RewardToneFile") == "./sounds/reward_tone.bin"
-    assert [nodes[i].get("Path") or nodes[i].findtext(W + "Name") for i in sorted(_upstream(edges, tone))][-2:] == [OUTCOME_EFFECTS, "Rewarded?"]
+    assert [nodes[i].get("Path") or nodes[i].findtext(W + "Name") or nodes[i].findtext(W + "Selector") for i in sorted(_upstream(edges, tone))][-3:] == [
+        OUTCOME_EFFECTS, "Rewarded?", "RewardToneLevelDbfs"]
+    (level,) = [a for a, b in edges if b == tone]
+    assert nodes[level].get(XSI) == "MemberSelector" and nodes[level].findtext(W + "Selector") == "RewardToneLevelDbfs"
+    (before,) = [a for a, b in edges if b == level]
+    assert nodes[before].findtext(W + "Name") == "Rewarded?"
     assert "RewardToneBuffer" not in ET.tostring(group("Audio"), encoding="unicode")
     nodes, upstream = _audio_chain("StimulusSoundBuffers")
     labels = _labels(nodes, upstream)
-    assert any("all_waveforms.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
-    assert labels[-2:] == ["rx:Zip", "ext:LayOutPips"] and {"rx:ToList", "Speakers", "TrialRules", "Loudest"} <= set(labels), labels
+    assert any("./sounds/pips.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
+    assert not any("all_waveforms" in ET.tostring(n, encoding="unicode") for n in nodes)
+    assert {"rx:Zip", "ext:LayOutPips", "rx:ToList", "Speakers", "TrialRules", "Loudest", "Sweep"} <= set(labels), labels
+    # LayOutPips is fed Zip(Loudest, Sweep, Zip(Speakers, pips)): the loudest level, the sweep, then the speakers with the pips.
+    _, labelled = lint.scope(group("Audio"))
+    (layout,) = [i for i, n in enumerate(nodes) if "ext:LayOutPips" in combinators(n)]
+    (zipped,) = [a for a, b, _ in labelled if b == layout]
+
+    def name(i: int) -> str:
+        return nodes[i].findtext(W + "Selector") or nodes[i].findtext(W + "Name") or combinators(nodes[i])[0]
+
+    feeds = {label: a for a, b, label in labelled if b == zipped}
+    assert [name(feeds[k]) for k in ("Source1", "Source2", "Source3")] == ["Loudest", "Sweep", "rx:Zip"]
+    inner = {label: a for a, b, label in labelled if b == feeds["Source3"]}
+    assert [name(inner[k]) for k in ("Source1", "Source2")] == ["Speakers", "rx:ToList"]
     assert "aud:SpeakerBuffer" not in labels and "dsp:Tile" not in labels
     sweep = (ROOT / "src" / "Extensions" / "Sweep.cs").read_text(encoding="utf-8-sig")
     assert "speakers.Layout(pip, null, 1, true, true)" in sweep
@@ -308,13 +327,14 @@ def test_run_trials_reads_both_lick_streams():
 
 def test_one_grating_subject_sets_the_grating():
     # One Grating subject (GratingStates over every trial event) maps spatial frequency, opacity and contrast onto
-    # DrawGratings at once: each pip's (the trial's visualContrast among them), and opacity 0 at the outcome.
+    # DrawGratings at once: each pip's (the trial's visualContrast and visualPhaseRad among them), and opacity 0 at the outcome.
     nodes, edges = _scope(group("Display"))
     (subject,) = [i for i, n in enumerate(nodes) if n.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Name") == "Grating"]
     assert nodes[subject].get("TypeArguments") == "ext:GratingState"
     (mapping,) = [b for a, b in edges if a == subject]
     assert [(p.get("Name"), p.get("Selector")) for p in nodes[mapping].iter(W + "Property")] == [
-        ("SpatialFrequency", "SpatialFrequencyCpd"), ("Opacity", "Opacity"), ("Contrast", "Contrast")]
+        ("SpatialFrequency", "SpatialFrequencyCpd"), ("Opacity", "Opacity"), ("Contrast", "Contrast"),
+        ("Phase", "PhaseRad")]
     assert [nodes[b].get("Path") for a, b in edges if a == mapping] == ["BonVision:Primitives.DrawGratings.bonsai"]
     nodes, edges = _scope(group("TaskLogic"))
     (multicast,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "Grating"]

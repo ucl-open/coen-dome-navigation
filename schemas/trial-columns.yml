@@ -10,18 +10,19 @@
 # both before it launches the workflow.
 #
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a duration or other quantity ends in its
-# unit (itiSeconds, rewardOfferedUl); never a stored latency.
+# unit (itiSeconds, rewardOfferedUl); never a stored latency. Every distance is in track cm.
 #
-# The first 18 columns, harpTime to laserTriggerTime, are the lab's shared block, its core with the optogenetics and quietWait blocks,
-# defined once in lib-open-rigs open_rigs.rigs.trials: coen-dome-decision-making and
+# The first 25 columns, harpTime to autoReward, are the lab's shared block, its core with the quietWait, optogenetics,
+# conditions, stimulus and autoReward blocks, defined once in lib-open-rigs open_rigs.rigs.trials: coen-dome-decision-making and
 # coen-dome-navigation list them in this order with these types, units and descriptions, word for word
 # (tests/test_trial_columns.py holds both), so one analysis reads both tasks.
 # trialType and outcome are described per task, and which trials are rewarded and penalised in those columns' notes. This task's own columns follow.
 #
-# Only what changes from trial to trial: the task file's values fixed for the
-# experiment (the stage's values and curriculum, the sound levels) are in Settings\Settings_Task_*.json, whose curriculum (code, version, path)
-# is the stage, and the metric curriculumStage is its code-version; no column sums the Harp logs, and none repeats another but outcomeTime, which names harpTime's
-# moment so that the shared block names every moment of a trial.
+# Only what changes from trial to trial: a value fixed for the experiment (the session fields, the curriculum) is in
+# Settings\Settings_Task_*.json, whose curriculum (code, version, path) is the stage, and the metric curriculumStage is its
+# code-version; a condition-level value (a sound's level, the track's wheelGain) is in the trial's row of
+# Settings\Settings_Combinations_*.json (trialCombinationId); no column sums the Harp logs, and none repeats another but
+# outcomeTime, which names harpTime's moment so that the shared block names every moment of a trial.
 
 harpTime:
   type: double
@@ -32,21 +33,21 @@ trialNumber:
   description: The trial's number in the experiment, from 1.
 trialType:
   type: string
-  values: [visual, auditory, audiovisualCoherent, neutral]
-  description: The label of the trial's condition (trialCondition), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryAmplitude). By default it is derived from the condition's settings - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither) - but a curriculum may choose another.
+  values: [visual, auditory, audiovisualCoherent, audiovisualConflict, neutral]
+  description: The label of the trial's condition (trialConditionId), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryLevelDbfs). By default it is derived from the condition's settings - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither) - but a curriculum may choose another (audiovisualConflict only so).
 outcome:
   type: string
-  values: [Correct, Incorrect, NoResponse]
-  description: The trial's result, in av-dome's values - Correct when rewarded, Incorrect at the wrong-lick limit, NoResponse at the end of the response window or of the track (outcomeReason says which). rig-control's Performance is Correct over Correct and Incorrect (NoResponse left out, its response rate shown beside it); Tom Childs' success rate was Correct over all trials.
+  values: [correct, incorrect, noResponse]
+  description: The trial's result - correct when rewarded, incorrect at the wrong-lick limit, noResponse at the end of the response window or of the track (outcomeReason says which). rig-control's Performance is correct over correct and incorrect (noResponse left out, its response rate shown beside it); Tom Childs' success rate was correct over all trials.
 itiStartTime:
   type: double
   unit: s
-  description: "Harp time the inter-trial interval before this trial began: the last trial's outcomeTime plus its penaltyTimeoutSeconds, exactly; on trial 1 the first Harp clock tick once the trials started."
+  description: 'Harp time the inter-trial interval before this trial began: the last trial''s outcomeTime plus its penaltyTimeoutSeconds, exactly; on trial 1 the first Harp clock tick once the trials started.'
   note: Trials start 0.5 s after the experiment folder exists and the tones are loaded.
 itiSeconds:
   type: double
   unit: s
-  description: "The inter-trial interval drawn for this trial (every trial draws its own), uniformly between trialStructure.itiMinSeconds and itiMaxSeconds: from itiStartTime to this trial's stimulus with a quiet mouse, the time to drink included. A task's quiet waits add quietWaitSeconds, so the stimulus was due at itiStartTime + itiSeconds + quietWaitSeconds (stimulusOnsetTime)."
+  description: 'The inter-trial interval drawn for this trial (every trial draws its own), uniformly between trialStructure.itiMinSeconds and itiMaxSeconds: from itiStartTime to this trial''s stimulus with a quiet mouse, the time to drink included. A task''s quiet waits add quietWaitSeconds, so the stimulus was due at itiStartTime + itiSeconds + quietWaitSeconds (stimulusOnsetTime).'
 quietWaitSeconds:
   type: double
   unit: s
@@ -54,42 +55,38 @@ quietWaitSeconds:
 trialStartTime:
   type: double
   unit: s
-  description: "Harp time the trial started: the end of its interval less the lead, max(laserToStimulusSeconds, 0) in the task file (Settings_Task) and 0 for a task file with no optogenetics block, plus quietWaitSeconds where the task has quiet waits."
+  description: 'Harp time the trial started: the end of its interval less the lead, max(laserToStimulusSeconds, 0) in the task file (Settings_Task) and 0 for a task file with no optogenetics block, plus quietWaitSeconds where the task has quiet waits.'
   note: Step 0, the track's position zero.
 stimulusOnsetTime:
   type: double
   unit: s
-  description: "Harp time the workflow commanded the stimulus on, NaN if it never was: the first tick of the 1 ms Harp clock at or after trialStartTime plus the lead, in every experiment. The physical onset is in the hardware logs."
+  description: 'Harp time the workflow commanded the stimulus on, NaN if it never was: the first tick of the 1 ms Harp clock at or after trialStartTime plus the lead, in every experiment. The physical onset is in the hardware logs.'
   note: The trial's first tone pip and grating frame, as Tom Childs' CueOnsetHarp.
 outcomeTime:
   type: double
   unit: s
   description: Harp time the workflow knew the outcome, the same time as harpTime, as its own column so that every moment of a trial is named; the reward, the penalty sound and the timeout are timed from it. On a lick it is the Harp clock's latest tick when the workflow saw the lick, a few ms after it; each lick's own Harp time is in the lick detectors' logs.
-  note: Why the trial ended is outcomeReason - a lick in the reward zone, the wrong-lick limit, the end of the response window, the end of the track or the reward frequency reached.
+  note: Why the trial ended is outcomeReason - a lick in the reward zone, the wrong-lick limit, the end of the response window, the end of the track or the reward zone reached.
 rewardOfferedUl:
   type: double
   unit: ul
-  description: "Microlitres a reward on this trial gives, on every trial whether or not it was rewarded: the size the task drew for it (the task file's rewardSizeUl, or a larger reward where the task has one); 0 on a trial that offers none. rewarded says whether it was given; what was delivered is RewardDelivered in WorkflowData_Events."
-  note: The trial's condition's reward.rewardSizeUl (a condition field since 18 Nov 2026; the task file's before), on every trial.
-  copyOf: reward.rewardSizeUl
+  description: 'Microlitres a reward on this trial gives, on every trial whether or not it was rewarded: the size the task drew for it (the task file''s reward size, or a larger reward where the task has one); 0 on a trial that offers none. rewarded says whether it was given; what was delivered is RewardDelivered in WorkflowData_Events.'
+  note: The trial's condition's reward.sizeUl, or sizeUl x reward.largeMultiplier on a large-reward trial (drawn with reward.largeProbability), on every trial.
 rewarded:
   type: bool
-  description: "True when the trial's outcome delivered its reward (rewardOfferedUl, at outcomeTime): the value the workflow's reward command is made from. Which outcomes are rewarded is the task's (its note)."
-  note: A trial that ends on a lick in the reward zone or with the zone reached (outcomeReason CorrectLick or FrequencyReached, outcome Correct), rewarded at the left spout.
-penaltySoundOn:
-  type: bool
-  description: "True when the trial was penalised and the task's penalty sound is enabled."
+  description: 'True when the trial''s outcome delivered its reward (rewardOfferedUl, at outcomeTime): the value the workflow''s reward command is made from. Which outcomes are rewarded is the task''s (its note).'
+  note: A trial that ends on a lick in the reward zone or with the zone reached (outcomeReason CorrectLick or RewardZoneReached, outcome correct), rewarded at the left spout.
 penaltyTimeoutSeconds:
   type: double
   unit: s
-  description: "The timeout after this trial: the task's penalty.timeoutSeconds when the trial was penalised, else 0. The next interval starts after it (itiStartTime)."
+  description: 'The timeout after this trial: the task''s penalty.timeoutSeconds when the trial was penalised, else 0. The next interval starts after it (itiStartTime).'
 penalised:
   type: bool
-  description: "True when the trial was penalised: the task's penalty timeout (penaltyTimeoutSeconds) and, with its penalty.sound enabled, the penalty sound (penaltySoundOn) followed its outcome. Which outcomes are penalised is the task's (its note)."
+  description: 'True when the trial was penalised: the task''s penalty timeout (penaltyTimeoutSeconds) and the penalty sound at the trial''s penalty.sound.levelDbfs (none when mute) followed its outcome. Which outcomes are penalised is the task''s (its note).'
   note: A trial that runs out of time or track with the outcome frequency in the reward zone, or ends outside the zone (TrialLogic.cs TrialRules.End).
 laserCondition:
   type: int
-  description: "The Zapit condition sent to Zapit this trial (its conditions file's number, from 1), laser on or off: every trial of an optogenetics experiment has one, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics."
+  description: 'The Zapit condition sent to Zapit this trial (its conditions file''s number, from 1), laser on or off: every trial of an optogenetics experiment has one, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics.'
 laserPowerMw:
   type: double
   unit: mW
@@ -97,29 +94,52 @@ laserPowerMw:
 laserTriggerTime:
   type: double
   unit: s
-  description: "Harp time the workflow raised the Zapit trigger line (the laser, or at 0 mW the galvos and masking light alone): the first tick of the 1 ms Harp clock at or after laserToStimulusSeconds before the stimulus was due. NaN without optogenetics and on a trial that ended before its trigger, so a laser-off trial (a time, laserPowerMw 0) and one answered first (NaN) differ."
-trialCondition:
+  description: 'Harp time the workflow raised the Zapit trigger line (the laser, or at 0 mW the galvos and masking light alone): the first tick of the 1 ms Harp clock at or after laserToStimulusSeconds before the stimulus was due. NaN without optogenetics and on a trial that ended before its trigger, so a laser-off trial (a time, laserPowerMw 0) and one answered first (NaN) differ.'
+trialConditionId:
   type: int
-  description: The 0-based index of the trial's condition in trialConditions of the task file as run (Settings_Task), which gives its trialType, weight and condition-level values (set). A repeat keeps the condition of the trial it repeats.
+  description: The 0-based index of the trial's condition in trialConditions of the task file as run (Settings_Task), which gives its trialType, weight, pairs and condition-level values (set). A repeat keeps the condition of the trial it repeats.
 trialCombinationId:
   type: int
-  description: The trial's row in the experiment's Settings_Combinations (0-based, session-wide) - the combination it was drawn from, every list pick (each list cell of the condition's set and each list field, contrasts, the initial azimuths, the track lengths and the stimulus-off fractions, one entry; pairs zipped), whose values that differ between combinations or from Settings_Task are the row's values. The row's trialCondition and trialType are this trial's.
+  description: 'The trial''s row in the experiment''s Settings_Combinations (0-based, session-wide): the combination it was drawn from, one pick of every list (pairs zipped), whose values that differ between combinations or from Settings_Task are the row''s values; the row''s trialConditionId and trialType are this trial''s. A repeat keeps the combination of the trial it repeats.'
+visualContrast:
+  type: double
+  description: Grating contrast as BonVision's Contrast, 1 full contrast; 0 when no grating was shown.
+  copyOf: visualStimulus.contrasts
+visualPhaseRad:
+  type: double
+  unit: rad
+  description: The grating's phase, drawn uniformly from 0 to 2 pi for every trial from the seeded stream (OpenRigs.Trials ConditionedTrial).
+auditoryLevelDbfs:
+  type: double
+  unit: dBFS
+  description: The sound's level in dBFS RMS, the trial's auditoryStimulus.levelDbfs; NaN when no sound played (mute).
+  note: The trial's level even where a stimulus-off trial switched the tone off part way (auditoryOffPositionCm); each pip's own level, NaN once switched off, is WorkflowData_StimulusState's auditoryLevelDbfs.
+auditoryInitialAzimuthDeg:
+  type: double
+  unit: deg
+  description: Azimuth of the speaker that played, rig.yml's nearest to the initial azimuth drawn; NaN when none played (auditoryLevelDbfs NaN) or when every speaker played (auditoryStimulus.initialAzimuthsDeg all).
+  note: The pips' one speaker, rig.yml's nearest (at auditoryStimulus.elevationDeg) to the azimuth picked from the condition's auditoryStimulus.initialAzimuthsDeg; NaN with a level when the pick was all, every speaker at once (the corridor's sound before 18 Nov 2026, and its default).
+auditoryElevationDeg:
+  type: double
+  unit: deg
+  description: Elevation of the speaker that played; NaN when none or every speaker played, as auditoryInitialAzimuthDeg.
+autoReward:
+  type: bool
+  description: 'True on an auto-reward trial (drawn with the task''s autoRewardProbability): one rewarded without a correct response; how, and so whether its reward came from the auto-reward, is the task''s (its note).'
+  note: 'An auto-reward trial is rewarded on the pip whose tone reaches the reward zone''s floor, no lick needed, its licks ignored (outcomeReason RewardZoneReached): its reward came from the auto-reward when rewarded.'
 outcomeReason:
   type: string
-  values: [FrequencyReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]
-  description: Why the trial ended - the reward frequency reached (on an auto-reward trial, drawn with the trial's condition's autoRewardProbability, every trial of stages 0 and 1), a lick in the reward zone, too many wrong licks, the end of the stage's response window (responseWindowSeconds after the first pip), or the end of the track.
+  values: [RewardZoneReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]
+  description: Why the trial ended - the reward zone reached (on an auto-reward trial, autoReward), a lick in the reward zone, too many wrong licks, the end of the response window (trialStructure.responseWindowSeconds after the first pip), or the end of the track.
 trackLengthCm:
   type: double
   unit: cm
-  description: Wheel distance from the trial start to the track's end - the trial's track length (one of trialStructure.trackLengthsCm, drawn per trial) divided by wheelGain. Every position column is in these wheel cm. Distances are at rig.yml's wheelDiameterMm (75 mm on every dome).
-wheelGain:
-  type: double
-  description: The stage's wheelGain - track cm per wheel cm, so the track length drawn is trackLengthCm x wheelGain. The tone and grating are set from the track's progress, wheel cm x wheelGain / track length plus the stage's autoProgressPerSecond x seconds since the trial start (in Settings_Task's taskParameters).
-  copyOf: wheelGain
+  description: The trial's track length in track cm, one of track.lengthsCm drawn per trial; the mouse runs trackLengthCm / track.wheelGain cm of wheel to its end (the trial's wheelGain is its Settings_Combinations row's). Distances are at rig.yml's wheelDiameterMm (75 mm on every dome).
+  copyOf: track.lengthsCm
 outcomePositionCm:
   type: double
   unit: cm
-  description: Wheel distance run along the track at the outcome (outcomeTime), behind the start never counted and capped at the track's length. Tom Childs' TrialEndPosCm was read 2 s later, so it included running after the outcome.
+  description: 'Track cm run along the track at the outcome (outcomeTime): the wheel distance, behind the start never counted and capped at the track''s length, times the trial''s track.wheelGain. Tom Childs'' TrialEndPosCm was read 2 s later, so it included running after the outcome.'
 outcomeAuditoryFrequencyHz:
   type: double
   unit: Hz
@@ -131,29 +151,8 @@ outcomeVisualSpatialFrequencyCpd:
 auditoryOffPositionCm:
   type: double
   unit: cm
-  description: Position along the track where the tone switched off on a stimulus-off trial (drawn with the stage's stimulusOffProbability, at one of stimulusOff.trackFractions of trackLengthCm, with auditory in stimulusOff.stimuli); NaN when it never did.
+  description: Position along the track, in track cm, where the tone switched off on a stimulus-off trial (its condition's stimulusOff.stimuli auditory or both, at one of stimulusOff.trackFractions of the track); NaN when it never did.
 visualOffPositionCm:
   type: double
   unit: cm
-  description: Position along the track where the grating switched off on a stimulus-off trial (drawn with the stage's stimulusOffProbability, at one of stimulusOff.trackFractions of trackLengthCm, with visual in stimulusOff.stimuli); NaN when it never did.
-autoRewarded:
-  type: bool
-  description: True when an auto-reward trial (drawn with the trial's condition's autoRewardProbability) was rewarded, on reaching the reward zone's floor with no lick needed (outcomeReason FrequencyReached).
-visualContrast:
-  type: double
-  description: Grating contrast as BonVision's Contrast, 1 full contrast; 0 when no grating showed (drawn from the trial's condition's contrasts).
-  copyOf: contrasts
-auditoryAmplitude:
-  type: double
-  description: The tone's amplitude, the task's auditoryStimulus.amplitude for the trial's condition - the scale of the pips' samples as stored (1 the files as stored, -58.1 dBFS RMS before equalisation); 0 when no tone played.
-  note: The trial's amplitude even where a stimulus-off trial switched the tone off part way (auditoryOffPositionCm); each pip's own amplitude, 0 once switched off, is WorkflowData_StimulusState's auditoryAmplitude.
-auditoryAzimuthDeg:
-  type: double
-  unit: deg
-  description: Azimuth of the speaker that played, rig.yml's nearest to the location drawn; NaN when none played.
-  note: The pips' one speaker, rig.yml's nearest (at elevation 0) to the azimuth picked from the condition's auditoryStimulus.initialAzimuthsDeg; NaN with auditoryAmplitude above 0 when the pick was all, every speaker at once (the corridor's sound before 18 Nov 2026, and its default).
-auditoryElevationDeg:
-  type: double
-  unit: deg
-  description: Elevation of the speaker that played; NaN when none played.
-  note: NaN with auditoryAmplitude above 0 when every speaker played (initialAzimuthsDeg all).
+  description: Position along the track, in track cm, where the grating switched off on a stimulus-off trial (its condition's stimulusOff.stimuli visual or both, at one of stimulusOff.trackFractions of the track); NaN when it never did.

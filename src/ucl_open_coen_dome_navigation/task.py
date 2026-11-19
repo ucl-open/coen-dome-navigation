@@ -1,19 +1,20 @@
 """The task file's schema: config/task-abstract-corridor.yml, which rig-control copies at launch and again at Go with the
-form's edits; the workflow reads the copy (TaskPath) at Start for the background noise and at Go for the rest. Ported from Tom Childs' auditory-vr-corridor task.py.
+form's edits; the workflow reads the copy (TaskPath) at Go. Ported from Tom Childs' auditory-vr-corridor task.py.
 
 The stage is a stage of the lab's Mouse Curriculum, recorded only as the task file's curriculum
 (K:\\config\\curricula\\coen-dome-navigation\\task-abstract-corridor.conditions.yml): rig-control writes that stage's values
-over this file's flat values at launch and fills curriculum (id, code, version, path, label, sha256); trialStructure holds the ITI and the track lengths, penalty the timeout and penalty
-sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's, made with the tone files
-(`uv run generate-waveforms`), not the task file's. The pips play at auditoryStimulus.amplitude (1 the files as stored,
--58.1 dBFS RMS); the other sounds at the task file's levelDbfs (dBFS RMS: rewardTone, backgroundNoise and penalty.sound).
+over this file's flat values at launch and fills curriculum (id, code, version, path, label, sha256); trialStructure holds the
+timing, track the track, penalty the timeout and penalty sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's,
+made with the tone files (`uv run generate-waveforms`), not the task file's. Every sound plays at a level in dBFS RMS
+(auditoryStimulus, rewardTone and penalty.sound); the background noise is the lab's, at its constant level.
 
 What a trial shows and offers is its trial condition's combination: a condition may set any field but the session fields
-(x-session-fields, SESSION_FIELDS), and every list field (LIST_FIELDS: contrasts, the initial azimuths, the track lengths and
+(x-session-fields, SESSION_FIELDS), and every list field (LIST_FIELDS: the contrasts, the initial azimuths, the track lengths and
 the stimulus-off fractions) expands into its combinations, one entry each; the draw reads every value per trial from the
 trial's combination (its row of Settings_Combinations the trialCombinationId column). Its trialType names it and drives nothing."""
 
 import json
+import math
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
@@ -21,21 +22,20 @@ from typing import Literal
 # Integers are int: open_rigs' Int carries its own range, which drops a Field's ge or gt.
 from open_rigs.core.base import Double, String
 from open_rigs.core.task import (
-    AutoReward,
-    BackgroundNoise,
+    MAX_REWARD_UL,
     Iti,
     LickQuietWait,
     Optogenetics,
     Penalty,
     ResponseWindow,
-    RewardSize,
     RewardTone,
+    SoundLevelDbfs,
     Task,
     TaskBlock,
     TaskParameters,
     WheelQuietWait,
+    level_dbfs,
 )
-from open_rigs.components.zapit import ZAPIT_MAX_RAMP_DOWN_SECONDS
 from open_rigs.rigs import conditioned_task as ct
 from open_rigs.rigs.conditioned_task import ALL_SPEAKERS, SoundAzimuth
 from pydantic import ConfigDict, Field, field_validator, model_validator
@@ -43,75 +43,96 @@ from pydantic import ConfigDict, Field, field_validator, model_validator
 from ucl_open_coen_dome_navigation import __semver__
 
 STEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (TrialLogic.cs StepSeconds)
-LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (responseWindowSeconds + laser_to_stimulus_seconds) the laser_max_seconds cap must be
+LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (responseWindowSeconds + laserToStimulusSeconds) the derived cap is (TrialLogic.cs LaserMaxMarginSeconds)
 MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole steps (TrialLogic.cs MaxLeadSeconds)
 UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without responseWindowSeconds (TrialLogic.cs)
+PIP_LEVEL_DBFS = -58.1  # the pips' level as the files store them, before the tone plays at auditoryStimulus.levelDbfs
 
 SWEEP_FILE = Path(__file__).resolve().parents[1] / "sounds" / "sweep.json"  # src/sounds/sweep.json
 
 
 def sweep() -> dict:
-    """The sweep the committed tone files were made for: sweepStartHz, sweepEndHz, sweepSteps, pipLevelDbfs and the waveforms' sampleRate."""
+    """The sweep the committed tone files were made for: startHz, endHz, steps, pipLevelDbfs and the waveforms' sampleRate."""
     return json.loads(SWEEP_FILE.read_text(encoding="utf-8"))
 
 
-class TrialStructure(Iti, WheelQuietWait):
-    """Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The wheel quiet wait (open_rigs.core.task WheelQuietWait) is here, the same for every stage; the lick quiet wait is each stage's."""
+def track_end_hz(made: dict) -> float:
+    """The highest tone the track plays: startHz times endHz / startHz in whole numbers (Sweep.cs TrackEndHz, 24 kHz)."""
+    return made["startHz"] * math.floor(made["endHz"] / made["startHz"])
 
-    track_lengths_cm: list[Double] = Field(
-        default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial, in track cm (the mouse runs track cm / the stage's wheelGain of wheel)"
+
+class TrialStructure(Iti, ResponseWindow, LickQuietWait, WheelQuietWait):
+    """Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any
+    penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the
+    time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The response window counts from the first tone pip; null:
+    it never closes (optogenetics then refused, as the laser's cap is derived from it). The quiet waits count from the interval's
+    start (open_rigs.core.task LickQuietWait, WheelQuietWait)."""
+
+
+class Track(TaskBlock):
+    """The virtual track: its lengths, how far it moves per wheel cm and how fast it moves on its own."""
+
+    lengths_cm: list[Double] = Field(
+        default=[80.0, 100.0, 120.0], min_length=1, description="Track lengths, one drawn per trial, in track cm (the mouse runs track cm / wheelGain of wheel)"
+    )
+    wheel_gain: Double = Field(default=8.0, gt=0, description="Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end")
+    auto_progress_per_second: Double = Field(
+        default=0.04,
+        ge=0,
+        description="Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
     )
 
 
 class VisualStimulus(TaskBlock):
-    """The grating: its spatial frequency runs from start to end along the track on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame)."""
+    """The grating: its contrast, and its spatial frequency from start to end along the track on a log scale, as the tone does
+    (TrialLogic.cs TrialRules.Frame)."""
 
+    contrasts: list[Double] = Field(
+        default=[1.0], min_length=1, description="Candidate grating contrasts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating"
+    )
     spatial_frequency_start_cpd: Double = Field(default=0.03, gt=0, description="The grating's spatial frequency at the track's start, in cycles per degree")
     spatial_frequency_end_cpd: Double = Field(default=0.3, gt=0, description="The grating's spatial frequency at the track's end, in cycles per degree")
 
+    @field_validator("contrasts")
+    @classmethod
+    def _not_negative(cls, value: list[float]) -> list[float]:
+        if any(contrast < 0 for contrast in value):
+            raise ValueError("contrasts must each be 0 or more")
+        return value
+
 
 class AuditoryStimulus(ct.AuditoryStimulus):
-    """The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the
-    picked initial azimuth is "all", else on rig.yml's speaker nearest it (at elevation 0)."""
+    """The tone sweep's pips (src/sounds/pips.bin), each equalised for its speaker: on every rig.yml speaker where the
+    picked initial azimuth is "all", else on rig.yml's speaker nearest it at elevationDeg."""
 
-    amplitude: Double = Field(
-        default=1.0,
-        ge=0,
-        description=(
-            "Scale of the pips' samples as stored: 0 no tone, 1 the files as stored (-58.1 dBFS RMS, the loudness the pips have always "
-            "played at), above 1 louder. Go refuses the largest amplitude any condition can draw if a pip would peak at -1 dBFS or more "
-            "after equalisation on any speaker; dB SPL is unknown until the speakers' SPL calibration"
-        ),
-    )
+    level_dbfs: SoundLevelDbfs = level_dbfs(PIP_LEVEL_DBFS, "The tone sweep's pips")
     initial_azimuths_deg: list[SoundAzimuth] = Field(
         default=[ALL_SPEAKERS],
         min_length=1,
         description=(
             "Where the pips play, one picked per trial: \"all\" on every rig.yml speaker at once (the corridor's sound, logged "
-            "auditoryAzimuthDeg NaN with an amplitude above 0); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's "
-            "speaker nearest it at elevation 0, logged as that speaker's auditoryAzimuthDeg and auditoryElevationDeg. Unused where the amplitude is 0"
+            "auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's "
+            "speaker nearest it at elevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryElevationDeg. Unused where the level is mute"
         ),
     )
 
 
 class StimulusOff(TaskBlock):
-    """Where the stimulus switches off on a stimulus-off trial (a stage's stimulusOffProbability says how often).
+    """A stimulus-off trial: which stimuli switch off, and where (a condition sets stimuli to make its trials stimulus-off ones).
 
-    On a stimulus-off trial each listed stimulus switches off once the mouse has run a track fraction of the trial's
-    track (position / trackLengthCm); an unlisted stimulus stays on. Everything else about the trial is unchanged, so
-    it is still rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.
+    Each listed stimulus switches off once the mouse has run a track fraction of the trial's track (the fraction one of
+    trackFractions, a list field); an unlisted stimulus stays on. Everything else about the trial is unchanged, so it is still
+    rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.
     """
 
+    stimuli: Literal["none", "auditory", "visual", "both"] = Field(
+        default="none",
+        description="The stimuli that switch off: none (an ordinary trial), auditory (the tone), visual (the grating) or both",
+    )
     track_fractions: list[Double] = Field(
         default=[0.4, 0.6],
         min_length=1,
-        description="Where the stimulus switches off, as a fraction of the trial's track length, split evenly over stimulus-off trials",
-    )
-    stimuli: list[Literal["auditory", "visual"]] = Field(
-        default=["auditory", "visual"],
-        min_length=1,
-        description="The stimuli that switch off on a stimulus-off trial: auditory (the tone), visual (the grating) or both",
-        json_schema_extra={"x-whole": True},
+        description="Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial",
     )
 
     @field_validator("track_fractions")
@@ -121,34 +142,18 @@ class StimulusOff(TaskBlock):
             raise ValueError("stimulusOff track fractions must be between 0 and 1")
         return value
 
-    @field_validator("stimuli")
-    @classmethod
-    def _stimuli_unique(cls, value: list[str]) -> list[str]:
-        if len(set(value)) != len(value):
-            raise ValueError("stimulusOff stimuli must not repeat")
-        return value
-
 
 class OptogeneticsSettings(Optogenetics):
     """Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.
 
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
-    the same file to list its conditions. "Stimulus" is the tone and grating; the laser is continuous: it starts at the
-    trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first
-    tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the trial's
-    outcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.
+    the same file to list its conditions and its longest ramp-down. "Stimulus" is the tone and grating; the laser is
+    continuous: it starts at the trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds
+    before the first tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the
+    trial's outcome, or at a cap derived at Go (the longest responseWindowSeconds any condition can draw plus
+    laser_to_stimulus_seconds plus 0.25 s) if that comes first. The trigger line, and the masking light on it, stays high past
+    the outcome for the conditions file's longest ramp-down. A trial that ends before its trigger has no laser.
     """
-
-    laser_max_seconds: Double = Field(
-        default=12.5,
-        gt=0,
-        description="Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus responseWindowSeconds), so it never ends the laser before the response window closes; on a stage without responseWindowSeconds a longer trial loses its laser before the outcome",
-    )
-    trigger_hold_seconds: Double = Field(
-        default=1.0,
-        ge=ZAPIT_MAX_RAMP_DOWN_SECONDS,
-        description=f"How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least {ZAPIT_MAX_RAMP_DOWN_SECONDS}, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger",
-    )
 
     @model_validator(mode="after")
     def validate_lead_time(self):
@@ -163,11 +168,12 @@ class OptogeneticsSettings(Optogenetics):
 
 class TrialType(StrEnum):
     """A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_trial_type);
-    coen-dome-decision-making's words."""
+    coen-dome-decision-making's words (audiovisualConflict no rule derives: a person names it)."""
 
     VISUAL = "visual"
     AUDITORY = "auditory"
     AUDIOVISUAL_COHERENT = "audiovisualCoherent"
+    AUDIOVISUAL_CONFLICT = "audiovisualConflict"
     NEUTRAL = "neutral"
 
 
@@ -175,35 +181,33 @@ class TrialType(StrEnum):
 # a condition may not set it (the path or any path under it). A condition may set every other field: the draw reads it per
 # trial from the trial's combination. A condition's blank takes the stage's, then the task's value.
 _COMMON = ct.COMMON_SESSION_FIELDS
-# The lab's (ct.COMMON_SESSION_FIELDS) and this task's, rewardTone before optogenetics' as the schema has always listed them.
+# The lab's (ct.COMMON_SESSION_FIELDS) and this task's.
 SESSION_FIELDS = {
-    **{path: _COMMON[path] for path in list(_COMMON)[:5]},
+    **{path: _COMMON[path] for path in list(_COMMON)[:3]},
     "rewardTone": "the reward tone's buffer is laid out once at Go, at its levelDbfs",
     **_COMMON,
-    "optogenetics.laserMaxSeconds": "the trial loop's laser cap and backstop (lib-open-rigs LaserTiming.UntilOutcome) are fixed at Go",
-    "optogenetics.triggerHoldSeconds": "the trial loop's trigger hold (lib-open-rigs LaserTiming.UntilOutcome) is fixed at Go",
 }
 
 
 # Where one setting limits another (the schema's x-rules, JSON Schema over dotted paths; open_rigs.rigs.conditions
 # evaluates them), as coen-dome-decision-making's. No corridor setting limits another, so its rules only say what goes unread.
 RULES = (
-    {"if": ct.if_({"contrasts": {"items": {"const": 0}}}), "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"],
+    {"if": ct.if_({"visualStimulus.contrasts": {"items": {"const": 0}}}), "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"],
      "message": "contrasts 0 shows no grating, so its spatial frequencies are unread"},
-    {"if": ct.if_({"auditoryStimulus.amplitude": {"const": 0}}), "unused": ["auditoryStimulus.initialAzimuthsDeg"],
-     "message": "auditoryStimulus.amplitude 0 plays no tone, so its azimuths are unread"},
-    {"if": ct.if_({"autoRewardProbability": {"const": 1}}), "unused": ["wrongLickLimit", "rewardCeilingHz"],
+    {"if": ct.if_({"auditoryStimulus.levelDbfs": {"const": "mute"}}), "unused": ["auditoryStimulus.initialAzimuthsDeg", "auditoryStimulus.elevationDeg"],
+     "message": "auditoryStimulus.levelDbfs mute plays no tone, so where it plays is unread"},
+    {"if": ct.if_({"autoRewardProbability": {"const": 1}}), "unused": ["wrongLickLimit", "rewardZoneMaxHz"],
      "message": "autoRewardProbability 1 rewards every trial, so the lick limits are unread"},
-    {"if": ct.if_({"stimulusOffProbability": {"const": 0}}), "unused": ["stimulusOff.trackFractions", "stimulusOff.stimuli"],
-     "message": "stimulusOffProbability 0 never cuts a stimulus, so stimulusOff is unread"},
+    {"if": ct.if_({"stimulusOff.stimuli": {"const": "none"}}), "unused": ["stimulusOff.trackFractions"],
+     "message": "stimulusOff.stimuli none switches nothing off, so its track fractions are unread"},
 )
 # How a condition is named (the schema's x-trial-types; derive_trial_type), coen-dome-decision-making's without its targets
 # or azimuths: first match wins, on the condition's values each as a list. The grating shown (a contrast above 0) and the
-# tone heard (an amplitude above 0): both audiovisualCoherent, one alone visual or auditory, neither neutral.
+# tone heard (a level, not mute): both audiovisualCoherent, one alone visual or auditory, neither neutral.
 TRIAL_TYPES = (
-    {"trialType": "audiovisualCoherent", "if": ct.if_({"contrasts": ct.ABOVE_0, "auditoryStimulus.amplitude": ct.ABOVE_0})},
-    {"trialType": "visual", "if": ct.if_({"contrasts": ct.ABOVE_0})},
-    {"trialType": "auditory", "if": ct.if_({"auditoryStimulus.amplitude": ct.ABOVE_0})},
+    {"trialType": "audiovisualCoherent", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0, "auditoryStimulus.levelDbfs": ct.SOUNDING})},
+    {"trialType": "visual", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0})},
+    {"trialType": "auditory", "if": ct.if_({"auditoryStimulus.levelDbfs": ct.SOUNDING})},
     {"trialType": "neutral"},
 )
 # What some weighted condition must draw (the schema's x-required-conditions; open_rigs.rigs.conditions.required_problems):
@@ -217,7 +221,7 @@ class TrialCondition(ct.TrialCondition[TrialType]):
     list field's list (LIST_FIELDS), at any level, one entry picked per trial. Paired lists share one picked index per trial."""
 
     trial_type: TrialType = Field(
-        description="The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing"
+        description="The condition's name, logged as each trial's trialType: derived from its contrasts and level (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing"
     )
     pairs: list[list[String]] = Field(
         default_factory=list,
@@ -233,14 +237,15 @@ class Curriculum(ct.Curriculum):
     sha256: String = Field(description="The sha256 of the curriculum file's text rig-control ran it from")
 
 
-class RewardSettings(RewardSize):
-    """Reward delivery: the reward size on the left spout's valve (the lab's RewardSize block), as coen-dome-decision-making's reward block."""
+class Reward(ct.Reward):
+    """Reward delivery on the left spout's valve: the size, and the large-reward trials (the lab's reward block)."""
 
 
-class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, ResponseWindow, AutoReward, ct.ConditionedTask):
-    """Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and what a training stage sets (the flat values below, stage 0's by default; the lick quiet wait, response window and auto-reward are the lab's, open_rigs.core.task).
+class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask):
+    """Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,
+    reward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.
 
-    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
+    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason RewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
     model_config = ConfigDict(json_schema_extra=ct.schema_extra(SESSION_FIELDS, RULES, TRIAL_TYPES, REQUIRED))
     SESSION_FIELDS = SESSION_FIELDS
@@ -248,110 +253,87 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, LickQuietWait, Res
     TRIAL_TYPES = TRIAL_TYPES
     REQUIRED = REQUIRED
 
-    reward: RewardSettings = Field(description="Reward delivery parameters")
-
+    curriculum: Curriculum | None = Field(
+        default=None,
+        description="The Mouse Curriculum stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
+    )
     trial_conditions: list[TrialCondition] = Field(
         min_length=1,
         description=(
             "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other "
             "trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; "
-            "its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index"
+            "its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialConditionId column is its 0-based index"
         ),
         json_schema_extra={"x-whole": True},
     )
-    auditory_stimulus: AuditoryStimulus = Field(default=AuditoryStimulus(), description="The tone sweep's pips (src/sounds/all_waveforms.bin), each played at amplitude")
-    contrasts: list[Double] = Field(
-        default=[1.0], min_length=1, description="Candidate grating contrasts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating"
-    )
-    reward_tone: RewardTone = Field(
-        default=RewardTone(), description="The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
-    )
-    background_noise: BackgroundNoise = Field(
-        default=BackgroundNoise(), description="The lab's background white noise (rig.yml's speakerArray.backgroundNoise) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)"
-    )
-    visual_stimulus: VisualStimulus = Field(default=VisualStimulus(), description="The grating's spatial frequencies along the track")
     trial_structure: TrialStructure = Field(description="Timing of each trial")
-    penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
-    stimulus_off: StimulusOff = Field(default=StimulusOff(), description="Where and which stimuli switch off on a stimulus-off trial")
-    optogenetics: OptogeneticsSettings = Field(description="Zapit optogenetic stimulation")
+    visual_stimulus: VisualStimulus = Field(description="The grating: its contrasts and spatial frequencies along the track")
+    auditory_stimulus: AuditoryStimulus = Field(description="The tone sweep's pips (src/sounds/pips.bin), each played at levelDbfs")
+    reward: Reward = Field(description="Reward delivery parameters")
     auto_reward_probability: Double = Field(
         default=1.0, ge=0, le=1, description="Probability that a trial is an auto-reward trial, rewarded on reaching the zone's floor without a lick; 0: never, 1: every trial"
     )
-    reward_floor_hz: Double = Field(default=18000, ge=1, description="Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)")
-    reward_ceiling_hz: Double = Field(default=25000, ge=1, description="Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)")
+    penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
+    reward_tone: RewardTone = Field(
+        default=RewardTone(), description="The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
+    )
+    optogenetics: OptogeneticsSettings = Field(description="Zapit optogenetic stimulation")
+    track: Track = Field(default=Track(), description="The virtual track")
+    reward_zone_min_hz: Double = Field(default=18000, ge=1, description="Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)")
+    reward_zone_max_hz: Double = Field(default=24000, ge=1, description="Upper frequency of the reward zone, in Hz, at most the track's top (24 kHz: the sweep's start times endHz / startHz in whole numbers, src/sounds/sweep.json)")
     wrong_lick_limit: int = Field(default=0, ge=0, description="Licks outside the zone that end the trial; 0: wrong licks never end it")
-    wheel_gain: Double = Field(default=8.0, gt=0, description="Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end")
-    auto_progress_per_second: Double = Field(
-        default=0.04,
-        ge=0,
-        description="Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
-    )
-    stimulus_off_probability: Double = Field(default=0.0, ge=0, le=1, description="Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial")
-    curriculum: Curriculum | None = Field(
-        default=None,
-        description="The Mouse Curriculum stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
-    )
-
-    @field_validator("contrasts")
-    @classmethod
-    def _not_negative(cls, value: list[float]) -> list[float]:
-        if any(contrast < 0 for contrast in value):
-            raise ValueError("contrasts must each be 0 or more")
-        return value
+    stimulus_off: StimulusOff = Field(default=StimulusOff(), description="Which stimuli switch off part way along the track, and where")
 
     @model_validator(mode="after")
     def _zone_ordered(self):
-        if self.reward_floor_hz >= self.reward_ceiling_hz:
-            raise ValueError("reward_floor_hz must be below reward_ceiling_hz")
+        if self.reward_zone_min_hz >= self.reward_zone_max_hz:
+            raise ValueError("reward_zone_min_hz must be below reward_zone_max_hz")
         return self
 
     @model_validator(mode="after")
-    def _laser_max_outlasts_the_trial(self):
-        # The laser is meant to stay on until the outcome: the cap must be longer than the longest trial, the
-        # response window (responseWindowSeconds, counted from the first tone pip) plus laser_to_stimulus_seconds (zapit-v2)
-        opto = self.optogenetics
-        window = self.response_window_seconds
-        if not opto.enabled or window is None:
-            return self
-        shortest = window + opto.laser_to_stimulus_seconds + LASER_MAX_MARGIN_SECONDS
-        if opto.laser_max_seconds < shortest - 1e-9:
+    def _large_reward_fits(self):
+        reward = self.reward
+        if reward.large_probability > 0 and reward.size_ul * reward.large_multiplier > MAX_REWARD_UL + 1e-9:
             raise ValueError(
-                f"optogenetics.laser_max_seconds ({opto.laser_max_seconds} s) must be at least {shortest:g} s: responseWindowSeconds "
-                f"({window:g} s) counts from the first tone pip, laser_to_stimulus_seconds ({opto.laser_to_stimulus_seconds} s) after onset"
+                f"reward.size_ul ({reward.size_ul} ul) x reward.large_multiplier ({reward.large_multiplier}) is more than {MAX_REWARD_UL} ul, the most one reward may ask for"
             )
         return self
 
     @model_validator(mode="after")
+    def _the_laser_has_a_cap(self):
+        # The laser stops at the outcome, capped at responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (TrialRules'
+        # LaserMaxSeconds, derived at Go): with no response window there is no cap to derive.
+        if self.optogenetics.enabled and self.trial_structure.response_window_seconds is None:
+            raise ValueError("optogenetics needs trial_structure.response_window_seconds: the laser's cap is derived from it")
+        return self
+
+    @model_validator(mode="after")
     def _the_lead_fits(self):
-        # TrialLogic.cs TrialRules.Create's same rules.
+        # TrialLogic.cs TrialDraw.Check's same rules.
         self.optogenetics.check_lead_fits(self.trial_structure.iti_min_seconds)
         lead = self.optogenetics.laser_to_stimulus_seconds
         # A negative lead puts the trigger after the first pip, at most responseWindowSeconds.
-        after = self.response_window_seconds or UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS
+        after = self.trial_structure.response_window_seconds or UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS
         if -lead > after + 1e-9:
             raise ValueError(f"optogenetics.laser_to_stimulus_seconds ({lead} s) puts the trigger more than {after:g} s after the first pip")
         return self
 
     @model_validator(mode="after")
-    def _the_next_trial_is_armed_in_time(self):
-        # The next trial is armed once the trigger line falls, trigger_hold_seconds after the outcome (TrialLoop's rule).
-        self.optogenetics.check_zapit_free_in_time(self.trial_structure.iti_min_seconds, trigger_hold_seconds=self.optogenetics.trigger_hold_seconds)
-        return self
-
-    @model_validator(mode="after")
-    def _zones_inside_sweep(self):
+    def _zones_inside_the_track(self):
         made = sweep()
-        if self.reward_floor_hz <= made["sweepStartHz"] or self.reward_ceiling_hz > made["sweepEndHz"]:
-            raise ValueError(f"the reward zone is not inside the sweep ({made['sweepStartHz']} to {made['sweepEndHz']} Hz, src/sounds/sweep.json)")
+        top = track_end_hz(made)
+        if self.reward_zone_min_hz <= made["startHz"] or self.reward_zone_max_hz > top:
+            raise ValueError(f"the reward zone is not inside the track's tones ({made['startHz']} to {top:g} Hz, src/sounds/sweep.json)")
         return self
 
 
 # The list fields one entry of which each trial draws (open_rigs.rigs.conditions.pick_lists).
 LIST_FIELDS = UclOpenCoenDomeNavigationTaskParameters.list_fields()
 
+
 class UclOpenCoenDomeNavigationTaskLogic(Task):
-    """Top-level task logic schema."""
+    """Task logic definition for the coen-dome-navigation experiment."""
 
     version: Literal[__semver__] = __semver__
-    name: Literal["UclOpenCoenDomeNavigation"] = Field(default="UclOpenCoenDomeNavigation", description="Name of the task")
-    task_parameters: UclOpenCoenDomeNavigationTaskParameters
+    name: Literal["UclOpenCoenDomeNavigation"] = Field(default="UclOpenCoenDomeNavigation", description="Name of the task logic", frozen=True)
+    task_parameters: UclOpenCoenDomeNavigationTaskParameters = Field(description="Parameters of the task logic")

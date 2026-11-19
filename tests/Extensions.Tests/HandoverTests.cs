@@ -73,7 +73,7 @@ public class HandoverTests
             for (int n = 0; n < Draws; n++)
             {
                 var t = draw.Next();
-                Check(golden.Name, built, t.trialType, t.trialCondition, t.trialCombinationId, t.visualContrast, t.auditoryAmplitude, t.auditoryAzimuthDeg, t.trackLengthCm, t.wheelGain, t.rewardOfferedUl);
+                Check(golden.Name, built, t.trialType, t.trialConditionId, t.trialCombinationId, t.visualContrast, t.auditoryLevelDbfs, t.auditoryInitialAzimuthDeg, t.TrackLengthCm, t.WheelGain, t.rewardOfferedUl);
                 counts[t.trialCombinationId] = (counts.ContainsKey(t.trialCombinationId) ? counts[t.trialCombinationId] : 0) + 1;
             }
             var problems = GoldenTaskFiles.ShareProblems(golden.Name, built, counts, Draws);
@@ -81,10 +81,10 @@ public class HandoverTests
         }
     }
 
-    // One trial against its combination (the file's values as BuildConditions picked them): its trialType the file's, the grating's contrast, the tone's amplitude on the speaker nearest its azimuth (NaN silent or
-    // at all), the track (track cm over the wheel gain) and the reward.
+    // One trial against its combination (the file's values as BuildConditions picked them): its trialType the file's, the grating's contrast, the tone's level on the speaker nearest its azimuth (NaN silent or
+    // at all), the track (track cm, and its wheel gain) and the reward.
     static void Check(string file, List<TrialConditionDraw> built, string trialType, int condition, int combinationId, double contrast,
-        double amplitude, double auditoryAzimuth, double trackLengthCm, double wheelGain, double rewardOfferedUl)
+        double levelDbfs, double auditoryAzimuth, double trackLengthCm, double wheelGain, double rewardOfferedUl)
     {
         var where = file + " " + built[condition].Where + " combination " + combinationId;
         Assert.AreEqual(built[condition].TrialType, trialType, where);
@@ -92,13 +92,13 @@ public class HandoverTests
         var combination = built[condition].Combinations.SingleOrDefault(m => m.Id == combinationId);
         Assert.IsNotNull(combination, where + ": not a combination of its condition");
         var c = combination.Task;
-        Assert.AreEqual(c.Contrasts[0], contrast, where);
-        Assert.AreEqual(c.AuditoryStimulus.Amplitude, amplitude, where);
+        Assert.AreEqual(c.VisualStimulus.Contrasts[0], contrast, where);
+        Assert.AreEqual(SoundLevels.Parse(c.AuditoryStimulus.LevelDbfs), levelDbfs, where);
         var azimuth = SoundAzimuths.Parse(c.AuditoryStimulus.InitialAzimuthsDeg[0]).Value;
-        Assert.AreEqual(amplitude > 0 && !double.IsNaN(azimuth) ? SoundAzimuths.NearestSpeaker(Fixture.Speakers(), azimuth, 0).Value.Position.Azimuth : double.NaN, auditoryAzimuth, where);
-        Assert.AreEqual(c.TrialStructure.TrackLengthsCm[0] / c.WheelGain, trackLengthCm, 1e-9, where);
-        Assert.AreEqual(c.WheelGain, wheelGain, where);
-        Assert.AreEqual(c.Reward.RewardSizeUl, rewardOfferedUl, where);
+        Assert.AreEqual(!double.IsNaN(levelDbfs) && !double.IsNaN(azimuth) ? SoundAzimuths.NearestSpeaker(Fixture.Speakers(), azimuth, 0).Value.Position.Azimuth : double.NaN, auditoryAzimuth, where);
+        Assert.AreEqual(c.Track.LengthsCm[0], trackLengthCm, 1e-9, where);
+        Assert.AreEqual(c.Track.WheelGain, wheelGain, where);
+        Assert.IsTrue(rewardOfferedUl == c.Reward.SizeUl || rewardOfferedUl == c.Reward.SizeUl * c.Reward.LargeMultiplier, where);
     }
 
     [TestMethod]
@@ -141,7 +141,7 @@ public class HandoverTests
             }
             foreach (var r in rows)
             {
-                Check(golden.Name, built, r.trialType, r.trialCondition, r.trialCombinationId, r.visualContrast, r.auditoryAmplitude, r.auditoryAzimuthDeg, r.trackLengthCm, r.wheelGain, r.rewardOfferedUl);
+                Check(golden.Name, built, r.trialType, r.trialConditionId, r.trialCombinationId, r.visualContrast, r.auditoryLevelDbfs, r.auditoryInitialAzimuthDeg, r.trackLengthCm, trials[r.trialNumber].WheelGain, r.rewardOfferedUl);
                 Assert.AreEqual(trials[r.trialNumber].trialCombinationId, r.trialCombinationId, golden.Name);
             }
         }
@@ -167,7 +167,7 @@ public class HandoverTests
                 if (set != null) foreach (var key in set.Keys) allowed.Add(key.ToString());
                 foreach (var group in condition.Pairs ?? new List<List<string>>()) foreach (var path in group) allowed.Add(path);
             }
-            var json = new TrialRules(golden.Text, Fixture.Sweep(), true, path => 2, Fixture.Speakers()).CombinationsJson;
+            var json = new TrialRules(golden.Text, Fixture.Sweep(), true, path => Tuple.Create(2, 0.0), Fixture.Speakers()).CombinationsJson;
             var built = Built(golden);
             var own = TaskYaml.Flatten(golden.Task, TaskSchema.ListFields);
             var rows = (Newtonsoft.Json.Linq.JArray)Newtonsoft.Json.Linq.JObject.Parse(json)["rows"];
@@ -179,7 +179,7 @@ public class HandoverTests
                 var where = golden.Name + " row " + n;
                 Assert.AreEqual(n, (int)row["trialCombinationId"], where);
                 Assert.AreEqual(n, combinations[n].Item3.Id, where);
-                Assert.AreEqual(combinations[n].Item1, (int)row["trialCondition"], where);
+                Assert.AreEqual(combinations[n].Item1, (int)row["trialConditionId"], where);
                 Assert.AreEqual(combinations[n].Item2.TrialType, (string)row["trialType"], where);
                 Assert.AreEqual(combinations[n].Item2.Weight, (int)row["conditionWeight"], where);
                 var values = (Newtonsoft.Json.Linq.JObject)row["values"];

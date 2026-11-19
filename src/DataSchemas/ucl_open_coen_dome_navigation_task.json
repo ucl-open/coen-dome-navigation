@@ -1,20 +1,37 @@
 {
   "$defs": {
     "AuditoryStimulus": {
-      "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), each equalised for its speaker: on every rig.yml speaker where the\npicked initial azimuth is \"all\", else on rig.yml's speaker nearest it (at elevation 0).",
+      "description": "The tone sweep's pips (src/sounds/pips.bin), each equalised for its speaker: on every rig.yml speaker where the\npicked initial azimuth is \"all\", else on rig.yml's speaker nearest it at elevationDeg.",
       "properties": {
-        "amplitude": {
-          "default": 1.0,
-          "description": "Scale of the pips' samples as stored: 0 no tone, 1 the files as stored (-58.1 dBFS RMS, the loudness the pips have always played at), above 1 louder. Go refuses the largest amplitude any condition can draw if a pip would peak at -1 dBFS or more after equalisation on any speaker; dB SPL is unknown until the speakers' SPL calibration",
-          "minimum": 0,
-          "title": "Amplitude",
+        "levelDbfs": {
+          "default": -58.1,
+          "description": "The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -58.1. The workflow stops at Go if any peak at the loudest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
+          "oneOf": [
+            {
+              "maximum": -1.0,
+              "minimum": -120.0,
+              "type": "number"
+            },
+            {
+              "const": "mute",
+              "type": "string"
+            }
+          ],
+          "title": "LevelDbfs"
+        },
+        "elevationDeg": {
+          "default": 0.0,
+          "description": "Elevation the sound plays at, in degrees: with the azimuth drawn, it picks rig.yml's nearest speaker",
+          "maximum": 90,
+          "minimum": -90,
+          "title": "ElevationDeg",
           "type": "number"
         },
         "initialAzimuthsDeg": {
           "default": [
             "all"
           ],
-          "description": "Where the pips play, one picked per trial: \"all\" on every rig.yml speaker at once (the corridor's sound, logged auditoryAzimuthDeg NaN with an amplitude above 0); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevation 0, logged as that speaker's auditoryAzimuthDeg and auditoryElevationDeg. Unused where the amplitude is 0",
+          "description": "Where the pips play, one picked per trial: \"all\" on every rig.yml speaker at once (the corridor's sound, logged auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryElevationDeg. Unused where the level is mute",
           "items": {
             "oneOf": [
               {
@@ -32,27 +49,6 @@
         }
       },
       "title": "AuditoryStimulus",
-      "type": "object"
-    },
-    "BackgroundNoise": {
-      "description": "The background noise, one level for the experiment: looped on every speaker unequalised, faded in over 2 s once\nthe task file is read at Go (OpenRigs.Audio SpeakerMixer).",
-      "properties": {
-        "enabled": {
-          "default": true,
-          "description": "Whether the background noise plays",
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "levelDbfs": {
-          "default": -50.0,
-          "description": "The background noise's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -50. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
-          "maximum": -1.0,
-          "minimum": -120.0,
-          "title": "LevelDbfs",
-          "type": "number"
-        }
-      },
-      "title": "BackgroundNoise",
       "type": "object"
     },
     "Curriculum": {
@@ -105,7 +101,7 @@
       "type": "object"
     },
     "OptogeneticsSettings": {
-      "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions. \"Stimulus\" is the tone and grating; the laser is continuous: it starts at the\ntrigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds before the first\ntone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the trial's\noutcome, or after laser_max_seconds if that comes first. A trial that ends before its trigger has no laser.",
+      "description": "Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.\n\nThe stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads\nthe same file to list its conditions and its longest ramp-down. \"Stimulus\" is the tone and grating; the laser is\ncontinuous: it starts at the trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds\nbefore the first tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the\ntrial's outcome, or at a cap derived at Go (the longest responseWindowSeconds any condition can draw plus\nlaser_to_stimulus_seconds plus 0.25 s) if that comes first. The trigger line, and the masking light on it, stays high past\nthe outcome for the conditions file's longest ramp-down. A trial that ends before its trigger has no laser.",
       "if": {
         "additionalProperties": true,
         "properties": {
@@ -161,20 +157,6 @@
           "minimum": 0,
           "title": "TrialsBeforeLaser",
           "type": "integer"
-        },
-        "laserMaxSeconds": {
-          "default": 12.5,
-          "description": "Longest the laser stays on in one trial, in seconds from the trigger, timed by Bonsai; it then ramps down over the condition's offRampDownDuration_ms. A safety cap: the laser normally stops at the trial's outcome. Timed on the Harp clock, with a wall-clock backstop should the board stall. With optogenetics on it must be at least the longest stage responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (the laser runs from the first pip less laser_to_stimulus_seconds to at most the first pip plus responseWindowSeconds), so it never ends the laser before the response window closes; on a stage without responseWindowSeconds a longer trial loses its laser before the outcome",
-          "exclusiveMinimum": 0,
-          "title": "LaserMaxSeconds",
-          "type": "number"
-        },
-        "triggerHoldSeconds": {
-          "default": 1.0,
-          "description": "How long the trigger line, and the masking light on it, stays high after the outcome, in seconds, on every trial of an optogenetics experiment (the line stays low without optogenetics): at least 0.5, the longest ramp-down a conditions file may have, and at most trialStructure.itiMinSeconds - laser_to_stimulus_seconds - 0.2 s, since the next trial is armed once the line falls and Zapit's reply needs 0.2 s before its trigger",
-          "minimum": 0.5,
-          "title": "TriggerHoldSeconds",
-          "type": "number"
         }
       },
       "required": [
@@ -200,7 +182,7 @@
       "type": "object"
     },
     "Penalty": {
-      "description": "What a wrong or missed trial costs: a timeout, and the penalty sound with it (the trial log's penaltySoundOn and\npenaltyTimeoutSeconds). Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.",
+      "description": "What a wrong or missed trial costs: a timeout (the trial log's penaltyTimeoutSeconds), and the penalty sound with it\nunless its level is mute. Each task says which trials are penalised; timeoutSeconds has no lab default: each task file gives it.",
       "properties": {
         "timeoutSeconds": {
           "description": "Timeout after a penalised trial, in seconds; the next interval starts after it",
@@ -211,7 +193,6 @@
         "sound": {
           "$ref": "#/$defs/PenaltySound",
           "default": {
-            "enabled": true,
             "levelDbfs": -30.0
           },
           "description": "The penalty sound, with every timeout",
@@ -225,94 +206,148 @@
       "type": "object"
     },
     "PenaltySound": {
-      "description": "The lab's penalty sound (OpenRigs.Audio PenaltySoundBuffer, the same in every task), on rig.yml's speakerArray.penaltySoundChannel alone, equalised for that speaker.",
+      "description": "The lab's penalty sound (OpenRigs.Audio PlayPenaltySound, the same in every task), on rig.yml's speakerArray.penaltySoundChannel alone,\nequalised for that speaker, at each penalised trial's levelDbfs.",
       "properties": {
-        "enabled": {
-          "default": true,
-          "description": "Whether the penalty sound plays with every timeout",
-          "title": "Enabled",
-          "type": "boolean"
-        },
         "levelDbfs": {
           "default": -30.0,
-          "description": "The penalty sound's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -30. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
-          "maximum": -1.0,
-          "minimum": -120.0,
-          "title": "LevelDbfs",
-          "type": "number"
+          "description": "The penalty sound's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -30. The workflow stops at Go if any peak at the loudest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
+          "oneOf": [
+            {
+              "maximum": -1.0,
+              "minimum": -120.0,
+              "type": "number"
+            },
+            {
+              "const": "mute",
+              "type": "string"
+            }
+          ],
+          "title": "LevelDbfs"
         }
       },
       "title": "PenaltySound",
       "type": "object"
     },
-    "RewardSettings": {
-      "description": "Reward delivery: the reward size on the left spout's valve (the lab's RewardSize block), as coen-dome-decision-making's reward block.",
+    "Reward": {
+      "description": "Reward delivery on the left spout's valve: the size, and the large-reward trials (the lab's reward block).",
       "properties": {
-        "rewardSizeUl": {
+        "sizeUl": {
           "description": "Reward size, in microlitres, planned into valve pulses from the valve's calibration; at most 20, the most one reward may ask for",
           "exclusiveMinimum": 0,
           "maximum": 20,
-          "title": "RewardSizeUl",
+          "title": "SizeUl",
+          "type": "number"
+        },
+        "largeMultiplier": {
+          "default": 2.0,
+          "description": "Reward size multiplier on large-reward trials, above 1",
+          "exclusiveMinimum": 1,
+          "title": "LargeMultiplier",
+          "type": "number"
+        },
+        "largeProbability": {
+          "default": 0.0,
+          "description": "Probability that a trial is a large-reward trial; 0: none (the only off)",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "LargeProbability",
           "type": "number"
         }
       },
       "required": [
-        "rewardSizeUl"
+        "sizeUl"
       ],
-      "title": "RewardSettings",
+      "title": "Reward",
       "type": "object"
     },
     "RewardTone": {
-      "description": "A task's reward tone, played at levelDbfs.",
+      "description": "A task's reward tone, played at each trial's levelDbfs (OpenRigs.Audio PlayRewardTone).",
       "properties": {
         "levelDbfs": {
-          "default": -36.0,
-          "description": "The reward tone's level in dBFS RMS: the RMS of the sound over its whole length as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3). The lab's default -36. The workflow stops as the sound's buffer is built (at Go for a sound built once, at its trial for one built each trial) if any peak would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
-          "maximum": -1.0,
-          "minimum": -120.0,
-          "title": "LevelDbfs",
-          "type": "number"
+          "default": -35.0,
+          "description": "The reward tone's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -35. The workflow stops at Go if any peak at the loudest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
+          "oneOf": [
+            {
+              "maximum": -1.0,
+              "minimum": -120.0,
+              "type": "number"
+            },
+            {
+              "const": "mute",
+              "type": "string"
+            }
+          ],
+          "title": "LevelDbfs"
         }
       },
       "title": "RewardTone",
       "type": "object"
     },
     "StimulusOff": {
-      "description": "Where the stimulus switches off on a stimulus-off trial (a stage's stimulusOffProbability says how often).\n\nOn a stimulus-off trial each listed stimulus switches off once the mouse has run a track fraction of the trial's\ntrack (position / trackLengthCm); an unlisted stimulus stays on. Everything else about the trial is unchanged, so\nit is still rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.",
+      "description": "A stimulus-off trial: which stimuli switch off, and where (a condition sets stimuli to make its trials stimulus-off ones).\n\nEach listed stimulus switches off once the mouse has run a track fraction of the trial's track (the fraction one of\ntrackFractions, a list field); an unlisted stimulus stays on. Everything else about the trial is unchanged, so it is still\nrewarded as normal: the animal has to keep going and find the reward zone without the stimulus.",
       "properties": {
+        "stimuli": {
+          "default": "none",
+          "description": "The stimuli that switch off: none (an ordinary trial), auditory (the tone), visual (the grating) or both",
+          "enum": [
+            "none",
+            "auditory",
+            "visual",
+            "both"
+          ],
+          "title": "Stimuli",
+          "type": "string"
+        },
         "trackFractions": {
           "default": [
             0.4,
             0.6
           ],
-          "description": "Where the stimulus switches off, as a fraction of the trial's track length, split evenly over stimulus-off trials",
+          "description": "Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial",
           "items": {
             "type": "number"
           },
           "minItems": 1,
           "title": "TrackFractions",
           "type": "array"
-        },
-        "stimuli": {
-          "default": [
-            "auditory",
-            "visual"
-          ],
-          "description": "The stimuli that switch off on a stimulus-off trial: auditory (the tone), visual (the grating) or both",
-          "items": {
-            "enum": [
-              "auditory",
-              "visual"
-            ],
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Stimuli",
-          "type": "array",
-          "x-whole": true
         }
       },
       "title": "StimulusOff",
+      "type": "object"
+    },
+    "Track": {
+      "description": "The virtual track: its lengths, how far it moves per wheel cm and how fast it moves on its own.",
+      "properties": {
+        "lengthsCm": {
+          "default": [
+            80.0,
+            100.0,
+            120.0
+          ],
+          "description": "Track lengths, one drawn per trial, in track cm (the mouse runs track cm / wheelGain of wheel)",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "title": "LengthsCm",
+          "type": "array"
+        },
+        "wheelGain": {
+          "default": 8.0,
+          "description": "Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end",
+          "exclusiveMinimum": 0,
+          "title": "WheelGain",
+          "type": "number"
+        },
+        "autoProgressPerSecond": {
+          "default": 0.04,
+          "description": "Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
+          "minimum": 0,
+          "title": "AutoProgressPerSecond",
+          "type": "number"
+        }
+      },
+      "title": "Track",
       "type": "object"
     },
     "TrialCondition": {
@@ -321,7 +356,7 @@
       "properties": {
         "trialType": {
           "$ref": "#/$defs/TrialType",
-          "description": "The condition's name, logged as each trial's trialType: derived from its contrasts and amplitude (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing"
+          "description": "The condition's name, logged as each trial's trialType: derived from its contrasts and level (x-trial-types, derive_trial_type) unless chosen; it names rows and analysis groups and drives nothing"
         },
         "weight": {
           "description": "Relative draw weight: each new trial picks a condition with these as relative chances",
@@ -356,11 +391,11 @@
       "type": "object"
     },
     "TrialStructure": {
-      "description": "Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The wheel quiet wait (open_rigs.core.task WheelQuietWait) is here, the same for every stage; the lick quiet wait is each stage's.",
+      "description": "Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any\npenalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the\ntime to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The response window counts from the first tone pip; null:\nit never closes (optogenetics then refused, as the laser's cap is derived from it). The quiet waits count from the interval's\nstart (open_rigs.core.task LickQuietWait, WheelQuietWait).",
       "properties": {
         "wheelQuietSeconds": {
           "default": 0.0,
-          "description": "Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (with wheelQuietCm 0); at most 10 s",
+          "description": "Quiet wait: a trial's start needs this long with the wheel still, in seconds, counted from the interval's start: the wheel's distance (forward and back added) over the last wheelQuietSeconds must stay within wheelQuietCm; 0: off (the only off); at most 10 s",
           "maximum": 10,
           "minimum": 0,
           "title": "WheelQuietSeconds",
@@ -368,93 +403,18 @@
         },
         "wheelQuietCm": {
           "default": 0.0,
-          "description": "The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: off (with wheelQuietSeconds 0); at most 20 cm",
+          "description": "The most the wheel may move, forward and back added, within the last wheelQuietSeconds before the trial's start, in cm; 0: no movement at all; at most 20 cm",
           "maximum": 20,
           "minimum": 0,
           "title": "WheelQuietCm",
           "type": "number"
         },
-        "itiMinSeconds": {
-          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds; the quiet waits can only lengthen it (quietWaitSeconds)",
+        "lickQuietSeconds": {
+          "default": 0.0,
+          "description": "Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
+          "maximum": 10,
           "minimum": 0,
-          "title": "ItiMinSeconds",
-          "type": "number"
-        },
-        "itiMaxSeconds": {
-          "description": "Upper bound of the inter-trial interval, in seconds; at least itiMinSeconds",
-          "minimum": 0,
-          "title": "ItiMaxSeconds",
-          "type": "number"
-        },
-        "trackLengthsCm": {
-          "default": [
-            80.0,
-            100.0,
-            120.0
-          ],
-          "description": "Track lengths, one drawn per trial, in track cm (the mouse runs track cm / the stage's wheelGain of wheel)",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 1,
-          "title": "TrackLengthsCm",
-          "type": "array"
-        }
-      },
-      "required": [
-        "itiMinSeconds",
-        "itiMaxSeconds"
-      ],
-      "title": "TrialStructure",
-      "type": "object"
-    },
-    "TrialType": {
-      "description": "A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_trial_type);\ncoen-dome-decision-making's words.",
-      "enum": [
-        "visual",
-        "auditory",
-        "audiovisualCoherent",
-        "neutral"
-      ],
-      "title": "TrialType",
-      "type": "string"
-    },
-    "UclOpenCoenDomeNavigationTaskLogic": {
-      "description": "Top-level task logic schema.",
-      "properties": {
-        "taskParameters": {
-          "$ref": "#/$defs/UclOpenCoenDomeNavigationTaskParameters",
-          "title": "TaskParameters"
-        },
-        "version": {
-          "const": "0.0.0-rc1",
-          "default": "0.0.0-rc1",
-          "title": "Version",
-          "type": "string"
-        },
-        "name": {
-          "const": "UclOpenCoenDomeNavigation",
-          "default": "UclOpenCoenDomeNavigation",
-          "description": "Name of the task",
-          "title": "Name",
-          "type": "string"
-        }
-      },
-      "required": [
-        "taskParameters"
-      ],
-      "title": "UclOpenCoenDomeNavigationTaskLogic",
-      "type": "object"
-    },
-    "UclOpenCoenDomeNavigationTaskParameters": {
-      "description": "Task parameters for the coen-dome-navigation corridor: the reward, the trial mix, the sounds, the trial structure, the penalty, stimulus off, optogenetics and what a training stage sets (the flat values below, stage 0's by default; the lick quiet wait, response window and auto-reward are the lab's, open_rigs.core.task).\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor, no lick needed, and the trial's licks are ignored (outcomeReason FrequencyReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
-      "properties": {
-        "autoRewardProbability": {
-          "default": 1.0,
-          "description": "Probability that a trial is an auto-reward trial, rewarded on reaching the zone's floor without a lick; 0: never, 1: every trial",
-          "maximum": 1,
-          "minimum": 0,
-          "title": "AutoRewardProbability",
+          "title": "LickQuietSeconds",
           "type": "number"
         },
         "responseWindowSeconds": {
@@ -471,14 +431,69 @@
           "description": "The response window, in seconds from when a lick first counts (the task says when); with no response by its end the trial is NoResponse. Null or left out: no limit (a task may refuse it)",
           "title": "ResponseWindowSeconds"
         },
-        "lickQuietSeconds": {
-          "default": 0.0,
-          "description": "Quiet wait: a trial's start needs this long with every spout released, in seconds, counted from the interval's start and restarted by every touch and release; a held contact (a paw or chin on a spout) holds the trial's start until released, so licks for the last reward cannot carry into the next trial; 0: off; at most 10 s. It lengthens the interval only when the mouse licks late in it (quietWaitSeconds)",
-          "maximum": 10,
+        "itiMinSeconds": {
+          "description": "Lower bound of the inter-trial interval, drawn uniformly for every trial, in seconds; the quiet waits can only lengthen it (quietWaitSeconds)",
           "minimum": 0,
-          "title": "LickQuietSeconds",
+          "title": "ItiMinSeconds",
           "type": "number"
         },
+        "itiMaxSeconds": {
+          "description": "Upper bound of the inter-trial interval, in seconds; at least itiMinSeconds",
+          "minimum": 0,
+          "title": "ItiMaxSeconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "itiMinSeconds",
+        "itiMaxSeconds"
+      ],
+      "title": "TrialStructure",
+      "type": "object"
+    },
+    "TrialType": {
+      "description": "A condition's name, logged as trialType: it names rows and analysis groups and drives nothing (derive_trial_type);\ncoen-dome-decision-making's words (audiovisualConflict no rule derives: a person names it).",
+      "enum": [
+        "visual",
+        "auditory",
+        "audiovisualCoherent",
+        "audiovisualConflict",
+        "neutral"
+      ],
+      "title": "TrialType",
+      "type": "string"
+    },
+    "UclOpenCoenDomeNavigationTaskLogic": {
+      "description": "Task logic definition for the coen-dome-navigation experiment.",
+      "properties": {
+        "taskParameters": {
+          "$ref": "#/$defs/UclOpenCoenDomeNavigationTaskParameters",
+          "description": "Parameters of the task logic",
+          "title": "TaskParameters"
+        },
+        "version": {
+          "const": "0.0.0-rc1",
+          "default": "0.0.0-rc1",
+          "title": "Version",
+          "type": "string"
+        },
+        "name": {
+          "const": "UclOpenCoenDomeNavigation",
+          "default": "UclOpenCoenDomeNavigation",
+          "description": "Name of the task logic",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskParameters"
+      ],
+      "title": "UclOpenCoenDomeNavigationTaskLogic",
+      "type": "object"
+    },
+    "UclOpenCoenDomeNavigationTaskParameters": {
+      "description": "Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,\nreward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason RewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
+      "properties": {
         "rngSeed": {
           "default": null,
           "description": "Seed of the random number generator for these task parameters",
@@ -487,136 +502,6 @@
             "number",
             "null"
           ]
-        },
-        "reward": {
-          "$ref": "#/$defs/RewardSettings",
-          "description": "Reward delivery parameters",
-          "title": "Reward"
-        },
-        "trialConditions": {
-          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialCondition column is its 0-based index",
-          "items": {
-            "$ref": "#/$defs/TrialCondition"
-          },
-          "minItems": 1,
-          "title": "TrialConditions",
-          "type": "array",
-          "x-whole": true
-        },
-        "auditoryStimulus": {
-          "$ref": "#/$defs/AuditoryStimulus",
-          "default": {
-            "amplitude": 1.0,
-            "initialAzimuthsDeg": [
-              "all"
-            ]
-          },
-          "description": "The tone sweep's pips (src/sounds/all_waveforms.bin), each played at amplitude"
-        },
-        "contrasts": {
-          "default": [
-            1.0
-          ],
-          "description": "Candidate grating contrasts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 1,
-          "title": "Contrasts",
-          "type": "array"
-        },
-        "rewardTone": {
-          "$ref": "#/$defs/RewardTone",
-          "default": {
-            "levelDbfs": -36.0
-          },
-          "description": "The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
-        },
-        "backgroundNoise": {
-          "$ref": "#/$defs/BackgroundNoise",
-          "default": {
-            "enabled": true,
-            "levelDbfs": -50.0
-          },
-          "description": "The lab's background white noise (rig.yml's speakerArray.backgroundNoise) on every speaker, from Ready at the level of the task file as launched (open_rigs.core.task BackgroundNoise)"
-        },
-        "visualStimulus": {
-          "$ref": "#/$defs/VisualStimulus",
-          "default": {
-            "spatialFrequencyStartCpd": 0.03,
-            "spatialFrequencyEndCpd": 0.3
-          },
-          "description": "The grating's spatial frequencies along the track"
-        },
-        "trialStructure": {
-          "$ref": "#/$defs/TrialStructure",
-          "description": "Timing of each trial"
-        },
-        "penalty": {
-          "$ref": "#/$defs/Penalty",
-          "description": "The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)"
-        },
-        "stimulusOff": {
-          "$ref": "#/$defs/StimulusOff",
-          "default": {
-            "trackFractions": [
-              0.4,
-              0.6
-            ],
-            "stimuli": [
-              "auditory",
-              "visual"
-            ]
-          },
-          "description": "Where and which stimuli switch off on a stimulus-off trial"
-        },
-        "optogenetics": {
-          "$ref": "#/$defs/OptogeneticsSettings",
-          "description": "Zapit optogenetic stimulation",
-          "title": "Optogenetics"
-        },
-        "rewardFloorHz": {
-          "default": 18000,
-          "description": "Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)",
-          "minimum": 1,
-          "title": "RewardFloorHz",
-          "type": "number"
-        },
-        "rewardCeilingHz": {
-          "default": 25000,
-          "description": "Upper frequency of the reward zone, in Hz, at most the sweep's end (src/sounds/sweep.json)",
-          "minimum": 1,
-          "title": "RewardCeilingHz",
-          "type": "number"
-        },
-        "wrongLickLimit": {
-          "default": 0,
-          "description": "Licks outside the zone that end the trial; 0: wrong licks never end it",
-          "minimum": 0,
-          "title": "WrongLickLimit",
-          "type": "integer"
-        },
-        "wheelGain": {
-          "default": 8.0,
-          "description": "Track cm per wheel cm: the track's tone and grating move this many cm for each cm the wheel turns, so the mouse runs track length / wheelGain cm of wheel to the end",
-          "exclusiveMinimum": 0,
-          "title": "WheelGain",
-          "type": "number"
-        },
-        "autoProgressPerSecond": {
-          "default": 0.04,
-          "description": "Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone",
-          "minimum": 0,
-          "title": "AutoProgressPerSecond",
-          "type": "number"
-        },
-        "stimulusOffProbability": {
-          "default": 0.0,
-          "description": "Probability that a trial is a stimulus-off trial (stimulusOff): its listed stimuli switch off part way along the track; 0: never, 1: every trial",
-          "maximum": 1,
-          "minimum": 0,
-          "title": "StimulusOffProbability",
-          "type": "number"
         },
         "curriculum": {
           "anyOf": [
@@ -630,12 +515,109 @@
           "default": null,
           "description": "The Mouse Curriculum stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
           "title": "Curriculum"
+        },
+        "trialConditions": {
+          "description": "The trial mix: each new trial picks one condition at random with the weights as relative chances, independently of every other trial, then one of its combinations: the task's values with the condition's set over them, any field but x-session-fields', each list field one entry; its trialType is the trial row's. One whole value: a curriculum stage's conditions replace it; the trialConditionId column is its 0-based index",
+          "items": {
+            "$ref": "#/$defs/TrialCondition"
+          },
+          "minItems": 1,
+          "title": "TrialConditions",
+          "type": "array",
+          "x-whole": true
+        },
+        "trialStructure": {
+          "$ref": "#/$defs/TrialStructure",
+          "description": "Timing of each trial"
+        },
+        "visualStimulus": {
+          "$ref": "#/$defs/VisualStimulus",
+          "description": "The grating: its contrasts and spatial frequencies along the track"
+        },
+        "auditoryStimulus": {
+          "$ref": "#/$defs/AuditoryStimulus",
+          "description": "The tone sweep's pips (src/sounds/pips.bin), each played at levelDbfs"
+        },
+        "reward": {
+          "$ref": "#/$defs/Reward",
+          "description": "Reward delivery parameters"
+        },
+        "autoRewardProbability": {
+          "default": 1.0,
+          "description": "Probability that a trial is an auto-reward trial, rewarded on reaching the zone's floor without a lick; 0: never, 1: every trial",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "AutoRewardProbability",
+          "type": "number"
+        },
+        "penalty": {
+          "$ref": "#/$defs/Penalty",
+          "description": "The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)"
+        },
+        "rewardTone": {
+          "$ref": "#/$defs/RewardTone",
+          "default": {
+            "levelDbfs": -35.0
+          },
+          "description": "The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
+        },
+        "optogenetics": {
+          "$ref": "#/$defs/OptogeneticsSettings",
+          "description": "Zapit optogenetic stimulation",
+          "title": "Optogenetics"
+        },
+        "track": {
+          "$ref": "#/$defs/Track",
+          "default": {
+            "lengthsCm": [
+              80.0,
+              100.0,
+              120.0
+            ],
+            "wheelGain": 8.0,
+            "autoProgressPerSecond": 0.04
+          },
+          "description": "The virtual track"
+        },
+        "rewardZoneMinHz": {
+          "default": 18000,
+          "description": "Lower frequency of the reward zone, in Hz, above the sweep's start (src/sounds/sweep.json)",
+          "minimum": 1,
+          "title": "RewardZoneMinHz",
+          "type": "number"
+        },
+        "rewardZoneMaxHz": {
+          "default": 24000,
+          "description": "Upper frequency of the reward zone, in Hz, at most the track's top (24 kHz: the sweep's start times endHz / startHz in whole numbers, src/sounds/sweep.json)",
+          "minimum": 1,
+          "title": "RewardZoneMaxHz",
+          "type": "number"
+        },
+        "wrongLickLimit": {
+          "default": 0,
+          "description": "Licks outside the zone that end the trial; 0: wrong licks never end it",
+          "minimum": 0,
+          "title": "WrongLickLimit",
+          "type": "integer"
+        },
+        "stimulusOff": {
+          "$ref": "#/$defs/StimulusOff",
+          "default": {
+            "stimuli": "none",
+            "trackFractions": [
+              0.4,
+              0.6
+            ]
+          },
+          "description": "Which stimuli switch off part way along the track, and where"
         }
       },
       "required": [
-        "reward",
         "trialConditions",
         "trialStructure",
+        "visualStimulus",
+        "auditoryStimulus",
+        "reward",
         "penalty",
         "optogenetics"
       ],
@@ -647,14 +629,14 @@
         {
           "if": {
             "properties": {
-              "contrasts": {
+              "visualStimulus.contrasts": {
                 "items": {
                   "const": 0
                 }
               }
             },
             "required": [
-              "contrasts"
+              "visualStimulus.contrasts"
             ]
           },
           "message": "contrasts 0 shows no grating, so its spatial frequencies are unread",
@@ -666,17 +648,18 @@
         {
           "if": {
             "properties": {
-              "auditoryStimulus.amplitude": {
-                "const": 0
+              "auditoryStimulus.levelDbfs": {
+                "const": "mute"
               }
             },
             "required": [
-              "auditoryStimulus.amplitude"
+              "auditoryStimulus.levelDbfs"
             ]
           },
-          "message": "auditoryStimulus.amplitude 0 plays no tone, so its azimuths are unread",
+          "message": "auditoryStimulus.levelDbfs mute plays no tone, so where it plays is unread",
           "unused": [
-            "auditoryStimulus.initialAzimuthsDeg"
+            "auditoryStimulus.initialAzimuthsDeg",
+            "auditoryStimulus.elevationDeg"
           ]
         },
         {
@@ -693,24 +676,23 @@
           "message": "autoRewardProbability 1 rewards every trial, so the lick limits are unread",
           "unused": [
             "wrongLickLimit",
-            "rewardCeilingHz"
+            "rewardZoneMaxHz"
           ]
         },
         {
           "if": {
             "properties": {
-              "stimulusOffProbability": {
-                "const": 0
+              "stimulusOff.stimuli": {
+                "const": "none"
               }
             },
             "required": [
-              "stimulusOffProbability"
+              "stimulusOff.stimuli"
             ]
           },
-          "message": "stimulusOffProbability 0 never cuts a stimulus, so stimulusOff is unread",
+          "message": "stimulusOff.stimuli none switches nothing off, so its track fractions are unread",
           "unused": [
-            "stimulusOff.trackFractions",
-            "stimulusOff.stimuli"
+            "stimulusOff.trackFractions"
           ]
         }
       ],
@@ -718,32 +700,28 @@
         "rngSeed",
         "curriculum",
         "trialConditions",
-        "backgroundNoise",
-        "penalty.sound.levelDbfs",
         "rewardTone",
         "optogenetics.enabled",
-        "optogenetics.zapitConditionsPath",
-        "optogenetics.laserMaxSeconds",
-        "optogenetics.triggerHoldSeconds"
+        "optogenetics.zapitConditionsPath"
       ],
       "x-trial-types": [
         {
           "if": {
             "properties": {
-              "contrasts": {
+              "visualStimulus.contrasts": {
                 "contains": {
                   "exclusiveMinimum": 0
                 }
               },
-              "auditoryStimulus.amplitude": {
+              "auditoryStimulus.levelDbfs": {
                 "contains": {
-                  "exclusiveMinimum": 0
+                  "type": "number"
                 }
               }
             },
             "required": [
-              "contrasts",
-              "auditoryStimulus.amplitude"
+              "visualStimulus.contrasts",
+              "auditoryStimulus.levelDbfs"
             ]
           },
           "trialType": "audiovisualCoherent"
@@ -751,14 +729,14 @@
         {
           "if": {
             "properties": {
-              "contrasts": {
+              "visualStimulus.contrasts": {
                 "contains": {
                   "exclusiveMinimum": 0
                 }
               }
             },
             "required": [
-              "contrasts"
+              "visualStimulus.contrasts"
             ]
           },
           "trialType": "visual"
@@ -766,14 +744,14 @@
         {
           "if": {
             "properties": {
-              "auditoryStimulus.amplitude": {
+              "auditoryStimulus.levelDbfs": {
                 "contains": {
-                  "exclusiveMinimum": 0
+                  "type": "number"
                 }
               }
             },
             "required": [
-              "auditoryStimulus.amplitude"
+              "auditoryStimulus.levelDbfs"
             ]
           },
           "trialType": "auditory"
@@ -784,8 +762,20 @@
       ]
     },
     "VisualStimulus": {
-      "description": "The grating: its spatial frequency runs from start to end along the track on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame).",
+      "description": "The grating: its contrast, and its spatial frequency from start to end along the track on a log scale, as the tone does\n(TrialLogic.cs TrialRules.Frame).",
       "properties": {
+        "contrasts": {
+          "default": [
+            1.0
+          ],
+          "description": "Candidate grating contrasts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "title": "Contrasts",
+          "type": "array"
+        },
         "spatialFrequencyStartCpd": {
           "default": 0.03,
           "description": "The grating's spatial frequency at the track's start, in cycles per degree",

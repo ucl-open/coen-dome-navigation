@@ -1,7 +1,7 @@
 {
-  "sweepStartHz": 2000,
-  "sweepEndHz": 25000,
-  "sweepSteps": 100,
+  "startHz": 2000,
+  "endHz": 25000,
+  "steps": 100,
   "pipLevelDbfs": -58.1,
   "sampleRate": 48000
 }

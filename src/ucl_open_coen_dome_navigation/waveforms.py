@@ -3,10 +3,10 @@
 Tom Childs' gen_session.py wrote the tones again before every experiment, at the task's amplitude, and the workflow
 scaled them by the amplitude again, so a pip peaked at amplitude squared. The sweep is fixed here (SWEEP_START_HZ ...
 SWEEP_STEPS, Tom's 2000 to 25000 Hz in 100 tones) and recorded in sweep.json, which the workflow reads for the sweep's
-frequencies (Sweep.cs) and task.py for the reward zones' bounds. Each pip is stored at PIP_LEVEL_DBFS RMS, -58.1, the level
-the pips played at from 15 Nov 2026 (Tom's 0.05 squared peak, -58.06, rounded), so auditoryStimulus.amplitude 1, which
-plays the pips as stored (PipSet), is that loudness exactly. The reward tone plays at rewardTone.levelDbfs of the file as
-stored, on rig.yml's speakers, equalised for each (OpenRigs.Audio SpeakerBuffer); the penalty sound is the lab's, from OpenRigs.Audio,
+frequencies (Sweep.cs) and task.py for the reward zone's bounds. Each pip is stored at PIP_LEVEL_DBFS RMS, -58.1, the level
+the pips played at from 15 Nov 2026 (Tom's 0.05 squared peak, -58.06, rounded); the workflow scales them to the trial's
+auditoryStimulus.levelDbfs (PipSet). The reward tone plays at rewardTone.levelDbfs of the file as
+stored, on rig.yml's speakers, equalised for each (OpenRigs.Audio PlayRewardTone); the penalty sound is the lab's, from OpenRigs.Audio,
 and the background noise the lab's one file, rig.yml's speakerArray.backgroundNoise. Run `uv run generate-waveforms` after changing one of them, and commit.
 """
 
@@ -25,7 +25,7 @@ SWEEP_END_HZ = 25000
 SWEEP_STEPS = 100
 TONE_AMPLITUDE = 0.05  # Tom's toneAmplitude
 REWARD_TONE_PEAK = TONE_AMPLITUDE * TONE_AMPLITUDE  # the reward tone peaks at amplitude squared, as it always played
-PIP_LEVEL_DBFS = -58.1  # each pip's RMS as stored, in dBFS: auditoryStimulus.amplitude 1
+PIP_LEVEL_DBFS = -58.1  # each pip's RMS as stored, in dBFS (sweep.json pipLevelDbfs)
 REWARD_TONES_HZ = (6000, 9000)  # the reward tone: 250 ms of each, as Tom's FunctionGenerator pair
 REWARD_TONE_MS = 250
 
@@ -53,16 +53,15 @@ def reward_tone(peak: float = REWARD_TONE_PEAK) -> np.ndarray:
 
 def sweep() -> dict:
     """sweep.json: what the workflow and task.py read, with the rate every waveform was made at."""
-    return {"sweepStartHz": SWEEP_START_HZ, "sweepEndHz": SWEEP_END_HZ, "sweepSteps": SWEEP_STEPS, "pipLevelDbfs": PIP_LEVEL_DBFS, "sampleRate": SAMPLE_RATE}
+    return {"startHz": SWEEP_START_HZ, "endHz": SWEEP_END_HZ, "steps": SWEEP_STEPS, "pipLevelDbfs": PIP_LEVEL_DBFS, "sampleRate": SAMPLE_RATE}
 
 
 def write(out_dir: Path = OUT_DIR) -> None:
-    """Write all_waveforms.bin (n x 2400 float32, row-major, no header), frequencies.txt, reward_tone.bin (float32)
-    and sweep.json. The penalty sound is OpenRigs.Audio's; the background noise is rig.yml's speakerArray.backgroundNoise."""
+    """Write pips.bin (n x 2400 float32, row-major, no header; row i is tone_frequencies()[i], as Sweep.cs computes it),
+    reward_tone.bin (float32) and sweep.json. The penalty sound is OpenRigs.Audio's; the background noise is rig.yml's
+    speakerArray.backgroundNoise."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    frequencies = tone_frequencies()
-    tones(frequencies).tofile(out_dir / "all_waveforms.bin")
-    (out_dir / "frequencies.txt").write_text("".join(f"{f}\n" for f in frequencies), encoding="utf-8")
+    tones(tone_frequencies()).tofile(out_dir / "pips.bin")
     reward_tone().tofile(out_dir / "reward_tone.bin")
     (out_dir / "sweep.json").write_text(json.dumps(sweep(), indent=2) + "\n", encoding="utf-8")
 

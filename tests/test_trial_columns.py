@@ -10,7 +10,11 @@ from open_rigs.rigs.trials import shared_block_problems
 
 def test_the_trial_columns_start_with_the_shared_block():
     columns = yaml.safe_load((Path(__file__).parents[1] / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))
-    assert shared_block_problems(columns, ("optogenetics", "quietWait")) == []
+    assert shared_block_problems(columns, ("quietWait", "optogenetics", "conditions", "stimulus", "autoReward")) == []
+    # The columns the shared blocks replaced are gone, and trial columns are camelCase outcomes.
+    gone = {"penaltySoundOn", "wheelGain", "autoRewarded", "trialCondition", "auditoryAmplitude", "auditoryAzimuthDeg"}
+    assert not gone & set(columns)
+    assert columns["outcome"]["values"] == ["correct", "incorrect", "noResponse"]
 
 def test_every_outcome_reason_the_rules_write_is_listed():
     # The outcomeReason values trial-columns.yml lists are the ones TrialLogic.cs writes: an outcome's reason, a lick's
@@ -23,12 +27,12 @@ def test_every_outcome_reason_the_rules_write_is_listed():
 
 
 def test_the_combination_is_logged_beside_the_condition():
-    # trialCombinationId, the trial's row of Settings_Combinations (TrialDraw.BuildConditions' order), follows trialCondition.
+    # trialCombinationId, the trial's row of Settings_Combinations (TrialDraw.BuildConditions' order), follows trialConditionId.
     root = Path(__file__).parents[1]
     names = list(yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8")))
-    assert names[names.index("trialCondition") + 1] == "trialCombinationId"
+    assert names[names.index("trialConditionId") + 1] == "trialCombinationId"
     row = (root / "src" / "Extensions" / "TrialRow.cs").read_text(encoding="utf-8")
-    assert re.search(r"int trialCondition;.*\n\s+public int trialCombinationId;", row)
+    assert re.search(r"int trialConditionId;.*\n\s+public int trialCombinationId;", row)
 
 
 def test_the_trial_types_are_the_conditions_and_decision_making_s():
@@ -38,5 +42,19 @@ def test_the_trial_types_are_the_conditions_and_decision_making_s():
     listed = yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))["trialType"]["values"]
     from ucl_open_coen_dome_navigation.task import TrialType
 
-    assert listed == [t.value for t in TrialType] == ["visual", "auditory", "audiovisualCoherent", "neutral"]
+    assert listed == [t.value for t in TrialType] == ["visual", "auditory", "audiovisualCoherent", "audiovisualConflict", "neutral"]
+
+
+def test_the_stimulus_state_columns_are_the_row_s_fields():
+    # schemas/stimulus-state-columns.yml describes WorkflowData_StimulusState: harpTime, then StimulusStateRow's public fields
+    # (src/Extensions/Sweep.cs) in order, each with a type and a description.
+    root = Path(__file__).parents[1]
+    columns = yaml.safe_load((root / "schemas" / "stimulus-state-columns.yml").read_text(encoding="utf-8"))
+    code = (root / "src" / "Extensions" / "Sweep.cs").read_text(encoding="utf-8-sig")
+    body = re.search(r"public class StimulusStateRow\s*\{(.*?)\n\}", code, re.S).group(1)
+    fields = re.findall(r"^\s*public \w+ (\w+);", body, re.M)
+    assert fields and list(columns) == ["harpTime", *fields]
+    for name, column in columns.items():
+        assert column["type"] in ("int", "double", "bool", "string") and column.get("description"), name
+    assert columns["harpTime"]["unit"] == "s"
 
