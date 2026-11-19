@@ -431,8 +431,8 @@ public class TrialDrawTests
         rig.RunTo(TrialEventKind.Start);
         var pip = rig.RunTo(TrialEventKind.Update).Update;
         Assert.AreEqual(0.25, pip.ToneGain);
-        Assert.AreEqual(1.0, pip.GratingOpacity);
-        Assert.AreEqual(0.5, pip.GratingContrast);
+        Assert.AreEqual(1.0, pip.Grating.Opacity);
+        Assert.AreEqual(0.5, pip.Grating.Contrast);
         rig.Wheel(1000);
         var row = rig.RunTo(TrialEventKind.Outcome).Outcome.Row.Value;
         Assert.AreEqual("visual", row.trialType);
@@ -444,7 +444,30 @@ public class TrialDrawTests
         rig.RunTo(TrialEventKind.Start);
         pip = rig.RunTo(TrialEventKind.Update).Update;
         Assert.AreEqual(0.0, pip.ToneGain);
-        Assert.AreEqual(0.0, pip.GratingOpacity);
+        Assert.AreEqual(0.0, pip.Grating.Opacity);
+    }
+
+    [TestMethod]
+    public void TheGratingFollowsEachPipAndHidesAtTheOutcome()
+    {
+        // GratingStates (the Grating subject): each pip's grating as it comes; at the outcome the last pip's at opacity 0.
+        var task = Fixture.Task(1);
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Visual, Weight = 1, Set = new Dictionary<object, object> { { "contrasts", new List<object> { 0.5 } } } } };
+        var rig = new Rig(Fixture.Setup(task));
+        rig.RunTo(TrialEventKind.Start);
+        rig.RunTo(TrialEventKind.Update);
+        rig.Wheel(1000);
+        rig.RunTo(TrialEventKind.Outcome);
+        var states = new GratingStates().Process(rig.Events.ToObservable()).ToList().Wait();
+        var pips = rig.Events.Where(e => e.Kind == TrialEventKind.Update).Select(e => e.Update.Grating).ToList();
+        Assert.IsTrue(pips.Count > 1);
+        CollectionAssert.AreEqual(pips, states.Take(pips.Count).ToList());
+        var last = states.Last();
+        Assert.AreEqual(pips.Count + 1, states.Count);
+        Assert.AreEqual(0.0, last.Opacity);
+        Assert.AreEqual(1.0, pips.Last().Opacity);
+        Assert.AreEqual(pips.Last().SpatialFrequencyCpd, last.SpatialFrequencyCpd);
+        Assert.AreEqual(0.5, last.Contrast);
     }
 
     [TestMethod]
@@ -526,7 +549,7 @@ public class TrialDrawTests
             rig.RunTo(TrialEventKind.Start);
             var pip = rig.RunTo(TrialEventKind.Update).Update;
             Assert.AreEqual(type == "visual" ? 0.0 : 1.0, pip.ToneGain, type);
-            Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, pip.GratingOpacity, type);
+            Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, pip.Grating.Opacity, type);
             rig.Wheel(1000);
             var row = rig.RunTo(TrialEventKind.Outcome).Outcome.Row.Value;
             Assert.AreEqual(type, row.trialType);
@@ -1120,7 +1143,7 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.1);
         var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(0.0, pip.Row.visualContrast);
-        Assert.AreEqual(0.0, pip.GratingOpacity);
+        Assert.AreEqual(0.0, pip.Grating.Opacity);
     }
 
     [TestMethod]

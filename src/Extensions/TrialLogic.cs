@@ -254,8 +254,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             Bin = sweep.BinOf(tone),
             ToneGain = gain,
             SpeakerChannel = trial.speakerChannel,
-            GratingOpacity = contrast > 0 ? 1 : 0,
-            GratingContrast = trial.visualContrast
+            Grating = new GratingState { SpatialFrequencyCpd = grating, Opacity = contrast > 0 ? 1 : 0, Contrast = trial.visualContrast }
         };
     }
 

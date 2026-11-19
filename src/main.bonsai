@@ -199,27 +199,11 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Display</Name>
-        <Description>The grating (BonVision DrawGratings) on the dome: each pip sets its spatial frequency, opacity and contrast (TaskLogic: the trial's visualContrast; opacity 0 at contrast 0); off between trials.</Description>
+        <Description>The grating (BonVision DrawGratings) on the dome: one subject, Grating (TaskLogic's GratingStates), sets its spatial frequency, opacity and contrast at once: each pip's (the trial's visualContrast; opacity 0 at contrast 0), then from the outcome the last pip's at opacity 0, so off between trials.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
               <Name>DrawStimuli</Name>
-            </Expression>
-            <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
-              <rx:Name>GratingSpatialFrequencyCpd</rx:Name>
-            </Expression>
-            <Expression xsi:type="PropertyMapping">
-              <PropertyMappings>
-                <Property Name="SpatialFrequency" Selector="it" />
-              </PropertyMappings>
-            </Expression>
-            <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
-              <rx:Name>GratingOpacity</rx:Name>
-            </Expression>
-            <Expression xsi:type="PropertyMapping">
-              <PropertyMappings>
-                <Property Name="Opacity" />
-              </PropertyMappings>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="BonVision:Primitives.DrawGratings.bonsai">
               <LocationX>0</LocationX>
@@ -238,23 +222,21 @@
               <Aperture>0</Aperture>
               <Opacity>0</Opacity>
             </Expression>
-            <Expression xsi:type="rx:BehaviorSubject" TypeArguments="sys:Double">
-              <rx:Name>GratingContrast</rx:Name>
+            <Expression xsi:type="rx:BehaviorSubject" TypeArguments="ext:GratingState">
+              <rx:Name>Grating</rx:Name>
             </Expression>
             <Expression xsi:type="PropertyMapping">
               <PropertyMappings>
-                <Property Name="Contrast" />
+                <Property Name="SpatialFrequency" Selector="SpatialFrequencyCpd" />
+                <Property Name="Opacity" Selector="Opacity" />
+                <Property Name="Contrast" Selector="Contrast" />
               </PropertyMappings>
             </Expression>
           </Nodes>
           <Edges>
-            <Edge From="0" To="5" Label="Source1" />
-            <Edge From="1" To="2" Label="Source1" />
-            <Edge From="2" To="5" Label="Source2" />
-            <Edge From="3" To="4" Label="Source1" />
-            <Edge From="4" To="5" Label="Source3" />
-            <Edge From="6" To="7" Label="Source1" />
-            <Edge From="7" To="5" Label="Source4" />
+            <Edge From="0" To="1" Label="Source1" />
+            <Edge From="2" To="3" Label="Source1" />
+            <Edge From="3" To="1" Label="Source2" />
           </Edges>
         </Workflow>
       </Expression>
@@ -491,7 +473,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, step 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating; Outcome writes the trial row, rewards (RewardRequests, the left valve) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, step 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating (GratingStates, which hides it at the Outcome); Outcome writes the trial row, rewards (RewardRequests, the left valve) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="MemberSelector">
@@ -720,18 +702,6 @@
             <Expression xsi:type="MulticastSubject">
               <Name>StimulusSounds</Name>
             </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>Update.Row.visualSpatialFrequencyCpd</Selector>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>GratingSpatialFrequencyCpd</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>Update.GratingOpacity</Selector>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>GratingOpacity</Name>
-            </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="ext:CreateStimulusStateRow" />
             </Expression>
@@ -745,14 +715,6 @@
               <Combinator xsi:type="trl:PickTrialEvents">
                 <trl:Kind>Outcome</trl:Kind>
               </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="DoubleProperty">
-                <Value>0</Value>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>GratingOpacity</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
               <Selector>Outcome.Row</Selector>
@@ -872,11 +834,11 @@
             <Expression xsi:type="SubscribeSubject">
               <Name>LickStateRight</Name>
             </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>Update.GratingContrast</Selector>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="ext:GratingStates" />
             </Expression>
             <Expression xsi:type="MulticastSubject">
-              <Name>GratingContrast</Name>
+              <Name>Grating</Name>
             </Expression>
           </Nodes>
           <Edges>
@@ -884,11 +846,11 @@
             <Edge From="1" To="5" Label="Source2" />
             <Edge From="2" To="5" Label="Source3" />
             <Edge From="3" To="5" Label="Source4" />
-            <Edge From="57" To="5" Label="Source5" />
+            <Edge From="51" To="5" Label="Source5" />
             <Edge From="4" To="5" Label="Source6" />
             <Edge From="5" To="6" Label="Source1" />
             <Edge From="10" To="11" Label="Source1" />
-            <Edge From="46" To="14" Label="Source1" />
+            <Edge From="40" To="14" Label="Source1" />
             <Edge From="15" To="16" Label="Source1" />
             <Edge From="16" To="18" Label="Source1" />
             <Edge From="17" To="18" Label="Source2" />
@@ -896,43 +858,37 @@
             <Edge From="19" To="20" Label="Source1" />
             <Edge From="16" To="21" Label="Source1" />
             <Edge From="21" To="22" Label="Source1" />
-            <Edge From="16" To="23" Label="Source1" />
             <Edge From="23" To="24" Label="Source1" />
-            <Edge From="16" To="25" Label="Source1" />
+            <Edge From="24" To="25" Label="Source1" />
             <Edge From="25" To="26" Label="Source1" />
+            <Edge From="24" To="27" Label="Source1" />
             <Edge From="27" To="28" Label="Source1" />
             <Edge From="28" To="29" Label="Source1" />
-            <Edge From="29" To="30" Label="Source1" />
-            <Edge From="28" To="31" Label="Source1" />
+            <Edge From="27" To="31" Label="Source1" />
+            <Edge From="30" To="31" Label="Source2" />
             <Edge From="31" To="32" Label="Source1" />
-            <Edge From="28" To="33" Label="Source1" />
-            <Edge From="33" To="34" Label="Source1" />
-            <Edge From="34" To="35" Label="Source1" />
-            <Edge From="33" To="37" Label="Source1" />
-            <Edge From="36" To="37" Label="Source2" />
+            <Edge From="32" To="33" Label="Source1" />
+            <Edge From="24" To="34" Label="Source1" />
+            <Edge From="36" To="37" Label="Source1" />
             <Edge From="37" To="38" Label="Source1" />
-            <Edge From="38" To="39" Label="Source1" />
-            <Edge From="28" To="40" Label="Source1" />
+            <Edge From="39" To="40" Label="Source1" />
+            <Edge From="41" To="42" Label="Source1" />
             <Edge From="42" To="43" Label="Source1" />
+            <Edge From="34" To="35" Label="Source1" />
             <Edge From="43" To="44" Label="Source1" />
-            <Edge From="45" To="46" Label="Source1" />
-            <Edge From="47" To="48" Label="Source1" />
-            <Edge From="48" To="49" Label="Source1" />
-            <Edge From="40" To="41" Label="Source1" />
-            <Edge From="49" To="50" Label="Source1" />
             <Edge From="11" To="12" Label="Source1" />
             <Edge From="12" To="13" Label="Source1" />
-            <Edge From="51" To="54" Label="Source1" />
-            <Edge From="52" To="54" Label="Source2" />
-            <Edge From="53" To="54" Label="Source3" />
-            <Edge From="54" To="55" Label="Source1" />
-            <Edge From="55" To="56" Label="Source1" />
-            <Edge From="1" To="56" Label="Source2" />
-            <Edge From="56" To="0" Label="Source1" />
+            <Edge From="45" To="48" Label="Source1" />
+            <Edge From="46" To="48" Label="Source2" />
+            <Edge From="47" To="48" Label="Source3" />
+            <Edge From="48" To="49" Label="Source1" />
+            <Edge From="49" To="50" Label="Source1" />
+            <Edge From="1" To="50" Label="Source2" />
+            <Edge From="50" To="0" Label="Source1" />
             <Edge From="7" To="8" Label="Source1" />
             <Edge From="8" To="9" Label="Source1" />
-            <Edge From="16" To="58" Label="Source1" />
-            <Edge From="58" To="59" Label="Source1" />
+            <Edge From="15" To="52" Label="Source1" />
+            <Edge From="52" To="53" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

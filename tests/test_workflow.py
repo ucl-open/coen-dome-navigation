@@ -401,14 +401,20 @@ def test_the_extensions_readme_names_every_public_class():
     assert sorted(c for c in classes if f"`{c}`" not in readme) == []
 
 
-def test_each_pip_sets_the_grating_s_contrast():
-    # The trial's visualContrast reaches DrawGratings' Contrast (GratingContrast), beside its opacity and spatial frequency.
+def test_one_grating_subject_sets_the_grating():
+    # One Grating subject (GratingStates over every trial event) maps spatial frequency, opacity and contrast onto
+    # DrawGratings at once: each pip's (the trial's visualContrast among them), and opacity 0 at the outcome.
     nodes, edges = _scope(group("Display"))
-    (subject,) = [i for i, n in enumerate(nodes) if n.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Name") == "GratingContrast"]
+    (subject,) = [i for i, n in enumerate(nodes) if n.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Name") == "Grating"]
+    assert nodes[subject].get("TypeArguments") == "ext:GratingState"
     (mapping,) = [b for a, b in edges if a == subject]
-    assert [p.get("Name") for p in nodes[mapping].iter(W + "Property")] == ["Contrast"]
-    assert any(nodes[b].get("Path") == "BonVision:Primitives.DrawGratings.bonsai" for a, b in edges if a == mapping)
+    assert [(p.get("Name"), p.get("Selector")) for p in nodes[mapping].iter(W + "Property")] == [
+        ("SpatialFrequency", "SpatialFrequencyCpd"), ("Opacity", "Opacity"), ("Contrast", "Contrast")]
+    assert [nodes[b].get("Path") for a, b in edges if a == mapping] == ["BonVision:Primitives.DrawGratings.bonsai"]
     nodes, edges = _scope(group("TaskLogic"))
-    (multicast,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "GratingContrast"]
-    (source,) = [a for a, b in edges if b == multicast]
-    assert nodes[source].findtext(W + "Selector") == "Update.GratingContrast"
+    (multicast,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "Grating"]
+    (states,) = [a for a, b in edges if b == multicast]
+    assert combinators(nodes[states]) == ["ext:GratingStates"]
+    (source,) = [a for a, b in edges if b == states]
+    assert nodes[source].get(XSI) == "SubscribeSubject" and nodes[source].findtext(W + "Name") == "TrialEvents"
+    assert not re.search(r"<(?:rx:)?Name>Grating\w", TEXT)

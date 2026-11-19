@@ -93,8 +93,15 @@ public class StimulusFrame
     public int Bin;              // the tone file's row
     public double ToneGain;      // the trial's auditoryAmplitude, or 0 when switched off (StimulusStateRow.auditoryAmplitude)
     public int SpeakerChannel;   // the one speaker the pip plays on; Trial.AllSpeakersChannel every speaker, -1 none (ToneGain 0)
-    public double GratingOpacity; // 1, or 0 when switched off (StimulusStateRow.visualContrast) or at contrast 0
-    public double GratingContrast; // the trial's visualContrast
+    public GratingState Grating; // what the grating shows (GratingStates)
+}
+
+/// <summary>What the grating shows: Display maps all three onto DrawGratings at once (the Grating subject).</summary>
+public class GratingState
+{
+    public double SpatialFrequencyCpd; // the pip's StimulusStateRow.visualSpatialFrequencyCpd
+    public double Opacity;             // 1, or 0 when switched off (StimulusStateRow.visualContrast), at contrast 0 or after the outcome
+    public double Contrast;            // the trial's visualContrast
 }
 
 /// <summary>The pips as the mixer plays them: each equalised for every rig.yml speaker, with its sync copy, at amplitude 1
@@ -198,6 +205,26 @@ public class CreateStimulusStateRow
     public IObservable<Timestamped<StimulusStateRow>> Process(IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> source)
     {
         return source.Where(e => e.Kind == TrialEventKind.Update).Select(e => Timestamped.Create(e.Update.Row, e.Seconds));
+    }
+}
+
+[Combinator]
+[Description("The grating's state from the trial events (the Grating subject): each pip's (an Update event) as it comes, and at each Outcome the last pip's at opacity 0, hiding the grating until the next trial's first pip.")]
+[WorkflowElementCategory(ElementCategory.Transform)]
+public class GratingStates
+{
+    public IObservable<GratingState> Process(IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> source)
+    {
+        return Observable.Defer(() =>
+        {
+            GratingState last = null;
+            return source.Select(e =>
+            {
+                if (e.Kind == TrialEventKind.Update) return last = e.Update.Grating;
+                if (e.Kind == TrialEventKind.Outcome && last != null) return new GratingState { SpatialFrequencyCpd = last.SpatialFrequencyCpd, Opacity = 0, Contrast = last.Contrast };
+                return null;
+            }).Where(g => g != null);
+        });
     }
 }
 
