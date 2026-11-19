@@ -84,7 +84,6 @@ public class Trial : IZapitTrial
     public int laserCondition;          // 0 without optogenetics
     public bool laserOn;
     public double laserPowerMw;         // 0 with the laser off
-    public double laserMaxSeconds;      // the workflow's wall-clock backstop (LaserBackstop); the loop's LaserCap is TrialRules.Laser's
     internal UclOpenCoenDomeNavigationTaskParameters values;  // its combination's values, which the rules read per trial
 }
 
@@ -496,9 +495,7 @@ public class TrialDraw
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
             var opto = p.Optogenetics;
             ZapitTrial.Draw(random, t.trialNumber, conditionCount, opto.TrialsBeforeLaser, opto.LaserOnProbability, opto.LaserPowerMw.Value,
-                out t.laserCondition, out t.laserOn, out t.laserPowerMw);
-            t.laserMaxSeconds = task.Optogenetics.LaserMaxSeconds;
-        }
+                out t.laserCondition, out t.laserOn, out t.laserPowerMw);        }
         return t;
     }
 

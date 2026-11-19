@@ -346,7 +346,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, step 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating (GratingStates, which hides it at the Outcome); Outcome (OpenRigs.Trials TrialOutcomeEffects) writes the trial row, rewards (RewardRequests, the left valve) and plays the reward tone (PlayRewardTone) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, step 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); OpenRigs.Trials ZapitTrials, in an optogenetics experiment only, sends Zapit the trial's condition at Arm (laser-off trials at 0 mW), raises the ZapitTrigger line at the Trigger, laserToStimulusSeconds before the first pip (after it if negative; on a software-triggered rig it sends the StartStimulus then), stops the laser at the outcome or its cap and clears the line at TriggerOff; RunTrials stops the task if Zapit has not answered by the Trigger; each Update (a pip) plays the pip and sets the grating (GratingStates, which hides it at the Outcome); Outcome (OpenRigs.Trials TrialOutcomeEffects) writes the trial row, rewards (RewardRequests, the left valve) and plays the reward tone (PlayRewardTone) or plays the penalty sound (PlayPenaltySound); TriggerOff comes triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="MemberSelector">
@@ -374,168 +374,8 @@
             <Expression xsi:type="SubscribeSubject">
               <Name>TrialRules</Name>
             </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>Optogenetics?</Name>
-              <Description>An optogenetics experiment: the rules have a laser (optogenetics.enabled).</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Laser != null</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="rx:SelectMany">
-              <Name>Zapit</Name>
-              <Description>Once at Go, in an optogenetics experiment (the rules have a laser), so a task without Zapit needs no rig.yml zapit block: each trial's StartStimulus (ArmZapit: its condition, laser on with the task's power or off at 0 mW, continuous until StopZapit; at Arm on a hardware-triggered rig, else at the Trigger) and the laser's stop (LaserOnUntilOutcome).</Description>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>TrialEvents</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="trl:PickTrialEvents">
-                      <trl:Kind>Arm</trl:Kind>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="MemberSelector">
-                    <Selector>Trial</Selector>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>TrialEvents</Name>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Combinator xsi:type="trl:PickTrialEvents">
-                      <trl:Kind>Trigger</trl:Kind>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="MemberSelector">
-                    <Selector>Trial</Selector>
-                  </Expression>
-                  <Expression xsi:type="SubscribeSubject">
-                    <Name>RigConfigs</Name>
-                  </Expression>
-                  <Expression xsi:type="PropertyMapping">
-                    <PropertyMappings>
-                      <Property Name="HardwareTriggered" Selector="Zapit.HardwareTriggered" />
-                    </PropertyMappings>
-                  </Expression>
-                  <Expression xsi:type="Combinator">
-                    <Name>ArmZapit</Name>
-                    <Description>The trial's StartStimulus (lib-open-rigs' ZapitTrialCommand: its condition, laser on with the task's power or off at 0 mW, continuous until StopZapit). On a hardware-triggered rig (rig.yml's zapit.hardwareTriggered) sent at the trial's Arm event, during the interval; without, Zapit starts the laser on receipt, so it is sent at the trigger.</Description>
-                    <Combinator xsi:type="trl:ZapitTrialCommand">
-                      <trl:HardwareTriggered>false</trl:HardwareTriggered>
-                      <trl:DurationSeconds>0</trl:DurationSeconds>
-                    </Combinator>
-                  </Expression>
-                  <Expression xsi:type="MulticastSubject">
-                    <Name>ZapitCommands</Name>
-                  </Expression>
-                  <Expression xsi:type="rx:SelectMany">
-                    <Name>LaserOnUntilOutcome</Name>
-                    <Description>From the trigger, stops Zapit once per optogenetics trial: at the outcome, at laserMaxSeconds on the Harp clock (LaserCap), or at laserMaxSeconds on the wall clock (LaserBackstop), should the board stall (the one wall-clock wait in TaskLogic). A trial that ends before its trigger has no laser; the next StartStimulus disarms it.</Description>
-                    <Workflow>
-                      <Nodes>
-                        <Expression xsi:type="WorkflowInput">
-                          <Name>Source1</Name>
-                        </Expression>
-                        <Expression xsi:type="SubscribeSubject">
-                          <Name>TrialEvents</Name>
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="trl:PickTrialEvents">
-                            <trl:Kind>Outcome</trl:Kind>
-                          </Combinator>
-                        </Expression>
-                        <Expression xsi:type="SubscribeSubject">
-                          <Name>TrialEvents</Name>
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="trl:PickTrialEvents">
-                            <trl:Kind>LaserCap</trl:Kind>
-                          </Combinator>
-                        </Expression>
-                        <Expression xsi:type="scr:ExpressionTransform">
-                          <scr:Name>LaserMax</scr:Name>
-                          <scr:Expression>TimeSpan.FromSeconds(Trial.laserMaxSeconds)</scr:Expression>
-                        </Expression>
-                        <Expression xsi:type="PropertyMapping">
-                          <PropertyMappings>
-                            <Property Name="DueTime" />
-                          </PropertyMappings>
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Name>LaserBackstop</Name>
-                          <Description>Stops Zapit laserMaxSeconds after the trigger on the computer's clock, should the Harp board stall so that LaserCap never comes: the one wall-clock wait in TaskLogic. It logs nothing itself; whichever of the three comes first stops the laser.</Description>
-                          <Combinator xsi:type="rx:Timer">
-                            <rx:DueTime>PT12.5S</rx:DueTime>
-                          </Combinator>
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="rx:Merge" />
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="rx:Take">
-                            <rx:Count>1</rx:Count>
-                          </Combinator>
-                        </Expression>
-                        <Expression xsi:type="Combinator">
-                          <Combinator xsi:type="zap:StopZapit" />
-                        </Expression>
-                        <Expression xsi:type="MulticastSubject">
-                          <Name>ZapitCommands</Name>
-                        </Expression>
-                        <Expression xsi:type="WorkflowOutput" />
-                        <Expression xsi:type="Unit" />
-                        <Expression xsi:type="Unit" />
-                        <Expression xsi:type="Unit" />
-                      </Nodes>
-                      <Edges>
-                        <Edge From="1" To="2" Label="Source1" />
-                        <Edge From="3" To="4" Label="Source1" />
-                        <Edge From="0" To="5" Label="Source1" />
-                        <Edge From="5" To="6" Label="Source1" />
-                        <Edge From="6" To="7" Label="Source1" />
-                        <Edge From="2" To="13" Label="Source1" />
-                        <Edge From="4" To="14" Label="Source1" />
-                        <Edge From="7" To="15" Label="Source1" />
-                        <Edge From="13" To="8" Label="Source1" />
-                        <Edge From="14" To="8" Label="Source2" />
-                        <Edge From="15" To="8" Label="Source3" />
-                        <Edge From="8" To="9" Label="Source1" />
-                        <Edge From="9" To="10" Label="Source1" />
-                        <Edge From="10" To="11" Label="Source1" />
-                        <Edge From="11" To="12" Label="Source1" />
-                      </Edges>
-                    </Workflow>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="1" To="2" Label="Source1" />
-                  <Edge From="2" To="3" Label="Source1" />
-                  <Edge From="4" To="5" Label="Source1" />
-                  <Edge From="5" To="6" Label="Source1" />
-                  <Edge From="7" To="8" Label="Source1" />
-                  <Edge From="3" To="9" Label="Source1" />
-                  <Edge From="6" To="9" Label="Source2" />
-                  <Edge From="8" To="9" Label="Source3" />
-                  <Edge From="9" To="10" Label="Source1" />
-                  <Edge From="5" To="11" Label="Source1" />
-                  <Edge From="10" To="12" Label="Source1" />
-                </Edges>
-              </Workflow>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Trials:ZapitTrials.bonsai">
+              <Description>Zapit's trials from TrialRules, in an optogenetics experiment only (the rules' Laser, LaserTiming.UntilOutcome): each trial's StartStimulus (laser-off trials at 0 mW) at Arm on a hardware-triggered rig, else at the Trigger; the laser stopped once per trial at its outcome, its LaserCap (laserMaxSeconds on the Harp clock) or LaserBackstop (laserMaxSeconds on the computer's clock, should the board stall: the one wall-clock wait); the ZapitTrigger line raised at each Trigger and cleared at each TriggerOff.</Description>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>TrialEvents</Name>
@@ -550,10 +390,6 @@
             </Expression>
             <Expression xsi:type="MulticastSubject">
               <Name>Trial</Name>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:SetZapitTriggerLine.bonsai">
-              <Set>true</Set>
-              <BoardCommandsSubjectName>BehaviorBoard-Main.Commands</BoardCommandsSubjectName>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>TrialEvents</Name>
@@ -622,26 +458,6 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="trl:PickTrialEvents">
-                <trl:Kind>TriggerOff</trl:Kind>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:SetZapitTriggerLine.bonsai">
-              <Set>false</Set>
-              <BoardCommandsSubjectName>BehaviorBoard-Main.Commands</BoardCommandsSubjectName>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TrialEvents</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="trl:PickTrialEvents">
-                <trl:Kind>Trigger</trl:Kind>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TrialEvents</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="trl:PickTrialEvents">
                 <trl:Kind>Start</trl:Kind>
               </Combinator>
             </Expression>
@@ -689,44 +505,39 @@
             <Edge From="1" To="5" Label="Source2" />
             <Edge From="2" To="5" Label="Source3" />
             <Edge From="3" To="5" Label="Source4" />
-            <Edge From="44" To="5" Label="Source5" />
+            <Edge From="37" To="5" Label="Source5" />
             <Edge From="4" To="5" Label="Source6" />
             <Edge From="5" To="6" Label="Source1" />
-            <Edge From="10" To="11" Label="Source1" />
-            <Edge From="33" To="14" Label="Source1" />
-            <Edge From="15" To="16" Label="Source1" />
-            <Edge From="16" To="18" Label="Source1" />
-            <Edge From="17" To="18" Label="Source2" />
-            <Edge From="18" To="19" Label="Source1" />
+            <Edge From="9" To="10" Label="Source1" />
+            <Edge From="13" To="14" Label="Source1" />
+            <Edge From="14" To="16" Label="Source1" />
+            <Edge From="15" To="16" Label="Source2" />
+            <Edge From="16" To="17" Label="Source1" />
+            <Edge From="17" To="18" Label="Source1" />
+            <Edge From="14" To="19" Label="Source1" />
             <Edge From="19" To="20" Label="Source1" />
-            <Edge From="16" To="21" Label="Source1" />
             <Edge From="21" To="22" Label="Source1" />
-            <Edge From="23" To="24" Label="Source1" />
-            <Edge From="29" To="30" Label="Source1" />
-            <Edge From="30" To="31" Label="Source1" />
-            <Edge From="32" To="33" Label="Source1" />
+            <Edge From="27" To="28" Label="Source1" />
+            <Edge From="28" To="29" Label="Source1" />
+            <Edge From="29" To="40" Label="Source1" />
+            <Edge From="10" To="11" Label="Source1" />
+            <Edge From="11" To="12" Label="Source1" />
+            <Edge From="31" To="34" Label="Source1" />
+            <Edge From="32" To="34" Label="Source2" />
+            <Edge From="33" To="34" Label="Source3" />
             <Edge From="34" To="35" Label="Source1" />
             <Edge From="35" To="36" Label="Source1" />
-            <Edge From="36" To="47" Label="Source1" />
-            <Edge From="11" To="12" Label="Source1" />
-            <Edge From="12" To="13" Label="Source1" />
-            <Edge From="38" To="41" Label="Source1" />
-            <Edge From="39" To="41" Label="Source2" />
-            <Edge From="40" To="41" Label="Source3" />
-            <Edge From="41" To="42" Label="Source1" />
-            <Edge From="42" To="43" Label="Source1" />
-            <Edge From="1" To="43" Label="Source2" />
-            <Edge From="43" To="0" Label="Source1" />
+            <Edge From="1" To="36" Label="Source2" />
+            <Edge From="36" To="0" Label="Source1" />
             <Edge From="7" To="8" Label="Source1" />
-            <Edge From="8" To="9" Label="Source1" />
-            <Edge From="15" To="45" Label="Source1" />
-            <Edge From="45" To="46" Label="Source1" />
-            <Edge From="38" To="36" Label="Source2" />
-            <Edge From="47" To="37" Label="Source1" />
+            <Edge From="13" To="38" Label="Source1" />
+            <Edge From="38" To="39" Label="Source1" />
+            <Edge From="31" To="29" Label="Source2" />
+            <Edge From="40" To="30" Label="Source1" />
+            <Edge From="22" To="23" Label="Source1" />
+            <Edge From="23" To="24" Label="Source1" />
             <Edge From="24" To="25" Label="Source1" />
             <Edge From="25" To="26" Label="Source1" />
-            <Edge From="26" To="27" Label="Source1" />
-            <Edge From="27" To="28" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

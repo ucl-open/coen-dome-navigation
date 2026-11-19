@@ -18,6 +18,7 @@ TEXT = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
 MAIN = ET.fromstring(TEXT.encode("utf-8"))
 OUTCOME_EFFECTS = "OpenRigs.Trials:TrialOutcomeEffects.bonsai"
 PLAY_REWARD_TONE = "OpenRigs.Audio:PlayRewardTone.bonsai"
+ZAPIT_TRIALS = "OpenRigs.Trials:ZapitTrials.bonsai"
 
 
 def group(name: str) -> ET.Element:
@@ -29,9 +30,8 @@ def combinators(element: ET.Element) -> list[str]:
 
 
 def test_no_wall_clock_wait_inside_task_logic():
-    # No wall-clock wait inside TaskLogic but the laser cap's backstop (LaserBackstop), should the board stall.
-    assert lint.wall_clock_waits(WORKFLOW, allowed=["LaserOnUntilOutcome"]) == []
-    assert combinators(group("LaserOnUntilOutcome")).count("rx:Timer") == 1
+    # No wall-clock wait inside TaskLogic: the laser cap's backstop (LaserBackstop), should the board stall, is ZapitTrials'.
+    assert lint.wall_clock_waits(WORKFLOW) == []
     assert "ext:RunTrials" in combinators(group("TaskLogic"))
 
 
@@ -117,37 +117,19 @@ def _picked(nodes: list[ET.Element], i: int) -> str | None:
     return next(nodes[i].iter(TRL_KIND)).text if lint.kind(nodes[i]) == "trl:PickTrialEvents" else None
 
 
-def test_the_trigger_line_rises_at_the_trigger_and_falls_at_trigger_off():
-    # BACKLOG (Decided): the trigger line and the masking LEDs on it only in optogenetics experiments:
-    # TrialLoop gives Trigger and TriggerOff only for a laser trial (tests\Extensions.Tests), each straight to the line.
+def test_zapit_s_trials_are_the_shared_include_fed_the_rules():
+    # OpenRigs.Trials ZapitTrials, once, given TrialRules: in an optogenetics experiment only (the rules' Laser, so a rig.yml
+    # without a zapit block works) each trial's StartStimulus (at Arm on a hardware-triggered rig, rig.yml's
+    # zapit.hardwareTriggered through the rules' LaserTiming, else at the Trigger), the laser's stop at the outcome, LaserCap or
+    # LaserBackstop, and the ZapitTrigger line raised at Trigger and cleared at TriggerOff. None of it is built here.
     nodes, edges = _scope(group("TaskLogic"))
-    lines = [i for i, n in enumerate(nodes) if n.get("Path") == lint.SET_ZAPIT_TRIGGER_LINE]
-    assert [nodes[i].findtext(W + "Set") for i in lines] == ["true", "false"]
-    assert [[_picked(nodes, a) for a, b in edges if b == line] for line in lines] == [["Trigger"], ["TriggerOff"]]
-
-
-def test_the_trigger_event_raises_the_line_and_starts_a_software_triggered_zapit():
-    # The trigger comes laserToStimulusSeconds before the first pip (TrialLoop's Trigger), not at Start;
-    # its trial is ArmZapit's second input, sent there on a rig without hardware triggering.
-    nodes, edges = _scope(group("Zapit"))
-    (trigger,) = [i for i in range(len(nodes)) if _picked(nodes, i) == "Trigger"]
-    arm = next(i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "ArmZapit")
-    inputs = {e.get("Label"): int(e.get("From")) for e in group("Zapit").find(W + "Workflow").find(W + "Edges") if int(e.get("To")) == arm}
-    assert trigger in _upstream(edges, inputs["Source2"]) and trigger not in _upstream(edges, inputs["Source1"])
-
-
-def test_zapit_runs_only_in_an_optogenetics_experiment_so_a_rig_yml_without_a_zapit_block_works():
-    # A task with optogenetics.enabled false on a rig.yml with no zapit block must build and run: the arm, the laser's stop and the
-    # rig.yml HardwareTriggered mapping (Zapit is null there) sit under the Optogenetics? gate, as in coen-dome-decision-making.
-    nodes, edges = _scope(group("TaskLogic"))
-    (gate,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "Optogenetics?"]
-    (zapit,) = [i for i, n in enumerate(nodes) if n.findtext(W + "Name") == "Zapit"]
-    assert zapit in {b for a, b in edges if a == gate}
-    outer = {n.findtext(W + "Name") for n in nodes}
-    assert not outer & {"ArmZapit", "LaserOnUntilOutcome"}
-    assert not [n for n in nodes if n.get(XSI) == "PropertyMapping" and "Zapit.HardwareTriggered" in ET.tostring(n, encoding="unicode")]
-    inner = {n.findtext(W + "Name") for n in group("Zapit").iter(W + "Expression")}
-    assert {"ArmZapit", "LaserOnUntilOutcome"} <= inner
+    (zapit,) = [i for i, n in enumerate(nodes) if n.get("Path") == ZAPIT_TRIALS]
+    assert [nodes[a].findtext(W + "Name") for a, b in edges if b == zapit] == ["TrialRules"]
+    assert TEXT.count(f'Path="{ZAPIT_TRIALS}"') == 1
+    for built in ('"trl:ZapitTrialCommand"', '"zap:StopZapit"', f'"{lint.SET_ZAPIT_TRIGGER_LINE}"', "<Name>Optogenetics?<", "<Name>LaserBackstop<"):
+        assert built not in TEXT, built
+    logic = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
+    assert "x.Item2.Zapit != null && x.Item2.Zapit.HardwareTriggered" in logic and "LaserTiming.UntilOutcome(hardwareTriggered," in logic
 
 
 def test_the_trial_loop_starts_on_the_clock_thread():
@@ -162,12 +144,6 @@ def test_the_trial_loop_starts_on_the_clock_thread():
     (trial,) = [i for i, n in enumerate(nodes) if n.get(XSI) == "MulticastSubject" and n.findtext(W + "Name") == "Trial"]
     assert [_picked(nodes, a) for a in _upstream(edges, trial) if _picked(nodes, a)] == ["Start"]   # the trial published at its Start
     assert "rx:Delay" not in TEXT
-
-
-def test_zapit_s_hardware_triggering_is_rig_yml_s():
-    # lib-open-rigs' ZapitTrialCommand, its HardwareTriggered mapped from rig.yml's zapit.hardwareTriggered, never typed in.
-    assert TEXT.count('"trl:ZapitTrialCommand"') == 1 and "ext:ZapitTrialCommand" not in TEXT
-    assert '<Property Name="HardwareTriggered" Selector="Zapit.HardwareTriggered" />' in TEXT and "HardwareTriggered>true<" not in TEXT
 
 
 AUD = "{clr-namespace:OpenRigs.Audio;assembly=OpenRigs.Audio}"
