@@ -117,22 +117,22 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     int nextStep, wrongLicks;
     double auditoryOffPositionCm, visualOffPositionCm;  // where each switched off this trial; NaN: it never did
 
-    public TrialRules(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount, EqualisedSpeakerArray speakers = null)
+    public TrialRules(string taskText, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount, EqualisedSpeakerArray speakers = null)
     {
-        this.task = task;
         this.sweep = sweep;
-        draw = new TrialDraw(task, sweep, zapitConditionCount, speakers);
+        draw = new TrialDraw(taskText, sweep, zapitConditionCount, speakers);
+        task = draw.Task;
         var opto = task.Optogenetics;
         // Every StartStimulus continuous: the laser on from the trigger until the outcome or LaserCap, the trigger line
         // (and the masking light on it) held triggerHoldSeconds past the outcome, the next trial armed once it falls.
         laser = opto.Enabled ? LaserTiming.UntilOutcome(hardwareTriggered, opto.TriggerHoldSeconds, opto.LaserMaxSeconds) : null;
     }
 
-    /// <summary>The rules for a task file with the sweep, Zapit's hardware triggering and rig.yml's speakerArray (null: none,
-    /// so only initialAzimuthsDeg "all"); throws naming every problem (TrialDraw.CheckTask).</summary>
-    public static TrialRules Create(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount, EqualisedSpeakerArray speakers = null)
+    /// <summary>The rules for a task file's text (TaskText) with the sweep, Zapit's hardware triggering and rig.yml's speakerArray
+    /// (null: none, so only initialAzimuthsDeg "all"); throws naming every problem (TrialDraw.CheckTask).</summary>
+    public static TrialRules Create(string taskText, Sweep sweep, bool hardwareTriggered, Func<string, int> zapitConditionCount, EqualisedSpeakerArray speakers = null)
     {
-        return new TrialRules(task, sweep, hardwareTriggered, zapitConditionCount, speakers);
+        return new TrialRules(taskText, sweep, hardwareTriggered, zapitConditionCount, speakers);
     }
 
     /// <summary>The stage as code-version (S03A-k7f2) from the task file's curriculum, which the check has found well formed.</summary>
@@ -308,21 +308,9 @@ public class TrialDraw
     /// <summary>Each trial condition as drawn (OpenRigs.Trials TrialConditions.Build, the Python build's rule): its set and
     /// pairs over the task's text, every combination read back, each combination's Id its row in Settings_Combinations. Adds a
     /// problem for each condition that cannot be built, and returns null then.</summary>
-    public static List<TrialConditionDraw> BuildConditions(UclOpenCoenDomeNavigationTaskParameters task, List<string> problems)
+    public static List<TrialConditionDraw> BuildConditions(string taskText, UclOpenCoenDomeNavigationTaskParameters task, List<string> problems)
     {
-        // The typed task's text, but a condition with no set (null) is written without one, as a task file leaves it out:
-        // the build refuses a set that is not a map, and null is not one.
-        var stream = TaskYaml.Load(TaskYaml.Text(new UclOpenCoenDomeNavigationTaskLogic { TaskParameters = task }));
-        var conditions = TaskYaml.Parameters(stream).Children[new YamlScalarNode("trialConditions")] as YamlSequenceNode;
-        foreach (var condition in conditions == null ? new List<YamlNode>() : conditions.Children)
-        {
-            var map = condition as YamlMappingNode;
-            YamlNode set;
-            if (map != null && map.Children.TryGetValue(new YamlScalarNode("set"), out set) && set is YamlScalarNode) map.Children.Remove(new YamlScalarNode("set"));
-        }
-        var text = new StringWriter();
-        stream.Save(text, false);
-        return TrialConditions.Build(text.ToString(), task, t => TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(t).TaskParameters, Schema, problems);
+        return TrialConditions.Build(taskText, task, t => TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(t).TaskParameters, Schema, problems);
     }
 
     readonly UclOpenCoenDomeNavigationTaskParameters task;
@@ -335,11 +323,11 @@ public class TrialDraw
     /// <summary>The seed the random stream started from: the task's rngSeed, or one drawn when it is null.</summary>
     public int Seed { get; private set; }
 
-    public TrialDraw(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, Func<string, int> zapitConditionCount, EqualisedSpeakerArray speakers = null)
+    /// <summary>The draw for the task file's text (TaskText), checked by CheckTask.</summary>
+    public TrialDraw(string taskText, Sweep sweep, Func<string, int> zapitConditionCount, EqualisedSpeakerArray speakers = null)
     {
-        this.task = task;
         this.speakers = speakers;
-        conditions = CheckTask(task, sweep, speakers);
+        conditions = CheckTask(taskText, sweep, speakers, out task);
         var opto = task.Optogenetics;
         if (opto.Enabled) conditionCount = zapitConditionCount != null ? zapitConditionCount(opto.ZapitConditionsPath) : ZapitConditions.Check(opto.ZapitConditionsPath);
         Seed = RngSeed.Resolve(task.RngSeed);
@@ -349,17 +337,21 @@ public class TrialDraw
     /// <summary>The conditions as built at Go, in trialConditions' order.</summary>
     public IList<TrialConditionDraw> Conditions { get { return conditions; } }
 
-    /// <summary>Checks the task can be run with the sweep and gives its conditions as drawn (BuildConditions): its curriculum (the
-    /// only record of the stage, filled by rig-control) is present and well formed, and what pydantic would check (Bonsai reads
-    /// the task file without it) and what only the sweep can say holds on the task and every combination of every condition;
-    /// throws naming every problem.</summary>
-    public static List<TrialConditionDraw> CheckTask(UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, EqualisedSpeakerArray speakers = null)
+    /// <summary>The task as read from its text (ReadTask's reader).</summary>
+    public UclOpenCoenDomeNavigationTaskParameters Task { get { return task; } }
+
+    /// <summary>Checks the task file's text can be run with the sweep and gives the task as read (ReadTask's reader) and its
+    /// conditions as drawn (BuildConditions, over the text as written): its curriculum (the only record of the stage, filled by
+    /// rig-control) is present and well formed, and what pydantic would check (Bonsai reads the task file without it) and what
+    /// only the sweep can say holds on the task and every combination of every condition; throws naming every problem.</summary>
+    public static List<TrialConditionDraw> CheckTask(string taskText, Sweep sweep, EqualisedSpeakerArray speakers, out UclOpenCoenDomeNavigationTaskParameters task)
     {
+        task = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(taskText).TaskParameters;
         var curriculumProblem = CurriculumCheck.Problem(task.Curriculum);
         if (curriculumProblem != null) throw new InvalidOperationException("The task file's curriculum " + curriculumProblem + ": rig-control fills it from the Mouse Curriculum at launch.");
         var problems = new List<string>();
         Check(problems, task, sweep, speakers);
-        var built = problems.Count == 0 ? BuildConditions(task, problems) : null;
+        var built = problems.Count == 0 ? BuildConditions(taskText, task, problems) : null;
         if (built != null)
         {
             // Every combination of every condition, each problem named by its condition and picks.
@@ -535,13 +527,13 @@ public class ReadTask
 }
 
 [Combinator]
-[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (task file, rig.yml, sweep); rig.yml's speakerArray places initialAzimuthsDeg's nearest speaker. Stops the workflow on a task whose curriculum is empty or malformed, a trial condition that cannot be built (its set and pairs over the task's values, every combination), a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
+[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (the task file's text, TaskText; rig.yml; sweep); the task is read as ReadTask reads it and its conditions built over the text as written; rig.yml's speakerArray places initialAzimuthsDeg's nearest speaker. Stops the workflow on a task whose curriculum is empty or malformed, a trial condition that cannot be built (its set and pairs over the task's values, every combination), a reward zone outside the sweep or the optogenetics rules. A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CheckTaskAtGo
 {
-    public IObservable<TrialRules> Process(IObservable<Tuple<UclOpenCoenDomeNavigationTaskLogic, LabRig, Sweep>> source)
+    public IObservable<TrialRules> Process(IObservable<Tuple<string, LabRig, Sweep>> source)
     {
-        return source.Select(x => TrialRules.Create(x.Item1.TaskParameters, x.Item3, x.Item2.Zapit != null && x.Item2.Zapit.HardwareTriggered, null, x.Item2.SpeakerArray));
+        return source.Select(x => TrialRules.Create(x.Item1, x.Item3, x.Item2.Zapit != null && x.Item2.Zapit.HardwareTriggered, null, x.Item2.SpeakerArray));
     }
 }
 

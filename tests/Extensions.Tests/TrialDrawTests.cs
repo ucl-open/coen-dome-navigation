@@ -79,14 +79,32 @@ static class Fixture
         return global::Sweep.Load(Path.Combine(Repo(), "src", "sounds", "sweep.json"));
     }
 
+    /// <summary>The task's text as a task file has it (TaskText, which the rules read): a condition made with no set
+    /// written with an empty one.</summary>
+    public static string Text(UclOpenCoenDomeNavigationTaskParameters task)
+    {
+        foreach (var c in task.TrialConditions.Where(c => c.Set == null)) c.Set = new Dictionary<string, object>();
+        return TaskYaml.Text(new UclOpenCoenDomeNavigationTaskLogic { TaskParameters = task });
+    }
+
     public static TrialRules Setup(UclOpenCoenDomeNavigationTaskParameters task, bool hardware = true)
     {
-        return TrialRules.Create(task, Sweep(), hardware, path => 4, Speakers());
+        return Setup(Text(task), hardware);
+    }
+
+    public static TrialRules Setup(string taskText, bool hardware = true)
+    {
+        return TrialRules.Create(taskText, Sweep(), hardware, path => 4, Speakers());
     }
 
     public static TrialDraw Draw(UclOpenCoenDomeNavigationTaskParameters task, bool speakers = true)
     {
-        return new TrialDraw(task, Sweep(), path => 4, speakers ? Speakers() : null);
+        return Draw(Text(task), speakers);
+    }
+
+    public static TrialDraw Draw(string taskText, bool speakers = true)
+    {
+        return new TrialDraw(taskText, Sweep(), path => 4, speakers ? Speakers() : null);
     }
 
     /// <summary>rig.yml's speakerArray: left (-90 deg, channel 0), right (90, channel 1) and centre (0, channel 2), all at
@@ -162,7 +180,8 @@ public class TrialDrawTests
     {
         // As coen-dome-decision-making's, no public mutable fields, the checks in TrialDraw.CheckTask.
         Assert.AreEqual(0, typeof(TrialRules).GetFields(BindingFlags.Public | BindingFlags.Instance).Length);
-        TrialDraw.CheckTask(Fixture.Task(2), Fixture.Sweep(), Fixture.Speakers());
+        UclOpenCoenDomeNavigationTaskParameters read;
+        TrialDraw.CheckTask(Fixture.Text(Fixture.Task(2)), Fixture.Sweep(), Fixture.Speakers(), out read);
     }
 
     [TestMethod]
@@ -194,10 +213,10 @@ public class TrialDrawTests
     [TestMethod]
     public void ARigWithoutAZapitBlockMakesTheRulesWhenTheLaserIsOff()
     {
-        var logic = new UclOpenCoenDomeNavigationTaskLogic { TaskParameters = Fixture.Task() };
+        var text = Fixture.Text(Fixture.Task());
         var rig = new LabRig { SpeakerArray = Fixture.Speakers() };   // rig.yml with no zapit block: Zapit is null
         Assert.IsNull(rig.Zapit);
-        var rules = new CheckTaskAtGo().Process(Observable.Return(Tuple.Create(logic, rig, Fixture.Sweep()))).Wait();
+        var rules = new CheckTaskAtGo().Process(Observable.Return(Tuple.Create(text, rig, Fixture.Sweep()))).Wait();
         Assert.IsNull(rules.Laser);
     }
 
@@ -412,7 +431,7 @@ public class TrialDrawTests
             CollectionAssert.AreEqual(new[] { "visual:2", "auditory:1", "audiovisualCoherent:0" }, task.TrialConditions.Select(c => Name(c) + ":" + c.Weight).ToArray());
             Assert.AreEqual(0, ((System.Collections.IDictionary)task.TrialConditions[2].Set).Count, "set: {} reads as an empty map");
             var problems = new List<string>();
-            var built = TrialDraw.BuildConditions(task, problems);
+            var built = TrialDraw.BuildConditions(text, task, problems);
             Assert.AreEqual(0, problems.Count, string.Join("; ", problems));
             // visual: the grating at the task's contrast, no tone; auditory: the tone at amplitude 1, no grating; both.
             // Each expands into the task's 3 track lengths times its 2 stimulus-off fractions.

@@ -21,33 +21,34 @@ public class HandoverTests
     const int Draws = 5000;   // trials drawn per file for the shares
     const int Run = 200;      // trials run through the loop per file
 
-    // Each golden file's name and task as ReadTask reads it, rngSeed set to 1 (app-rig-control leaves it null for the
-    // workflow to draw), with the file's conditions as written, read apart from the draw's own reader: (trialType, weight).
-    static List<Tuple<string, UclOpenCoenDomeNavigationTaskParameters, List<Tuple<string, int>>>> Goldens()
+    // Each golden file (OpenRigs.Trials GoldenTaskFiles: its text, rngSeed set to 1, as app-rig-control leaves it null for
+    // the workflow to draw), its task as ReadTask reads it, and its conditions as written, read apart from the draw's own
+    // reader: (trialType, weight).
+    class Golden
     {
-        var folder = Environment.GetEnvironmentVariable("HANDOVER_DIR");
-        if (string.IsNullOrEmpty(folder)) folder = Path.Combine(Fixture.Repo(), "tests", "fixtures", "handover");
-        var files = Directory.GetFiles(folder, "*.yml").OrderBy(f => f, StringComparer.Ordinal).ToList();
-        Assert.IsTrue(files.Count > 0, "no golden task files in " + folder);
-        return files.Select(f =>
+        public string Name, Text;
+        public UclOpenCoenDomeNavigationTaskParameters Task;
+        public List<Tuple<string, int>> Written;
+    }
+
+    static List<Golden> Goldens()
+    {
+        return GoldenTaskFiles.Read(Path.Combine(Fixture.Repo(), "tests", "fixtures", "handover")).Select(f =>
         {
-            var text = File.ReadAllText(f);
-            var task = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
-            Assert.IsNull(task.RngSeed, f);
-            task.RngSeed = 1;
             var stream = new YamlStream();
-            stream.Load(new StringReader(text));
+            stream.Load(new StringReader(f.Value));
             var root = (YamlMappingNode)((YamlMappingNode)stream.Documents[0].RootNode).Children[new YamlScalarNode("taskParameters")];
             var written = ((YamlSequenceNode)root.Children[new YamlScalarNode("trialConditions")]).Children.Cast<YamlMappingNode>().Select(c => Tuple.Create(
                 ((YamlScalarNode)c.Children[new YamlScalarNode("trialType")]).Value, int.Parse(((YamlScalarNode)c.Children[new YamlScalarNode("weight")]).Value))).ToList();
-            return Tuple.Create(Path.GetFileName(f), task, written);
+            return new Golden { Name = f.Key, Text = f.Value, Task = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(f.Value).TaskParameters, Written = written };
         }).ToList();
     }
 
-    static List<TrialConditionDraw> Built(string name, UclOpenCoenDomeNavigationTaskParameters task)
+    static List<TrialConditionDraw> Built(Golden golden)
     {
-        try { return TrialDraw.CheckTask(task, Fixture.Sweep(), Fixture.Speakers()); }
-        catch (InvalidOperationException e) { Assert.Fail(name + ": " + e.Message); return null; }
+        UclOpenCoenDomeNavigationTaskParameters read;
+        try { return TrialDraw.CheckTask(golden.Text, Fixture.Sweep(), Fixture.Speakers(), out read); }
+        catch (InvalidOperationException e) { Assert.Fail(golden.Name + ": " + e.Message); return null; }
     }
 
     [TestMethod]
@@ -55,9 +56,9 @@ public class HandoverTests
     {
         foreach (var golden in Goldens())
         {
-            var built = Built(golden.Item1, golden.Item2);
-            CollectionAssert.AreEqual(golden.Item3.Select(w => w.Item1).ToList(), built.Select(c => c.TrialType).ToList(), golden.Item1);
-            CollectionAssert.AreEqual(golden.Item3.Select(w => w.Item2).ToList(), built.Select(c => c.Weight).ToList(), golden.Item1);
+            var built = Built(golden);
+            CollectionAssert.AreEqual(golden.Written.Select(w => w.Item1).ToList(), built.Select(c => c.TrialType).ToList(), golden.Name);
+            CollectionAssert.AreEqual(golden.Written.Select(w => w.Item2).ToList(), built.Select(c => c.Weight).ToList(), golden.Name);
         }
     }
 
@@ -66,27 +67,17 @@ public class HandoverTests
     {
         foreach (var golden in Goldens())
         {
-            var built = Built(golden.Item1, golden.Item2);
-            var draw = Fixture.Draw(golden.Item2);
+            var built = Built(golden);
+            var draw = Fixture.Draw(golden.Text);
             var counts = new Dictionary<int, int>();
             for (int n = 0; n < Draws; n++)
             {
                 var t = draw.Next();
-                Check(golden.Item1, built, t.trialType, t.trialCondition, t.trialCombinationId, t.visualContrast, t.auditoryAmplitude, t.auditoryAzimuthDeg, t.trackLengthCm, t.wheelGain, t.rewardOfferedUl);
+                Check(golden.Name, built, t.trialType, t.trialCondition, t.trialCombinationId, t.visualContrast, t.auditoryAmplitude, t.auditoryAzimuthDeg, t.trackLengthCm, t.wheelGain, t.rewardOfferedUl);
                 counts[t.trialCombinationId] = (counts.ContainsKey(t.trialCombinationId) ? counts[t.trialCombinationId] : 0) + 1;
             }
-            double total = built.Sum(c => c.Weight);
-            for (int i = 0; i < built.Count; i++)
-            {
-                for (int k = 0; k < built[i].Combinations.Count; k++)
-                {
-                    // Each Settings_Combinations row at its condition's weight over the sum of weights over its number of combinations.
-                    var p = built[i].Weight / total / built[i].Combinations.Count;
-                    var key = built[i].Combinations[k].Id;
-                    var share = (counts.ContainsKey(key) ? counts[key] : 0) / (double)Draws;
-                    Assert.IsTrue(Math.Abs(share - p) <= 4.5 * Math.Sqrt(p * (1 - p) / Draws), string.Format("{0} {1}: share {2}, expected {3}", golden.Item1, built[i].Where + " " + built[i].Combinations[k].Picks, share, p));
-                }
-            }
+            var problems = GoldenTaskFiles.ShareProblems(golden.Name, built, counts, Draws);
+            Assert.AreEqual(0, problems.Count, string.Join("; ", problems));
         }
     }
 
@@ -118,8 +109,8 @@ public class HandoverTests
         // each row as LogTrials writes it.
         foreach (var golden in Goldens())
         {
-            var built = Built(golden.Item1, golden.Item2);
-            var rig = new Rig(Fixture.Setup(golden.Item2));
+            var built = Built(golden);
+            var rig = new Rig(Fixture.Setup(golden.Text));
             var mouse = new Random(1);
             var rows = new List<TrialRow>();
             var trials = new Dictionary<int, Trial>();
@@ -137,7 +128,7 @@ public class HandoverTests
             rig.Wheel(0);
             while (rows.Count < Run)
             {
-                Assert.IsTrue(rig.Now < Run * 60, golden.Item1 + ": the loop stalled at " + rows.Count + " rows");
+                Assert.IsTrue(rig.Now < Run * 60, golden.Name + ": the loop stalled at " + rows.Count + " rows");
                 rig.Until(rig.Now + 0.001);
                 if (running)
                 {
@@ -150,8 +141,8 @@ public class HandoverTests
             }
             foreach (var r in rows)
             {
-                Check(golden.Item1, built, r.trialType, r.trialCondition, r.trialCombinationId, r.visualContrast, r.auditoryAmplitude, r.auditoryAzimuthDeg, r.trackLengthCm, r.wheelGain, r.rewardOfferedUl);
-                Assert.AreEqual(trials[r.trialNumber].trialCombinationId, r.trialCombinationId, golden.Item1);
+                Check(golden.Name, built, r.trialType, r.trialCondition, r.trialCombinationId, r.visualContrast, r.auditoryAmplitude, r.auditoryAzimuthDeg, r.trackLengthCm, r.wheelGain, r.rewardOfferedUl);
+                Assert.AreEqual(trials[r.trialNumber].trialCombinationId, r.trialCombinationId, golden.Name);
             }
         }
     }
@@ -170,22 +161,22 @@ public class HandoverTests
         foreach (var golden in Goldens())
         {
             var allowed = new HashSet<string>(TaskSchema.ListFields);
-            foreach (var condition in golden.Item2.TrialConditions)
+            foreach (var condition in golden.Task.TrialConditions)
             {
                 var set = condition.Set as System.Collections.IDictionary;
                 if (set != null) foreach (var key in set.Keys) allowed.Add(key.ToString());
                 foreach (var group in condition.Pairs ?? new List<List<string>>()) foreach (var path in group) allowed.Add(path);
             }
-            var json = new TrialRules(golden.Item2, Fixture.Sweep(), true, path => 2, Fixture.Speakers()).CombinationsJson;
-            var built = Built(golden.Item1, golden.Item2);
-            var own = TaskYaml.Flatten(golden.Item2, TaskSchema.ListFields);
+            var json = new TrialRules(golden.Text, Fixture.Sweep(), true, path => 2, Fixture.Speakers()).CombinationsJson;
+            var built = Built(golden);
+            var own = TaskYaml.Flatten(golden.Task, TaskSchema.ListFields);
             var rows = (Newtonsoft.Json.Linq.JArray)Newtonsoft.Json.Linq.JObject.Parse(json)["rows"];
             var combinations = built.SelectMany((c, i) => c.Combinations.Select(m => Tuple.Create(i, c, m))).ToList();
-            Assert.AreEqual(combinations.Count, rows.Count, golden.Item1);
+            Assert.AreEqual(combinations.Count, rows.Count, golden.Name);
             for (int n = 0; n < rows.Count; n++)
             {
                 var row = rows[n];
-                var where = golden.Item1 + " row " + n;
+                var where = golden.Name + " row " + n;
                 Assert.AreEqual(n, (int)row["trialCombinationId"], where);
                 Assert.AreEqual(n, combinations[n].Item3.Id, where);
                 Assert.AreEqual(combinations[n].Item1, (int)row["trialCondition"], where);
@@ -201,10 +192,10 @@ public class HandoverTests
                 foreach (var path in expected.Keys.Where(k => !TaskSchema.SessionFields.Any(f => k == f || k.StartsWith(f + "."))))
                     Assert.IsTrue(Newtonsoft.Json.Linq.JToken.DeepEquals(expected[path], rebuilt[path]), where + ": " + path);
             }
-            var file = Path.Combine(folder, Path.ChangeExtension(golden.Item1, ".json"));
+            var file = Path.Combine(folder, Path.ChangeExtension(golden.Name, ".json"));
             if (regen) File.WriteAllText(file, json);
             Assert.IsTrue(File.Exists(file), file + " is missing: run the C# tests with COMBINATIONS_REGEN=1");
-            Assert.AreEqual(File.ReadAllText(file).Replace("\r\n", "\n"), json.Replace("\r\n", "\n"), golden.Item1 + ": Settings_Combinations differs from " + file + " (COMBINATIONS_REGEN=1 rewrites it)");
+            Assert.AreEqual(File.ReadAllText(file).Replace("\r\n", "\n"), json.Replace("\r\n", "\n"), golden.Name + ": Settings_Combinations differs from " + file + " (COMBINATIONS_REGEN=1 rewrites it)");
         }
     }
 }

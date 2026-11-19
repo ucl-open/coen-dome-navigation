@@ -366,7 +366,7 @@ def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
     assert "ExperimentGo" not in labels
     (setup,) = [i for i, n in enumerate(nodes) if "ext:CheckTaskAtGo" in combinators(n)]
     zip_ = next(a for a, b in edges if b == setup)
-    assert [nodes[a].findtext(W + "Name") for a, b in sorted(edges, key=lambda e: e[0]) if b == zip_] == ["TaskConfig", "RigConfigs", "Sweep"]
+    assert [nodes[a].findtext(W + "Name") for a, b in sorted(edges, key=lambda e: e[0]) if b == zip_] == ["TaskText", "RigConfigs", "Sweep"]
     assert "SweepFile" not in ET.tostring(nodes[setup], encoding="unicode")
     # The pips' reader takes its rate and its 50 ms pip's length from the sweep, not typed values.
     nodes, upstream = _audio_chain("StimulusSoundBuffers")
