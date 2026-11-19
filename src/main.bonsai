@@ -41,7 +41,7 @@
         <Commands />
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Start for the background noise and again at Go with the form's edits; from the editor, config\task-abstract-corridor.yml." />
+        <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Go with the form's edits; from the editor, config\task-abstract-corridor.yml." />
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:LaunchSettings.bonsai">
         <Description>Publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go (OpenRigs.Control).</Description>
@@ -50,7 +50,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskFile</Name>
-        <Description>Reads the task file (TaskPath) at Start into LaunchTaskConfig, as rig-control wrote it at launch, for the background noise, which plays from Ready, and src\sounds\sweep.json into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskText (OpenRigs.Core TaskFileText: the file's text) and TaskConfig (each read by ReadTask, which keeps a trial condition's set values as numbers), and checks TaskText with rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create, the conditions built over the text as written: a curriculum empty or malformed, a trial condition that cannot be built, its set and pairs over the task's values in every combination, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). BackgroundNoise stops the workflow at Go if backgroundNoise was changed after launch, as the noise already plays at the launch's level. A real mouse on a rig without hardware triggering is ConnectForTask's refusal.</Description>
+        <Description>Reads src\sounds\sweep.json at Start into Sweep (LoadSweep), which stops the workflow at Start naming the file when it is missing or naming both rates when its waveforms' rate is not rig.yml's speakerArray.device.sampleRate; at Go, with the form's edits, into TaskText (OpenRigs.Core TaskFileText: the file's text) and TaskConfig (each read by ReadTask, which keeps a trial condition's set values as numbers), and checks TaskText with rig.yml and the sweep into TrialRules (CheckTaskAtGo, TrialRules.Create, the conditions built over the text as written: a curriculum empty or malformed, a trial condition that cannot be built, its set and pairs over the task's values in every combination, a reward zone outside the sweep, the optogenetics rules, the Zapit conditions file). A real mouse on a rig without hardware triggering is ConnectForTask's refusal.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Core:TaskFileText.bonsai" />
@@ -59,18 +59,6 @@
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
               <Name>TaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TaskPath</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="core:ReadTextFile" />
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="ext:ReadTask" />
-            </Expression>
-            <Expression xsi:type="rx:AsyncSubject">
-              <Name>LaunchTaskConfig</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>RigConfigs</Name>
@@ -125,20 +113,17 @@
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
             <Edge From="1" To="2" Label="Source1" />
+            <Edge From="7" To="10" Label="Source1" />
+            <Edge From="8" To="10" Label="Source2" />
+            <Edge From="9" To="10" Label="Source3" />
+            <Edge From="10" To="11" Label="Source1" />
+            <Edge From="11" To="12" Label="Source1" />
+            <Edge From="13" To="14" Label="Source1" />
+            <Edge From="14" To="15" Label="Source1" />
+            <Edge From="15" To="16" Label="Source1" />
             <Edge From="3" To="4" Label="Source1" />
             <Edge From="4" To="5" Label="Source1" />
             <Edge From="5" To="6" Label="Source1" />
-            <Edge From="11" To="14" Label="Source1" />
-            <Edge From="12" To="14" Label="Source2" />
-            <Edge From="13" To="14" Label="Source3" />
-            <Edge From="14" To="15" Label="Source1" />
-            <Edge From="15" To="16" Label="Source1" />
-            <Edge From="17" To="18" Label="Source1" />
-            <Edge From="18" To="19" Label="Source1" />
-            <Edge From="19" To="20" Label="Source1" />
-            <Edge From="7" To="8" Label="Source1" />
-            <Edge From="8" To="9" Label="Source1" />
-            <Edge From="9" To="10" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -286,7 +271,7 @@
         </Workflow>
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:BackgroundNoise.bonsai">
-        <Description>The background noise, the lab's one file, rig.yml's speakerArray.backgroundNoise (60 s of white noise, 32-bit float), unequalised on every speaker at the launched task file's backgroundNoise.levelDbfs from Ready; Go stops if the task file changed backgroundNoise after launch.</Description>
+        <Description>The background noise, the lab's one file, rig.yml's speakerArray.backgroundNoise (60 s of white noise, 32-bit float), unequalised on every speaker at the lab's -60 dBFS RMS from Ready (no task setting).</Description>
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ConnectForTask.bonsai" />
       <Expression xsi:type="GroupWorkflow">

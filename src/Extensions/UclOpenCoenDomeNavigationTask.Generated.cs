@@ -156,12 +156,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -58.1. The workflow stops at Go if any peak at the loudest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
+        /// The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -55. The workflow stops at Go if any peak at the loudest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute(@"The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -58.1. The workflow stops at Go if any peak at the loudest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
+        [System.ComponentModel.DescriptionAttribute(@"The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -55. The workflow stops at Go if any peak at the loudest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
         public object LevelDbfs
         {
             get
@@ -1858,13 +1858,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)
+        /// The reward tone (src/sounds/reward_tone.bin), played on a rewarded trial at its levelDbfs (open_rigs.core.task RewardTone, OpenRigs.Audio PlayRewardTone)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("rewardTone")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardTone")]
-        [System.ComponentModel.DescriptionAttribute("The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core" +
-            ".task RewardTone)")]
+        [System.ComponentModel.DescriptionAttribute("The reward tone (src/sounds/reward_tone.bin), played on a rewarded trial at its l" +
+            "evelDbfs (open_rigs.core.task RewardTone, OpenRigs.Audio PlayRewardTone)")]
         public RewardTone RewardTone
         {
             get

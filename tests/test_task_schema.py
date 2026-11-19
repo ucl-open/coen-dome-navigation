@@ -111,7 +111,7 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
         {"trialType": "audiovisualCoherent", "weight": 0, "set": {}},
     ]
     assert params["visualStimulus"]["contrasts"] == [1.0]
-    assert params["auditoryStimulus"] == {"levelDbfs": -58.1, "elevationDeg": 0, "initialAzimuthsDeg": ["all"]}
+    assert params["auditoryStimulus"] == {"levelDbfs": -55, "elevationDeg": 0, "initialAzimuthsDeg": ["all"]}
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     assert [model.derive_trial_type(c) for c in model.trial_conditions] == [c.trial_type.value for c in model.trial_conditions]
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
@@ -217,7 +217,7 @@ def test_a_stimulus_off_value_outside_the_four_is_refused():
         ([{"trialType": "conflict", "weight": 1}], "Input should be 'visual', 'auditory', 'audiovisualCoherent', 'audiovisualConflict' or 'neutral'"),
         ([{"trialType": "visual", "weight": 1, "set": {"sizeUl": 2}}], r"sets or pairs sizeUl, which is not a task field"),
         ([{"trialType": "visual", "weight": 1, "set": {"rngSeed": 2}}], r"sets or pairs rngSeed, a session field \(x-session-fields: rngSeed "),
-        ([{"trialType": "visual", "weight": 1, "set": {"rewardTone.levelDbfs": -30}}], r"sets or pairs rewardTone.levelDbfs, a session field \(x-session-fields: rewardTone "),
+        ([{"trialType": "visual", "weight": 1, "set": {"optogenetics.enabled": True}}], r"sets or pairs optogenetics.enabled, a session field \(x-session-fields: optogenetics.enabled "),
         ([{"trialType": "visual", "weight": 1, "set": {"optogenetics.laserMaxSeconds": 1}}], r"sets or pairs optogenetics.laserMaxSeconds, which is not a task field"),
         ([{"trialType": "visual", "weight": 1, "set": {"optogenetics.laserOnProbability": 1}}], r"sets optogenetics.laserOnProbability with optogenetics off"),
         ([{"trialType": "visual", "weight": 1, "set": {"reward.sizeUl": 0}}], r"(?s)with \{.*'reward.sizeUl': 0.*greater than 0"),
@@ -662,3 +662,25 @@ def test_a_condition_sets_its_reward_auto_reward_and_where_the_pips_play():
         "visualStimulus.contrasts": [0], "reward.sizeUl": [2, 4], "autoRewardProbability": 0, "auditoryStimulus.initialAzimuthsDeg": [-60, "all"]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     assert params["auditoryStimulus"]["initialAzimuthsDeg"] == ["all"]   # the task file's: every speaker, as before
+
+
+def test_every_sound_s_level_is_a_condition_s_and_the_plan_s_values():
+    # Every sound's level is condition-level (P19), none a session field; the task file's levels are the lab's 5 dB steps
+    # (stimulus -55, reward tone -55, penalty -45) and the background noise has no task setting (the lab's -60).
+    assert not {"rewardTone", "penalty", "auditoryStimulus"} & {path.split(".")[0] for path in SESSION_FIELDS}
+    params = task()["taskParameters"]
+    assert (params["auditoryStimulus"]["levelDbfs"], params["rewardTone"]["levelDbfs"], params["penalty"]["sound"]["levelDbfs"]) == (-55, -55, -45)
+    assert "backgroundNoise" not in params
+    conditions = [{"trialType": "auditory", "weight": 1, "set": {"visualStimulus.contrasts": [0], "rewardTone.levelDbfs": -50, "penalty.sound.levelDbfs": "mute"}},
+                  {"trialType": "auditory", "weight": 1, "set": {"visualStimulus.contrasts": [0], "rewardTone.levelDbfs": "mute"}}]
+    UclOpenCoenDomeNavigationTaskParameters.model_validate({**params, "trialConditions": conditions})
+
+
+def test_the_pips_level_is_measured_by_the_lab_s_rule():
+    # sweep.json's pipLevelDbfs is the pips' level by OpenRigs.Audio SoundLevel's rule: the RMS outside runs of exactly-zero
+    # samples at least 1 ms long (a lone zero counts), to 0.01 dB; the pips have no such run, so it is their RMS, -58.1.
+    assert waveforms.sweep()["pipLevelDbfs"] == json.loads((WAVES / "sweep.json").read_text(encoding="utf-8"))["pipLevelDbfs"] == -58.1
+    on = np.full(480, 0.5)
+    assert waveforms.level_dbfs(np.concatenate([on, np.zeros(48), on])) == waveforms.level_dbfs(on)
+    assert waveforms.level_dbfs(np.concatenate([on, np.zeros(47), on])) < waveforms.level_dbfs(on)
+    assert waveforms.level_dbfs(np.concatenate([on, [0.0], on])) < waveforms.level_dbfs(on)

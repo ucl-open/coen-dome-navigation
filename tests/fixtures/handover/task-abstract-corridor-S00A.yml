@@ -27,7 +27,7 @@ taskParameters:
     spatialFrequencyStartCpd: 0.03
     spatialFrequencyEndCpd: 0.3
   auditoryStimulus:
-    levelDbfs: -58.1
+    levelDbfs: -55
     elevationDeg: 0
     initialAzimuthsDeg:
     - all
@@ -39,9 +39,9 @@ taskParameters:
   penalty:
     timeoutSeconds: 2.0
     sound:
-      levelDbfs: -44.6
+      levelDbfs: -45
   rewardTone:
-    levelDbfs: -55.1
+    levelDbfs: -55
   optogenetics:
     enabled: false
     zapitConditionsPath: ''

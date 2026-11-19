@@ -6,7 +6,8 @@ The stage is a stage of the lab's Mouse Curriculum, recorded only as the task fi
 over this file's flat values at launch and fills curriculum (id, code, version, path, label, sha256); trialStructure holds the
 timing, track the track, penalty the timeout and penalty sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's,
 made with the tone files (`uv run generate-waveforms`), not the task file's. Every sound plays at a level in dBFS RMS
-(auditoryStimulus, rewardTone and penalty.sound); the background noise is the lab's, at its constant level.
+(auditoryStimulus, rewardTone and penalty.sound), each a condition-level value; the background noise is the lab's, at its
+constant level (open_rigs.core.task BACKGROUND_LEVEL_DBFS). The pips are stored at sweep.json's pipLevelDbfs.
 
 What a trial shows and offers is its trial condition's combination: a condition may set any field but the session fields
 (x-session-fields, SESSION_FIELDS), and every list field (LIST_FIELDS: the contrasts, the initial azimuths, the track lengths and
@@ -46,7 +47,6 @@ STEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (TrialLog
 LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (responseWindowSeconds + laserToStimulusSeconds) the derived cap is (TrialLogic.cs LaserMaxMarginSeconds)
 MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole steps (TrialLogic.cs MaxLeadSeconds)
 UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without responseWindowSeconds (TrialLogic.cs)
-PIP_LEVEL_DBFS = -58.1  # the pips' level as the files store them, before the tone plays at auditoryStimulus.levelDbfs
 
 SWEEP_FILE = Path(__file__).resolve().parents[1] / "sounds" / "sweep.json"  # src/sounds/sweep.json
 
@@ -105,7 +105,7 @@ class AuditoryStimulus(ct.AuditoryStimulus):
     """The tone sweep's pips (src/sounds/pips.bin), each equalised for its speaker: on every rig.yml speaker where the
     picked initial azimuth is "all", else on rig.yml's speaker nearest it at elevationDeg."""
 
-    level_dbfs: SoundLevelDbfs = level_dbfs(PIP_LEVEL_DBFS, "The tone sweep's pips")
+    level_dbfs: SoundLevelDbfs = level_dbfs(-55.0, "The tone sweep's pips")
     initial_azimuths_deg: list[SoundAzimuth] = Field(
         default=[ALL_SPEAKERS],
         min_length=1,
@@ -181,12 +181,8 @@ class TrialType(StrEnum):
 # a condition may not set it (the path or any path under it). A condition may set every other field: the draw reads it per
 # trial from the trial's combination. A condition's blank takes the stage's, then the task's value.
 _COMMON = ct.COMMON_SESSION_FIELDS
-# The lab's (ct.COMMON_SESSION_FIELDS) and this task's.
-SESSION_FIELDS = {
-    **{path: _COMMON[path] for path in list(_COMMON)[:3]},
-    "rewardTone": "the reward tone's buffer is laid out once at Go, at its levelDbfs",
-    **_COMMON,
-}
+# The lab's (ct.COMMON_SESSION_FIELDS); this task adds none: every sound's level is condition-level.
+SESSION_FIELDS = dict(_COMMON)
 
 
 # Where one setting limits another (the schema's x-rules, JSON Schema over dotted paths; open_rigs.rigs.conditions
@@ -275,7 +271,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask
     )
     penalty: Penalty = Field(description="The timeout and penalty sound a penalised trial gets (open_rigs.core.task Penalty)")
     reward_tone: RewardTone = Field(
-        default=RewardTone(), description="The reward tone (src/sounds/reward_tone.bin), played at levelDbfs (open_rigs.core.task RewardTone)"
+        default=RewardTone(), description="The reward tone (src/sounds/reward_tone.bin), played on a rewarded trial at its levelDbfs (open_rigs.core.task RewardTone, OpenRigs.Audio PlayRewardTone)"
     )
     optogenetics: OptogeneticsSettings = Field(description="Zapit optogenetic stimulation")
     track: Track = Field(default=Track(), description="The virtual track")

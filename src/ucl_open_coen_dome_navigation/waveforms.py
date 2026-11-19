@@ -25,7 +25,8 @@ SWEEP_END_HZ = 25000
 SWEEP_STEPS = 100
 TONE_AMPLITUDE = 0.05  # Tom's toneAmplitude
 REWARD_TONE_PEAK = TONE_AMPLITUDE * TONE_AMPLITUDE  # the reward tone peaks at amplitude squared, as it always played
-PIP_LEVEL_DBFS = -58.1  # each pip's RMS as stored, in dBFS (sweep.json pipLevelDbfs)
+PIP_LEVEL_DBFS = -58.1  # each pip's RMS as made, in dBFS; sweep.json's pipLevelDbfs is the pips' level measured (level_dbfs)
+SILENT_STRETCH_SECONDS = 0.001  # a run of exactly-zero samples this long or longer is silence, left out of a level (OpenRigs.Audio SoundLevel)
 REWARD_TONES_HZ = (6000, 9000)  # the reward tone: 250 ms of each, as Tom's FunctionGenerator pair
 REWARD_TONE_MS = 250
 
@@ -45,6 +46,21 @@ def tones(frequencies: np.ndarray, level_dbfs: float = PIP_LEVEL_DBFS) -> np.nda
     return (pips * 10 ** (level_dbfs / 20) / rms).astype(np.float32)
 
 
+def level_dbfs(samples: np.ndarray, sample_rate: int = SAMPLE_RATE) -> float:
+    """A sound's level in dBFS RMS by the lab's rule (OpenRigs.Audio SoundLevel.RmsDbfs): the RMS of its samples outside
+    silent stretches, runs of exactly-zero samples at least SILENT_STRETCH_SECONDS long (a lone zero counts)."""
+    x = np.asarray(samples, dtype=np.float64).ravel()
+    keep = np.ones(x.size, dtype=bool)
+    zero = np.concatenate(([False], x == 0, [False]))
+    starts = np.flatnonzero(~zero[:-1] & zero[1:])
+    ends = np.flatnonzero(zero[:-1] & ~zero[1:])
+    shortest = int(np.ceil(SILENT_STRETCH_SECONDS * sample_rate))
+    for start, end in zip(starts, ends):
+        if end - start >= shortest:
+            keep[start:end] = False
+    return float(20 * np.log10(np.sqrt(np.mean(x[keep] ** 2))))
+
+
 def reward_tone(peak: float = REWARD_TONE_PEAK) -> np.ndarray:
     """250 ms of 6 kHz then 250 ms of 9 kHz, sine at peak, float32 (1, samples)."""
     t = np.arange(int(SAMPLE_RATE * REWARD_TONE_MS / 1000)) / SAMPLE_RATE
@@ -52,8 +68,11 @@ def reward_tone(peak: float = REWARD_TONE_PEAK) -> np.ndarray:
 
 
 def sweep() -> dict:
-    """sweep.json: what the workflow and task.py read, with the rate every waveform was made at."""
-    return {"startHz": SWEEP_START_HZ, "endHz": SWEEP_END_HZ, "steps": SWEEP_STEPS, "pipLevelDbfs": PIP_LEVEL_DBFS, "sampleRate": SAMPLE_RATE}
+    """sweep.json: what the workflow and task.py read, with the rate every waveform was made at; pipLevelDbfs is the pips'
+    level by the lab's rule (level_dbfs, to 0.01 dB), which the workflow plays each pip at its trial's level from."""
+    pips = tones(tone_frequencies())
+    level = round(float(np.mean([level_dbfs(pip) for pip in pips])), 2)
+    return {"startHz": SWEEP_START_HZ, "endHz": SWEEP_END_HZ, "steps": SWEEP_STEPS, "pipLevelDbfs": level, "sampleRate": SAMPLE_RATE}
 
 
 def write(out_dir: Path = OUT_DIR) -> None:

@@ -372,9 +372,6 @@ public class TrialDrawTests
             Tuple.Create(Conditions(-1, 2, 0), "trialConditions[0] (visual): its weight is below 0"),
             Tuple.Create(setting("rngSeed", 2.0), "trialConditions[1] (auditory) sets or pairs rngSeed, a session field (x-session-fields: rngSeed)"),
             Tuple.Create(setting("optogenetics.enabled", true), "trialConditions[1] (auditory) sets or pairs optogenetics.enabled, a session field (x-session-fields: optogenetics.enabled)"),
-            Tuple.Create(setting("rewardTone.levelDbfs", -30.0), "trialConditions[1] (auditory) sets or pairs rewardTone.levelDbfs, a session field (x-session-fields: rewardTone)"),
-            // A set path that holds a session field (a map set whole) is refused as the field itself is.
-            Tuple.Create(setting("rewardTone", new Dictionary<object, object> { { "levelDbfs", -40.0 } }), "trialConditions[1] (auditory) sets or pairs rewardTone, a session field (x-session-fields: rewardTone)"),
             Tuple.Create(setting("trialStructure.lengthCm", 2.0), "trialConditions[1] (auditory) sets or pairs trialStructure.lengthCm, which is not a task field"),
             Tuple.Create(setting("trialStructure", 2.0), "trialConditions[1] (auditory) sets or pairs trialStructure, which is not a task field"),
             Tuple.Create(setting("rewardZoneMinHz", 2.0), "trialConditions[1] (auditory): the reward zone (2 to 24000 Hz) is not inside the track's tones (2000 to 24000 Hz)"),
@@ -449,7 +446,7 @@ public class TrialDrawTests
             Assert.AreEqual(0, problems.Count, string.Join("; ", problems));
             // visual: the grating at the task's contrast, no tone; auditory: the tone at its level, no grating; both.
             // Each expands into the task's 3 track lengths times its 2 stimulus-off fractions.
-            CollectionAssert.AreEqual(new[] { "1:mute", "0:-58.1", "1:-58.1" }, built.Select(c => c.Combinations[0].Task).Select(m => string.Join(",", m.VisualStimulus.Contrasts) + ":" + Convert.ToString(m.AuditoryStimulus.LevelDbfs, System.Globalization.CultureInfo.InvariantCulture)).ToArray());
+            CollectionAssert.AreEqual(new[] { "1:mute", "0:-55", "1:-55" }, built.Select(c => c.Combinations[0].Task).Select(m => string.Join(",", m.VisualStimulus.Contrasts) + ":" + Convert.ToString(m.AuditoryStimulus.LevelDbfs, System.Globalization.CultureInfo.InvariantCulture)).ToArray());
             Assert.IsTrue(built.All(c => c.Combinations.Count == 6));
         }
         // ReadTask keeps a set value a number, so Settings_Task logs it as one (the typed read's text would log "0").
@@ -584,13 +581,13 @@ public class TrialDrawTests
             var rig = new Rig(Fixture.Setup(task));
             rig.RunTo(TrialEventKind.Start);
             var pip = rig.RunTo(TrialEventKind.Update).Update;
-            Assert.AreEqual(type == "visual" ? 0.0 : 1.0, pip.AuditoryGain, type);
+            Assert.AreEqual(type == "visual" ? 0.0 : Fixture.Sweep().GainOf(-55), pip.AuditoryGain, 1e-9, type);
             Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, pip.Grating.Opacity, type);
             rig.Wheel(1000);
             var row = rig.RunTo(TrialEventKind.Outcome).Outcome.Row.Value;
             Assert.AreEqual(type, row.trialType);
             Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, row.visualContrast, type);
-            Assert.AreEqual(type == "visual" ? double.NaN : -58.1, row.auditoryLevelDbfs, type);
+            Assert.AreEqual(type == "visual" ? double.NaN : -55, row.auditoryLevelDbfs, type);
         }
     }
 
@@ -667,7 +664,7 @@ public class TrialDrawTests
         var task = Fixture.Task(1);
         var all = Fixture.Draw(task).Next();
         Assert.AreEqual(SoundAzimuths.AllSpeakersChannel, all.speakerChannel);
-        Assert.IsTrue(double.IsNaN(all.auditoryInitialAzimuthDeg) && double.IsNaN(all.auditoryElevationDeg) && all.auditoryLevelDbfs == -58.1);
+        Assert.IsTrue(double.IsNaN(all.auditoryInitialAzimuthDeg) && double.IsNaN(all.auditoryElevationDeg) && all.auditoryLevelDbfs == -55);
         // A number: rig.yml's speaker nearest it.
         task.TrialConditions = new List<TrialCondition> { new TrialCondition { TrialType = TrialType.Auditory, Weight = 1,
             Set = new Dictionary<object, object> { { "auditoryStimulus.initialAzimuthsDeg", new List<object> { -70.0, "all", 20.0 } } } } };
@@ -934,7 +931,7 @@ public class TrialRulesTests
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
         Assert.AreEqual(TrialOutcomes.Incorrect, outcome.Outcome.Row.Value.outcome);
         Assert.AreEqual("WrongLickLimit", outcome.Outcome.Row.Value.outcomeReason);
-        Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -44.6);
+        Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -45);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Rewarded, "penalised, unrewarded");
         Assert.AreEqual(3.0, outcome.Outcome.Row.Value.rewardOfferedUl, "the offer kept on a trial not rewarded");
         Assert.AreEqual(2.0, outcome.Outcome.Row.Value.penaltyTimeoutSeconds);
@@ -1139,7 +1136,7 @@ public class TrialRulesTests
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.AreEqual("ResponseWindowEnd", outcome.Outcome.Row.Value.outcomeReason);
         Assert.AreEqual(TrialOutcomes.NoResponse, outcome.Outcome.Row.Value.outcome);
-        Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -44.6);
+        Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -45);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded);
         Assert.AreEqual(start.Seconds + 0.1 + 12.0, outcome.Seconds, 0.0011);
     }
@@ -1186,8 +1183,8 @@ public class TrialRulesTests
         rig.Wheel(start.Trial.trackLengthWheelCm * 0.3);
         rig.Until(rig.Now + 0.1);
         var before = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
-        Assert.AreEqual(1.0, before.AuditoryGain);
-        Assert.IsTrue(before.Row.auditoryLevelDbfs == -58.1 && before.Row.visualContrast == start.Trial.visualContrast);
+        Assert.AreEqual(Fixture.Sweep().GainOf(-55), before.AuditoryGain, 1e-9);
+        Assert.IsTrue(before.Row.auditoryLevelDbfs == -55 && before.Row.visualContrast == start.Trial.visualContrast);
         rig.Wheel(start.Trial.trackLengthWheelCm * 0.7);
         rig.Until(rig.Now + 0.1);
         var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
@@ -1198,7 +1195,7 @@ public class TrialRulesTests
         var row = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
         Assert.AreEqual(pip.Row.positionCm, row.auditoryOffPositionCm, 1e-9);
         Assert.IsTrue(double.IsNaN(row.visualOffPositionCm));
-        Assert.AreEqual(-58.1, row.auditoryLevelDbfs);   // the trial's level; the pips' rows say where it was cut
+        Assert.AreEqual(-55, row.auditoryLevelDbfs);   // the trial's level; the pips' rows say where it was cut
         Assert.IsNull(typeof(StimulusStateRow).GetField("auditoryOn"));
         Assert.IsNull(typeof(StimulusStateRow).GetField("visualOn"));
         Assert.AreEqual(typeof(double), typeof(StimulusStateRow).GetField("visualContrast").FieldType);
@@ -1449,21 +1446,27 @@ public class TrialRulesTests
         Assert.AreEqual(-30.0, Fixture.Setup(task).LoudestPenaltyLevelDbfs);
         task.TrialConditions = conditions("mute", "mute");
         Assert.IsTrue(double.IsNaN(Fixture.Setup(task).LoudestPenaltyLevelDbfs));
-        // The reward tone is a session field (one level for the experiment): the outcome carries it, NaN when mute.
-        var tone = Fixture.Task(1);
-        var rewarded = new Rig(Fixture.Setup(tone));
-        rewarded.RunTo(TrialEventKind.Start);
-        rewarded.Wheel(1000);
-        var reward = rewarded.RunTo(TrialEventKind.Outcome).Outcome;
-        Assert.IsTrue(reward.Rewarded);
-        Assert.AreEqual(-55.1, reward.RewardToneLevelDbfs);
-        Assert.AreEqual(-55.1, Fixture.Setup(tone).LoudestRewardToneLevelDbfs);
-        tone.RewardTone.LevelDbfs = "mute";
-        Assert.IsTrue(double.IsNaN(Fixture.Setup(tone).LoudestRewardToneLevelDbfs));
-        var muted = new Rig(Fixture.Setup(tone));
-        muted.RunTo(TrialEventKind.Start);
-        muted.Wheel(1000);
-        Assert.IsTrue(double.IsNaN(muted.RunTo(TrialEventKind.Outcome).Outcome.RewardToneLevelDbfs));
+        // The reward tone follows its condition too: one at -50, one mute (auto-reward trials, each rewarded on the next pip).
+        var tones = Fixture.Task(1);
+        tones.TrialConditions = new List<TrialCondition>
+        {
+            new TrialCondition { TrialType = TrialType.Auditory, Weight = 1, Set = new Dictionary<object, object> { { "rewardTone.levelDbfs", -50.0 } } },
+            new TrialCondition { TrialType = TrialType.Visual, Weight = 1, Set = new Dictionary<object, object> { { "rewardTone.levelDbfs", "mute" } } },
+        };
+        var toneRules = Fixture.Setup(tones);
+        Assert.AreEqual(-50.0, toneRules.LoudestRewardToneLevelDbfs);
+        var toneSeen = new Dictionary<int, double>();
+        var toneRig = new Rig(toneRules);
+        for (int i = 0; i < 12; i++)
+        {
+            toneRig.RunTo(TrialEventKind.Start);
+            toneRig.Wheel(1000 * (i + 1));
+            var reward = toneRig.RunTo(TrialEventKind.Outcome).Outcome;
+            Assert.IsTrue(reward.Rewarded);
+            toneSeen[reward.Row.Value.trialConditionId] = reward.RewardToneLevelDbfs;
+        }
+        Assert.AreEqual(-50.0, toneSeen[0]);
+        Assert.IsTrue(double.IsNaN(toneSeen[1]), "mute is NaN: the tone never plays");
     }
 
     [TestMethod]

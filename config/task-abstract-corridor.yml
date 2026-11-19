@@ -33,9 +33,9 @@ taskParameters:
     spatialFrequencyStartCpd: 0.03
     spatialFrequencyEndCpd: 0.3
   # Every sound plays at a level in dBFS RMS of the sound as stored, before equalisation (lib-open-rigs OpenRigs.Audio
-  # SoundLevel); mute plays nothing. The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms).
+  # SoundLevel); mute plays nothing. Each is condition-level; the background noise is the lab's constant, -60. The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms).
   auditoryStimulus:           # the tone sweep's pips
-    levelDbfs: -58.1          # dBFS RMS; mute: no tone
+    levelDbfs: -55            # dBFS RMS; mute: no tone
     elevationDeg: 0           # the elevation the nearest speaker is found at
     initialAzimuthsDeg: [all]   # one picked per trial: all, every rig.yml speaker; a number, rig.yml's speaker nearest that azimuth
   reward:
@@ -46,9 +46,9 @@ taskParameters:
   penalty:
     timeoutSeconds: 2.0       # s after a penalised trial
     sound:                    # the lab's penalty sound (OpenRigs.Audio), on a penalised trial
-      levelDbfs: -44.6        # dBFS RMS, on rig.yml's penaltySoundChannel alone; mute: none
-  rewardTone:
-    levelDbfs: -55.1
+      levelDbfs: -45          # dBFS RMS, on rig.yml's penaltySoundChannel alone; mute: none
+  rewardTone:                 # on a rewarded trial, every speaker
+    levelDbfs: -55            # dBFS RMS; mute: none
   optogenetics:               # Zapit; the laser runs from the trigger to the outcome (or its cap, derived at Go), laser-off trials laser off
     enabled: false
     zapitConditionsPath: ''   # the Zapit conditions file loaded in Zapit
