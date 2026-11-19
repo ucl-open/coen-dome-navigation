@@ -201,7 +201,7 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     buffer = _speaker_buffer(nodes, upstream)
     assert buffer.findtext(AUD + "Equalise") == "true" and buffer.findtext(AUD + "Gain") is None
     assert not (buffer.findtext(AUD + "Channels") or "").strip()
-    nodes, upstream = _audio_chain("PipBuffers")
+    nodes, upstream = _audio_chain("StimulusSoundBuffers")
     labels = _labels(nodes, upstream)
     assert any("all_waveforms.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
     assert labels[-2:] == ["rx:Zip", "ext:LayOutPips"] and {"rx:ToList", "Speakers", "TrialRules", "Loudest"} <= set(labels), labels
@@ -348,7 +348,7 @@ def test_each_trial_s_sound_carries_its_sync_copy():
     # rig.yml's syncChannel at syncGain for each pip (SpeakerSet.Layout's syncCopy, kept unscaled at any amplitude: PipSetTests),
     # as coen-dome-decision-making's stimulus.
     sweep = (ROOT / "src" / "Extensions" / "Sweep.cs").read_text(encoding="utf-8-sig")
-    assert "speakers.Layout(pip, null, 1, true, true)" in sweep and "ext:LayOutPips" in _labels(*_audio_chain("PipBuffers"))
+    assert "speakers.Layout(pip, null, 1, true, true)" in sweep and "ext:LayOutPips" in _labels(*_audio_chain("StimulusSoundBuffers"))
 
 
 def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
@@ -364,7 +364,7 @@ def test_the_sweep_is_read_at_start_and_checked_against_rig_yml_s_rate():
     assert [nodes[a].findtext(W + "Name") for a, b in sorted(edges, key=lambda e: e[0]) if b == zip_] == ["TaskConfig", "RigConfigs", "Sweep"]
     assert "SweepFile" not in ET.tostring(nodes[setup], encoding="unicode")
     # The pips' reader takes its rate and its 50 ms pip's length from the sweep, not typed values.
-    nodes, upstream = _audio_chain("PipBuffers")
+    nodes, upstream = _audio_chain("StimulusSoundBuffers")
     (mapping,) = [nodes[i] for i in upstream if nodes[i].get(XSI) == "PropertyMapping"]
     assert {p.get("Name"): p.get("Selector") for p in mapping.iter(W + "Property")} == {"SampleRate": "SampleRate", "BufferLength": "PipSamples"}
     assert "Sweep" in _labels(nodes, upstream)

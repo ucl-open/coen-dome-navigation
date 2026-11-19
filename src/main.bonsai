@@ -242,7 +242,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (PipBuffers, LayOutPips: read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) at amplitude 1, the files as stored (-58.1 dBFS RMS), checked at the largest auditoryStimulus.amplitude any condition can draw (TrialRules.Loudest), each pip then played at its trial's auditoryAmplitude (PipBuffer); the reward tone (RewardTone) at rewardTone.levelDbfs; the lab's penalty sound is OpenRigs.Audio's PlayPenaltySound, in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (StimulusSoundBuffers, LayOutPips: read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) at amplitude 1, the files as stored (-58.1 dBFS RMS), checked at the largest auditoryStimulus.amplitude any condition can draw (TrialRules.Loudest), each pip then played at its trial's auditoryAmplitude (PipBuffer); the reward tone (RewardTone) at rewardTone.levelDbfs; the lab's penalty sound is OpenRigs.Audio's PlayPenaltySound, in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -287,7 +287,7 @@
               <Combinator xsi:type="ext:LayOutPips" />
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
-              <Name>PipBuffers</Name>
+              <Name>StimulusSoundBuffers</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>TaskConfig</Name>
@@ -691,7 +691,7 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>PipBuffers</Name>
+              <Name>StimulusSoundBuffers</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:WithLatestFrom" />
@@ -818,7 +818,7 @@
               <Name>PathPrefix</Name>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
-              <Name>PipBuffers</Name>
+              <Name>StimulusSoundBuffers</Name>
             </Expression>
             <Expression xsi:type="Combinator">
               <Combinator xsi:type="rx:Zip" />
