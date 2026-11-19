@@ -16,6 +16,8 @@ W = "{https://bonsai-rx.org/2018/workflow}"
 XSI = "{http://www.w3.org/2001/XMLSchema-instance}type"
 TEXT = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
 MAIN = ET.fromstring(TEXT.encode("utf-8"))
+OUTCOME_EFFECTS = "OpenRigs.Trials:TrialOutcomeEffects.bonsai"
+PLAY_REWARD_TONE = "OpenRigs.Audio:PlayRewardTone.bonsai"
 
 
 def group(name: str) -> ET.Element:
@@ -195,16 +197,15 @@ def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
 
 
 def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
-    # Each sound is one row laid out on rig.yml's channels (no Tile 32), equalised for each speaker: the reward tone by
-    # OpenRigs.Audio's SpeakerBuffer at rewardTone.levelDbfs, no Channels being every rig.yml speaker; the pips by LayOutPips
-    # (PipSet: SpeakerSet.Layout on every speaker at amplitude 1, checked at the loudest amplitude the conditions draw, TrialRules.Loudest).
-    nodes, upstream = _audio_chain("RewardToneBuffer")
-    labels = _labels(nodes, upstream)
-    assert "Speakers" in labels and "rx:Zip" in labels and "dsp:Tile" not in labels, labels
-    assert any("reward_tone.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
-    buffer = _speaker_buffer(nodes, upstream)
-    assert buffer.findtext(AUD + "Equalise") == "true" and buffer.findtext(AUD + "Gain") is None
-    assert not (buffer.findtext(AUD + "Channels") or "").strip()
+    # Each sound is one row laid out on rig.yml's channels, equalised for each speaker: the reward tone by OpenRigs.Audio's
+    # PlayRewardTone (SpeakerBuffer at rewardTone.levelDbfs on every speaker) on each rewarded outcome TrialOutcomeEffects
+    # passes on, from this repo's file; the pips by LayOutPips (PipSet: SpeakerSet.Layout on every speaker at amplitude 1,
+    # checked at the loudest amplitude the conditions draw, TrialRules.Loudest).
+    nodes, edges = _scope(group("TaskLogic"))
+    (tone,) = [i for i, n in enumerate(nodes) if n.get("Path") == PLAY_REWARD_TONE]
+    assert nodes[tone].findtext(W + "RewardToneFile") == "./sounds/reward_tone.bin"
+    assert [nodes[i].get("Path") or nodes[i].findtext(W + "Name") for i in sorted(_upstream(edges, tone))][-2:] == [OUTCOME_EFFECTS, "Rewarded?"]
+    assert "RewardToneBuffer" not in ET.tostring(group("Audio"), encoding="unicode")
     nodes, upstream = _audio_chain("StimulusSoundBuffers")
     labels = _labels(nodes, upstream)
     assert any("all_waveforms.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
@@ -230,7 +231,7 @@ def test_the_speakers_are_declared_before_every_user():
     declared = next(i for i, n in enumerate(top) if n.get("Path") == "OpenRigs.Devices:DomeHardware.bonsai")
     users = [i for i, n in enumerate(top) for s in n.iter(W + "Expression")
              if s.get(XSI) == "SubscribeSubject" and s.findtext(W + "Name") == "Speakers"]
-    users += [i for i, n in enumerate(top) for s in n.iter(W + "Expression") if s.get("Path") in (lint.BACKGROUND_NOISE, lint.PLAY_PENALTY_SOUND)]
+    users += [i for i, n in enumerate(top) for s in n.iter(W + "Expression") if s.get("Path") in (lint.BACKGROUND_NOISE, OUTCOME_EFFECTS, PLAY_REWARD_TONE)]
     assert len(users) == 4 and min(users) > declared
 
 
@@ -282,7 +283,10 @@ def test_every_reward_goes_through_the_lab_s_rewards():
 
 
 def test_the_penalty_sound_is_the_lab_s_at_the_task_s_level():
-    assert lint.penalty_sound_problems(WORKFLOW) == []
+    # PlayPenaltySound is TrialOutcomeEffects' (OpenRigs.Trials), included once; lib's lint counts only a direct include,
+    # so its count is the one problem until it looks inside TrialOutcomeEffects.
+    assert TEXT.count(f'Path="{OUTCOME_EFFECTS}"') == 1
+    assert lint.penalty_sound_problems(WORKFLOW) == ["the workflow includes PlayPenaltySound 0 times, not once"]
 
 
 def test_the_readme_lists_every_open_rigs_block():

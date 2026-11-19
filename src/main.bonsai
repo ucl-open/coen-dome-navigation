@@ -218,7 +218,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (StimulusSoundBuffers, LayOutPips: read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) at amplitude 1, the files as stored (-58.1 dBFS RMS), checked at the largest auditoryStimulus.amplitude any condition can draw (TrialRules.Loudest), each pip then played at its trial's auditoryAmplitude (PipBuffer); the reward tone (RewardTone) at rewardTone.levelDbfs; the lab's penalty sound is OpenRigs.Audio's PlayPenaltySound, in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (StimulusSoundBuffers, LayOutPips: read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) at amplitude 1, the files as stored (-58.1 dBFS RMS), checked at the largest auditoryStimulus.amplitude any condition can draw (TrialRules.Loudest), each pip then played at its trial's auditoryAmplitude (PipBuffer); the reward tone (OpenRigs.Audio PlayRewardTone) at rewardTone.levelDbfs and the lab's penalty sound (PlayPenaltySound, in OpenRigs.Trials TrialOutcomeEffects) are made in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -265,53 +265,6 @@
             <Expression xsi:type="rx:AsyncSubject">
               <Name>StimulusSoundBuffers</Name>
             </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TaskConfig</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>TaskParameters.RewardTone.LevelDbfs</Selector>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>Speakers</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="dsp:MatrixReader">
-                <dsp:Path>./sounds/reward_tone.bin</dsp:Path>
-                <dsp:Offset>0</dsp:Offset>
-                <dsp:SampleRate>0</dsp:SampleRate>
-                <dsp:ChannelCount>1</dsp:ChannelCount>
-                <dsp:BufferLength>0</dsp:BufferLength>
-                <dsp:Depth>F32</dsp:Depth>
-                <dsp:Layout>RowMajor</dsp:Layout>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Take">
-                <rx:Count>1</rx:Count>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Zip" />
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:Zip" />
-            </Expression>
-            <Expression xsi:type="InputMapping">
-              <PropertyMappings>
-                <Property Name="LevelDbfs" Selector="Item1" />
-              </PropertyMappings>
-              <Selector>Item2</Selector>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="aud:SpeakerBuffer">
-                <aud:LevelDbfs>-36</aud:LevelDbfs>
-                <aud:Equalise>true</aud:Equalise>
-                <aud:SyncCopy>false</aud:SyncCopy>
-              </Combinator>
-            </Expression>
-            <Expression xsi:type="rx:AsyncSubject">
-              <Name>RewardToneBuffer</Name>
-            </Expression>
           </Nodes>
           <Edges>
             <Edge From="3" To="4" Label="Source1" />
@@ -324,15 +277,6 @@
             <Edge From="7" To="8" Label="Source2" />
             <Edge From="8" To="9" Label="Source1" />
             <Edge From="9" To="10" Label="Source1" />
-            <Edge From="11" To="12" Label="Source1" />
-            <Edge From="14" To="15" Label="Source1" />
-            <Edge From="13" To="16" Label="Source1" />
-            <Edge From="15" To="16" Label="Source2" />
-            <Edge From="12" To="17" Label="Source1" />
-            <Edge From="16" To="17" Label="Source2" />
-            <Edge From="17" To="18" Label="Source1" />
-            <Edge From="18" To="19" Label="Source1" />
-            <Edge From="19" To="20" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
@@ -402,7 +346,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, step 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating (GratingStates, which hides it at the Outcome); Outcome writes the trial row, rewards (RewardRequests, the left valve) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, step 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); Arm sends Zapit the trial's condition (laser-off trials at 0 mW); Trigger, laserToStimulusSeconds before the first pip (after it if negative), in an optogenetics experiment only, raises the ZapitTrigger line (SetZapitTriggerLine) (and on a software-triggered rig sends the StartStimulus), and RunTrials stops the task if Zapit has not answered by then; each Update (a pip) plays the pip and sets the grating (GratingStates, which hides it at the Outcome); Outcome (OpenRigs.Trials TrialOutcomeEffects) writes the trial row, rewards (RewardRequests, the left valve) and plays the reward tone (PlayRewardTone) or plays the penalty sound (PlayPenaltySound); TriggerOff clears the trigger line triggerHoldSeconds after the outcome. Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="MemberSelector">
@@ -646,10 +590,10 @@
               </Combinator>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>Outcome.Row</Selector>
+              <Selector>Outcome</Selector>
             </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>TrialRow</Name>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Trials:TrialOutcomeEffects.bonsai">
+              <Description>Each outcome's row into TrialRow, a rewarded outcome's reward into RewardRequests (the left valve), the penalty sound (PlayPenaltySound) when PenaltySoundOn; the outcome passed on.</Description>
             </Expression>
             <Expression xsi:type="rx:Condition">
               <Name>Rewarded?</Name>
@@ -658,8 +602,8 @@
                   <Expression xsi:type="WorkflowInput">
                     <Name>Source1</Name>
                   </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Outcome.Rewarded</scr:Expression>
+                  <Expression xsi:type="MemberSelector">
+                    <Selector>Rewarded</Selector>
                   </Expression>
                   <Expression xsi:type="WorkflowOutput" />
                 </Nodes>
@@ -669,43 +613,10 @@
                 </Edges>
               </Workflow>
             </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>Outcome.Reward</Selector>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:PlayRewardTone.bonsai">
+              <Description>The reward tone at each rewarded outcome: sounds/reward_tone.bin laid out at Go on every speaker, equalised, at rewardTone.levelDbfs (RewardToneBuffer), into RewardToneSounds.</Description>
+              <RewardToneFile>./sounds/reward_tone.bin</RewardToneFile>
             </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>RewardRequests</Name>
-            </Expression>
-            <Expression xsi:type="SubscribeSubject">
-              <Name>RewardToneBuffer</Name>
-            </Expression>
-            <Expression xsi:type="Combinator">
-              <Combinator xsi:type="rx:WithLatestFrom" />
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>Item2</Selector>
-            </Expression>
-            <Expression xsi:type="MulticastSubject">
-              <Name>RewardToneSounds</Name>
-            </Expression>
-            <Expression xsi:type="rx:Condition">
-              <Name>PenaltySound?</Name>
-              <Workflow>
-                <Nodes>
-                  <Expression xsi:type="WorkflowInput">
-                    <Name>Source1</Name>
-                  </Expression>
-                  <Expression xsi:type="scr:ExpressionTransform">
-                    <scr:Expression>Outcome.PenaltySoundOn</scr:Expression>
-                  </Expression>
-                  <Expression xsi:type="WorkflowOutput" />
-                </Nodes>
-                <Edges>
-                  <Edge From="0" To="1" Label="Source1" />
-                  <Edge From="1" To="2" Label="Source1" />
-                </Edges>
-              </Workflow>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:PlayPenaltySound.bonsai" />
             <Expression xsi:type="SubscribeSubject">
               <Name>TrialEvents</Name>
             </Expression>
@@ -778,11 +689,11 @@
             <Edge From="1" To="5" Label="Source2" />
             <Edge From="2" To="5" Label="Source3" />
             <Edge From="3" To="5" Label="Source4" />
-            <Edge From="51" To="5" Label="Source5" />
+            <Edge From="44" To="5" Label="Source5" />
             <Edge From="4" To="5" Label="Source6" />
             <Edge From="5" To="6" Label="Source1" />
             <Edge From="10" To="11" Label="Source1" />
-            <Edge From="40" To="14" Label="Source1" />
+            <Edge From="33" To="14" Label="Source1" />
             <Edge From="15" To="16" Label="Source1" />
             <Edge From="16" To="18" Label="Source1" />
             <Edge From="17" To="18" Label="Source2" />
@@ -791,38 +702,31 @@
             <Edge From="16" To="21" Label="Source1" />
             <Edge From="21" To="22" Label="Source1" />
             <Edge From="23" To="24" Label="Source1" />
-            <Edge From="24" To="25" Label="Source1" />
-            <Edge From="25" To="26" Label="Source1" />
-            <Edge From="24" To="27" Label="Source1" />
-            <Edge From="27" To="28" Label="Source1" />
-            <Edge From="28" To="29" Label="Source1" />
-            <Edge From="27" To="31" Label="Source1" />
-            <Edge From="30" To="31" Label="Source2" />
-            <Edge From="31" To="32" Label="Source1" />
+            <Edge From="29" To="30" Label="Source1" />
+            <Edge From="30" To="31" Label="Source1" />
             <Edge From="32" To="33" Label="Source1" />
-            <Edge From="24" To="34" Label="Source1" />
-            <Edge From="36" To="37" Label="Source1" />
-            <Edge From="37" To="38" Label="Source1" />
-            <Edge From="39" To="40" Label="Source1" />
-            <Edge From="41" To="42" Label="Source1" />
-            <Edge From="42" To="43" Label="Source1" />
             <Edge From="34" To="35" Label="Source1" />
-            <Edge From="43" To="54" Label="Source1" />
+            <Edge From="35" To="36" Label="Source1" />
+            <Edge From="36" To="47" Label="Source1" />
             <Edge From="11" To="12" Label="Source1" />
             <Edge From="12" To="13" Label="Source1" />
-            <Edge From="45" To="48" Label="Source1" />
-            <Edge From="46" To="48" Label="Source2" />
-            <Edge From="47" To="48" Label="Source3" />
-            <Edge From="48" To="49" Label="Source1" />
-            <Edge From="49" To="50" Label="Source1" />
-            <Edge From="1" To="50" Label="Source2" />
-            <Edge From="50" To="0" Label="Source1" />
+            <Edge From="38" To="41" Label="Source1" />
+            <Edge From="39" To="41" Label="Source2" />
+            <Edge From="40" To="41" Label="Source3" />
+            <Edge From="41" To="42" Label="Source1" />
+            <Edge From="42" To="43" Label="Source1" />
+            <Edge From="1" To="43" Label="Source2" />
+            <Edge From="43" To="0" Label="Source1" />
             <Edge From="7" To="8" Label="Source1" />
             <Edge From="8" To="9" Label="Source1" />
-            <Edge From="15" To="52" Label="Source1" />
-            <Edge From="52" To="53" Label="Source1" />
-            <Edge From="45" To="43" Label="Source2" />
-            <Edge From="54" To="44" Label="Source1" />
+            <Edge From="15" To="45" Label="Source1" />
+            <Edge From="45" To="46" Label="Source1" />
+            <Edge From="38" To="36" Label="Source2" />
+            <Edge From="47" To="37" Label="Source1" />
+            <Edge From="24" To="25" Label="Source1" />
+            <Edge From="25" To="26" Label="Source1" />
+            <Edge From="26" To="27" Label="Source1" />
+            <Edge From="27" To="28" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
