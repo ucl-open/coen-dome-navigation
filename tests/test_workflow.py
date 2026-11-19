@@ -14,7 +14,7 @@ from open_rigs.rigs.lab_rig import LabRig
 
 ROOT = Path(__file__).parents[1]
 # The workflow checks every open-rigs task runs (lib-open-rigs workflow_checks, one copy); this task's own follow, and a
-# test defined below with a shared one's name (the hardware's pinned devices, the penalty sound's) replaces it.
+# test defined below with a shared one's name (the hardware's pinned devices) replaces it.
 globals().update(workflow_checks.tests(ROOT))
 W = "{https://bonsai-rx.org/2018/workflow}"
 XSI = "{http://www.w3.org/2001/XMLSchema-instance}type"
@@ -242,13 +242,6 @@ def test_every_sound_plays_at_the_task_file_s_level():
 def test_every_reward_goes_through_the_lab_s_rewards():
     # OpenRigs.Devices' Rewards (RewardRequests, RewardDelivered), then one RewardValve per valve, before TaskLogic.
     assert lint.reward_problems(WORKFLOW) == []
-
-
-def test_the_penalty_sound_is_the_lab_s_at_the_task_s_level():
-    # PlayPenaltySound is TrialOutcomeEffects' (OpenRigs.Trials), included once; lib's lint counts only a direct include,
-    # so its count is the one problem until it looks inside TrialOutcomeEffects.
-    assert TEXT.count(f'Path="{OUTCOME_EFFECTS}"') == 1
-    assert lint.penalty_sound_problems(WORKFLOW) == ["the workflow includes PlayPenaltySound 0 times, not once"]
 
 
 def test_the_rng_seed_is_logged_at_trial_1s_start():
