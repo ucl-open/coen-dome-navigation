@@ -677,10 +677,10 @@ def test_a_condition_sets_its_reward_auto_reward_and_where_the_pips_play():
 
 def test_every_sound_s_level_is_a_condition_s_and_the_plan_s_values():
     # Every sound's level is condition-level (P19), none a session field; the task file's levels are the lab's 5 dB steps
-    # (stimulus -55, reward tone -55, penalty -45) and the background noise has no task setting (the lab's -60).
+    # (stimulus -55, reward tone -55, penalty -35) and the background noise has no task setting (the lab's -60).
     assert not {"rewardTone", "penalty", "auditoryStimulus"} & {path.split(".")[0] for path in SESSION_FIELDS}
     params = task()["taskParameters"]
-    assert (params["auditoryStimulus"]["levelDbfs"], params["rewardTone"]["levelDbfs"], params["penalty"]["sound"]["levelDbfs"]) == (-55, -55, -45)
+    assert (params["auditoryStimulus"]["levelDbfs"], params["rewardTone"]["levelDbfs"], params["penalty"]["sound"]["levelDbfs"]) == (-55, -55, -35)
     assert "backgroundNoise" not in params
     conditions = [{"weight": 1, "set": {"visualStimulus.contrasts": [0], "rewardTone.levelDbfs": -50, "penalty.sound.levelDbfs": "mute"}},
                   {"weight": 1, "set": {"visualStimulus.contrasts": [0], "rewardTone.levelDbfs": "mute"}}]
