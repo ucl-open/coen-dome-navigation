@@ -366,7 +366,7 @@
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ConnectForTask.bonsai" />
       <Expression xsi:type="GroupWorkflow">
         <Name>Logging</Name>
-        <Description>Everything else written to the experiment folder (ExperimentLogs, before DomeHardware, makes the folder): TaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), WorkflowData_Trials and Zapit's logs (its replies as Events rows, Settings_ZapitConditions), Settings_Combinations (TrialRules.CombinationsJson, through LogDataSchema) every combination the conditions built at Go, each a row the trial log's trialCombinationId names, with the values that vary, LogWorkflowData the task's own WorkflowData_StimulusState; each device logs itself; Rewards logs each reward (RewardDelivered) and each RewardValve piece its calibration file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
+        <Description>Everything else written to the experiment folder (ExperimentLogs, before DomeHardware, makes the folder): ConditionedTaskLogs (OpenRigs.Logging) writes Settings_Task (the task file as JSON), WorkflowData_Trials and Zapit's logs (its replies as Events rows, Settings_ZapitConditions) through TaskLogs, and Settings_Combinations (TrialRules.CombinationsJson) every combination the conditions built at Go, each a row the trial log's trialCombinationId names, with the values that vary, LogWorkflowData the task's own WorkflowData_StimulusState; each device logs itself; Rewards logs each reward (RewardDelivered) and each RewardValve piece its calibration file; ExperimentRecords, last but LiveView, takes the controller's events, records the Harp devices and writes the manifest.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -387,23 +387,12 @@
                 <task:Formatting>Indented</task:Formatting>
               </Combinator>
             </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:TaskLogs.bonsai" />
-            <Expression xsi:type="SubscribeSubject">
-              <Name>TrialRules</Name>
-            </Expression>
-            <Expression xsi:type="MemberSelector">
-              <Selector>CombinationsJson</Selector>
-            </Expression>
-            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LogDataSchema.bonsai">
-              <Name>Settings_Combinations</Name>
-            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:ConditionedTaskLogs.bonsai" />
           </Nodes>
           <Edges>
             <Edge From="0" To="1" Label="Source1" />
             <Edge From="2" To="3" Label="Source1" />
             <Edge From="3" To="4" Label="Source1" />
-            <Edge From="5" To="6" Label="Source1" />
-            <Edge From="6" To="7" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>
