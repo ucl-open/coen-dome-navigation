@@ -39,15 +39,15 @@ def test_no_wall_clock_wait_inside_task_logic():
     assert "ext:RunTrials" in combinators(group("TaskLogic"))
 
 
-def test_rewarded_follows_the_valve():
-    # F12: rewarded is the valve's, through lib's TrialOutcomeEffects (the reward requested first, then the row by
-    # RewardedAsDelivered over RewardDelivered, which Rewards declares before it), so a stop that cuts the reward off logs
-    # it unrewarded. Included once, and no row of main.bonsai's own goes into TrialRow around it.
+def test_rewarded_follows_the_boards_answer():
+    # F12: rewarded is the board's answer to the valve's write, through lib's TrialOutcomeEffects (the reward requested first, then the row by
+    # RewardedAsDelivered over RewardDelivered, which Rewards declares before it), so a reward the board never answered (a stop cut it off) logs
+    # it unrewarded or not at all. Included once, and no row of main.bonsai's own goes into TrialRow around it.
     assert TEXT.count(f'Path="{OUTCOME_EFFECTS}"') == 1
     assert not [e for e in MAIN.iter(W + "Expression") if e.get(XSI) == "MulticastSubject" and e.findtext(W + "Name") == "TrialRow"]
     assert TEXT.index('Path="OpenRigs.Devices:Rewards.bonsai"') < TEXT.index(f'Path="{OUTCOME_EFFECTS}"')
     rewarded = yaml.safe_load((ROOT / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))["rewarded"]["description"]
-    assert rewarded.startswith("True when the valve planned the trial's reward") and "the stop came first" in rewarded
+    assert rewarded.startswith("True when the board answered the write that opened the valve") and "had not answered by the next outcome" in rewarded
 
 
 def test_the_shared_blocks_replace_the_local_copies():

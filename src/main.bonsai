@@ -328,11 +328,13 @@
         <Name>RewardValve-Left</Name>
         <Board>BehaviorBoard-Main</Board>
         <BoardTriggerCalibratedPulseSubjectName>BehaviorBoard-Main.TriggerCalibratedPulse</BoardTriggerCalibratedPulseSubjectName>
+        <BoardDataSubjectName>BehaviorBoard-Main.Data</BoardDataSubjectName>
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:RewardValve.bonsai">
         <Name>RewardValve-Right</Name>
         <Board>BehaviorBoard-Main</Board>
         <BoardTriggerCalibratedPulseSubjectName>BehaviorBoard-Main.TriggerCalibratedPulse</BoardTriggerCalibratedPulseSubjectName>
+        <BoardDataSubjectName>BehaviorBoard-Main.Data</BoardDataSubjectName>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>

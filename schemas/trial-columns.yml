@@ -74,7 +74,7 @@ rewardOfferedUl:
   note: The trial's condition's reward.sizeUl, or sizeUl x reward.largeMultiplier on a large-reward trial (drawn with reward.largeProbability), on every trial.
 rewarded:
   type: bool
-  description: 'True when the valve planned the trial''s reward (rewardOfferedUl; its RewardDelivered row in WorkflowData_Events, at outcomeTime); false on an outcome that earned it when the stop came first. Which outcomes are rewarded is the task''s (its note).'
+  description: 'True when the board answered the write that opened the valve for the trial''s reward (rewardOfferedUl; its RewardDelivered row in WorkflowData_Events, a few ms after outcomeTime); false on an outcome that earned it when the board had not answered by the next outcome. A stop before the board answered leaves the trial with no row. Which outcomes are rewarded is the task''s (its note).'
   note: A trial that ends on a lick in the reward zone (outcomeReason correctLick, outcome correct) or with the zone reached on an auto-reward trial (outcomeReason rewardZoneReached, outcome auto), rewarded at the left spout.
 penaltyTimeoutSeconds:
   type: double
