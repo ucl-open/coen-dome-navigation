@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using OpenRigs.Devices.Rigs;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.RepresentationModel;
-using TrialConditionDraw = OpenRigs.Trials.TrialConditionDraw<UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskParameters>;
+using BuiltTrialCondition = OpenRigs.Trials.BuiltTrialCondition<UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskParameters>;
 
 // The task in tested C#: each trial's draw, its timing and its run along the virtual track, as the rules
 // lib-open-rigs' TrialLoop runs on the Harp clock (RunTrials). main.bonsai drives the hardware from the loop's events;
@@ -88,7 +88,7 @@ public class TrialOutcome : OpenRigs.Trials.TrialOutcome<TrialRow>
 public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
 {
     public const double StepSeconds = 0.05;       // task.py STEP_SECONDS
-    public const double LaserMaxMarginSeconds = 0.25; // task.py LASER_MAX_MARGIN_SECONDS
+    public const double LaserCapMarginSeconds = 0.25; // task.py LASER_CAP_MARGIN_SECONDS
     public const double MaxLeadSeconds = 0.2;            // task.py MAX_LEAD_SECONDS: the furthest the trigger may come before the first pip
     public const double UnlimitedWindowTriggerAfterSeconds = 2.0; // task.py UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS: the furthest after the first pip it may come on a stage without responseWindowSeconds
 
@@ -101,22 +101,22 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     int nextStep, wrongLicks;
     double auditoryOffPositionCm, visualOffPositionCm;  // where each switched off this trial, in track cm; NaN: it never did
 
-    /// <summary>The rules for a task file's text; zapitConditions gives a conditions file's count and longest ramp-down in
+    /// <summary>The rules for a task file's text; zapitConditions gives a conditions file's count and max ramp-down in
     /// seconds (null: ZapitConditions.Check reads the file).</summary>
-    public TrialRules(string taskText, Sweep sweep, bool hardwareTriggered, Func<string, Tuple<int, double>> zapitConditions, EqualisedSpeakerArray speakers = null)
+    public TrialRules(string taskText, Sweep sweep, bool hardwareTriggered, Func<string, ZapitConditionsFile> zapitConditions, EqualisedSpeakerArray speakers = null)
     {
         this.sweep = sweep;
         draw = new TrialDraw(taskText, sweep, zapitConditions, speakers);
         task = draw.Task;
         // Every StartStimulus continuous: the laser on from the trigger until the outcome or LaserCap (the cap derived at
-        // Go), the trigger line (and the masking light on it) held the conditions file's longest ramp-down past the outcome,
+        // Go), the trigger line (and the masking light on it) held the conditions file's max ramp-down past the outcome,
         // the next trial armed once it falls.
-        laser = task.Optogenetics.Enabled ? LaserTiming.UntilOutcome(hardwareTriggered, draw.MaxRampDownSeconds, draw.LaserMaxSeconds) : null;
+        laser = task.Optogenetics.Enabled ? LaserTiming.UntilOutcome(hardwareTriggered, draw.MaxRampDownSeconds, draw.LaserCapSeconds) : null;
     }
 
     /// <summary>The rules for a task file's text (TaskText) with the sweep, Zapit's hardware triggering and rig.yml's speakerArray
     /// (null: none, so only initialAzimuthsDeg "all"); throws naming every problem (TrialDraw.CheckTask).</summary>
-    public static TrialRules Create(string taskText, Sweep sweep, bool hardwareTriggered, Func<string, Tuple<int, double>> zapitConditions, EqualisedSpeakerArray speakers = null)
+    public static TrialRules Create(string taskText, Sweep sweep, bool hardwareTriggered, Func<string, ZapitConditionsFile> zapitConditions, EqualisedSpeakerArray speakers = null)
     {
         return new TrialRules(taskText, sweep, hardwareTriggered, zapitConditions, speakers);
     }
@@ -124,14 +124,14 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     /// <summary>The stage as code-version (S03A-k7f2) from the task file's curriculum, which the check has found well formed.</summary>
     public string CurriculumStage { get { return task.Curriculum.Code + "-" + task.Curriculum.Version; } }
 
-    /// <summary>The loudest tone the task's conditions can draw (OpenRigs.Trials LoudestSound.Of), for the pips' peak check (LayOutPips).</summary>
-    public LoudestSound MaxStimulusLevel { get { return LoudestSound.Of(draw.Conditions, t => t.AuditoryStimulus.LevelDbfs); } }
+    /// <summary>The highest tone the task's conditions can draw (OpenRigs.Trials MaxSoundLevel.Of), for the pips' peak check (LayOutPips).</summary>
+    public MaxSoundLevel MaxStimulusLevel { get { return MaxSoundLevel.Of(draw.Conditions, t => t.AuditoryStimulus.LevelDbfs); } }
 
-    /// <summary>The loudest penalty.sound.levelDbfs any condition can draw (NaN: every one mute), PlayPenaltySound's buffer level.</summary>
-    public double LoudestPenaltyLevelDbfs { get { return LoudestSound.Of(draw.Conditions, t => t.Penalty.Sound.LevelDbfs).LevelDbfs; } }
+    /// <summary>The highest penalty.sound.levelDbfs any condition can draw (NaN: every one mute), PlayPenaltySound's buffer level.</summary>
+    public double MaxPenaltyLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.Penalty.Sound.LevelDbfs).LevelDbfs; } }
 
-    /// <summary>The loudest rewardTone.levelDbfs any condition can draw (NaN: every one mute), PlayRewardTone's buffer level.</summary>
-    public double LoudestRewardToneLevelDbfs { get { return LoudestSound.Of(draw.Conditions, t => t.RewardTone.LevelDbfs).LevelDbfs; } }
+    /// <summary>The highest rewardTone.levelDbfs any condition can draw (NaN: every one mute), PlayRewardTone's buffer level.</summary>
+    public double MaxRewardToneLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.RewardTone.LevelDbfs).LevelDbfs; } }
 
     /// <summary>Settings_Combinations' text (OpenRigs.Trials TrialConditions.CombinationsJson): every combination built at Go, each a row the trial
     /// log's trialCombinationId names; logged by ConditionedTaskLogs in the Logging group.</summary>
@@ -311,14 +311,14 @@ public class TrialDraw
     /// <summary>Each trial condition as drawn (OpenRigs.Trials TrialConditions.Build, the Python build's rule): its set and
     /// pairs over the task's text, every combination read back, each combination's Id its row in Settings_Combinations. Adds a
     /// problem for each condition that cannot be built, and returns null then.</summary>
-    public static List<TrialConditionDraw> BuildConditions(string taskText, UclOpenCoenDomeNavigationTaskParameters task, List<string> problems)
+    public static List<BuiltTrialCondition> BuildConditions(string taskText, UclOpenCoenDomeNavigationTaskParameters task, List<string> problems)
     {
         return TrialConditions.Build(taskText, task, t => TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(t).TaskParameters, Schema, problems);
     }
 
     readonly UclOpenCoenDomeNavigationTaskParameters task;
     readonly EqualisedSpeakerArray speakers;
-    readonly List<TrialConditionDraw> conditions;
+    readonly List<BuiltTrialCondition> conditions;
     readonly Random random;
     readonly int conditionCount;
     int drawn;
@@ -326,30 +326,30 @@ public class TrialDraw
     /// <summary>The seed the random stream started from: the task's rngSeed, or one drawn when it is null.</summary>
     public int Seed { get; private set; }
 
-    /// <summary>The Zapit conditions file's longest ramp-down, in seconds: how long the trigger line is held past the outcome
+    /// <summary>The Zapit conditions file's max ramp-down, in seconds: how long the trigger line is held past the outcome
     /// (0 without optogenetics).</summary>
     public double MaxRampDownSeconds { get; private set; }
 
-    /// <summary>The laser's cap from the trigger, derived at Go: the longest responseWindowSeconds + laserToStimulusSeconds any
-    /// weighted combination can draw, plus TrialRules.LaserMaxMarginSeconds (infinity without optogenetics).</summary>
-    public double LaserMaxSeconds { get; private set; }
+    /// <summary>The laser's cap from the trigger, derived at Go: the max responseWindowSeconds + laserToStimulusSeconds any
+    /// weighted combination can draw, plus TrialRules.LaserCapMarginSeconds (infinity without optogenetics).</summary>
+    public double LaserCapSeconds { get; private set; }
 
     /// <summary>The draw for the task file's text (TaskText), checked by CheckTask; zapitConditions gives a conditions file's
-    /// count and longest ramp-down (null: ZapitConditions.Check reads it). With optogenetics, refuses a ramp-down that leaves
+    /// count and max ramp-down (null: ZapitConditions.Check reads it). With optogenetics, refuses a ramp-down that leaves
     /// the trigger line up past the next trial's arming in any combination.</summary>
-    public TrialDraw(string taskText, Sweep sweep, Func<string, Tuple<int, double>> zapitConditions, EqualisedSpeakerArray speakers = null)
+    public TrialDraw(string taskText, Sweep sweep, Func<string, ZapitConditionsFile> zapitConditions, EqualisedSpeakerArray speakers = null)
     {
         this.speakers = speakers;
         conditions = CheckTask(taskText, sweep, speakers, out task);
         var opto = task.Optogenetics;
-        LaserMaxSeconds = double.PositiveInfinity;
+        LaserCapSeconds = double.PositiveInfinity;
         if (opto.Enabled)
         {
-            var file = zapitConditions != null ? zapitConditions(opto.ZapitConditionsPath) : Read(opto.ZapitConditionsPath);
-            conditionCount = file.Item1;
-            MaxRampDownSeconds = file.Item2;
+            var file = zapitConditions != null ? zapitConditions(opto.ZapitConditionsPath) : ZapitConditions.Check(opto.ZapitConditionsPath);
+            conditionCount = file.Count;
+            MaxRampDownSeconds = file.MaxRampDownSeconds;
             var weighted = Weighted(conditions).ToList();
-            LaserMaxSeconds = weighted.Max(c => c.Task.TrialStructure.ResponseWindowSeconds.Value + c.Task.Optogenetics.LaserToStimulusSeconds) + TrialRules.LaserMaxMarginSeconds;
+            LaserCapSeconds = weighted.Max(c => c.Task.TrialStructure.ResponseWindowSeconds.Value + c.Task.Optogenetics.LaserToStimulusSeconds) + TrialRules.LaserCapMarginSeconds;
             var problems = new List<string>();
             foreach (var condition in conditions)
             {
@@ -359,7 +359,7 @@ public class TrialDraw
                     var holdMax = p.TrialStructure.ItiMinSeconds - p.Optogenetics.LaserToStimulusSeconds - ZapitTrial.ReplyMarginSeconds;
                     if (MaxRampDownSeconds > holdMax + 1e-9)
                     {
-                        problems.Add(string.Format("{0}: the Zapit conditions file's longest ramp-down ({1} s) must be at most {2} s (itiMinSeconds - laserToStimulusSeconds - {3} s): the trigger line is held that long past the outcome, the next trial is armed once it falls, and Zapit's reply needs {3} s before its trigger",
+                        problems.Add(string.Format("{0}: the Zapit conditions file's max ramp-down ({1} s) must be at most {2} s (itiMinSeconds - laserToStimulusSeconds - {3} s): the trigger line is held that long past the outcome, the next trial is armed once it falls, and Zapit's reply needs {3} s before its trigger",
                             condition.Where + (combination.Picks.Length == 0 ? "" : " with " + combination.Picks), MaxRampDownSeconds, holdMax, ZapitTrial.ReplyMarginSeconds));
                     }
                 }
@@ -370,19 +370,13 @@ public class TrialDraw
         random = new Random(Seed);
     }
 
-    static Tuple<int, double> Read(string path)
-    {
-        var file = ZapitConditions.Check(path);
-        return Tuple.Create(file.Count, file.LongestRampDownSeconds);
-    }
-
-    static IEnumerable<TrialConditionCombination<UclOpenCoenDomeNavigationTaskParameters>> Weighted(IEnumerable<TrialConditionDraw> conditions)
+    static IEnumerable<TrialConditionCombination<UclOpenCoenDomeNavigationTaskParameters>> Weighted(IEnumerable<BuiltTrialCondition> conditions)
     {
         return conditions.Where(c => c.Weight > 0).SelectMany(c => c.Combinations);
     }
 
     /// <summary>The conditions as built at Go, in trialConditions' order.</summary>
-    public IList<TrialConditionDraw> Conditions { get { return conditions; } }
+    public IList<BuiltTrialCondition> Conditions { get { return conditions; } }
 
     /// <summary>The task as read from its text (ReadTask's reader).</summary>
     public UclOpenCoenDomeNavigationTaskParameters Task { get { return task; } }
@@ -391,7 +385,7 @@ public class TrialDraw
     /// conditions as drawn (BuildConditions, over the text as written): its curriculum (the only record of the stage, filled by
     /// app-rig-control) is present and well formed, and what pydantic would check (Bonsai reads the task file without it) and what
     /// only the sweep can say holds on the task and every combination of every condition; throws naming every problem.</summary>
-    public static List<TrialConditionDraw> CheckTask(string taskText, Sweep sweep, EqualisedSpeakerArray speakers, out UclOpenCoenDomeNavigationTaskParameters task)
+    public static List<BuiltTrialCondition> CheckTask(string taskText, Sweep sweep, EqualisedSpeakerArray speakers, out UclOpenCoenDomeNavigationTaskParameters task)
     {
         task = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(taskText).TaskParameters;
         var curriculumProblem = CurriculumCheck.Problem(task.Curriculum);
@@ -490,7 +484,7 @@ public class TrialDraw
         if (opto.Enabled)
         {
             if (!(opto.LaserPowerMw > 0)) problems.Add("optogenetics.laserPowerMw must be a power in mW above 0 with optogenetics on");
-            // The laser's cap is derived from the response window (TrialDraw.LaserMaxSeconds).
+            // The laser's cap is derived from the response window (TrialDraw.LaserCapSeconds).
             if (!structure.ResponseWindowSeconds.HasValue) problems.Add("optogenetics needs trialStructure.responseWindowSeconds: the laser's cap is derived from it");
         }
     }
@@ -570,7 +564,7 @@ public class ReadTask
 }
 
 [Combinator]
-[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (the task file's text, TaskText; rig.yml; sweep); the task is read as ReadTask reads it and its conditions built over the text as written; rig.yml's speakerArray places initialAzimuthsDeg's nearest speaker. Stops the workflow on a task whose curriculum is empty or malformed, a trial condition that cannot be built (its set and pairs over the task's values, every combination), a reward zone outside the track's tones or the optogenetics rules (the Zapit conditions file read for its conditions and longest ramp-down). A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
+[Description("Checks the task at Go and makes the rules the trials are drawn from and run by. Input: (the task file's text, TaskText; rig.yml; sweep); the task is read as ReadTask reads it and its conditions built over the text as written; rig.yml's speakerArray places initialAzimuthsDeg's nearest speaker. Stops the workflow on a task whose curriculum is empty or malformed, a trial condition that cannot be built (its set and pairs over the task's values, every combination), a reward zone outside the track's tones or the optogenetics rules (the Zapit conditions file read for its conditions and max ramp-down). A real mouse on a rig without hardware triggering is lib-open-rigs' ConnectZapit's refusal.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class CheckTaskAtGo
 {

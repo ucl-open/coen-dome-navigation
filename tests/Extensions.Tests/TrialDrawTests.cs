@@ -12,7 +12,7 @@ using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.Serialization;
-using TrialConditionDraw = OpenRigs.Trials.TrialConditionDraw<UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskParameters>;
+using BuiltTrialCondition = OpenRigs.Trials.BuiltTrialCondition<UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskParameters>;
 using TrialEventOf = OpenRigs.Trials.TrialEvent<Trial, StimulusFrame, TrialOutcome>;
 
 static class Fixture
@@ -52,7 +52,7 @@ static class Fixture
         new double?[] { 15248, 21248, 0, 5, 1, 12, 1, 0 },       // Stimulus Off
     };
 
-    /// <summary>The longest ramp-down in the stand-in Zapit conditions file, s.</summary>
+    /// <summary>The max ramp-down in the stand-in Zapit conditions file, s.</summary>
     public const double RampDown = 1.0;
 
     /// <summary>The task with a curriculum stage's values written over it, as app-rig-control does at launch.</summary>
@@ -108,7 +108,7 @@ static class Fixture
 
     public static TrialRules Setup(string taskText, bool hardware = true)
     {
-        return TrialRules.Create(taskText, Sweep(), hardware, path => Tuple.Create(4, RampDown), Speakers());
+        return TrialRules.Create(taskText, Sweep(), hardware, path => new ZapitConditionsFile(4, RampDown), Speakers());
     }
 
     public static TrialDraw Draw(UclOpenCoenDomeNavigationTaskParameters task, bool speakers = true)
@@ -118,7 +118,7 @@ static class Fixture
 
     public static TrialDraw Draw(string taskText, bool speakers = true)
     {
-        return new TrialDraw(taskText, Sweep(), path => Tuple.Create(4, RampDown), speakers ? Speakers() : null);
+        return new TrialDraw(taskText, Sweep(), path => new ZapitConditionsFile(4, RampDown), speakers ? Speakers() : null);
     }
 
     /// <summary>rig.yml's speakerArray: left (-90 deg, channel 0), right (90, channel 1) and centre (0, channel 2), all at
@@ -534,7 +534,7 @@ public class TrialDrawTests
     }
 
     [TestMethod]
-    public void TheLoudestToneIsTheLoudestLevelAWeightedConditionCanDraw()
+    public void TheMaxToneIsTheMaxLevelAWeightedConditionCanDraw()
     {
         var task = Fixture.Task(1);
         task.TrialConditions = new List<TrialCondition>
@@ -543,9 +543,9 @@ public class TrialDrawTests
             new TrialCondition { Weight = 0, Set = new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", -30.0 } } },
             new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", "mute" } } },
         };
-        var loudest = Fixture.Setup(task).MaxStimulusLevel;
-        Assert.AreEqual(-50.0, loudest.LevelDbfs);   // the weight 0 condition's -30 is never drawn
-        StringAssert.StartsWith(loudest.Where, "trialConditions[0] (audiovisualCoherent)");   // the task's grating, shown too
+        var max = Fixture.Setup(task).MaxStimulusLevel;
+        Assert.AreEqual(-50.0, max.LevelDbfs);   // the weight 0 condition's -30 is never drawn
+        StringAssert.StartsWith(max.Where, "trialConditions[0] (audiovisualCoherent)");   // the task's grating, shown too
     }
 
     [TestMethod]
@@ -1286,7 +1286,7 @@ public class TrialRulesTests
         // The cap comes after the window's own end (12 s from the first pip), so it only backstops a missed outcome.
         var task = Fixture.Task(4);
         Fixture.Opto(task);
-        Assert.AreEqual(12 + 0.1 + 0.25, Fixture.Setup(task, false).Laser.LaserMaxSeconds, 1e-9);
+        Assert.AreEqual(12 + 0.1 + 0.25, Fixture.Setup(task, false).Laser.LaserCapSeconds, 1e-9);
     }
 
     [TestMethod]
@@ -1344,10 +1344,10 @@ public class TrialRulesTests
         var task = Fixture.Task(3);
         Fixture.Opto(task);
         var on = Fixture.Setup(task);
-        Assert.AreEqual(Fixture.RampDown, on.Laser.TriggerHoldSeconds);   // the conditions file's longest ramp-down
+        Assert.AreEqual(Fixture.RampDown, on.Laser.TriggerHoldSeconds);   // the conditions file's max ramp-down
     }
 
-    // The line falls the conditions file's longest ramp-down after the outcome, on the Harp clock (TrialLoop's TriggerOff, which replaced
+    // The line falls the conditions file's max ramp-down after the outcome, on the Harp clock (TrialLoop's TriggerOff, which replaced
     // TaskLogic's HarpDelay), and the next trial is armed then.
     [TestMethod]
     public void TheTriggerLineFallsTriggerHoldSecondsAfterTheOutcomeAndTheNextIsArmedThen()
@@ -1370,8 +1370,8 @@ public class TrialRulesTests
     [TestMethod]
     public void TheLaserCapAndTheTriggerHoldAreDerivedAtGo()
     {
-        // The cap: the longest responseWindowSeconds + laserToStimulusSeconds over the weighted combinations, + 0.25; the hold:
-        // the conditions file's longest ramp-down.
+        // The cap: the max responseWindowSeconds + laserToStimulusSeconds over the weighted combinations, + 0.25; the hold:
+        // the conditions file's max ramp-down.
         var task = Fixture.Task(4);
         Fixture.Opto(task);
         task.Optogenetics.LaserToStimulusSeconds = 0.05;
@@ -1382,12 +1382,12 @@ public class TrialRulesTests
             new TrialCondition { Weight = 0, Set = new Dictionary<object, object> { { "trialStructure.responseWindowSeconds", 40.0 } } },   // never drawn: not in the cap
         };
         var draw = Fixture.Draw(task);
-        Assert.AreEqual(15.0 + 0.15 + 0.25, draw.LaserMaxSeconds, 1e-9);
+        Assert.AreEqual(15.0 + 0.15 + 0.25, draw.LaserCapSeconds, 1e-9);
         Assert.AreEqual(Fixture.RampDown, draw.MaxRampDownSeconds);
-        var rules = TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => Tuple.Create(4, 0.7), Fixture.Speakers());
+        var rules = TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, 0.7), Fixture.Speakers());
         Assert.AreEqual(0.7, rules.Laser.TriggerHoldSeconds);
-        Assert.AreEqual(15.0 + 0.15 + 0.25, rules.Laser.LaserMaxSeconds, 1e-9);
-        Assert.AreEqual(double.PositiveInfinity, Fixture.Draw(Fixture.Task(4)).LaserMaxSeconds, "without optogenetics: no cap");
+        Assert.AreEqual(15.0 + 0.15 + 0.25, rules.Laser.LaserCapSeconds, 1e-9);
+        Assert.AreEqual(double.PositiveInfinity, Fixture.Draw(Fixture.Task(4)).LaserCapSeconds, "without optogenetics: no cap");
         Assert.AreEqual(0.0, Fixture.Draw(Fixture.Task(4)).MaxRampDownSeconds);
     }
 
@@ -1396,14 +1396,14 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(4);
         var lead = task.Optogenetics.LaserToStimulusSeconds;
-        var longest = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;   // 1.7 s
+        var maxRampDown = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;   // 1.7 s
         Fixture.Opto(task);
-        TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => Tuple.Create(4, longest), Fixture.Speakers());   // exactly the longest: allowed
-        var message = Assert.ThrowsException<InvalidOperationException>(() => TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => Tuple.Create(4, longest + 0.1), Fixture.Speakers())).Message;
-        StringAssert.Contains(message, "longest ramp-down");
+        TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, maxRampDown), Fixture.Speakers());   // exactly the max: allowed
+        var message = Assert.ThrowsException<InvalidOperationException>(() => TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, maxRampDown + 0.1), Fixture.Speakers())).Message;
+        StringAssert.Contains(message, "max ramp-down");
         StringAssert.Contains(message, "itiMinSeconds - laserToStimulusSeconds");
         task.Optogenetics.Enabled = false;
-        TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => Tuple.Create(4, 99.0), Fixture.Speakers());   // the file is not read without optogenetics
+        TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, 99.0), Fixture.Speakers());   // the file is not read without optogenetics
     }
 
     [TestMethod]
@@ -1428,7 +1428,7 @@ public class TrialRulesTests
     }
 
     [TestMethod]
-    public void EachTrialsPenaltyLevelFollowsItsConditionAndTheLoudestIsTheBufferLevel()
+    public void EachTrialsPenaltyLevelFollowsItsConditionAndTheMaxIsTheBufferLevel()
     {
         Func<object, object, List<TrialCondition>> conditions = (a, b) => new List<TrialCondition>
         {
@@ -1438,7 +1438,7 @@ public class TrialRulesTests
         var task = Fixture.Task(2);   // no auto-reward: a trial run to the track's end is penalised
         task.TrialConditions = conditions(-40.0, "mute");
         var rules = Fixture.Setup(task);
-        Assert.AreEqual(-40.0, rules.LoudestPenaltyLevelDbfs);
+        Assert.AreEqual(-40.0, rules.MaxPenaltyLevelDbfs);
         var seen = new Dictionary<int, double>();
         var rig = new Rig(rules);
         for (int i = 0; i < 12; i++)
@@ -1452,9 +1452,9 @@ public class TrialRulesTests
         Assert.AreEqual(-40.0, seen[0]);
         Assert.IsTrue(double.IsNaN(seen[1]), "mute is NaN: the sound never plays");
         task.TrialConditions = conditions("mute", -30.0);
-        Assert.AreEqual(-30.0, Fixture.Setup(task).LoudestPenaltyLevelDbfs);
+        Assert.AreEqual(-30.0, Fixture.Setup(task).MaxPenaltyLevelDbfs);
         task.TrialConditions = conditions("mute", "mute");
-        Assert.IsTrue(double.IsNaN(Fixture.Setup(task).LoudestPenaltyLevelDbfs));
+        Assert.IsTrue(double.IsNaN(Fixture.Setup(task).MaxPenaltyLevelDbfs));
         // The reward tone follows its condition too: one at -50, one mute (auto-reward trials, each rewarded on the next pip).
         var tones = Fixture.Task(1);
         tones.TrialConditions = new List<TrialCondition>
@@ -1463,7 +1463,7 @@ public class TrialRulesTests
             new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "rewardTone.levelDbfs", "mute" } } },
         };
         var toneRules = Fixture.Setup(tones);
-        Assert.AreEqual(-50.0, toneRules.LoudestRewardToneLevelDbfs);
+        Assert.AreEqual(-50.0, toneRules.MaxRewardToneLevelDbfs);
         var toneSeen = new Dictionary<int, double>();
         var toneRig = new Rig(toneRules);
         for (int i = 0; i < 12; i++)

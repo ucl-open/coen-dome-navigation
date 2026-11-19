@@ -37,6 +37,9 @@ from open_rigs.core.task import (
     WheelQuietWait,
     level_dbfs,
 )
+from open_rigs.core.task import (
+    Reward as LabReward,
+)
 from open_rigs.rigs import conditioned_task as ct
 from open_rigs.rigs.conditioned_task import ALL_SPEAKERS, SoundAzimuth
 from pydantic import ConfigDict, Field, field_validator, model_validator
@@ -44,7 +47,7 @@ from pydantic import ConfigDict, Field, field_validator, model_validator
 from ucl_open_coen_dome_navigation import __semver__
 
 STEP_SECONDS = 0.05  # the tone pips are 50 ms apart on the Harp clock (TrialLogic.cs StepSeconds)
-LASER_MAX_MARGIN_SECONDS = 0.25  # how much longer than the longest laser (responseWindowSeconds + laserToStimulusSeconds) the derived cap is (TrialLogic.cs LaserMaxMarginSeconds)
+LASER_CAP_MARGIN_SECONDS = 0.25  # how much longer than the max laser (responseWindowSeconds + laserToStimulusSeconds) the derived cap is (TrialLogic.cs LaserCapMarginSeconds)
 MAX_LEAD_SECONDS = 0.2  # the furthest the trigger may come before the first pip, in whole steps (TrialLogic.cs MaxLeadSeconds)
 UNLIMITED_WINDOW_TRIGGER_AFTER_SECONDS = 2.0  # the furthest after the first pip the trigger may come on a stage without responseWindowSeconds (TrialLogic.cs)
 
@@ -147,12 +150,12 @@ class OptogeneticsSettings(Optogenetics):
     """Zapit optogenetic stimulation: the lab's block (open_rigs.core.task Optogenetics) and this task's laser timing.
 
     The stimulation sites and ramp-down are set in the Zapit conditions file loaded in Zapit, not here; Bonsai reads
-    the same file to list its conditions and its longest ramp-down. "Stimulus" is the tone and grating; the laser is
+    the same file to list its conditions and its max ramp-down. "Stimulus" is the tone and grating; the laser is
     continuous: it starts at the trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds
     before the first tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the
-    trial's outcome, or at a cap derived at Go (the longest responseWindowSeconds any condition can draw plus
+    trial's outcome, or at a cap derived at Go (the max responseWindowSeconds any condition can draw plus
     laser_to_stimulus_seconds plus 0.25 s) if that comes first. The trigger line, and the masking light on it, stays high past
-    the outcome for the conditions file's longest ramp-down. A trial that ends before its trigger has no laser.
+    the outcome for the conditions file's max ramp-down. A trial that ends before its trigger has no laser.
     """
 
     @model_validator(mode="after")
@@ -204,7 +207,7 @@ TRIAL_TYPES = (
 )
 # What some weighted condition must draw (the schema's x-required-conditions; open_rigs.rigs.conditions.required_problems):
 # nothing, as the corridor has no target.
-REQUIRED = ()
+REQUIRED_CONDITIONS = ()
 
 
 class TrialCondition(ct.TrialCondition):
@@ -227,7 +230,7 @@ class Curriculum(ct.Curriculum):
     sha256: String = Field(description="The sha256 of the curriculum file's text app-rig-control ran it from")
 
 
-class Reward(ct.Reward):
+class Reward(LabReward):
     """Reward delivery on the left spout's valve: the size, and the large-reward trials (the lab's reward block)."""
 
 
@@ -237,11 +240,11 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask
 
     A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
-    model_config = ConfigDict(json_schema_extra=ct.schema_extra(SESSION_FIELDS, RULES, TRIAL_TYPES, REQUIRED))
+    model_config = ConfigDict(json_schema_extra=ct.schema_extra(SESSION_FIELDS, RULES, TRIAL_TYPES, REQUIRED_CONDITIONS))
     SESSION_FIELDS = SESSION_FIELDS
     RULES = RULES
     TRIAL_TYPES = TRIAL_TYPES
-    REQUIRED = REQUIRED
+    REQUIRED_CONDITIONS = REQUIRED_CONDITIONS
 
     curriculum: Curriculum | None = Field(
         default=None,
@@ -292,7 +295,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask
     @model_validator(mode="after")
     def _the_laser_has_a_cap(self):
         # The laser stops at the outcome, capped at responseWindowSeconds + laser_to_stimulus_seconds + 0.25 s (TrialRules'
-        # LaserMaxSeconds, derived at Go): with no response window there is no cap to derive.
+        # LaserCapSeconds, derived at Go): with no response window there is no cap to derive.
         if self.optogenetics.enabled and self.trial_structure.response_window_seconds is None:
             raise ValueError("optogenetics needs trial_structure.response_window_seconds: the laser's cap is derived from it")
         return self

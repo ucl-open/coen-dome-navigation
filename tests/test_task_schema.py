@@ -9,25 +9,25 @@ import numpy as np
 import pydantic
 import pytest
 import yaml
-
-from ucl_open_coen_dome_navigation import waveforms
-from ucl_open_coen_dome_navigation.task import (
-    STEP_SECONDS,
-    LASER_MAX_MARGIN_SECONDS,
-    LIST_FIELDS,
-    REQUIRED,
-    SESSION_FIELDS,
-    RULES,
-    OptogeneticsSettings,
-    TRIAL_TYPES,
-    sweep,
-    track_end_hz,
-    UclOpenCoenDomeNavigationTaskLogic,
-    UclOpenCoenDomeNavigationTaskParameters,
-)
 from open_rigs.rigs import conditioned_task as ct
 from open_rigs.rigs.conditioned_task import MAX_WEIGHT_SUM, session_field
 from open_rigs.rigs.conditions import MAX_COMBINATIONS, flatten, unused_paths
+
+from ucl_open_coen_dome_navigation import waveforms
+from ucl_open_coen_dome_navigation.task import (
+    LASER_CAP_MARGIN_SECONDS,
+    LIST_FIELDS,
+    REQUIRED_CONDITIONS,
+    RULES,
+    SESSION_FIELDS,
+    STEP_SECONDS,
+    TRIAL_TYPES,
+    OptogeneticsSettings,
+    UclOpenCoenDomeNavigationTaskLogic,
+    UclOpenCoenDomeNavigationTaskParameters,
+    sweep,
+    track_end_hz,
+)
 
 ROOT = Path(__file__).parent.parent
 TASK = ROOT / "config" / "task-abstract-corridor.yml"
@@ -120,7 +120,7 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     # a C# test holds it to the schema), x-rules the rules, x-trial-types the names, x-required-conditions none (no target),
     # x-max-combinations the cap; every array but an x-whole one is a list field, one entry per combination.
     assert params_schema["x-session-fields"] == list(SESSION_FIELDS) and "x-condition-fields" not in params_schema
-    assert params_schema["x-required-conditions"] == list(REQUIRED) == []
+    assert params_schema["x-required-conditions"] == list(REQUIRED_CONDITIONS) == []
     assert params_schema["x-max-combinations"] == MAX_COMBINATIONS == 1024
     assert list(LIST_FIELDS) == ["auditoryStimulus.initialAzimuthsDeg", "stimulusOff.trackFractions", "track.lengthsCm", "visualStimulus.contrasts"]
     assert "x-whole" not in schema["$defs"]["StimulusOff"]["properties"]["stimuli"]
@@ -220,7 +220,7 @@ def test_a_stimulus_off_value_outside_the_four_is_refused():
         ([{"weight": 1, "set": {"sizeUl": 2}}], r"sets or pairs sizeUl, which is not a task field"),
         ([{"weight": 1, "set": {"rngSeed": 2}}], r"sets or pairs rngSeed, a session field \(x-session-fields: rngSeed "),
         ([{"weight": 1, "set": {"optogenetics.enabled": True}}], r"sets or pairs optogenetics.enabled, a session field \(x-session-fields: optogenetics.enabled "),
-        ([{"weight": 1, "set": {"optogenetics.laserMaxSeconds": 1}}], r"sets or pairs optogenetics.laserMaxSeconds, which is not a task field"),
+        ([{"weight": 1, "set": {"optogenetics.laserCapSeconds": 1}}], r"sets or pairs optogenetics.laserCapSeconds, which is not a task field"),
         ([{"weight": 1, "set": {"optogenetics.laserOnProbability": 1}}], r"sets optogenetics.laserOnProbability with optogenetics off"),
         ([{"weight": 1, "set": {"reward.sizeUl": 0}}], r"(?s)with \{.*'reward.sizeUl': 0.*greater than 0"),
         ([{"weight": 1, "set": {"autoRewardProbability": 2}}], r"less than or equal to 1"),
@@ -382,11 +382,11 @@ def test_the_schema_refuses_zapit_ticked_with_no_conditions_path():
 
 
 def test_the_optogenetics_block_has_pip_s_names():
-    # No laserMaxSeconds (the cap is derived at Go) and no triggerHoldSeconds (read from the Zapit conditions file in C#).
+    # No laserCapSeconds (the cap is derived at Go) and no triggerHoldSeconds (read from the Zapit conditions file in C#).
     names = ["enabled", "zapitConditionsPath", "laserPowerMw", "laserOnProbability", "laserToStimulusSeconds", "trialsBeforeLaser"]
     assert list(task()["taskParameters"]["optogenetics"]) == names
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    assert not {"laserMaxSeconds", "triggerHoldSeconds"} & set(schema["$defs"]["OptogeneticsSettings"]["properties"])
+    assert not {"laserCapSeconds", "triggerHoldSeconds"} & set(schema["$defs"]["OptogeneticsSettings"]["properties"])
 
 
 def test_rig_control_keeps_the_zapit_file():
@@ -402,7 +402,7 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
 
 
 def test_optogenetics_without_a_response_window_is_refused():
-    # The laser's cap is derived at Go from responseWindowSeconds (TrialRules' LaserMaxSeconds): a window that never closes has none.
+    # The laser's cap is derived at Go from responseWindowSeconds (TrialRules' LaserCapSeconds): a window that never closes has none.
     doc = task()
     assert doc["taskParameters"]["trialStructure"]["responseWindowSeconds"] is None
     doc["taskParameters"]["optogenetics"].update(enabled=True, zapitConditionsPath=r"C:\Zapit\conditions.yml", laserPowerMw=2.0)
@@ -596,7 +596,7 @@ def test_laser_power_is_required_with_optogenetics_on_and_above_0():
 
 def test_trial_logic_cs_uses_the_same_constants():
     # TrialLogic.cs's own checks of these rules, and the laser-off trials' 0 mW, are tests\Extensions.Tests' (TrialDrawTests.cs).
-    assert float(re.search(r"const double LaserMaxMarginSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == LASER_MAX_MARGIN_SECONDS
+    assert float(re.search(r"const double LaserCapMarginSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == LASER_CAP_MARGIN_SECONDS
     assert float(re.search(r"const double StepSeconds = ([\d.]+);", TRIAL_LOGIC).group(1)) == STEP_SECONDS
     from ucl_open_coen_dome_navigation import task
 
@@ -607,10 +607,10 @@ def test_trial_logic_cs_uses_the_same_constants():
 
 
 def test_the_laser_cap_and_trigger_hold_are_not_task_settings():
-    # The cap is derived at Go (TrialDraw.LaserMaxSeconds, LASER_MAX_MARGIN_SECONDS past the longest window plus lead) and the
-    # trigger hold is read from the Zapit conditions file (its longest ramp-down) in C#: neither is a model field or a Python rule.
+    # The cap is derived at Go (TrialDraw.LaserCapSeconds, LASER_CAP_MARGIN_SECONDS past the max window plus lead) and the
+    # trigger hold is read from the Zapit conditions file (its max ramp-down) in C#: neither is a model field or a Python rule.
     assert not {"laser_max_seconds", "trigger_hold_seconds"} & set(OptogeneticsSettings.model_fields)
-    assert "LaserMaxSeconds" in TRIAL_LOGIC and "draw.MaxRampDownSeconds" in TRIAL_LOGIC
+    assert "LaserCapSeconds" in TRIAL_LOGIC and "draw.MaxRampDownSeconds" in TRIAL_LOGIC
 
 
 @pytest.mark.parametrize("where, key, value", [

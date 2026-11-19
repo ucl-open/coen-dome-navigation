@@ -173,9 +173,9 @@ def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
 
 def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     # Each sound is one row laid out on rig.yml's channels, equalised for each speaker: the reward tone by OpenRigs.Audio's
-    # PlayRewardTone (SpeakerBuffer at the loudest rewardTone.levelDbfs on every speaker, played at the trial's) on each rewarded
+    # PlayRewardTone (SpeakerBuffer at the highest rewardTone.levelDbfs on every speaker, played at the trial's) on each rewarded
     # outcome TrialOutcomeEffects passes on, its input the trial's RewardToneLevelDbfs, from this repo's file; the pips by
-    # LayOutPips (PipSet: SpeakerSet.Layout on every speaker as stored, checked at the loudest level the conditions draw,
+    # LayOutPips (PipSet: SpeakerSet.Layout on every speaker as stored, checked at the highest level the conditions draw,
     # TrialRules.MaxStimulusLevel), fed Zip(MaxStimulusLevel, Sweep, Zip(Speakers, pips)).
     nodes, edges = _scope(group("TaskLogic"))
     (tone,) = [i for i, n in enumerate(nodes) if n.get("Path") == PLAY_REWARD_TONE]
@@ -192,7 +192,7 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     assert any("./sounds/pips.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
     assert not any("all_waveforms" in ET.tostring(n, encoding="unicode") for n in nodes)
     assert {"rx:Zip", "ext:LayOutPips", "rx:ToList", "Speakers", "TrialRules", "MaxStimulusLevel", "Sweep"} <= set(labels), labels
-    # LayOutPips is fed Zip(MaxStimulusLevel, Sweep, Zip(Speakers, pips)): the loudest level, the sweep, then the speakers with the pips.
+    # LayOutPips is fed Zip(MaxStimulusLevel, Sweep, Zip(Speakers, pips)): the highest level, the sweep, then the speakers with the pips.
     _, labelled = lint.scope(group("Audio"))
     (layout,) = [i for i, n in enumerate(nodes) if "ext:LayOutPips" in combinators(n)]
     (zipped,) = [a for a, b, _ in labelled if b == layout]

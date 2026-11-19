@@ -114,13 +114,13 @@ public class GratingState
 }
 
 /// <summary>The pips as the mixer plays them: each equalised for every rig.yml speaker, with its sync copy, as stored
-/// (sweep.json's pipLevelDbfs), checked at Go for the loudest level the task's conditions can draw.</summary>
+/// (sweep.json's pipLevelDbfs), checked at Go for the highest level the task's conditions can draw.</summary>
 public class PipSet
 {
     readonly IList<Mat> buffers;
     readonly int[] channels;
 
-    /// <summary>The largest gain the set was checked for at Go: the loudest level's (Sweep.GainOf).</summary>
+    /// <summary>The largest gain the set was checked for at Go: the highest level's (Sweep.GainOf).</summary>
     public double MaxGain { get; private set; }
 
     PipSet(IList<Mat> buffers, int[] channels, double largest)
@@ -131,17 +131,17 @@ public class PipSet
     }
 
     /// <summary>The pips laid out on the speakers as stored; stops, naming the pip, channel and condition, if any would peak
-    /// at -1 dBFS or more after equalisation at the loudest level the conditions can draw.</summary>
-    public static PipSet Create(SpeakerSet speakers, IList<Mat> pips, LoudestSound loudest, Sweep sweep)
+    /// at -1 dBFS or more after equalisation at the highest level the conditions can draw.</summary>
+    public static PipSet Create(SpeakerSet speakers, IList<Mat> pips, MaxSoundLevel max, Sweep sweep)
     {
         var buffers = pips.Select(pip => speakers.Layout(pip, null, 1, true, true)).ToList();
-        var largest = sweep.GainOf(loudest.LevelDbfs);
+        var largest = sweep.GainOf(max.LevelDbfs);
         var set = new PipSet(buffers, speakers.SpeakerChannels, largest);
         for (int i = 0; i < buffers.Count && largest > 0; i++)
         {
             using (var played = set.Scale(buffers[i], largest))
             {
-                SoundLevel.CheckPeak(played, "Pip " + i + " at " + loudest.LevelDbfs.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " dBFS (auditoryStimulus.levelDbfs, " + loudest.Where + ")");
+                SoundLevel.CheckPeak(played, "Pip " + i + " at " + max.LevelDbfs.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " dBFS (auditoryStimulus.levelDbfs, " + max.Where + ")");
             }
         }
         return set;
@@ -239,11 +239,11 @@ public class GratingStates
 }
 
 [Combinator]
-[Description("The pips laid out at Go (PipSet): each row of pips.bin equalised for every rig.yml speaker with its sync copy, as stored (sweep.json's pipLevelDbfs). Input: the loudest tone the conditions can draw (TrialRules.MaxStimulusLevel), the sweep, and the speakers with the pip rows. Stops the workflow, naming the pip, channel and condition, if any would peak at -1 dBFS or more after equalisation at that level.")]
+[Description("The pips laid out at Go (PipSet): each row of pips.bin equalised for every rig.yml speaker with its sync copy, as stored (sweep.json's pipLevelDbfs). Input: the highest tone the conditions can draw (TrialRules.MaxStimulusLevel), the sweep, and the speakers with the pip rows. Stops the workflow, naming the pip, channel and condition, if any would peak at -1 dBFS or more after equalisation at that level.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class LayOutPips
 {
-    public IObservable<PipSet> Process(IObservable<Tuple<LoudestSound, Sweep, Tuple<SpeakerSet, IList<Mat>>>> source)
+    public IObservable<PipSet> Process(IObservable<Tuple<MaxSoundLevel, Sweep, Tuple<SpeakerSet, IList<Mat>>>> source)
     {
         return source.Select(x => PipSet.Create(x.Item3.Item1, x.Item3.Item2, x.Item1, x.Item2));
     }

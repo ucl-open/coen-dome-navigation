@@ -1,13 +1,14 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenRigs.Core;
 using OpenRigs.Trials;
+using OpenRigs.Devices.Zapit;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UclOpenCoenDomeNavigationTask;
 using YamlDotNet.RepresentationModel;
-using TrialConditionDraw = OpenRigs.Trials.TrialConditionDraw<UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskParameters>;
+using BuiltTrialCondition = OpenRigs.Trials.BuiltTrialCondition<UclOpenCoenDomeNavigationTask.UclOpenCoenDomeNavigationTaskParameters>;
 using TrialEventOf = OpenRigs.Trials.TrialEvent<Trial, StimulusFrame, TrialOutcome>;
 
 /// <summary>The task files app-rig-control writes at launch (tests\fixtures\handover, golden files its tests\test_handover.py
@@ -45,7 +46,7 @@ public class HandoverTests
         }).ToList();
     }
 
-    static List<TrialConditionDraw> Built(Golden golden)
+    static List<BuiltTrialCondition> Built(Golden golden)
     {
         UclOpenCoenDomeNavigationTaskParameters read;
         try { return TrialDraw.CheckTask(golden.Text, Fixture.Sweep(), Fixture.Speakers(), out read); }
@@ -83,7 +84,7 @@ public class HandoverTests
 
     // One trial against its combination (the file's values as BuildConditions picked them): its trialType the file's, the grating's contrast, the tone's level on the speaker nearest its azimuth (NaN silent or
     // at all), the track (track cm, and its wheel gain) and the reward.
-    static void Check(string file, List<TrialConditionDraw> built, string trialType, int condition, int combinationId, double contrast,
+    static void Check(string file, List<BuiltTrialCondition> built, string trialType, int condition, int combinationId, double contrast,
         double levelDbfs, double auditoryAzimuth, double trackLengthCm, double wheelGain, double rewardOfferedUl)
     {
         var where = file + " " + built[condition].Where + " combination " + combinationId;
@@ -167,7 +168,7 @@ public class HandoverTests
                 if (set != null) foreach (var key in set.Keys) allowed.Add(key.ToString());
                 foreach (var group in condition.Pairs ?? new List<List<string>>()) foreach (var path in group) allowed.Add(path);
             }
-            var json = new TrialRules(golden.Text, Fixture.Sweep(), true, path => Tuple.Create(2, 0.0), Fixture.Speakers()).CombinationsJson;
+            var json = new TrialRules(golden.Text, Fixture.Sweep(), true, path => new ZapitConditionsFile(2, 0.0), Fixture.Speakers()).CombinationsJson;
             var built = Built(golden);
             var own = TaskYaml.Flatten(golden.Task, TaskSchema.ListFields);
             var rows = (Newtonsoft.Json.Linq.JArray)Newtonsoft.Json.Linq.JObject.Parse(json)["rows"];

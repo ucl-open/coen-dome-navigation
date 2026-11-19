@@ -71,7 +71,7 @@ public class PipSetTests
         // channel, the sync copy included.
         var speakers = Speakers();
         var pips = Pips();
-        var set = PipSet.Create(speakers, pips, new LoudestSound { LevelDbfs = -58.1, Where = "test" }, Fixture.Sweep());
+        var set = PipSet.Create(speakers, pips, new MaxSoundLevel { LevelDbfs = -58.1, Where = "test" }, Fixture.Sweep());
         Assert.AreEqual(1, set.MaxGain, 1e-9);
         for (int i = 0; i < pips.Count; i++)
         {
@@ -87,7 +87,7 @@ public class PipSetTests
     public void APipPlaysAtItsTrialsLevelWithTheSyncCopyKept()
     {
         var speakers = Speakers();
-        var set = PipSet.Create(speakers, Pips(), new LoudestSound { LevelDbfs = -58.1 + 20 * Math.Log10(2), Where = "test" }, Fixture.Sweep());   // gain 2
+        var set = PipSet.Create(speakers, Pips(), new MaxSoundLevel { LevelDbfs = -58.1 + 20 * Math.Log10(2), Where = "test" }, Fixture.Sweep());   // gain 2
         var one = set.Buffer(40, 1);
         var half = set.Buffer(40, 0.5);
         using (var left = one.GetRow(0)) using (var leftHalf = half.GetRow(0)) using (var expected = new Mat(left.Size, Depth.F32, 1))
@@ -110,7 +110,7 @@ public class PipSetTests
     [TestMethod]
     public void ALevelThatWouldClipStopsAtGoNamingTheCondition()
     {
-        var message = Assert.ThrowsException<InvalidOperationException>(() => PipSet.Create(Speakers(), Pips(), new LoudestSound { LevelDbfs = -10, Where = "trialConditions[1] (auditory)" }, Fixture.Sweep())).Message;
+        var message = Assert.ThrowsException<InvalidOperationException>(() => PipSet.Create(Speakers(), Pips(), new MaxSoundLevel { LevelDbfs = -10, Where = "trialConditions[1] (auditory)" }, Fixture.Sweep())).Message;
         StringAssert.Contains(message, "trialConditions[1] (auditory)");
         StringAssert.Contains(message, "-10 dBFS");
     }
