@@ -18,21 +18,21 @@
   <Workflow>
     <Nodes>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="ConfigRoot" Description="The root under which each machine has its own configuration directory, &lt;ConfigRoot&gt;\&lt;MACHINE-NAME&gt;\rig.yml, read by ReadLabRig, which publishes it to every device piece; the launch's own, which rig-control always sets to C:\Coen-Lab-Local\RigConfigs. ExperimentRecords and LiveView are not mapped from here: each reads that root as its own ConfigRoot, as a mapping edge into LiveView's StreamDevices would build it before the devices it streams." />
+        <Property Name="ConfigRoot" Description="The root under which each machine has its own configuration directory, &lt;ConfigRoot&gt;\&lt;MACHINE-NAME&gt;\rig.yml, read by ReadLabRig, which publishes it to every device piece; the launch's own, which app-rig-control always sets to C:\Coen-Lab-Local\RigConfigs. ExperimentRecords and LiveView are not mapped from here: each reads that root as its own ConfigRoot, as a mapping edge into LiveView's StreamDevices would build it before the devices it streams." />
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ReadLabRig.bonsai">
         <Description>This machine's rig.yml (ConfigRoot\MACHINE\rig.yml) read once into the lab rig model: RigConfigs, RigFile and ConfigRoot, which every device piece reads. First, before anything that reads them.</Description>
         <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="SubjectId" Description="The mouse's lab ID; the launch's own, from rig-control." />
+        <Property Name="SubjectId" Description="The mouse's lab ID; the launch's own, from app-rig-control." />
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="SessionId" Description="The session number; the launch's own, from rig-control." />
-        <Property Name="LaunchId" Description="The launcher's run id; the launch's own, from rig-control." />
+        <Property Name="SessionId" Description="The session number; the launch's own, from app-rig-control." />
+        <Property Name="LaunchId" Description="The launcher's run id; the launch's own, from app-rig-control." />
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:ExperimentControl.bonsai">
-        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its curriculum the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from DomeHardware. TaskFile publishes the stage as CurriculumStage (code-version, like S03A-k7f2, from the task file's curriculum) at Go and reports it as the metric curriculumStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
+        <Description>The experiment controller (OpenRigs.Control, ExperimentControl) over TCP 5561: SubjectId (the mouse's lab ID, or test), SessionId and LaunchId (the launcher's run id, in the manifest) are the launch's; the experiment declares no parameter of its own: the task's own settings are the task file's, which app-rig-control writes at launch and again at Go with the form's edits, and names in TaskPath, its curriculum the only record of the stage; the pieces declare their own parameters and commands. The workflow starts into ready mode (devices connected, spouts homed and at this mouse's positions, live view on, nothing recorded) and reports Ready from DomeHardware. TaskFile publishes the stage as CurriculumStage (code-version, like S03A-k7f2, from the task file's curriculum) at Go and reports it as the metric curriculumStage. SpoutStepSize and the spout commands are DomeHardware's LickSpoutStage's, which takes the step size live and shows its default. RewardValve-Left.Reward and RewardValve-Right.Reward each give 2.5 ul before and during a run through the valve's calibration (each RewardValve piece's manual drop).</Description>
         <SubjectId />
         <SessionId />
         <LaunchId />
@@ -41,7 +41,7 @@
         <Commands />
       </Expression>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="TaskPath" Description="The task file: rig-control's copy of the one chosen at launch, read at Go with the form's edits; from the editor, config\task-abstract-corridor.yml." />
+        <Property Name="TaskPath" Description="The task file: app-rig-control's copy of the one chosen at launch, read at Go with the form's edits; from the editor, config\task-abstract-corridor.yml." />
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Control:LaunchSettings.bonsai">
         <Description>Publishes SubjectId and TaskPath at Start and ExperimentIds (SubjectId, SessionId) at Go (OpenRigs.Control).</Description>
@@ -204,14 +204,14 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (StimulusSoundBuffers, LayOutPips: pips.bin read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) as stored (sweep.json's pipLevelDbfs), checked at the loudest auditoryStimulus.levelDbfs any condition can draw (TrialRules.Loudest), each pip then played at its trial's auditoryLevelDbfs (PipBuffer); the reward tone (OpenRigs.Audio PlayRewardTone) at each rewarded trial's rewardTone.levelDbfs and the lab's penalty sound (PlayPenaltySound, in OpenRigs.Trials TrialOutcomeEffects) are made in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (StimulusSoundBuffers, LayOutPips: pips.bin read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) as stored (sweep.json's pipLevelDbfs), checked at the loudest auditoryStimulus.levelDbfs any condition can draw (TrialRules.MaxStimulusLevel), each pip then played at its trial's auditoryLevelDbfs (PipBuffer); the reward tone (OpenRigs.Audio PlayRewardTone) at each rewarded trial's rewardTone.levelDbfs and the lab's penalty sound (PlayPenaltySound, in OpenRigs.Trials TrialOutcomeEffects) are made in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
               <Name>TrialRules</Name>
             </Expression>
             <Expression xsi:type="MemberSelector">
-              <Selector>Loudest</Selector>
+              <Selector>MaxStimulusLevel</Selector>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
               <Name>Speakers</Name>
@@ -308,7 +308,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Status</Name>
-        <Description>The current trial's facts as metrics, named as WorkflowData_Trials's columns, at each trial's start: the shared ones (OpenRigs.Control ReportTrialMetrics: trialNumber, trialType, rewardOfferedUl, laserCondition); the curriculumStage, code-version, is TaskFile's; rig-control computes counts and performance from the trial rows.</Description>
+        <Description>The current trial's facts as metrics, named as WorkflowData_Trials's columns, at each trial's start: the shared ones (OpenRigs.Control ReportTrialMetrics: trialNumber, trialType, rewardOfferedUl, laserCondition); the curriculumStage, code-version, is TaskFile's; app-rig-control computes counts and performance from the trial rows.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">

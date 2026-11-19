@@ -111,7 +111,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         // Every StartStimulus continuous: the laser on from the trigger until the outcome or LaserCap (the cap derived at
         // Go), the trigger line (and the masking light on it) held the conditions file's longest ramp-down past the outcome,
         // the next trial armed once it falls.
-        laser = task.Optogenetics.Enabled ? LaserTiming.UntilOutcome(hardwareTriggered, draw.RampDownSeconds, draw.LaserMaxSeconds) : null;
+        laser = task.Optogenetics.Enabled ? LaserTiming.UntilOutcome(hardwareTriggered, draw.MaxRampDownSeconds, draw.LaserMaxSeconds) : null;
     }
 
     /// <summary>The rules for a task file's text (TaskText) with the sweep, Zapit's hardware triggering and rig.yml's speakerArray
@@ -125,7 +125,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     public string CurriculumStage { get { return task.Curriculum.Code + "-" + task.Curriculum.Version; } }
 
     /// <summary>The loudest tone the task's conditions can draw (OpenRigs.Trials LoudestSound.Of), for the pips' peak check (LayOutPips).</summary>
-    public LoudestSound Loudest { get { return LoudestSound.Of(draw.Conditions, t => t.AuditoryStimulus.LevelDbfs); } }
+    public LoudestSound MaxStimulusLevel { get { return LoudestSound.Of(draw.Conditions, t => t.AuditoryStimulus.LevelDbfs); } }
 
     /// <summary>The loudest penalty.sound.levelDbfs any condition can draw (NaN: every one mute), PlayPenaltySound's buffer level.</summary>
     public double LoudestPenaltyLevelDbfs { get { return LoudestSound.Of(draw.Conditions, t => t.Penalty.Sound.LevelDbfs).LevelDbfs; } }
@@ -198,7 +198,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         nextStep = due + 1;
         last = Frame(trial, due);
         updates.Add(last);
-        return trial.autoReward && last.Row.auditoryFrequencyHz >= trial.values.RewardZoneMinHz ? End(trial, "RewardZoneReached", times) : null;
+        return trial.autoReward && last.Row.auditoryFrequencyHz >= trial.values.RewardZoneMinHz ? End(trial, "rewardZoneReached", times) : null;
     }
 
     /// <summary>The left spout's licks count from the first pip: in the zone rewarded, outside toward wrongLickLimit;
@@ -206,25 +206,25 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     public TrialOutcome Lick(Trial trial, int spout, TrialTimes times, ICollection<StimulusFrame> updates)
     {
         if (spout != 0 || last == null || trial.autoReward) return null;
-        if (OnTarget(trial, last.Row.auditoryFrequencyHz)) return End(trial, "Lick", times);
+        if (OnTarget(trial, last.Row.auditoryFrequencyHz)) return End(trial, "correctLick", times);
         wrongLicks++;
         var limit = trial.values.WrongLickLimit;
-        return limit > 0 && wrongLicks >= limit ? End(trial, "WrongLickLimit", times) : null;
+        return limit > 0 && wrongLicks >= limit ? End(trial, "wrongLickLimit", times) : null;
     }
 
     /// <summary>The track's position from the trial start, and the trial's end at the end of the track (during the lead too).
     /// On an auto-reward trial the next pip ends it instead: the track's end is the track's top tone, above every reward floor,
-    /// so that pip reaches the zone (RewardZoneReached), as a mouse running past the floor between two pips expects.</summary>
+    /// so that pip reaches the zone (rewardZoneReached), as a mouse running past the floor between two pips expects.</summary>
     public TrialOutcome Wheel(Trial trial, double cm, TrialTimes times, ICollection<StimulusFrame> updates)
     {
         track.Update(cm);
-        return !trial.autoReward && track.AtEnd ? End(trial, "TrackEnd", times) : null;
+        return !trial.autoReward && track.AtEnd ? End(trial, "trackEnd", times) : null;
     }
 
     /// <summary>responseWindowSeconds from the first pip.</summary>
     public TrialOutcome ResponseEnd(Trial trial, TrialTimes times)
     {
-        return End(trial, "ResponseWindowEnd", times);
+        return End(trial, "responseWindowEnd", times);
     }
 
     StimulusFrame Frame(Trial trial, int step)
@@ -235,7 +235,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var position = track.Position;
         var fraction = trial.trackLengthWheelCm > 0 ? position / trial.trackLengthWheelCm : 0;
         var progress = Math.Max(0, Math.Min(1, fraction + trial.values.Track.AutoProgressPerSecond * step * StepSeconds));
-        var tone = sweep.FrequencyAt(progress);
+        var hz = sweep.FrequencyAt(progress);
         var visual = trial.values.VisualStimulus;
         var gratingStart = visual.SpatialFrequencyStartCpd;
         var grating = gratingStart * Math.Pow(visual.SpatialFrequencyEndCpd / gratingStart, progress);
@@ -251,8 +251,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var level = auditoryOff ? double.NaN : trial.auditoryLevelDbfs;
         return new StimulusFrame
         {
-            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = trackCm, auditoryFrequencyHz = tone, auditoryLevelDbfs = level, visualSpatialFrequencyCpd = grating, visualContrast = contrast },
-            PipIndex = sweep.PipIndexOf(tone),
+            Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = trackCm, auditoryFrequencyHz = hz, auditoryLevelDbfs = level, visualSpatialFrequencyCpd = grating, visualContrast = contrast },
+            PipIndex = sweep.PipIndexOf(hz),
             AuditoryGain = sweep.GainOf(level),
             SpeakerChannel = trial.speakerChannel,
             Grating = new GratingState { SpatialFrequencyCpd = grating, Opacity = contrast > 0 ? 1 : 0, Contrast = trial.visualContrast, PhaseRad = trial.visualPhaseRad }
@@ -270,10 +270,10 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     /// pass the ceiling on the step it crosses the floor, and is rewarded.</summary>
     TrialOutcome End(Trial trial, string reason, TrialTimes times)
     {
-        var tone = last != null ? last.Row.auditoryFrequencyHz : 0;
-        var onTarget = reason == "RewardZoneReached" || OnTarget(trial, tone);
-        var ranOut = reason == "ResponseWindowEnd" || reason == "TrackEnd";
-        var rewarded = onTarget && (reason == "Lick" || reason == "RewardZoneReached");
+        var hz = last != null ? last.Row.auditoryFrequencyHz : 0;
+        var onTarget = reason == "rewardZoneReached" || OnTarget(trial, hz);
+        var ranOut = reason == "responseWindowEnd" || reason == "trackEnd";
+        var rewarded = onTarget && (reason == "correctLick" || reason == "rewardZoneReached");
         var penalised = !onTarget || ranOut;
         var p = trial.values;
         // The shared block (trialNumber, the times, rewardOfferedUl, rewarded, the penalty, the laser) is lib-open-rigs';
@@ -290,10 +290,10 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             auditoryInitialAzimuthDeg = trial.auditoryInitialAzimuthDeg,
             auditoryElevationDeg = trial.auditoryElevationDeg,
             autoReward = trial.autoReward,
-            outcomeReason = reason == "Lick" ? (rewarded ? "CorrectLick" : "WrongLickLimit") : reason,
+            outcomeReason = reason,
             trackLengthCm = trial.TrackLengthCm,
             outcomePositionCm = track.Position * trial.WheelGain,
-            outcomeAuditoryFrequencyHz = tone,
+            outcomeAuditoryFrequencyHz = hz,
             outcomeVisualSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             auditoryOffPositionCm = auditoryOffPositionCm,
             visualOffPositionCm = visualOffPositionCm
@@ -328,7 +328,7 @@ public class TrialDraw
 
     /// <summary>The Zapit conditions file's longest ramp-down, in seconds: how long the trigger line is held past the outcome
     /// (0 without optogenetics).</summary>
-    public double RampDownSeconds { get; private set; }
+    public double MaxRampDownSeconds { get; private set; }
 
     /// <summary>The laser's cap from the trigger, derived at Go: the longest responseWindowSeconds + laserToStimulusSeconds any
     /// weighted combination can draw, plus TrialRules.LaserMaxMarginSeconds (infinity without optogenetics).</summary>
@@ -347,7 +347,7 @@ public class TrialDraw
         {
             var file = zapitConditions != null ? zapitConditions(opto.ZapitConditionsPath) : Read(opto.ZapitConditionsPath);
             conditionCount = file.Item1;
-            RampDownSeconds = file.Item2;
+            MaxRampDownSeconds = file.Item2;
             var weighted = Weighted(conditions).ToList();
             LaserMaxSeconds = weighted.Max(c => c.Task.TrialStructure.ResponseWindowSeconds.Value + c.Task.Optogenetics.LaserToStimulusSeconds) + TrialRules.LaserMaxMarginSeconds;
             var problems = new List<string>();
@@ -357,10 +357,10 @@ public class TrialDraw
                 {
                     var p = combination.Task;
                     var holdMax = p.TrialStructure.ItiMinSeconds - p.Optogenetics.LaserToStimulusSeconds - ZapitTrial.ReplyMarginSeconds;
-                    if (RampDownSeconds > holdMax + 1e-9)
+                    if (MaxRampDownSeconds > holdMax + 1e-9)
                     {
                         problems.Add(string.Format("{0}: the Zapit conditions file's longest ramp-down ({1} s) must be at most {2} s (itiMinSeconds - laserToStimulusSeconds - {3} s): the trigger line is held that long past the outcome, the next trial is armed once it falls, and Zapit's reply needs {3} s before its trigger",
-                            condition.Where + (combination.Picks.Length == 0 ? "" : " with " + combination.Picks), RampDownSeconds, holdMax, ZapitTrial.ReplyMarginSeconds));
+                            condition.Where + (combination.Picks.Length == 0 ? "" : " with " + combination.Picks), MaxRampDownSeconds, holdMax, ZapitTrial.ReplyMarginSeconds));
                     }
                 }
             }
@@ -389,13 +389,13 @@ public class TrialDraw
 
     /// <summary>Checks the task file's text can be run with the sweep and gives the task as read (ReadTask's reader) and its
     /// conditions as drawn (BuildConditions, over the text as written): its curriculum (the only record of the stage, filled by
-    /// rig-control) is present and well formed, and what pydantic would check (Bonsai reads the task file without it) and what
+    /// app-rig-control) is present and well formed, and what pydantic would check (Bonsai reads the task file without it) and what
     /// only the sweep can say holds on the task and every combination of every condition; throws naming every problem.</summary>
     public static List<TrialConditionDraw> CheckTask(string taskText, Sweep sweep, EqualisedSpeakerArray speakers, out UclOpenCoenDomeNavigationTaskParameters task)
     {
         task = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(taskText).TaskParameters;
         var curriculumProblem = CurriculumCheck.Problem(task.Curriculum);
-        if (curriculumProblem != null) throw new InvalidOperationException("The task file's curriculum " + curriculumProblem + ": rig-control fills it from the Mouse Curriculum at launch.");
+        if (curriculumProblem != null) throw new InvalidOperationException("The task file's curriculum " + curriculumProblem + ": app-rig-control fills it from the Mouse Curriculum at launch.");
         var problems = new List<string>();
         Check(problems, task, sweep, speakers);
         var built = problems.Count == 0 ? BuildConditions(taskText, task, problems) : null;

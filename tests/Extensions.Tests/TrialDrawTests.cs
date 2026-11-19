@@ -31,7 +31,7 @@ static class Fixture
         return task;
     }
 
-    /// <summary>The task file as rig-control writes it for a curriculum stage: that stage's values over the file's, and
+    /// <summary>The task file as app-rig-control writes it for a curriculum stage: that stage's values over the file's, and
     /// curriculum naming it.</summary>
     public static UclOpenCoenDomeNavigationTaskParameters Task(int stage = 0)
     {
@@ -55,7 +55,7 @@ static class Fixture
     /// <summary>The longest ramp-down in the stand-in Zapit conditions file, s.</summary>
     public const double RampDown = 1.0;
 
-    /// <summary>The task with a curriculum stage's values written over it, as rig-control does at launch.</summary>
+    /// <summary>The task with a curriculum stage's values written over it, as app-rig-control does at launch.</summary>
     public static UclOpenCoenDomeNavigationTaskParameters Stage(UclOpenCoenDomeNavigationTaskParameters task, int stage)
     {
         var v = Stages[stage];
@@ -201,7 +201,7 @@ public class TrialDrawTests
     [TestMethod]
     public void TheCurriculumIsTheTaskFilesOnlyRecordOfTheStage()
     {
-        // Go refuses a task file rig-control has not filled (the repo's, its curriculum empty) or filled malformed.
+        // Go refuses a task file app-rig-control has not filled (the repo's, its curriculum empty) or filled malformed.
         StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(Fixture.FromFile())).Message, "The task file's curriculum is empty");
         foreach (var field in new[] { "code", "version", "path", "label", "sha256", "id" })
         {
@@ -543,7 +543,7 @@ public class TrialDrawTests
             new TrialCondition { Weight = 0, Set = new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", -30.0 } } },
             new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", "mute" } } },
         };
-        var loudest = Fixture.Setup(task).Loudest;
+        var loudest = Fixture.Setup(task).MaxStimulusLevel;
         Assert.AreEqual(-50.0, loudest.LevelDbfs);   // the weight 0 condition's -30 is never drawn
         StringAssert.StartsWith(loudest.Where, "trialConditions[0] (audiovisualCoherent)");   // the task's grating, shown too
     }
@@ -848,7 +848,7 @@ public class TrialRulesTests
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.IsTrue(outcome.Outcome.Rewarded);
         Assert.AreEqual(TrialOutcomes.Correct, outcome.Outcome.Row.Value.outcome);
-        Assert.AreEqual("RewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's reward.sizeUl, 3 ul
         Assert.IsTrue(outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Row.Value.penalised && outcome.Outcome.Row.Value.rewardOfferedUl == 3, "the row says what the valve did");
         Assert.IsTrue(outcome.Outcome.Row.Value.autoReward, "stage 1 auto-rewards every trial");
@@ -864,7 +864,7 @@ public class TrialRulesTests
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(0)));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
-        Assert.AreEqual("RewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz >= 18000);
         Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime > 10 && outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime < 25);
         Assert.AreEqual(outcome.Seconds, outcome.Outcome.Row.Value.outcomeTime, "outcomeTime is the row's own time, harpTime");
@@ -880,7 +880,7 @@ public class TrialRulesTests
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         var first = rig.Events.First(e => e.Kind == TrialEventKind.Update).Update.Row;
         Assert.AreEqual(0.05, first.visualSpatialFrequencyCpd, 0.005);   // progressed a little by the first pip, after the lead
-        Assert.AreEqual("RewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime < 5);
     }
 
@@ -922,7 +922,7 @@ public class TrialRulesTests
         rig.Wheel(start.Trial.trackLengthWheelCm + 5);
         Assert.IsFalse(rig.Events.Any(e => e.Kind == TrialEventKind.Outcome));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
-        Assert.AreEqual("RewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(outcome.Outcome.Rewarded && !outcome.Outcome.Row.Value.penalised);
         Assert.IsTrue(outcome.Outcome.Row.Value.autoReward);
     }
@@ -939,7 +939,7 @@ public class TrialRulesTests
         rig.Lick();
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
         Assert.AreEqual(TrialOutcomes.Incorrect, outcome.Outcome.Row.Value.outcome);
-        Assert.AreEqual("WrongLickLimit", outcome.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("wrongLickLimit", outcome.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -45);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Rewarded, "penalised, unrewarded");
         Assert.AreEqual(3.0, outcome.Outcome.Row.Value.rewardOfferedUl, "the offer kept on a trial not rewarded");
@@ -954,7 +954,7 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.06);
         rig.Lick();
         var rewarded = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome);
-        Assert.AreEqual("CorrectLick", rewarded.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("correctLick", rewarded.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(rewarded.Outcome.Row.Value.rewarded && !rewarded.Outcome.Row.Value.autoReward, "earned, not auto-rewarded");
         Assert.AreEqual(2.0, rewarded.Outcome.Row.Value.itiStartTime - outcome.Seconds, 0.0011);
         Assert.AreEqual(next.Trial.itiSeconds, rewarded.Outcome.Row.Value.itiSeconds);
@@ -1143,7 +1143,7 @@ public class TrialRulesTests
         var start = rig.RunTo(TrialEventKind.Start);
         rig.Wheel(start.Trial.trackLengthWheelCm * 0.85);
         var outcome = rig.RunTo(TrialEventKind.Outcome);
-        Assert.AreEqual("ResponseWindowEnd", outcome.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("responseWindowEnd", outcome.Outcome.Row.Value.outcomeReason);
         Assert.AreEqual(TrialOutcomes.NoResponse, outcome.Outcome.Row.Value.outcome);
         Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -45);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded);
@@ -1158,7 +1158,7 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.1);
         rig.Wheel(start.Trial.trackLengthWheelCm + 5);
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
-        Assert.AreEqual("TrackEnd", outcome.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("trackEnd", outcome.Outcome.Row.Value.outcomeReason);
         Assert.AreEqual(start.Trial.TrackLengthCm, outcome.Outcome.Row.Value.outcomePositionCm, 1e-9);
     }
 
@@ -1309,7 +1309,7 @@ public class TrialRulesTests
             rig.Until(rig.Now + 0.05);
             outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == TrialEventKind.Outcome);
         }
-        Assert.AreEqual("RewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
+        Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz > 20000, outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz.ToString());
         Assert.IsTrue(outcome.Outcome.Rewarded);
         Assert.AreEqual(TrialOutcomes.Correct, outcome.Outcome.Row.Value.outcome);
@@ -1383,12 +1383,12 @@ public class TrialRulesTests
         };
         var draw = Fixture.Draw(task);
         Assert.AreEqual(15.0 + 0.15 + 0.25, draw.LaserMaxSeconds, 1e-9);
-        Assert.AreEqual(Fixture.RampDown, draw.RampDownSeconds);
+        Assert.AreEqual(Fixture.RampDown, draw.MaxRampDownSeconds);
         var rules = TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => Tuple.Create(4, 0.7), Fixture.Speakers());
         Assert.AreEqual(0.7, rules.Laser.TriggerHoldSeconds);
         Assert.AreEqual(15.0 + 0.15 + 0.25, rules.Laser.LaserMaxSeconds, 1e-9);
         Assert.AreEqual(double.PositiveInfinity, Fixture.Draw(Fixture.Task(4)).LaserMaxSeconds, "without optogenetics: no cap");
-        Assert.AreEqual(0.0, Fixture.Draw(Fixture.Task(4)).RampDownSeconds);
+        Assert.AreEqual(0.0, Fixture.Draw(Fixture.Task(4)).MaxRampDownSeconds);
     }
 
     [TestMethod]

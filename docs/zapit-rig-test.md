@@ -10,7 +10,7 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
 
 ## 1. Optogenetics off
 
-rig-control, `test` mouse, Training Stage 4, optogenetics unticked; ~20 trials.
+app-rig-control, `test` mouse, Training Stage 4, optogenetics unticked; ~20 trials.
 **Pass:** task as before; nothing in Zapit's window; no `ZapitReply` rows in `WorkflowData_Events` and no `Settings_ZapitConditions` file; trial rows `laserPowerMw` 0, `laserCondition` 0; the trigger line (and the masking LEDs) low throughout: no DO3 edges in the Behavior board log.
 
 ## 2. Optogenetics on
@@ -25,7 +25,7 @@ Same, optogenetics ticked with `zapitConditionsPath` and `laserPowerMw`; at leas
 ## 3. Hardware-triggered rig
 
 Step 2 on the rig with `hardwareTriggered: true`.
-**Pass:** each trial's StartStimulus reply arrives during the interval, before the trial starts (the trial's start is never later for Zapit); the Behavior board log has the trigger line going high `laserToStimulusSeconds` before every first pip (at the trial's start with the default 0.1 s) and low `triggerHoldSeconds` (1 s) after each outcome (it is held, not pulsed); the masking LEDs stay lit for all of that, on laser-off trials too; Zapit starts every trial (one rising edge each), including the first after a long trial; with the galvos visible or a photodiode, the stimulus starts at the trigger, not at the command.
+**Pass:** each trial's StartStimulus reply arrives during the interval, before the trial starts (the trial's start is never later for Zapit); the Behavior board log has the trigger line going high `laserToStimulusSeconds` before every first pip (at the trial's start with the default 0.1 s) and low the Zapit file's longest ramp-down (1 s) after each outcome (it is held, not pulsed); the masking LEDs stay lit for all of that, on laser-off trials too; Zapit starts every trial (one rising edge each), including the first after a long trial; with the galvos visible or a photodiode, the stimulus starts at the trigger, not at the command.
 
 ## 4. Failures (each should stop the experiment with a message)
 

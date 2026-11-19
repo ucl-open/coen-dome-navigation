@@ -2,7 +2,7 @@
 
 Tom Childs' gen_session.py wrote the tones again before every experiment, at the task's amplitude, and the workflow
 scaled them by the amplitude again, so a pip peaked at amplitude squared. The sweep is fixed here (SWEEP_START_HZ ...
-SWEEP_STEPS, Tom's 2000 to 25000 Hz in 100 tones) and recorded in sweep.json, which the workflow reads for the sweep's
+SWEEP_PIP_COUNT, Tom's 2000 to 25000 Hz in 100 pips) and recorded in sweep.json, which the workflow reads for the sweep's
 frequencies (Sweep.cs) and task.py for the reward zone's bounds. Each pip is stored at PIP_LEVEL_DBFS RMS, -58.1, the level
 the pips played at from 15 Nov 2026 (Tom's 0.05 squared peak, -58.06, rounded); the workflow scales them to the trial's
 auditoryStimulus.levelDbfs (PipSet). The reward tone plays at rewardTone.levelDbfs of the file as
@@ -18,11 +18,11 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "src" / "sounds"
 SAMPLE_RATE = 48000  # every waveform's, recorded in sweep.json: the workflow stops at Start unless rig.yml's speakerArray.device.sampleRate is the same
-TONE_MS = 50  # one tone pip; the pips are 50 ms apart
+PIP_MS = 50  # one pip; the pips are 50 ms apart
 
 SWEEP_START_HZ = 2000
 SWEEP_END_HZ = 25000
-SWEEP_STEPS = 100
+SWEEP_PIP_COUNT = 100
 TONE_AMPLITUDE = 0.05  # Tom's toneAmplitude
 REWARD_TONE_PEAK = TONE_AMPLITUDE * TONE_AMPLITUDE  # the reward tone peaks at amplitude squared, as it always played
 PIP_LEVEL_DBFS = -58.1  # each pip's RMS as made, in dBFS; sweep.json's pipLevelDbfs is the pips' level measured (level_dbfs)
@@ -31,19 +31,19 @@ REWARD_TONES_HZ = (6000, 9000)  # the reward tone: 250 ms of each, as Tom's Func
 REWARD_TONE_MS = 250
 
 
-def tone_frequencies(sweep_start_hz: int = SWEEP_START_HZ, sweep_end_hz: int = SWEEP_END_HZ, sweep_steps: int = SWEEP_STEPS) -> np.ndarray:
-    """The sweep's tone frequencies: sweep_steps log-spaced from sweep_start_hz to sweep_end_hz, rounded to whole Hz."""
-    return np.round(np.logspace(np.log10(sweep_start_hz), np.log10(sweep_end_hz), sweep_steps)).astype(int)
+def pip_frequencies(sweep_start_hz: int = SWEEP_START_HZ, sweep_end_hz: int = SWEEP_END_HZ, pip_count: int = SWEEP_PIP_COUNT) -> np.ndarray:
+    """The sweep's pip frequencies: pip_count log-spaced from sweep_start_hz to sweep_end_hz, rounded to whole Hz."""
+    return np.round(np.logspace(np.log10(sweep_start_hz), np.log10(sweep_end_hz), pip_count)).astype(int)
 
 
-def tones(frequencies: np.ndarray, level_dbfs: float = PIP_LEVEL_DBFS) -> np.ndarray:
+def pips(frequencies: np.ndarray, level_dbfs: float = PIP_LEVEL_DBFS) -> np.ndarray:
     """One 50 ms sine pip per frequency under a half-sine envelope, each scaled to level_dbfs RMS, float32 (n, samples)."""
-    duration = TONE_MS / 1000.0
+    duration = PIP_MS / 1000.0
     t = np.linspace(0, duration, int(SAMPLE_RATE * duration), endpoint=False)
     envelope = np.sin(np.pi * t / duration)
-    pips = np.stack([np.sin(2 * np.pi * f * t) * envelope for f in frequencies])
-    rms = np.sqrt(np.mean(pips**2, axis=1, keepdims=True))
-    return (pips * 10 ** (level_dbfs / 20) / rms).astype(np.float32)
+    waves = np.stack([np.sin(2 * np.pi * f * t) * envelope for f in frequencies])
+    rms = np.sqrt(np.mean(waves**2, axis=1, keepdims=True))
+    return (waves * 10 ** (level_dbfs / 20) / rms).astype(np.float32)
 
 
 def level_dbfs(samples: np.ndarray, sample_rate: int = SAMPLE_RATE) -> float:
@@ -70,17 +70,17 @@ def reward_tone(peak: float = REWARD_TONE_PEAK) -> np.ndarray:
 def sweep() -> dict:
     """sweep.json: what the workflow and task.py read, with the rate every waveform was made at; pipLevelDbfs is the pips'
     level by the lab's rule (level_dbfs, to 0.01 dB), which the workflow plays each pip at its trial's level from."""
-    pips = tones(tone_frequencies())
-    level = round(float(np.mean([level_dbfs(pip) for pip in pips])), 2)
-    return {"startHz": SWEEP_START_HZ, "endHz": SWEEP_END_HZ, "steps": SWEEP_STEPS, "pipLevelDbfs": level, "sampleRate": SAMPLE_RATE}
+    waves = pips(pip_frequencies())
+    level = round(float(np.mean([level_dbfs(wave) for wave in waves])), 2)
+    return {"startHz": SWEEP_START_HZ, "endHz": SWEEP_END_HZ, "pipCount": SWEEP_PIP_COUNT, "pipLevelDbfs": level, "sampleRate": SAMPLE_RATE}
 
 
 def write(out_dir: Path = OUT_DIR) -> None:
-    """Write pips.bin (n x 2400 float32, row-major, no header; row i is tone_frequencies()[i], as Sweep.cs computes it),
+    """Write pips.bin (n x 2400 float32, row-major, no header; row i is pip_frequencies()[i], as Sweep.cs computes it),
     reward_tone.bin (float32) and sweep.json. The penalty sound is OpenRigs.Audio's; the background noise is rig.yml's
     speakerArray.backgroundNoise."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    tones(tone_frequencies()).tofile(out_dir / "pips.bin")
+    pips(pip_frequencies()).tofile(out_dir / "pips.bin")
     reward_tone().tofile(out_dir / "reward_tone.bin")
     (out_dir / "sweep.json").write_text(json.dumps(sweep(), indent=2) + "\n", encoding="utf-8")
 
@@ -88,7 +88,7 @@ def write(out_dir: Path = OUT_DIR) -> None:
 def main() -> None:
     """Write the waveforms for the sweep above."""
     write()
-    print(f"Wrote {SWEEP_STEPS} tones from {SWEEP_START_HZ} to {SWEEP_END_HZ} Hz at {PIP_LEVEL_DBFS:g} dBFS RMS and the reward tone to {OUT_DIR}")
+    print(f"Wrote {SWEEP_PIP_COUNT} pips from {SWEEP_START_HZ} to {SWEEP_END_HZ} Hz at {PIP_LEVEL_DBFS:g} dBFS RMS and the reward tone to {OUT_DIR}")
 
 
 if __name__ == "__main__":

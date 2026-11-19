@@ -72,7 +72,7 @@ public class PipSetTests
         var speakers = Speakers();
         var pips = Pips();
         var set = PipSet.Create(speakers, pips, new LoudestSound { LevelDbfs = -58.1, Where = "test" }, Fixture.Sweep());
-        Assert.AreEqual(1, set.Largest, 1e-9);
+        Assert.AreEqual(1, set.MaxGain, 1e-9);
         for (int i = 0; i < pips.Count; i++)
         {
             Assert.AreEqual(-58.1, SoundLevel.RmsDbfs(pips[i], 48000), 1e-4, "pip " + i);
@@ -125,7 +125,7 @@ public class SweepTests
         var sweep = Fixture.Sweep();
         Assert.AreEqual(2000, sweep.StartHz);
         Assert.AreEqual(25000, sweep.EndHz);
-        Assert.AreEqual(100, sweep.Steps);
+        Assert.AreEqual(100, sweep.PipCount);
         Assert.AreEqual(48000, sweep.SampleRate);
         Assert.AreEqual(-58.1, sweep.PipLevelDbfs);
         Assert.AreEqual(2400, sweep.PipSamples);  // one row of pips.bin
@@ -147,7 +147,7 @@ public class SweepTests
     [TestMethod]
     public void TheTrackRunsTwoToTwentyFourKilohertzAsTomsWorkflowDid()
     {
-        // Tom Childs' 'cm to Hz' divided sweepEndHz / sweepStartHz as whole numbers (25000 / 2000 = 12): his mice learned 2 to 24 kHz
+        // Tom Childs' 'cm to Hz' divided endHz / startHz as whole numbers (25000 / 2000 = 12): his mice learned 2 to 24 kHz
         // along the track, so the reward zones sit where they did. The tone files still span 2 to 25 kHz.
         var sweep = Fixture.Sweep();
         Assert.AreEqual(12, sweep.TrackRatio);
@@ -168,7 +168,7 @@ public class SweepTests
         {
             foreach (var missing in new[] { "endHz", "pipLevelDbfs", "sampleRate" })
             {
-                var json = new Dictionary<string, string> { { "startHz", "2000" }, { "endHz", "25000" }, { "steps", "100" }, { "pipLevelDbfs", "-58.1" }, { "sampleRate", "48000" } };
+                var json = new Dictionary<string, string> { { "startHz", "2000" }, { "endHz", "25000" }, { "pipCount", "100" }, { "pipLevelDbfs", "-58.1" }, { "sampleRate", "48000" } };
                 json.Remove(missing);
                 File.WriteAllText(path, "{" + string.Join(", ", json.Select(kv => "\"" + kv.Key + "\": " + kv.Value)) + "}");
                 var message = Assert.ThrowsException<InvalidOperationException>(() => global::Sweep.Load(path)).Message;

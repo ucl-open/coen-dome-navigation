@@ -1,8 +1,8 @@
-"""The task file's schema: config/task-abstract-corridor.yml, which rig-control copies at launch and again at Go with the
+"""The task file's schema: config/task-abstract-corridor.yml, which app-rig-control copies at launch and again at Go with the
 form's edits; the workflow reads the copy (TaskPath) at Go. Ported from Tom Childs' auditory-vr-corridor task.py.
 
 The stage is a stage of the lab's Mouse Curriculum, recorded only as the task file's curriculum
-(K:\\config\\curricula\\coen-dome-navigation\\task-abstract-corridor.conditions.yml): rig-control writes that stage's values
+(K:\\config\\curricula\\coen-dome-navigation\\task-abstract-corridor.conditions.yml): app-rig-control writes that stage's values
 over this file's flat values at launch and fills curriculum (id, code, version, path, label, sha256); trialStructure holds the
 timing, track the track, penalty the timeout and penalty sound, and rngSeed seeds every draw. The sweep is src/sounds/sweep.json's,
 made with the tone files (`uv run generate-waveforms`), not the task file's. Every sound plays at a level in dBFS RMS
@@ -52,7 +52,7 @@ SWEEP_FILE = Path(__file__).resolve().parents[1] / "sounds" / "sweep.json"  # sr
 
 
 def sweep() -> dict:
-    """The sweep the committed tone files were made for: startHz, endHz, steps, pipLevelDbfs and the waveforms' sampleRate."""
+    """The sweep the committed tone files were made for: startHz, endHz, pipCount, pipLevelDbfs and the waveforms' sampleRate."""
     return json.loads(SWEEP_FILE.read_text(encoding="utf-8"))
 
 
@@ -215,11 +215,11 @@ class TrialCondition(ct.TrialCondition):
 
 
 class Curriculum(ct.Curriculum):
-    """The Mouse Curriculum stage the values came from, and the task file's only record of the stage: filled by rig-control
+    """The Mouse Curriculum stage the values came from, and the task file's only record of the stage: filled by app-rig-control
     at launch; empty in the repo's task files. Bonsai only records it."""
 
     label: String = Field(description="The stage's label in the curriculum")
-    sha256: String = Field(description="The sha256 of the curriculum file's text rig-control ran it from")
+    sha256: String = Field(description="The sha256 of the curriculum file's text app-rig-control ran it from")
 
 
 class Reward(ct.Reward):
@@ -230,7 +230,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask
     """Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,
     reward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.
 
-    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason RewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
+    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start."""
 
     model_config = ConfigDict(json_schema_extra=ct.schema_extra(SESSION_FIELDS, RULES, TRIAL_TYPES, REQUIRED))
     SESSION_FIELDS = SESSION_FIELDS
@@ -240,7 +240,7 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask
 
     curriculum: Curriculum | None = Field(
         default=None,
-        description="The Mouse Curriculum stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
+        description="The Mouse Curriculum stage these values came from, the only record of the stage, filled by app-rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
     )
     trial_conditions: list[TrialCondition] = Field(
         min_length=1,

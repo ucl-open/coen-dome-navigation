@@ -44,7 +44,7 @@ def test_the_task_file_validates():
 
 
 def test_the_stages_are_the_curriculum_s_and_the_file_has_stage_0_s_values():
-    # The stages live in the lab's Mouse Curriculum on the share (rig-control writes the chosen stage's values over these
+    # The stages live in the lab's Mouse Curriculum on the share (app-rig-control writes the chosen stage's values over these
     # at launch); the file holds the defaults, stage 0's (Zone Reward, Drift), and an empty curriculum.
     params = task()["taskParameters"]
     assert "trainingStages" not in params
@@ -58,14 +58,14 @@ def test_the_stages_are_the_curriculum_s_and_the_file_has_stage_0_s_values():
 
 
 def test_curriculum_comes_second_in_the_lab_s_block_order():
-    # The lab's BLOCK_ORDER: rig-control's form and the task file list the blocks in it.
+    # The lab's BLOCK_ORDER: app-rig-control's form and the task file list the blocks in it.
     assert ct.block_order_problems(UclOpenCoenDomeNavigationTaskParameters) == []
     assert list(task()["taskParameters"])[:2] == ["rngSeed", "curriculum"]
 
 
 @pytest.mark.parametrize("curriculum", ["absent", None, {"id": 3, "code": "S03A", "version": "k7f2", "path": "A", "label": "Ceiling In", "sha256": "ab12"}])
 def test_curriculum_is_optional_in_the_model_and_the_schema(curriculum):
-    # rig-control fills it at launch; Go (TrialLogic.cs CheckTask) refuses it missing or malformed.
+    # app-rig-control fills it at launch; Go (TrialLogic.cs CheckTask) refuses it missing or malformed.
     doc = task()
     if curriculum == "absent":
         del doc["taskParameters"]["curriculum"]
@@ -309,17 +309,17 @@ def test_trial_structure_has_no_coded_default():
 
 def test_the_committed_waveforms_are_waveforms_py_s():
     assert json.loads((WAVES / "sweep.json").read_text(encoding="utf-8")) == waveforms.sweep()
-    freqs = waveforms.tone_frequencies()
+    freqs = waveforms.pip_frequencies()
     assert not (WAVES / "frequencies.txt").exists() and not (WAVES / "all_waveforms.bin").exists()
-    committed = np.fromfile(WAVES / "pips.bin", dtype=np.float32).reshape(waveforms.SWEEP_STEPS, -1)
-    assert np.array_equal(committed, waveforms.tones(freqs))
+    committed = np.fromfile(WAVES / "pips.bin", dtype=np.float32).reshape(waveforms.SWEEP_PIP_COUNT, -1)
+    assert np.array_equal(committed, waveforms.pips(freqs))
     assert committed.shape[1] == 2400  # the workflow's MatrixReader BufferLength
     # Each pip is stored at sweep.json's pipLevelDbfs, -58.1 dBFS RMS: the level the pips played at before the
     # trial-type split. Then SpeakerBuffer scaled Tom's pips (0.05 squared peak, -58.06) to -58.1; the files are those
     # samples now, to float32's precision (PipSetTests holds the laid-out buffers equal too).
     rms_dbfs = 20 * np.log10(np.sqrt(np.mean(committed.astype(np.float64) ** 2, axis=1)))
     assert np.allclose(rms_dbfs, -58.1, atol=1e-5)
-    duration = waveforms.TONE_MS / 1000
+    duration = waveforms.PIP_MS / 1000
     t = np.linspace(0, duration, 2400, endpoint=False)
     toms = np.stack([(np.sin(2 * np.pi * f * t) * np.sin(np.pi * t / duration) * 0.05**2).astype(np.float32) for f in freqs]).astype(np.float64)
     before = toms * 10 ** ((-58.1 - 20 * np.log10(np.sqrt(np.mean(toms**2, axis=1, keepdims=True)))) / 20)
@@ -328,15 +328,15 @@ def test_the_committed_waveforms_are_waveforms_py_s():
 
 
 def test_the_sweep_s_frequencies_are_the_c_sharp_sweep_s():
-    # The pips' frequencies (no frequencies.txt now): Sweep.cs computes round(startHz * (endHz / startHz) ** (i / (steps - 1))),
-    # and the committed pips are waveforms.tones() of waveforms.tone_frequencies(); sweep.json holds the rest of the sweep.
+    # The pips' frequencies (no frequencies.txt now): Sweep.cs computes round(startHz * (endHz / startHz) ** (i / (pipCount - 1))),
+    # and the committed pips are waveforms.pips() of waveforms.pip_frequencies(); sweep.json holds the rest of the sweep.
     made = sweep()
-    assert set(made) == {"startHz", "endHz", "steps", "pipLevelDbfs", "sampleRate"}
-    freqs = [round(made["startHz"] * (made["endHz"] / made["startHz"]) ** (i / (made["steps"] - 1))) for i in range(made["steps"])]
-    assert list(waveforms.tone_frequencies()) == freqs and freqs[0] == made["startHz"] and freqs[-1] == made["endHz"]
-    committed = np.fromfile(WAVES / "pips.bin", dtype=np.float32).reshape(made["steps"], -1)
-    assert np.array_equal(committed, waveforms.tones(np.array(freqs), made["pipLevelDbfs"]))
-    assert committed.shape[1] == made["sampleRate"] * waveforms.TONE_MS // 1000
+    assert set(made) == {"startHz", "endHz", "pipCount", "pipLevelDbfs", "sampleRate"}
+    freqs = [round(made["startHz"] * (made["endHz"] / made["startHz"]) ** (i / (made["pipCount"] - 1))) for i in range(made["pipCount"])]
+    assert list(waveforms.pip_frequencies()) == freqs and freqs[0] == made["startHz"] and freqs[-1] == made["endHz"]
+    committed = np.fromfile(WAVES / "pips.bin", dtype=np.float32).reshape(made["pipCount"], -1)
+    assert np.array_equal(committed, waveforms.pips(np.array(freqs), made["pipLevelDbfs"]))
+    assert committed.shape[1] == made["sampleRate"] * waveforms.PIP_MS // 1000
 
 
 def test_the_penalty_sound_is_the_lab_s():
@@ -345,7 +345,7 @@ def test_the_penalty_sound_is_the_lab_s():
     assert set(task()["taskParameters"]["penalty"]["sound"]) == {"levelDbfs"}
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert set(schema["$defs"]["PenaltySound"]["properties"]) == {"levelDbfs"}
-    # rig-control checks the task file against the closed schema, so a file naming a sound path is refused.
+    # app-rig-control checks the task file against the closed schema, so a file naming a sound path is refused.
     doc = task()
     doc["taskParameters"]["penalty"]["sound"]["path"] = "sounds\\penalty.wav"
     errors = [e.message for e in jsonschema.Draft202012Validator(_closed(schema)).iter_errors(doc)]
@@ -353,7 +353,7 @@ def test_the_penalty_sound_is_the_lab_s():
 
 
 def _closed(node):
-    """rig-control's taskfile.closed: every object that lists properties refuses others."""
+    """app-rig-control's taskfile.closed: every object that lists properties refuses others."""
     if isinstance(node, dict):
         node = {k: _closed(v) for k, v in node.items()}
         if isinstance(node.get("properties"), dict) and "additionalProperties" not in node:
@@ -364,7 +364,7 @@ def _closed(node):
 
 
 def test_the_schema_refuses_zapit_ticked_with_no_conditions_path():
-    # rig-control checks the task file against the schema, not the model.
+    # app-rig-control checks the task file against the schema, not the model.
     validator = jsonschema.Draft202012Validator(_closed(json.loads(SCHEMA.read_text(encoding="utf-8"))))
 
     def problems(**opto):
@@ -387,7 +387,7 @@ def test_the_optogenetics_block_has_pip_s_names():
 
 
 def test_rig_control_keeps_the_zapit_file():
-    # rig-control copies a task field ending in ConfigPath beside the task file at Go (taskfile.keep_files).
+    # app-rig-control copies a task field ending in ConfigPath beside the task file at Go (taskfile.keep_files).
     assert [k for k in task()["taskParameters"]["optogenetics"] if k.endswith("Path")] == ["zapitConditionsPath"]
 
 
@@ -473,7 +473,7 @@ def test_the_generated_csharp_has_every_schema_field():
 @pytest.mark.parametrize("key, bad", [("id", -1), ("code", "S3A"), ("code", "s03a"), ("code", "S03AB"), ("version", "k7f"), ("version", "k7f1"), ("version", "K7F2"),
                                       ("path", "a"), ("path", "AB"), ("label", None), ("sha256", None)])
 def test_a_malformed_curriculum_is_refused_by_the_model_and_the_schema(key, bad):
-    # The only record of the stage, exactly the fields rig-control writes, each checked; no TrainingStage parameter.
+    # The only record of the stage, exactly the fields app-rig-control writes, each checked; no TrainingStage parameter.
     doc = task()
     doc["taskParameters"]["curriculum"] = {**{"id": 3, "code": "S03A", "version": "k7f2", "path": "A", "label": "Ceiling In", "sha256": "ab12"}, key: bad}
     with pytest.raises(pydantic.ValidationError):
@@ -607,7 +607,7 @@ def test_the_laser_cap_and_trigger_hold_are_not_task_settings():
     # The cap is derived at Go (TrialDraw.LaserMaxSeconds, LASER_MAX_MARGIN_SECONDS past the longest window plus lead) and the
     # trigger hold is read from the Zapit conditions file (its longest ramp-down) in C#: neither is a model field or a Python rule.
     assert not {"laser_max_seconds", "trigger_hold_seconds"} & set(OptogeneticsSettings.model_fields)
-    assert "LaserMaxSeconds" in TRIAL_LOGIC and "draw.RampDownSeconds" in TRIAL_LOGIC
+    assert "LaserMaxSeconds" in TRIAL_LOGIC and "draw.MaxRampDownSeconds" in TRIAL_LOGIC
 
 
 @pytest.mark.parametrize("where, key, value", [
@@ -637,7 +637,7 @@ def test_the_backlog_has_the_pupil_gain_decided():
 
 
 def test_the_task_file_dumps_back_unchanged():
-    # The shared blocks (Iti, LickQuietWait, WheelQuietWait, ResponseWindow, AutoReward, RewardSize) keep every key where the file has it: the dump
+    # The shared blocks (Iti, LickQuietWait, WheelQuietWait, ResponseWindow, Reward) keep every key where the file has it: the dump
     # holds each of the file's values (the model adds defaults the file leaves out), and dumps back the same again.
     def held(file, dumped, path=""):
         if isinstance(file, dict):

@@ -52,7 +52,7 @@
       "type": "object"
     },
     "Curriculum": {
-      "description": "The Mouse Curriculum stage the values came from, and the task file's only record of the stage: filled by rig-control\nat launch; empty in the repo's task files. Bonsai only records it.",
+      "description": "The Mouse Curriculum stage the values came from, and the task file's only record of the stage: filled by app-rig-control\nat launch; empty in the repo's task files. Bonsai only records it.",
       "properties": {
         "id": {
           "description": "The stage's id in the curriculum, fixed and hidden: never shown to the experimenter",
@@ -84,7 +84,7 @@
           "type": "string"
         },
         "sha256": {
-          "description": "The sha256 of the curriculum file's text rig-control ran it from",
+          "description": "The sha256 of the curriculum file's text app-rig-control ran it from",
           "title": "Sha256",
           "type": "string"
         }
@@ -475,7 +475,7 @@
       "type": "object"
     },
     "UclOpenCoenDomeNavigationTaskParameters": {
-      "description": "Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,\nreward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason RewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
+      "description": "Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,\nreward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.\n\nA lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.",
       "properties": {
         "rngSeed": {
           "default": null,
@@ -496,7 +496,7 @@
             }
           ],
           "default": null,
-          "description": "The Mouse Curriculum stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
+          "description": "The Mouse Curriculum stage these values came from, the only record of the stage, filled by app-rig-control at launch; Go refuses a task whose curriculum is empty or malformed",
           "title": "Curriculum"
         },
         "trialConditions": {

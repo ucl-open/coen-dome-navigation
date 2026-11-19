@@ -38,7 +38,7 @@ trialType:
 outcome:
   type: string
   values: [correct, incorrect, noResponse]
-  description: The trial's result - correct when rewarded, incorrect at the wrong-lick limit, noResponse at the end of the response window or of the track (outcomeReason says which). rig-control's Performance is correct over correct and incorrect (noResponse left out, its response rate shown beside it); Tom Childs' success rate was correct over all trials.
+  description: The trial's result - correct when rewarded, incorrect at the wrong-lick limit, noResponse at the end of the response window or of the track (outcomeReason says which). app-rig-control's Performance is correct over correct and incorrect (noResponse left out, its response rate shown beside it); Tom Childs' success rate was correct over all trials.
 itiStartTime:
   type: double
   unit: s
@@ -75,7 +75,7 @@ rewardOfferedUl:
 rewarded:
   type: bool
   description: 'True when the trial''s outcome delivered its reward (rewardOfferedUl, at outcomeTime): the value the workflow''s reward command is made from. Which outcomes are rewarded is the task''s (its note).'
-  note: A trial that ends on a lick in the reward zone or with the zone reached (outcomeReason CorrectLick or RewardZoneReached, outcome correct), rewarded at the left spout.
+  note: A trial that ends on a lick in the reward zone or with the zone reached (outcomeReason correctLick or rewardZoneReached, outcome correct), rewarded at the left spout.
 penaltyTimeoutSeconds:
   type: double
   unit: s
@@ -127,10 +127,10 @@ auditoryElevationDeg:
 autoReward:
   type: bool
   description: 'True on an auto-reward trial (drawn with the task''s autoRewardProbability): one rewarded without a correct response; how, and so whether its reward came from the auto-reward, is the task''s (its note).'
-  note: 'An auto-reward trial is rewarded on the pip whose tone reaches the reward zone''s floor, no lick needed, its licks ignored (outcomeReason RewardZoneReached): its reward came from the auto-reward when rewarded.'
+  note: 'An auto-reward trial is rewarded on the pip whose tone reaches the reward zone''s floor, no lick needed, its licks ignored (outcomeReason rewardZoneReached): its reward came from the auto-reward when rewarded.'
 outcomeReason:
   type: string
-  values: [RewardZoneReached, CorrectLick, WrongLickLimit, ResponseWindowEnd, TrackEnd]
+  values: [rewardZoneReached, correctLick, wrongLickLimit, responseWindowEnd, trackEnd]
   description: Why the trial ended - the reward zone reached (on an auto-reward trial, autoReward), a lick in the reward zone, too many wrong licks, the end of the response window (trialStructure.responseWindowSeconds after the first pip), or the end of the track.
 trackLengthCm:
   type: double

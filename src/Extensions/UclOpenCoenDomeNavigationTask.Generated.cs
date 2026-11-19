@@ -246,13 +246,13 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// The Mouse Curriculum stage the values came from, and the task file's only record of the stage: filled by rig-control
+    /// The Mouse Curriculum stage the values came from, and the task file's only record of the stage: filled by app-rig-control
     ///at launch; empty in the repo's task files. Bonsai only records it.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("The Mouse Curriculum stage the values came from, and the task file\'s only record " +
-        "of the stage: filled by rig-control\nat launch; empty in the repo\'s task files. B" +
-        "onsai only records it.")]
+        "of the stage: filled by app-rig-control\nat launch; empty in the repo\'s task file" +
+        "s. Bonsai only records it.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Curriculum
@@ -377,11 +377,11 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The sha256 of the curriculum file's text rig-control ran it from
+        /// The sha256 of the curriculum file's text app-rig-control ran it from
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("sha256", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sha256")]
-        [System.ComponentModel.DescriptionAttribute("The sha256 of the curriculum file\'s text rig-control ran it from")]
+        [System.ComponentModel.DescriptionAttribute("The sha256 of the curriculum file\'s text app-rig-control ran it from")]
         public string Sha256
         {
             get
@@ -1549,13 +1549,13 @@ namespace UclOpenCoenDomeNavigationTask
     /// Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,
     ///reward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.
     ///
-    ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason RewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
+    ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute(@"Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,
     reward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.
 
-    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason RewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
+    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class UclOpenCoenDomeNavigationTaskParameters
@@ -1650,14 +1650,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The Mouse Curriculum stage these values came from, the only record of the stage, filled by rig-control at launch; Go refuses a task whose curriculum is empty or malformed
+        /// The Mouse Curriculum stage these values came from, the only record of the stage, filled by app-rig-control at launch; Go refuses a task whose curriculum is empty or malformed
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("curriculum")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="curriculum")]
         [System.ComponentModel.DescriptionAttribute("The Mouse Curriculum stage these values came from, the only record of the stage, " +
-            "filled by rig-control at launch; Go refuses a task whose curriculum is empty or " +
-            "malformed")]
+            "filled by app-rig-control at launch; Go refuses a task whose curriculum is empty" +
+            " or malformed")]
         public Curriculum Curriculum
         {
             get

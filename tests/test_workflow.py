@@ -176,7 +176,7 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     # PlayRewardTone (SpeakerBuffer at the loudest rewardTone.levelDbfs on every speaker, played at the trial's) on each rewarded
     # outcome TrialOutcomeEffects passes on, its input the trial's RewardToneLevelDbfs, from this repo's file; the pips by
     # LayOutPips (PipSet: SpeakerSet.Layout on every speaker as stored, checked at the loudest level the conditions draw,
-    # TrialRules.Loudest), fed Zip(Loudest, Sweep, Zip(Speakers, pips)).
+    # TrialRules.MaxStimulusLevel), fed Zip(MaxStimulusLevel, Sweep, Zip(Speakers, pips)).
     nodes, edges = _scope(group("TaskLogic"))
     (tone,) = [i for i, n in enumerate(nodes) if n.get("Path") == PLAY_REWARD_TONE]
     assert nodes[tone].findtext(W + "RewardToneFile") == "./sounds/reward_tone.bin"
@@ -191,8 +191,8 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     labels = _labels(nodes, upstream)
     assert any("./sounds/pips.bin" in ET.tostring(nodes[i], encoding="unicode") for i in upstream)
     assert not any("all_waveforms" in ET.tostring(n, encoding="unicode") for n in nodes)
-    assert {"rx:Zip", "ext:LayOutPips", "rx:ToList", "Speakers", "TrialRules", "Loudest", "Sweep"} <= set(labels), labels
-    # LayOutPips is fed Zip(Loudest, Sweep, Zip(Speakers, pips)): the loudest level, the sweep, then the speakers with the pips.
+    assert {"rx:Zip", "ext:LayOutPips", "rx:ToList", "Speakers", "TrialRules", "MaxStimulusLevel", "Sweep"} <= set(labels), labels
+    # LayOutPips is fed Zip(MaxStimulusLevel, Sweep, Zip(Speakers, pips)): the loudest level, the sweep, then the speakers with the pips.
     _, labelled = lint.scope(group("Audio"))
     (layout,) = [i for i, n in enumerate(nodes) if "ext:LayOutPips" in combinators(n)]
     (zipped,) = [a for a, b, _ in labelled if b == layout]
@@ -201,7 +201,7 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
         return nodes[i].findtext(W + "Selector") or nodes[i].findtext(W + "Name") or combinators(nodes[i])[0]
 
     feeds = {label: a for a, b, label in labelled if b == zipped}
-    assert [name(feeds[k]) for k in ("Source1", "Source2", "Source3")] == ["Loudest", "Sweep", "rx:Zip"]
+    assert [name(feeds[k]) for k in ("Source1", "Source2", "Source3")] == ["MaxStimulusLevel", "Sweep", "rx:Zip"]
     inner = {label: a for a, b, label in labelled if b == feeds["Source3"]}
     assert [name(inner[k]) for k in ("Source1", "Source2")] == ["Speakers", "rx:ToList"]
     assert "aud:SpeakerBuffer" not in labels and "dsp:Tile" not in labels
@@ -210,8 +210,8 @@ def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
 
 
 def test_the_background_noise_is_the_shared_include():
-    # OpenRigs.Audio's BackgroundNoise: the noise unequalised on every speaker at the launched task file's
-    # level from Ready, Go stopping on a backgroundNoise changed after launch. The noise is the lab's one file, rig.yml's
+    # OpenRigs.Audio's BackgroundNoise: the noise unequalised on every speaker
+    # from Ready. The noise is the lab's one file, rig.yml's
     # speakerArray.backgroundNoise (on the server's config\shared): the include takes no file and the repo keeps none (the lint).
     assert lint.background_noise_problems(WORKFLOW) == []
     (noise,) = [e for e in MAIN.iter(W + "Expression") if e.get("Path") == lint.BACKGROUND_NOISE]

@@ -17,7 +17,7 @@ public class Sweep
 {
     public double StartHz;
     public double EndHz;
-    public int Steps;
+    public int PipCount;
     public double PipLevelDbfs;
     public int SampleRate;
 
@@ -37,13 +37,13 @@ public class Sweep
             // A missing key reads as NaN or 0, so the check below names the file rather than a bare null.
             StartHz = json.Value<double?>("startHz") ?? double.NaN,
             EndHz = json.Value<double?>("endHz") ?? double.NaN,
-            Steps = json.Value<int?>("steps") ?? 0,
+            PipCount = json.Value<int?>("pipCount") ?? 0,
             PipLevelDbfs = json.Value<double?>("pipLevelDbfs") ?? double.NaN,
             SampleRate = json.Value<int?>("sampleRate") ?? 0
         };
-        if (!(sweep.StartHz > 0 && sweep.EndHz > sweep.StartHz && sweep.Steps > 1 && sweep.SampleRate > 0 && sweep.PipLevelDbfs < 0 && !double.IsInfinity(sweep.PipLevelDbfs)))
+        if (!(sweep.StartHz > 0 && sweep.EndHz > sweep.StartHz && sweep.PipCount > 1 && sweep.SampleRate > 0 && sweep.PipLevelDbfs < 0 && !double.IsInfinity(sweep.PipLevelDbfs)))
         {
-            throw new InvalidOperationException(path + " holds no usable sweep: it needs 0 < startHz < endHz, steps above 1, pipLevelDbfs a level below 0 and sampleRate above 0. Run `uv run generate-waveforms`.");
+            throw new InvalidOperationException(path + " holds no usable sweep: it needs 0 < startHz < endHz, pipCount above 1, pipLevelDbfs a level below 0 and sampleRate above 0. Run `uv run generate-waveforms`.");
         }
         return sweep;
     }
@@ -80,11 +80,11 @@ public class Sweep
         return hz <= 0 ? 0 : Math.Log(hz / StartHz) / Math.Log(TrackRatio);
     }
 
-    /// <summary>The pip's row in pips.bin (0 to Steps - 1) nearest a frequency, over the files' full sweep (StartHz to EndHz).</summary>
+    /// <summary>The pip's row in pips.bin (0 to PipCount - 1) nearest a frequency, over the files' full sweep (StartHz to EndHz).</summary>
     public int PipIndexOf(double hz)
     {
         var fraction = hz <= 0 ? 0 : Math.Log(hz / StartHz) / Math.Log(EndHz / StartHz);
-        return (int)Math.Max(0, Math.Min(Steps - 1, Math.Round(fraction * (Steps - 1))));
+        return (int)Math.Max(0, Math.Min(PipCount - 1, Math.Round(fraction * (PipCount - 1))));
     }
 
     /// <summary>The gain that plays a pip, stored at PipLevelDbfs, at a level in dBFS RMS; 0 at NaN (mute, or switched off).</summary>
@@ -121,13 +121,13 @@ public class PipSet
     readonly int[] channels;
 
     /// <summary>The largest gain the set was checked for at Go: the loudest level's (Sweep.GainOf).</summary>
-    public double Largest { get; private set; }
+    public double MaxGain { get; private set; }
 
     PipSet(IList<Mat> buffers, int[] channels, double largest)
     {
         this.buffers = buffers;
         this.channels = channels;
-        Largest = largest;
+        MaxGain = largest;
     }
 
     /// <summary>The pips laid out on the speakers as stored; stops, naming the pip, channel and condition, if any would peak
@@ -161,7 +161,7 @@ public class PipSet
             silent.SetZero();
             return silent;
         }
-        if (!(gain <= Largest * (1 + 1e-9))) throw new InvalidOperationException("A pip asks for gain " + gain + ", above the " + Largest + " the pips were checked for at Go (LayOutPips).");
+        if (!(gain <= MaxGain * (1 + 1e-9))) throw new InvalidOperationException("A pip asks for gain " + gain + ", above the " + MaxGain + " the pips were checked for at Go (LayOutPips).");
         if (channel >= 0 && !channels.Contains(channel)) throw new InvalidOperationException("A pip asks for channel " + channel + ", which no rig.yml speaker is on.");
         return gain == 1 && channel < 0 ? buffer : Scale(buffer, gain, channel);
     }
@@ -239,7 +239,7 @@ public class GratingStates
 }
 
 [Combinator]
-[Description("The pips laid out at Go (PipSet): each row of pips.bin equalised for every rig.yml speaker with its sync copy, as stored (sweep.json's pipLevelDbfs). Input: the loudest tone the conditions can draw (TrialRules.Loudest), the sweep, and the speakers with the pip rows. Stops the workflow, naming the pip, channel and condition, if any would peak at -1 dBFS or more after equalisation at that level.")]
+[Description("The pips laid out at Go (PipSet): each row of pips.bin equalised for every rig.yml speaker with its sync copy, as stored (sweep.json's pipLevelDbfs). Input: the loudest tone the conditions can draw (TrialRules.MaxStimulusLevel), the sweep, and the speakers with the pip rows. Stops the workflow, naming the pip, channel and condition, if any would peak at -1 dBFS or more after equalisation at that level.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class LayOutPips
 {

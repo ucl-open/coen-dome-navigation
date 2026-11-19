@@ -1,15 +1,15 @@
 # yaml-language-server: $schema=../src/DataSchemas/ucl_open_coen_dome_navigation_task.json
-# The task file: rig-control copies it at launch and again at Go with the form's edits, and the workflow reads the
+# The task file: app-rig-control copies it at launch and again at Go with the form's edits, and the workflow reads the
 # copy (TaskPath) at Go. From the editor, the workflow reads this file as it is.
 #
 # The stage is a stage of the lab's Mouse Curriculum
-# (K:\config\curricula\coen-dome-navigation\task-abstract-corridor.conditions.yml, edited on rig-control's Mouse
-# Curriculum page): rig-control writes that stage's values over the values below at launch and fills curriculum.
+# (K:\config\curricula\coen-dome-navigation\task-abstract-corridor.conditions.yml, edited on app-rig-control's Mouse
+# Curriculum page): app-rig-control writes that stage's values over the values below at launch and fills curriculum.
 # The values here are the defaults (stage 0's). Not every rule is in the schema: tests\test_task_schema.py checks
 # this file against the pydantic model (src\ucl_open_coen_dome_navigation\task.py), which also says what each field does.
 taskParameters:
   rngSeed: null               # null = the workflow draws one at Go; each seed used is a RngSeed event in WorkflowData_Events
-  # The curriculum stage these values came from, the task file's only record of the stage: rig-control fills it at launch
+  # The curriculum stage these values came from, the task file's only record of the stage: app-rig-control fills it at launch
   # (id, code, version, path, label, sha256), and Go refuses a task whose curriculum is empty or malformed. Empty here.
   curriculum:
   # The trial mix, one whole value: each condition's relative chance and what its trials show, its set over the task's

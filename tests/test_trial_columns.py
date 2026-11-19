@@ -17,12 +17,11 @@ def test_the_trial_columns_start_with_the_shared_block():
     assert columns["outcome"]["values"] == ["correct", "incorrect", "noResponse"]
 
 def test_every_outcome_reason_the_rules_write_is_listed():
-    # The outcomeReason values trial-columns.yml lists are the ones TrialLogic.cs writes: an outcome's reason, a lick's
-    # split into CorrectLick and WrongLickLimit (the response window's end is ResponseWindowEnd).
+    # The outcomeReason values trial-columns.yml lists are the ones TrialLogic.cs writes.
     root = Path(__file__).parents[1]
     listed = yaml.safe_load((root / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))["outcomeReason"]["values"]
     code = (root / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8")
-    written = set(re.findall(r'End\(trial, "(\w+)"', code)) - {"Lick"} | {"CorrectLick", "WrongLickLimit"}
+    written = set(re.findall(r'End\(trial, "(\w+)"', code))
     assert sorted(listed) == sorted(written)
 
 
@@ -43,7 +42,7 @@ def test_the_trial_types_are_the_ones_x_trial_types_derives():
     from ucl_open_coen_dome_navigation.task import TRIAL_TYPES
 
     assert sorted(listed) == sorted(rule["trialType"] for rule in TRIAL_TYPES)
-    assert set(listed) <= {"visual", "auditory", "audiovisualCoherent", "audiovisualConflict", "neutral"}
+    assert set(listed) <= {"visual", "auditory", "audiovisualCoherent", "neutral"}
 
 
 def test_the_stimulus_state_columns_are_the_row_s_fields():
