@@ -47,7 +47,7 @@ taskParameters:
     largeMultiplier: 2        # x sizeUl on a large-reward trial, above 1
     largeProbability: 0       # large-reward trials; 0: none
     tone:                     # on a rewarded trial, every speaker
-      levelDbfs: -55          # dBFS RMS; mute: none (Tom's tone)
+      levelDbfs: -45          # dBFS RMS; mute: none (Tom's tone)
   autoRewardProbability: 1.0   # every trial rewarded on reaching the floor, no lick needed
   penalty:                    # each kind its own full values, nothing inherited
     incorrect:                # a trial ending outside the reward zone

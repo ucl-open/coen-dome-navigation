@@ -405,7 +405,7 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
     params = task()["taskParameters"]
     opto = params["optogenetics"]
     assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserToStimulusSeconds"]) == (0.4, 20, 0.1)
-    assert params["reward"] == {"sizeUl": 3.0, "largeMultiplier": 2, "largeProbability": 0, "tone": {"levelDbfs": -55}}
+    assert params["reward"] == {"sizeUl": 3.0, "largeMultiplier": 2, "largeProbability": 0, "tone": {"levelDbfs": -45}}
 
 
 def test_optogenetics_without_a_response_window_is_refused():
@@ -697,12 +697,12 @@ def test_a_condition_sets_its_reward_auto_reward_and_where_the_pips_play():
 
 def test_every_sound_s_level_is_a_condition_s_and_the_plan_s_values():
     # Every sound's level is condition-level (P19), none a session field; the task file's levels are the lab's 5 dB steps
-    # (stimulus -45, reward tone -55, Tom's, set as lib's default is mute; penalty -35) and the background noise has no task
+    # (stimulus -45, reward tone -45, Tom's, set as lib's default is mute; penalty -35) and the background noise has no task
     # setting (the lab's -60).
     assert not {"reward", "penalty", "auditoryStimulus"} & {path.split(".")[0] for path in SESSION_FIELDS}
     params = task()["taskParameters"]
     assert (params["auditoryStimulus"]["levelDbfs"], params["reward"]["tone"]["levelDbfs"], params["penalty"]["incorrect"]["sound"]["levelDbfs"],
-            params["penalty"]["noResponse"]["sound"]["levelDbfs"]) == (-45, -55, -35, -35)
+            params["penalty"]["noResponse"]["sound"]["levelDbfs"]) == (-45, -45, -35, -35)
     assert "backgroundNoise" not in params and "rewardTone" not in params
     conditions = [{"weight": 1, "set": {"visualStimulus.contrasts": [0], "reward.tone.levelDbfs": -50, "penalty.incorrect.sound.levelDbfs": "mute"}},
                   {"weight": 1, "set": {"visualStimulus.contrasts": [0], "reward.tone.levelDbfs": "mute", "penalty.noResponse.sound.levelDbfs": -40}}]
