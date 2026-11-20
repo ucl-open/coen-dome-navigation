@@ -173,7 +173,7 @@ public class SpoutAndStimulusOffTests
         Assert.AreEqual(1, rig.Events.Count(e => e.Kind == TrialEventKind.Outcome), "the wheel never ends the trial again");
         var after = UpdatesAfter(rig, outcome);
         Assert.IsTrue(after.Count >= 15 && after.All(e => e.Seconds <= off.Seconds), "a pip every 50 ms until the off, none after");
-        Assert.IsTrue(after.All(e => e.Update.Row.auditoryLevelDbfs == trial.auditoryLevelDbfs && e.Update.Grating.Opacity == 1));
+        Assert.IsTrue(after.All(e => e.Update.Row.auditoryLevelDbfs == trial.auditoryInitialLevelDbfs && e.Update.Grating.Opacity == 1));
         Assert.AreEqual(trial.TrackLengthCm, after.Last().Update.Row.positionCm, 1e-9, "held at the track's end");
         Assert.IsTrue(after.First().Update.Row.positionCm < trial.TrackLengthCm);
         var gratings = new GratingStates().Process(rig.Events.ToObservable()).ToList().Wait();

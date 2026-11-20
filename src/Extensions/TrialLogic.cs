@@ -139,7 +139,7 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>, IStim
     public string CurriculumStage { get { return task.Curriculum.Code + "-" + task.Curriculum.Version; } }
 
     /// <summary>The highest tone the task's conditions can draw (OpenRigs.Trials MaxSoundLevel.Of), for the pips' peak check (LayOutPips).</summary>
-    public MaxSoundLevel MaxStimulusLevel { get { return MaxSoundLevel.Of(draw.Conditions, t => t.AuditoryStimulus.LevelDbfs); } }
+    public MaxSoundLevel MaxStimulusLevel { get { return MaxSoundLevel.Of(draw.Conditions, t => t.AuditoryStimulus.InitialLevelDbfs); } }
 
     /// <summary>The highest penalty.incorrect.sound.levelDbfs or penalty.noResponse.sound.levelDbfs any condition can draw (NaN:
     /// every one mute), PlayPenaltySound's buffer level.</summary>
@@ -298,8 +298,8 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>, IStim
         var progress = Math.Max(0, Math.Min(1, fraction + trial.values.Track.AutoProgressPerSecond * step * StepSeconds));
         var hz = sweep.FrequencyAt(progress);
         var visual = trial.values.VisualStimulus;
-        var gratingStart = visual.SpatialFrequencyStartCpd;
-        var grating = gratingStart * Math.Pow(visual.SpatialFrequencyEndCpd / gratingStart, progress);
+        var gratingStart = visual.InitialSpatialFrequencyCpd;
+        var grating = gratingStart * Math.Pow(visual.TrackEndSpatialFrequencyCpd / gratingStart, progress);
         // A cutoff trial's listed stimuli switch off once the mouse has run its fraction of the track; after the outcome
         // one cut off stays off.
         var off = !double.IsNaN(trial.cutoffFraction) && Math.Round(fraction, 3) >= trial.cutoffFraction;
@@ -309,15 +309,15 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>, IStim
         if (auditoryCut && double.IsNaN(auditoryCutoffPositionCm)) auditoryCutoffPositionCm = trackCm;
         if (visualCut && double.IsNaN(visualCutoffPositionCm)) visualCutoffPositionCm = trackCm;
         // A stimulus off (cut, or past stimulus.durationSeconds) plays nothing: the tone logged at level NaN in each pip's row.
-        var contrast = visualCut || timedOff ? 0 : trial.visualContrast;
-        var level = auditoryCut || timedOff ? double.NaN : trial.auditoryLevelDbfs;
+        var contrast = visualCut || timedOff ? 0 : trial.visualInitialContrast;
+        var level = auditoryCut || timedOff ? double.NaN : trial.auditoryInitialLevelDbfs;
         return new StimulusFrame
         {
             Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = trackCm, auditoryFrequencyHz = hz, auditoryLevelDbfs = level, visualSpatialFrequencyCpd = grating, visualContrast = contrast },
             PipIndex = sweep.PipIndexOf(hz),
             AuditoryGain = sweep.GainOf(level),
             SpeakerChannel = trial.speakerChannel,
-            Grating = new GratingState { SpatialFrequencyCpd = grating, Opacity = contrast > 0 ? 1 : 0, Contrast = trial.visualContrast, PhaseRad = trial.visualPhaseRad }
+            Grating = new GratingState { SpatialFrequencyCpd = grating, Opacity = contrast > 0 ? 1 : 0, Contrast = trial.visualInitialContrast, PhaseRad = trial.visualPhaseRad }
         };
     }
 
@@ -350,17 +350,17 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>, IStim
             outcome = reason == "rewardZoneReached" ? TrialOutcomes.Auto : rewarded ? TrialOutcomes.Correct : ranOut ? TrialOutcomes.NoResponse : TrialOutcomes.Incorrect,
             trialConditionId = trial.trialConditionId,
             trialCombinationId = trial.trialCombinationId,
-            visualContrast = trial.visualContrast,
+            visualInitialContrast = trial.visualInitialContrast,
             visualPhaseRad = trial.visualPhaseRad,
-            auditoryLevelDbfs = trial.auditoryLevelDbfs,
+            auditoryInitialLevelDbfs = trial.auditoryInitialLevelDbfs,
             auditoryInitialAzimuthDeg = trial.auditoryInitialAzimuthDeg,
-            auditoryElevationDeg = trial.auditoryElevationDeg,
+            auditoryInitialElevationDeg = trial.auditoryInitialElevationDeg,
             autoReward = trial.autoReward,
             outcomeReason = reason,
             trackLengthCm = trial.TrackLengthCm,
             outcomePositionCm = track.Position * trial.WheelGain,
-            outcomeAuditoryFrequencyHz = hz,
-            outcomeVisualSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
+            auditoryOutcomeFrequencyHz = hz,
+            visualOutcomeSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
             auditoryCutoffPositionCm = auditoryCutoffPositionCm,
             visualCutoffPositionCm = visualCutoffPositionCm
         }, trial, times, trial.rewardOfferedUl, rewarded, penalised, cost.TimeoutSeconds, cost.Flash.Brightness);
@@ -529,12 +529,12 @@ public class TrialDraw
         foreach (var p in QuietWait.WheelProblems(structure.WheelQuietSeconds, structure.WheelQuietCm)) problems.Add("trialStructure." + p);
         number("track.wheelGain", trackBlock.WheelGain, true);
         number("track.autoProgressPerSecond", trackBlock.AutoProgressPerSecond, false);
-        number("visualStimulus.spatialFrequencyStartCpd", task.VisualStimulus.SpatialFrequencyStartCpd, true);
-        number("visualStimulus.spatialFrequencyEndCpd", task.VisualStimulus.SpatialFrequencyEndCpd, true);
-        var contrasts = task.VisualStimulus.Contrasts;
-        if (contrasts == null || contrasts.Count == 0 || contrasts.Any(c => !(c >= 0) || double.IsInfinity(c))) problems.Add("visualStimulus.contrasts must each be a finite number, 0 or more, at least one");
+        number("visualStimulus.initialSpatialFrequencyCpd", task.VisualStimulus.InitialSpatialFrequencyCpd, true);
+        number("visualStimulus.trackEndSpatialFrequencyCpd", task.VisualStimulus.TrackEndSpatialFrequencyCpd, true);
+        var contrasts = task.VisualStimulus.InitialContrasts;
+        if (contrasts == null || contrasts.Count == 0 || contrasts.Any(c => !(c >= 0) || double.IsInfinity(c))) problems.Add("visualStimulus.initialContrasts must each be a finite number, 0 or more, at least one");
         var sound = task.AuditoryStimulus;
-        Level(problems, "auditoryStimulus.levelDbfs", sound.LevelDbfs);
+        Level(problems, "auditoryStimulus.initialLevelDbfs", sound.InitialLevelDbfs);
         // Each penalty kind its own full values (a miss is penalised here, so noResponse must be given: Penalties.Problems); the
         // flashes are checked at Go by PlayPenaltyFlash (PenaltyFlashes).
         var kinds = new[] { Tuple.Create("penalty.incorrect", task.Penalty.Incorrect), Tuple.Create("penalty.noResponse", task.Penalty.NoResponse) };
@@ -547,11 +547,11 @@ public class TrialDraw
         }
         if (task.Penalty.Incorrect == null) problems.Add("penalty.incorrect must be given");
         Level(problems, "reward.tone.levelDbfs", task.Reward.Tone == null ? null : task.Reward.Tone.LevelDbfs);
-        if (!(sound.ElevationDeg >= -90 && sound.ElevationDeg <= 90)) problems.Add("auditoryStimulus.elevationDeg must be in [-90, 90]");
+        if (!(sound.InitialElevationDeg >= -90 && sound.InitialElevationDeg <= 90)) problems.Add("auditoryStimulus.initialElevationDeg must be in [-90, 90]");
         var azimuths = (sound.InitialAzimuthsDeg ?? new List<object>()).Select(SoundAzimuths.Parse).ToList();
         if (azimuths.Count == 0 || azimuths.Any(a => !(a.HasValue && (double.IsNaN(a.Value) || a.Value >= -180 && a.Value <= 180))))
             problems.Add("auditoryStimulus.initialAzimuthsDeg must each be all or a number in [-180, 180], at least one");
-        else if (sound.LevelDbfs as string != SoundLevels.Mute && (speakers == null || speakers.Speakers == null || speakers.Speakers.Count == 0))
+        else if (sound.InitialLevelDbfs as string != SoundLevels.Mute && (speakers == null || speakers.Speakers == null || speakers.Speakers.Count == 0))
             problems.Add("rig.yml has no speakerArray.speakers to play auditoryStimulus.initialAzimuthsDeg on");
         foreach (var p in TaskBlocks.RewardSizeProblems(task.Reward.SizeUl, LoadRewardLine.DefaultMaxRewardUl)) problems.Add("reward." + p);
         foreach (var p in TaskBlocks.LargeRewardProblems(task.Reward.SizeUl, task.Reward.LargeMultiplier, task.Reward.LargeProbability, LoadRewardLine.DefaultMaxRewardUl)) problems.Add("reward." + p);
@@ -618,20 +618,20 @@ public class TrialDraw
         t.auditoryCutoff = stimuli == StimulusCutoffStimuli.Auditory || stimuli == StimulusCutoffStimuli.Both;
         t.visualCutoff = stimuli == StimulusCutoffStimuli.Visual || stimuli == StimulusCutoffStimuli.Both;
         t.autoReward = random.NextDouble() < p.AutoRewardProbability;   // so 1 is every trial and 0 none
-        t.visualContrast = p.VisualStimulus.Contrasts[0];
-        t.auditoryLevelDbfs = SoundLevels.Parse(p.AuditoryStimulus.LevelDbfs);
-        var sounding = !double.IsNaN(t.auditoryLevelDbfs);
-        // Where the pips play: every speaker ("all"), or rig.yml's speaker nearest the picked azimuth at elevationDeg; nowhere when mute.
+        t.visualInitialContrast = p.VisualStimulus.InitialContrasts[0];
+        t.auditoryInitialLevelDbfs = SoundLevels.Parse(p.AuditoryStimulus.InitialLevelDbfs);
+        var sounding = !double.IsNaN(t.auditoryInitialLevelDbfs);
+        // Where the pips play: every speaker ("all"), or rig.yml's speaker nearest the picked azimuth at initialElevationDeg; nowhere when mute.
         var azimuth = SoundAzimuths.Parse(p.AuditoryStimulus.InitialAzimuthsDeg[0]).Value;
         t.speakerChannel = sounding ? SoundAzimuths.AllSpeakersChannel : -1;
         t.auditoryInitialAzimuthDeg = double.NaN;
-        t.auditoryElevationDeg = double.NaN;
+        t.auditoryInitialElevationDeg = double.NaN;
         if (sounding && !double.IsNaN(azimuth))
         {
-            var speaker = SoundAzimuths.NearestSpeaker(speakers, azimuth, p.AuditoryStimulus.ElevationDeg).Value;
+            var speaker = SoundAzimuths.NearestSpeaker(speakers, azimuth, p.AuditoryStimulus.InitialElevationDeg).Value;
             t.speakerChannel = speaker.Channel;
             t.auditoryInitialAzimuthDeg = speaker.Position.Azimuth;
-            t.auditoryElevationDeg = speaker.Position.Elevation;
+            t.auditoryInitialElevationDeg = speaker.Position.Elevation;
         }
         if (task.Optogenetics.Enabled)
         {

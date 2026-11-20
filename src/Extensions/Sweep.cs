@@ -109,7 +109,7 @@ public class GratingState
 {
     public double SpatialFrequencyCpd; // the pip's StimulusStateRow.visualSpatialFrequencyCpd
     public double Opacity;             // 1, or 0 when switched off (StimulusStateRow.visualContrast), at contrast 0 or from the StimulusOff
-    public double Contrast;            // the trial's visualContrast
+    public double Contrast;            // the trial's visualInitialContrast
     public double PhaseRad;            // the trial's visualPhaseRad
 }
 
@@ -141,7 +141,7 @@ public class PipSet
         {
             using (var played = set.Scale(buffers[i], largest))
             {
-                SoundLevel.CheckPeak(played, "Pip " + i + " at " + max.LevelDbfs.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " dBFS (auditoryStimulus.levelDbfs, " + max.Where + ")");
+                SoundLevel.CheckPeak(played, "Pip " + i + " at " + max.LevelDbfs.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " dBFS (auditoryStimulus.initialLevelDbfs, " + max.Where + ")");
             }
         }
         return set;
@@ -183,9 +183,9 @@ public class StimulusStateRow
     public int trialNumber;
     public double positionCm;        // track cm along the track
     public double auditoryFrequencyHz;
-    public double auditoryLevelDbfs; // the pip's level: the trial's auditoryLevelDbfs, NaN when mute or while a cutoff trial has the tone off
+    public double auditoryLevelDbfs; // the pip's level: the trial's auditoryInitialLevelDbfs, NaN when mute or while a cutoff trial has the tone off
     public double visualSpatialFrequencyCpd;
-    public double visualContrast;    // the contrast shown: the trial's visualContrast, 0 once a cutoff trial has switched the grating off
+    public double visualContrast;    // the contrast shown: the trial's visualInitialContrast, 0 once a cutoff trial has switched the grating off
 }
 
 [Combinator]
@@ -250,7 +250,7 @@ public class LayOutPips
 }
 
 [Combinator]
-[Description("A pip's buffer for the mixer: the laid-out pip at its PipIndex at its AuditoryGain, the trial's auditoryLevelDbfs, on every speaker or the trial's one (SpeakerChannel) (input: the pip's Update event and the PipSet); silent when AuditoryGain is 0 (mute, or switched off).")]
+[Description("A pip's buffer for the mixer: the laid-out pip at its PipIndex at its AuditoryGain, the trial's auditoryInitialLevelDbfs, on every speaker or the trial's one (SpeakerChannel) (input: the pip's Update event and the PipSet); silent when AuditoryGain is 0 (mute, or switched off).")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class PipBuffer
 {

@@ -34,7 +34,7 @@ trialNumber:
 trialType:
   type: string
   values: [visual, auditory, audiovisualCoherent, neutral, visualTruncated, auditoryTruncated, audiovisualCoherentTruncated]
-  description: The label of the trial's condition (trialConditionId), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryLevelDbfs). Derived at Go from the condition's settings (the task's x-trial-types) - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither); a condition whose stimulusCutoff.stimuli is not none takes Truncated after its name (visualTruncated, auditoryTruncated, audiovisualCoherentTruncated; neutral has no stimulus, so no truncated form).
+  description: The label of the trial's condition (trialConditionId), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualInitialContrast, auditoryInitialLevelDbfs). Derived at Go from the condition's settings (the task's x-trial-types) - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither); a condition whose stimulusCutoff.stimuli is not none takes Truncated after its name (visualTruncated, auditoryTruncated, audiovisualCoherentTruncated; neutral has no stimulus, so no truncated form).
 outcome:
   type: string
   values: [correct, incorrect, noResponse, auto]
@@ -109,29 +109,29 @@ trialConditionId:
 trialCombinationId:
   type: int
   description: 'The trial''s row in the experiment''s Settings_Combinations (0-based, session-wide): the combination it was drawn from, one pick of every list (pairs zipped), whose values that differ between combinations or from Settings_Task are the row''s values; the row''s trialConditionId and trialType are this trial''s. A repeat keeps the combination of the trial it repeats.'
-visualContrast:
+visualInitialContrast:
   type: double
-  description: Grating contrast as BonVision's Contrast, 1 full contrast; 0 when no grating was shown.
-  copyOf: visualStimulus.contrasts
+  description: Grating contrast as the trial starts, as BonVision's Contrast, 1 full contrast; 0 when no grating was shown.
+  copyOf: visualStimulus.initialContrasts
 visualPhaseRad:
   type: double
   unit: rad
   description: The grating's phase, drawn uniformly from 0 to 2 pi for every trial from the seeded stream (OpenRigs.Trials ConditionedTrial).
-auditoryLevelDbfs:
+auditoryInitialLevelDbfs:
   type: double
   unit: dBFS
-  description: The sound's level in dBFS RMS, the trial's auditoryStimulus.levelDbfs; NaN when no sound played (mute).
+  description: The sound's level in dBFS RMS as the trial starts, the trial's auditoryStimulus.initialLevelDbfs; NaN when no sound played (mute).
   note: The trial's level even where a cutoff trial switched the tone off part way (auditoryCutoffPositionCm); each pip's own level, NaN once switched off, is WorkflowData_StimulusState's auditoryLevelDbfs.
-  copyOf: auditoryStimulus.levelDbfs
+  copyOf: auditoryStimulus.initialLevelDbfs
 auditoryInitialAzimuthDeg:
   type: double
   unit: deg
-  description: Azimuth of the speaker that played, rig.yml's nearest to the initial azimuth drawn; NaN when none played (auditoryLevelDbfs NaN) or when every speaker played (auditoryStimulus.initialAzimuthsDeg all).
-  note: The pips' one speaker, rig.yml's nearest (at auditoryStimulus.elevationDeg) to the azimuth picked from the condition's auditoryStimulus.initialAzimuthsDeg; NaN with a level when the pick was all, every speaker at once (the corridor's sound before 18 Nov 2026, and its default).
-auditoryElevationDeg:
+  description: Azimuth of the speaker that played, rig.yml's nearest to the initial azimuth drawn; NaN when none played (auditoryInitialLevelDbfs NaN) or when every speaker played (auditoryStimulus.initialAzimuthsDeg all).
+  note: The pips' one speaker, rig.yml's nearest (at auditoryStimulus.initialElevationDeg) to the azimuth picked from the condition's auditoryStimulus.initialAzimuthsDeg; NaN with a level when the pick was all, every speaker at once (the corridor's sound before 18 Nov 2026, and its default).
+auditoryInitialElevationDeg:
   type: double
   unit: deg
-  description: Elevation of the speaker that played; NaN when none or every speaker played, as auditoryInitialAzimuthDeg.
+  description: Elevation of the speaker that played as the trial starts; NaN when none or every speaker played, as auditoryInitialAzimuthDeg.
 autoReward:
   type: bool
   description: 'True on an auto-reward trial (drawn with the task''s autoRewardProbability): one rewarded without a correct response, its outcome auto when the auto-reward answered it with no response of the mouse''s own; how, and so whether its reward came from the auto-reward, is the task''s (its note).'
@@ -149,11 +149,11 @@ outcomePositionCm:
   type: double
   unit: cm
   description: 'Track cm run along the track at the outcome (outcomeTime): the wheel distance, behind the start never counted and capped at the track''s length, times the trial''s track.wheelGain. Tom Childs'' TrialEndPosCm was read 2 s later, so it included running after the outcome.'
-outcomeAuditoryFrequencyHz:
+auditoryOutcomeFrequencyHz:
   type: double
   unit: Hz
   description: The tone sweep's frequency at the outcome (outcomeTime).
-outcomeVisualSpatialFrequencyCpd:
+visualOutcomeSpatialFrequencyCpd:
   type: double
   unit: cycles/deg
   description: The grating's spatial frequency at the outcome (outcomeTime).

@@ -21,11 +21,11 @@ auditoryFrequencyHz:
 auditoryLevelDbfs:
   type: double
   unit: dBFS
-  description: The pip's level in dBFS RMS, the trial's auditoryLevelDbfs; NaN when no tone played (mute, or switched off on a cutoff trial).
+  description: The pip's level in dBFS RMS, the trial's auditoryInitialLevelDbfs; NaN when no tone played (mute, or switched off on a cutoff trial).
 visualSpatialFrequencyCpd:
   type: double
   unit: cycles/deg
-  description: The grating's spatial frequency at the pip, from the track's progress on a log scale between visualStimulus.spatialFrequencyStartCpd and spatialFrequencyEndCpd.
+  description: The grating's spatial frequency at the pip, from the track's progress on a log scale between visualStimulus.initialSpatialFrequencyCpd and trackEndSpatialFrequencyCpd.
 visualContrast:
   type: double
-  description: The grating's contrast shown at the pip - the trial's visualContrast, 0 once a cutoff trial has switched the grating off.
+  description: The grating's contrast shown at the pip - the trial's visualInitialContrast, 0 once a cutoff trial has switched the grating off.

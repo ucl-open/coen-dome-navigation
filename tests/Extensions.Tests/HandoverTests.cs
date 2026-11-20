@@ -74,7 +74,7 @@ public class HandoverTests
             for (int n = 0; n < Draws; n++)
             {
                 var t = draw.Next();
-                Check(golden.Name, built, t.trialType, t.trialConditionId, t.trialCombinationId, t.visualContrast, t.auditoryLevelDbfs, t.auditoryInitialAzimuthDeg, t.TrackLengthCm, t.WheelGain, t.rewardOfferedUl);
+                Check(golden.Name, built, t.trialType, t.trialConditionId, t.trialCombinationId, t.visualInitialContrast, t.auditoryInitialLevelDbfs, t.auditoryInitialAzimuthDeg, t.TrackLengthCm, t.WheelGain, t.rewardOfferedUl);
                 counts[t.trialCombinationId] = (counts.ContainsKey(t.trialCombinationId) ? counts[t.trialCombinationId] : 0) + 1;
             }
             var problems = GoldenTaskFiles.ShareProblems(golden.Name, built, counts, Draws);
@@ -93,8 +93,8 @@ public class HandoverTests
         var combination = built[condition].Combinations.SingleOrDefault(m => m.Id == combinationId);
         Assert.IsNotNull(combination, where + ": not a combination of its condition");
         var c = combination.Task;
-        Assert.AreEqual(c.VisualStimulus.Contrasts[0], contrast, where);
-        Assert.AreEqual(SoundLevels.Parse(c.AuditoryStimulus.LevelDbfs), levelDbfs, where);
+        Assert.AreEqual(c.VisualStimulus.InitialContrasts[0], contrast, where);
+        Assert.AreEqual(SoundLevels.Parse(c.AuditoryStimulus.InitialLevelDbfs), levelDbfs, where);
         var azimuth = SoundAzimuths.Parse(c.AuditoryStimulus.InitialAzimuthsDeg[0]).Value;
         Assert.AreEqual(!double.IsNaN(levelDbfs) && !double.IsNaN(azimuth) ? SoundAzimuths.NearestSpeaker(Fixture.Speakers(), azimuth, 0).Value.Position.Azimuth : double.NaN, auditoryAzimuth, where);
         Assert.AreEqual(c.Track.LengthsCm[0], trackLengthCm, 1e-9, where);
@@ -142,7 +142,7 @@ public class HandoverTests
             }
             foreach (var r in rows)
             {
-                Check(golden.Name, built, r.trialType, r.trialConditionId, r.trialCombinationId, r.visualContrast, r.auditoryLevelDbfs, r.auditoryInitialAzimuthDeg, r.trackLengthCm, trials[r.trialNumber].WheelGain, r.rewardOfferedUl);
+                Check(golden.Name, built, r.trialType, r.trialConditionId, r.trialCombinationId, r.visualInitialContrast, r.auditoryInitialLevelDbfs, r.auditoryInitialAzimuthDeg, r.trackLengthCm, trials[r.trialNumber].WheelGain, r.rewardOfferedUl);
                 Assert.AreEqual(trials[r.trialNumber].trialCombinationId, r.trialCombinationId, golden.Name);
             }
         }

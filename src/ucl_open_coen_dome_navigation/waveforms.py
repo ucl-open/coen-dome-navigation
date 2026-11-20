@@ -5,7 +5,7 @@ scaled them by the amplitude again, so a pip peaked at amplitude squared. The sw
 SWEEP_PIP_COUNT, Tom's 2000 to 25000 Hz in 100 pips) and recorded in sweep.json, which the workflow reads for the sweep's
 frequencies (Sweep.cs) and task.py for the reward zone's bounds. Each pip is stored at PIP_LEVEL_DBFS RMS, -58.1, the level
 the pips played at from 15 Nov 2026 (Tom's 0.05 squared peak, -58.06, rounded); the workflow scales them to the trial's
-auditoryStimulus.levelDbfs (PipSet). The reward tone plays at reward.tone.levelDbfs of the file as
+auditoryStimulus.initialLevelDbfs (PipSet). The reward tone plays at reward.tone.levelDbfs of the file as
 stored, on rig.yml's speakers, equalised for each (OpenRigs.Audio PlayRewardTone); the penalty sound is the lab's, from OpenRigs.Audio,
 and the background noise the lab's one file, rig.yml's speakerArray.backgroundNoise. Run `uv run generate-waveforms` after changing one of them, and commit.
 """

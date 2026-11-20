@@ -339,7 +339,7 @@ def test_run_trials_reads_both_lick_streams():
 
 def test_one_grating_subject_sets_the_grating():
     # One Grating subject (GratingStates over every trial event) maps spatial frequency, opacity and contrast onto
-    # DrawGratings at once: each pip's (the trial's visualContrast and visualPhaseRad among them), and opacity 0 at the outcome.
+    # DrawGratings at once: each pip's (the trial's visualInitialContrast and visualPhaseRad among them), and opacity 0 at the outcome.
     nodes, edges = _scope(group("Display"))
     (subject,) = [i for i, n in enumerate(nodes) if n.findtext("{clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core}Name") == "Grating"]
     assert nodes[subject].get("TypeArguments") == "ext:GratingState"

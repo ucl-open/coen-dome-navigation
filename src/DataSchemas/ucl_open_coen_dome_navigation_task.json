@@ -1,11 +1,11 @@
 {
   "$defs": {
     "AuditoryStimulus": {
-      "description": "The tone sweep's pips (src/sounds/pips.bin), each equalised for its speaker: on every rig.yml speaker where the\npicked initial azimuth is \"all\", else on rig.yml's speaker nearest it at elevationDeg.",
+      "description": "The tone sweep's pips (src/sounds/pips.bin), each equalised for its speaker: on every rig.yml speaker where the\npicked initial azimuth is \"all\", else on rig.yml's speaker nearest it at initialElevationDeg.",
       "properties": {
-        "levelDbfs": {
-          "default": -55.0,
-          "description": "The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -55. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
+        "initialLevelDbfs": {
+          "default": -45.0,
+          "description": "The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -45. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix",
           "oneOf": [
             {
               "maximum": -1.0,
@@ -17,21 +17,21 @@
               "type": "string"
             }
           ],
-          "title": "LevelDbfs"
+          "title": "InitialLevelDbfs"
         },
-        "elevationDeg": {
+        "initialElevationDeg": {
           "default": 0.0,
-          "description": "Elevation the sound plays at, in degrees: with the azimuth drawn, it picks rig.yml's nearest speaker",
+          "description": "Elevation the sound plays at as the trial starts, in degrees: with the azimuth drawn, it picks rig.yml's nearest speaker",
           "maximum": 90,
           "minimum": -90,
-          "title": "ElevationDeg",
+          "title": "InitialElevationDeg",
           "type": "number"
         },
         "initialAzimuthsDeg": {
           "default": [
             "all"
           ],
-          "description": "Where the pips play, one picked per trial: \"all\" on every rig.yml speaker at once (the corridor's sound, logged auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryElevationDeg. Unused where the level is mute",
+          "description": "Where the pips play, one picked per trial: \"all\" on every rig.yml speaker at once (the corridor's sound, logged auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at initialElevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryInitialElevationDeg. Unused where the level is mute",
           "items": {
             "oneOf": [
               {
@@ -496,7 +496,7 @@
     },
     "TrialCondition": {
       "additionalProperties": false,
-      "description": "One kind of trial in the mix (coen-dome-decision-making's shape): its relative weight, its condition-level values (set)\nby dotted path and the lists it pairs; its trialType is derived from its contrasts and level (TRIAL_TYPES), never stored.\nA list in a scalar field's cell is one value picked per trial; a list field's list (LIST_FIELDS), at any level, one entry\npicked per trial. Paired lists share one picked index per trial.",
+      "description": "One kind of trial in the mix (coen-dome-decision-making's shape): its relative weight, its condition-level values (set)\nby dotted path and the lists it pairs; its trialType is derived from its initial contrasts and level (TRIAL_TYPES), never stored.\nA list in a scalar field's cell is one value picked per trial; a list field's list (LIST_FIELDS), at any level, one entry\npicked per trial. Paired lists share one picked index per trial.",
       "properties": {
         "weight": {
           "description": "Relative draw weight: each new trial picks a condition with these as relative chances",
@@ -666,11 +666,11 @@
         },
         "visualStimulus": {
           "$ref": "#/$defs/VisualStimulus",
-          "description": "The grating: its contrasts and spatial frequencies along the track"
+          "description": "The grating: its initial contrasts and spatial frequencies along the track"
         },
         "auditoryStimulus": {
           "$ref": "#/$defs/AuditoryStimulus",
-          "description": "The tone sweep's pips (src/sounds/pips.bin), each played at levelDbfs"
+          "description": "The tone sweep's pips (src/sounds/pips.bin), each played at initialLevelDbfs"
         },
         "reward": {
           "$ref": "#/$defs/Reward",
@@ -773,37 +773,37 @@
         {
           "if": {
             "properties": {
-              "visualStimulus.contrasts": {
+              "visualStimulus.initialContrasts": {
                 "items": {
                   "const": 0
                 }
               }
             },
             "required": [
-              "visualStimulus.contrasts"
+              "visualStimulus.initialContrasts"
             ]
           },
-          "message": "contrasts 0 shows no grating, so its spatial frequencies are unread",
+          "message": "visualStimulus.initialContrasts 0 shows no grating, so its spatial frequencies are unread",
           "unused": [
-            "visualStimulus.spatialFrequencyStartCpd",
-            "visualStimulus.spatialFrequencyEndCpd"
+            "visualStimulus.initialSpatialFrequencyCpd",
+            "visualStimulus.trackEndSpatialFrequencyCpd"
           ]
         },
         {
           "if": {
             "properties": {
-              "auditoryStimulus.levelDbfs": {
+              "auditoryStimulus.initialLevelDbfs": {
                 "const": "mute"
               }
             },
             "required": [
-              "auditoryStimulus.levelDbfs"
+              "auditoryStimulus.initialLevelDbfs"
             ]
           },
-          "message": "auditoryStimulus.levelDbfs mute plays no tone, so where it plays is unread",
+          "message": "auditoryStimulus.initialLevelDbfs mute plays no tone, so where it plays is unread",
           "unused": [
             "auditoryStimulus.initialAzimuthsDeg",
-            "auditoryStimulus.elevationDeg"
+            "auditoryStimulus.initialElevationDeg"
           ]
         },
         {
@@ -851,12 +851,12 @@
         {
           "if": {
             "properties": {
-              "visualStimulus.contrasts": {
+              "visualStimulus.initialContrasts": {
                 "contains": {
                   "exclusiveMinimum": 0
                 }
               },
-              "auditoryStimulus.levelDbfs": {
+              "auditoryStimulus.initialLevelDbfs": {
                 "contains": {
                   "type": "number"
                 }
@@ -872,8 +872,8 @@
               }
             },
             "required": [
-              "visualStimulus.contrasts",
-              "auditoryStimulus.levelDbfs",
+              "visualStimulus.initialContrasts",
+              "auditoryStimulus.initialLevelDbfs",
               "stimulusCutoff.stimuli"
             ]
           },
@@ -882,20 +882,20 @@
         {
           "if": {
             "properties": {
-              "visualStimulus.contrasts": {
+              "visualStimulus.initialContrasts": {
                 "contains": {
                   "exclusiveMinimum": 0
                 }
               },
-              "auditoryStimulus.levelDbfs": {
+              "auditoryStimulus.initialLevelDbfs": {
                 "contains": {
                   "type": "number"
                 }
               }
             },
             "required": [
-              "visualStimulus.contrasts",
-              "auditoryStimulus.levelDbfs"
+              "visualStimulus.initialContrasts",
+              "auditoryStimulus.initialLevelDbfs"
             ]
           },
           "trialType": "audiovisualCoherent"
@@ -903,7 +903,7 @@
         {
           "if": {
             "properties": {
-              "visualStimulus.contrasts": {
+              "visualStimulus.initialContrasts": {
                 "contains": {
                   "exclusiveMinimum": 0
                 }
@@ -919,7 +919,7 @@
               }
             },
             "required": [
-              "visualStimulus.contrasts",
+              "visualStimulus.initialContrasts",
               "stimulusCutoff.stimuli"
             ]
           },
@@ -928,14 +928,14 @@
         {
           "if": {
             "properties": {
-              "visualStimulus.contrasts": {
+              "visualStimulus.initialContrasts": {
                 "contains": {
                   "exclusiveMinimum": 0
                 }
               }
             },
             "required": [
-              "visualStimulus.contrasts"
+              "visualStimulus.initialContrasts"
             ]
           },
           "trialType": "visual"
@@ -943,7 +943,7 @@
         {
           "if": {
             "properties": {
-              "auditoryStimulus.levelDbfs": {
+              "auditoryStimulus.initialLevelDbfs": {
                 "contains": {
                   "type": "number"
                 }
@@ -959,7 +959,7 @@
               }
             },
             "required": [
-              "auditoryStimulus.levelDbfs",
+              "auditoryStimulus.initialLevelDbfs",
               "stimulusCutoff.stimuli"
             ]
           },
@@ -968,14 +968,14 @@
         {
           "if": {
             "properties": {
-              "auditoryStimulus.levelDbfs": {
+              "auditoryStimulus.initialLevelDbfs": {
                 "contains": {
                   "type": "number"
                 }
               }
             },
             "required": [
-              "auditoryStimulus.levelDbfs"
+              "auditoryStimulus.initialLevelDbfs"
             ]
           },
           "trialType": "auditory"
@@ -986,32 +986,32 @@
       ]
     },
     "VisualStimulus": {
-      "description": "The grating: its contrast, and its spatial frequency from start to end along the track on a log scale, as the tone does\n(TrialLogic.cs TrialRules.Frame).",
+      "description": "The grating: its initial contrast, and its spatial frequency from the initial one at the track's start to the one at\nits end on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame).",
       "properties": {
-        "contrasts": {
+        "initialContrasts": {
           "default": [
             1.0
           ],
-          "description": "Candidate grating contrasts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating",
+          "description": "Candidate grating contrasts as the trial starts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating",
           "items": {
             "type": "number"
           },
           "minItems": 1,
-          "title": "Contrasts",
+          "title": "InitialContrasts",
           "type": "array"
         },
-        "spatialFrequencyStartCpd": {
+        "initialSpatialFrequencyCpd": {
           "default": 0.03,
           "description": "The grating's spatial frequency at the track's start, in cycles per degree",
           "exclusiveMinimum": 0,
-          "title": "SpatialFrequencyStartCpd",
+          "title": "InitialSpatialFrequencyCpd",
           "type": "number"
         },
-        "spatialFrequencyEndCpd": {
+        "trackEndSpatialFrequencyCpd": {
           "default": 0.3,
           "description": "The grating's spatial frequency at the track's end, in cycles per degree",
           "exclusiveMinimum": 0,
-          "title": "SpatialFrequencyEndCpd",
+          "title": "TrackEndSpatialFrequencyCpd",
           "type": "number"
         }
       },

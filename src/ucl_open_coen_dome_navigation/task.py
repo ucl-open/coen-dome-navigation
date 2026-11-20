@@ -11,7 +11,7 @@ made with the tone files (`uv run generate-waveforms`), not the task file's. Eve
 constant level (open_rigs.core.task BACKGROUND_LEVEL_DBFS). The pips are stored at sweep.json's pipLevelDbfs.
 
 What a trial shows and offers is its trial condition's combination: a condition may set any field but the session fields
-(x-session-fields, SESSION_FIELDS), and every list field (LIST_FIELDS: the contrasts, the initial azimuths, the track lengths and
+(x-session-fields, SESSION_FIELDS), and every list field (LIST_FIELDS: the initial contrasts, the initial azimuths, the track lengths and
 the cutoff fractions) expands into its combinations, one entry each; the draw reads every value per trial from the
 trial's combination (its row of Settings_Combinations the trialCombinationId column). Its trialType, derived from its values
 (TRIAL_TYPES), names it and drives nothing."""
@@ -104,35 +104,35 @@ class Track(TaskBlock):
 
 
 class VisualStimulus(TaskBlock):
-    """The grating: its contrast, and its spatial frequency from start to end along the track on a log scale, as the tone does
-    (TrialLogic.cs TrialRules.Frame)."""
+    """The grating: its initial contrast, and its spatial frequency from the initial one at the track's start to the one at
+    its end on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame)."""
 
-    contrasts: list[Double] = Field(
-        default=[1.0], min_length=1, description="Candidate grating contrasts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating"
+    initial_contrasts: list[Double] = Field(
+        default=[1.0], min_length=1, description="Candidate grating contrasts as the trial starts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating"
     )
-    spatial_frequency_start_cpd: Double = Field(default=0.03, gt=0, description="The grating's spatial frequency at the track's start, in cycles per degree")
-    spatial_frequency_end_cpd: Double = Field(default=0.3, gt=0, description="The grating's spatial frequency at the track's end, in cycles per degree")
+    initial_spatial_frequency_cpd: Double = Field(default=0.03, gt=0, description="The grating's spatial frequency at the track's start, in cycles per degree")
+    track_end_spatial_frequency_cpd: Double = Field(default=0.3, gt=0, description="The grating's spatial frequency at the track's end, in cycles per degree")
 
-    @field_validator("contrasts")
+    @field_validator("initial_contrasts")
     @classmethod
     def _not_negative(cls, value: list[float]) -> list[float]:
         if any(contrast < 0 for contrast in value):
-            raise ValueError("contrasts must each be 0 or more")
+            raise ValueError("initialContrasts must each be 0 or more")
         return value
 
 
 class AuditoryStimulus(ct.AuditoryStimulus):
     """The tone sweep's pips (src/sounds/pips.bin), each equalised for its speaker: on every rig.yml speaker where the
-    picked initial azimuth is "all", else on rig.yml's speaker nearest it at elevationDeg."""
+    picked initial azimuth is "all", else on rig.yml's speaker nearest it at initialElevationDeg."""
 
-    level_dbfs: SoundLevelDbfs = level_dbfs(-55.0, "The tone sweep's pips")
+    initial_level_dbfs: SoundLevelDbfs = level_dbfs(-45.0, "The tone sweep's pips")
     initial_azimuths_deg: list[SoundAzimuth] = Field(
         default=[ALL_SPEAKERS],
         min_length=1,
         description=(
             "Where the pips play, one picked per trial: \"all\" on every rig.yml speaker at once (the corridor's sound, logged "
             "auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's "
-            "speaker nearest it at elevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryElevationDeg. Unused where the level is mute"
+            "speaker nearest it at initialElevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryInitialElevationDeg. Unused where the level is mute"
         ),
     )
 
@@ -236,10 +236,10 @@ SESSION_FIELDS = dict(_COMMON)
 # Where one setting limits another (the schema's x-rules, JSON Schema over dotted paths; open_rigs.rigs.conditions
 # evaluates them), as coen-dome-decision-making's. No corridor setting limits another, so its rules only say what goes unread.
 RULES = (
-    {"if": ct.if_({"visualStimulus.contrasts": {"items": {"const": 0}}}), "unused": ["visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd"],
-     "message": "contrasts 0 shows no grating, so its spatial frequencies are unread"},
-    {"if": ct.if_({"auditoryStimulus.levelDbfs": {"const": "mute"}}), "unused": ["auditoryStimulus.initialAzimuthsDeg", "auditoryStimulus.elevationDeg"],
-     "message": "auditoryStimulus.levelDbfs mute plays no tone, so where it plays is unread"},
+    {"if": ct.if_({"visualStimulus.initialContrasts": {"items": {"const": 0}}}), "unused": ["visualStimulus.initialSpatialFrequencyCpd", "visualStimulus.trackEndSpatialFrequencyCpd"],
+     "message": "visualStimulus.initialContrasts 0 shows no grating, so its spatial frequencies are unread"},
+    {"if": ct.if_({"auditoryStimulus.initialLevelDbfs": {"const": "mute"}}), "unused": ["auditoryStimulus.initialAzimuthsDeg", "auditoryStimulus.initialElevationDeg"],
+     "message": "auditoryStimulus.initialLevelDbfs mute plays no tone, so where it plays is unread"},
     {"if": ct.if_({"autoRewardProbability": {"const": 1}}), "unused": ["wrongLickLimit", "rewardZoneMaxHz"],
      "message": "autoRewardProbability 1 rewards every trial, so the lick limits are unread"},
     {"if": ct.if_({"stimulusCutoff.stimuli": {"const": "none"}}), "unused": ["stimulusCutoff.trackFractions"],
@@ -253,12 +253,12 @@ RULES = (
 # (a stimulus switches off) takes "Truncated" after its name, first: neutral has no stimulus, so no truncated form.
 _OFF = {"stimulusCutoff.stimuli": {"contains": {"enum": ["auditory", "visual", "both"]}}}
 TRIAL_TYPES = (
-    {"trialType": "audiovisualCoherentTruncated", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0, "auditoryStimulus.levelDbfs": ct.SOUNDING, **_OFF})},
-    {"trialType": "audiovisualCoherent", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0, "auditoryStimulus.levelDbfs": ct.SOUNDING})},
-    {"trialType": "visualTruncated", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0, **_OFF})},
-    {"trialType": "visual", "if": ct.if_({"visualStimulus.contrasts": ct.ABOVE_0})},
-    {"trialType": "auditoryTruncated", "if": ct.if_({"auditoryStimulus.levelDbfs": ct.SOUNDING, **_OFF})},
-    {"trialType": "auditory", "if": ct.if_({"auditoryStimulus.levelDbfs": ct.SOUNDING})},
+    {"trialType": "audiovisualCoherentTruncated", "if": ct.if_({"visualStimulus.initialContrasts": ct.ABOVE_0, "auditoryStimulus.initialLevelDbfs": ct.SOUNDING, **_OFF})},
+    {"trialType": "audiovisualCoherent", "if": ct.if_({"visualStimulus.initialContrasts": ct.ABOVE_0, "auditoryStimulus.initialLevelDbfs": ct.SOUNDING})},
+    {"trialType": "visualTruncated", "if": ct.if_({"visualStimulus.initialContrasts": ct.ABOVE_0, **_OFF})},
+    {"trialType": "visual", "if": ct.if_({"visualStimulus.initialContrasts": ct.ABOVE_0})},
+    {"trialType": "auditoryTruncated", "if": ct.if_({"auditoryStimulus.initialLevelDbfs": ct.SOUNDING, **_OFF})},
+    {"trialType": "auditory", "if": ct.if_({"auditoryStimulus.initialLevelDbfs": ct.SOUNDING})},
     {"trialType": "neutral"},
 )
 # What some weighted condition must draw (the schema's x-required-conditions; open_rigs.rigs.conditions.required_problems):
@@ -268,7 +268,7 @@ REQUIRED_CONDITIONS = ()
 
 class TrialCondition(ct.TrialCondition):
     """One kind of trial in the mix (coen-dome-decision-making's shape): its relative weight, its condition-level values (set)
-    by dotted path and the lists it pairs; its trialType is derived from its contrasts and level (TRIAL_TYPES), never stored.
+    by dotted path and the lists it pairs; its trialType is derived from its initial contrasts and level (TRIAL_TYPES), never stored.
     A list in a scalar field's cell is one value picked per trial; a list field's list (LIST_FIELDS), at any level, one entry
     picked per trial. Paired lists share one picked index per trial."""
 
@@ -317,8 +317,8 @@ class UclOpenCoenDomeNavigationTaskParameters(TaskParameters, ct.ConditionedTask
         json_schema_extra={"x-whole": True},
     )
     trial_structure: TrialStructure = Field(description="Timing of each trial")
-    visual_stimulus: VisualStimulus = Field(description="The grating: its contrasts and spatial frequencies along the track")
-    auditory_stimulus: AuditoryStimulus = Field(description="The tone sweep's pips (src/sounds/pips.bin), each played at levelDbfs")
+    visual_stimulus: VisualStimulus = Field(description="The grating: its initial contrasts and spatial frequencies along the track")
+    auditory_stimulus: AuditoryStimulus = Field(description="The tone sweep's pips (src/sounds/pips.bin), each played at initialLevelDbfs")
     reward: Reward = Field(description="Reward delivery parameters")
     auto_reward_probability: Double = Field(
         default=1.0, ge=0, le=1, description="Probability that a trial is an auto-reward trial, rewarded on reaching the zone's floor without a lick; 0: never, 1: every trial"

@@ -99,18 +99,18 @@ def test_a_reward_zone_above_the_track_s_top_is_refused():
 
 
 def test_the_task_file_s_conditions_show_what_their_old_types_did():
-    # The trial-type split (18 Nov 2026): each condition says what it shows (visualStimulus.contrasts 0 no grating,
-    # auditoryStimulus.levelDbfs mute no tone) over the task's contrast 1 and level, so each draws what its type drew; the label,
+    # The trial-type split (18 Nov 2026): each condition says what it shows (visualStimulus.initialContrasts 0 no grating,
+    # auditoryStimulus.initialLevelDbfs mute no tone) over the task's contrast 1 and level, so each draws what its type drew; the label,
     # derived from them, names it. Weights as before (visual 0, auditory 1, audiovisualCoherent 0). One whole value (x-whole).
     params = task()["taskParameters"]
     assert "modality" not in params and "trialWeights" not in params
     assert params["trialConditions"] == [
-        {"weight": 0, "set": {"auditoryStimulus.levelDbfs": "mute"}},
-        {"weight": 1, "set": {"visualStimulus.contrasts": [0]}},
+        {"weight": 0, "set": {"auditoryStimulus.initialLevelDbfs": "mute"}},
+        {"weight": 1, "set": {"visualStimulus.initialContrasts": [0]}},
         {"weight": 0, "set": {}},
     ]
-    assert params["visualStimulus"]["contrasts"] == [1.0]
-    assert params["auditoryStimulus"] == {"levelDbfs": -45, "elevationDeg": 0, "initialAzimuthsDeg": ["all"]}
+    assert params["visualStimulus"]["initialContrasts"] == [1.0]
+    assert params["auditoryStimulus"] == {"initialLevelDbfs": -45, "initialElevationDeg": 0, "initialAzimuthsDeg": ["all"]}
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     assert [model.derive_trial_type(c) for c in model.trial_conditions] == ["visual", "auditory", "audiovisualCoherent"]
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
@@ -122,7 +122,7 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     assert params_schema["x-session-fields"] == list(SESSION_FIELDS) and "x-condition-fields" not in params_schema
     assert params_schema["x-required-conditions"] == list(REQUIRED_CONDITIONS) == []
     assert params_schema["x-max-combinations"] == MAX_COMBINATIONS == 1024
-    assert list(LIST_FIELDS) == ["auditoryStimulus.initialAzimuthsDeg", "stimulusCutoff.trackFractions", "track.lengthsCm", "visualStimulus.contrasts"]
+    assert list(LIST_FIELDS) == ["auditoryStimulus.initialAzimuthsDeg", "stimulusCutoff.trackFractions", "track.lengthsCm", "visualStimulus.initialContrasts"]
     assert "x-whole" not in schema["$defs"]["StimulusCutoff"]["properties"]["stimuli"]
     # Every path a rule or trial type names is a task field, and none a session field; every session field is one.
     leaves = set(flatten(model.model_dump(by_alias=True, mode="json")))
@@ -142,25 +142,25 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
 def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
     # The curriculum's path A auditory, path B visual: a stage's conditions say what its trials show, whatever their trialType.
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"weight": 1, "set": {"auditoryStimulus.levelDbfs": "mute", "visualStimulus.contrasts": [0.5, 1.0]}}]
+    params["trialConditions"] = [{"weight": 1, "set": {"auditoryStimulus.initialLevelDbfs": "mute", "visualStimulus.initialContrasts": [0.5, 1.0]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
-    params["trialConditions"] = [{"weight": 1, "set": {"visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": [-50, -40]}}]
+    params["trialConditions"] = [{"weight": 1, "set": {"visualStimulus.initialContrasts": [0], "auditoryStimulus.initialLevelDbfs": [-50, -40]}}]
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     assert model.derive_trial_type(model.trial_conditions[0]) == "auditory"
 
 
 @pytest.mark.parametrize("set_, trial_type", [
-    ({}, "audiovisualCoherent"), ({"visualStimulus.contrasts": [0]}, "auditory"), ({"auditoryStimulus.levelDbfs": "mute"}, "visual"),
-    ({"visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": "mute"}, "neutral"),
-    ({"visualStimulus.contrasts": [0, 0.5], "auditoryStimulus.levelDbfs": ["mute", -40]}, "audiovisualCoherent"),
-    ({"visualStimulus.contrasts": [0, 0.5]}, "audiovisualCoherent"), ({"visualStimulus.contrasts": [0, 0], "auditoryStimulus.levelDbfs": ["mute", -40]}, "auditory"),
-    ({"auditoryStimulus.initialAzimuthsDeg": [0]}, "audiovisualCoherent"), ({"visualStimulus.contrasts": [0], "auditoryStimulus.initialAzimuthsDeg": ["all"]}, "auditory"),
-    ({"visualStimulus.contrasts": [0.5], "auditoryStimulus.levelDbfs": ["mute", "mute"]}, "visual"),
-    ({"visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": -30}, "auditory"),
-    ({"visualStimulus.contrasts": [0.5], "auditoryStimulus.levelDbfs": -30}, "audiovisualCoherent"),
-    ({"stimulusCutoff.stimuli": "both"}, "audiovisualCoherentTruncated"), ({"stimulusCutoff.stimuli": "auditory", "visualStimulus.contrasts": [0]}, "auditoryTruncated"),
-    ({"stimulusCutoff.stimuli": "visual", "auditoryStimulus.levelDbfs": "mute"}, "visualTruncated"), ({"stimulusCutoff.stimuli": "none", "visualStimulus.contrasts": [0]}, "auditory"),
-    ({"stimulusCutoff.stimuli": "both", "visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": "mute"}, "neutral")])
+    ({}, "audiovisualCoherent"), ({"visualStimulus.initialContrasts": [0]}, "auditory"), ({"auditoryStimulus.initialLevelDbfs": "mute"}, "visual"),
+    ({"visualStimulus.initialContrasts": [0], "auditoryStimulus.initialLevelDbfs": "mute"}, "neutral"),
+    ({"visualStimulus.initialContrasts": [0, 0.5], "auditoryStimulus.initialLevelDbfs": ["mute", -40]}, "audiovisualCoherent"),
+    ({"visualStimulus.initialContrasts": [0, 0.5]}, "audiovisualCoherent"), ({"visualStimulus.initialContrasts": [0, 0], "auditoryStimulus.initialLevelDbfs": ["mute", -40]}, "auditory"),
+    ({"auditoryStimulus.initialAzimuthsDeg": [0]}, "audiovisualCoherent"), ({"visualStimulus.initialContrasts": [0], "auditoryStimulus.initialAzimuthsDeg": ["all"]}, "auditory"),
+    ({"visualStimulus.initialContrasts": [0.5], "auditoryStimulus.initialLevelDbfs": ["mute", "mute"]}, "visual"),
+    ({"visualStimulus.initialContrasts": [0], "auditoryStimulus.initialLevelDbfs": -30}, "auditory"),
+    ({"visualStimulus.initialContrasts": [0.5], "auditoryStimulus.initialLevelDbfs": -30}, "audiovisualCoherent"),
+    ({"stimulusCutoff.stimuli": "both"}, "audiovisualCoherentTruncated"), ({"stimulusCutoff.stimuli": "auditory", "visualStimulus.initialContrasts": [0]}, "auditoryTruncated"),
+    ({"stimulusCutoff.stimuli": "visual", "auditoryStimulus.initialLevelDbfs": "mute"}, "visualTruncated"), ({"stimulusCutoff.stimuli": "none", "visualStimulus.initialContrasts": [0]}, "auditory"),
+    ({"stimulusCutoff.stimuli": "both", "visualStimulus.initialContrasts": [0], "auditoryStimulus.initialLevelDbfs": "mute"}, "neutral")])
 def test_the_trial_type_is_derived_from_what_the_condition_shows(set_, trial_type):
     # A grating shows at a contrast above 0 and a tone sounds at a number (ct.SOUNDING), not at mute: both audiovisualCoherent,
     # one alone visual or auditory, neither neutral; a list counts as shown when any entry shows.
@@ -179,14 +179,14 @@ def test_a_stored_trial_type_is_refused():
 def test_the_rules_say_what_goes_unread():
     # The corridor's rules only say what goes unread (open_rigs.rigs.conditions evaluates them).
     values = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"]).model_dump(by_alias=True, mode="json")
-    values["visualStimulus"]["contrasts"] = [0, 0]
+    values["visualStimulus"]["initialContrasts"] = [0, 0]
     values.update(autoRewardProbability=0.5)
-    assert unused_paths(RULES, values) == {"visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd", "stimulusCutoff.trackFractions"}
-    values["auditoryStimulus"]["levelDbfs"] = "mute"
+    assert unused_paths(RULES, values) == {"visualStimulus.initialSpatialFrequencyCpd", "visualStimulus.trackEndSpatialFrequencyCpd", "stimulusCutoff.trackFractions"}
+    values["auditoryStimulus"]["initialLevelDbfs"] = "mute"
     values["stimulusCutoff"]["stimuli"] = "both"
     values["autoRewardProbability"] = 1
-    assert unused_paths(RULES, values) == {"visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd", "auditoryStimulus.initialAzimuthsDeg",
-                                           "auditoryStimulus.elevationDeg", "wrongLickLimit", "rewardZoneMaxHz"}
+    assert unused_paths(RULES, values) == {"visualStimulus.initialSpatialFrequencyCpd", "visualStimulus.trackEndSpatialFrequencyCpd", "auditoryStimulus.initialAzimuthsDeg",
+                                           "auditoryStimulus.initialElevationDeg", "wrongLickLimit", "rewardZoneMaxHz"}
 
 
 @pytest.mark.parametrize("stimuli", ["none", "auditory", "visual", "both"])
@@ -227,18 +227,18 @@ def test_a_stimulus_cutoff_value_outside_the_four_is_refused():
         ([{"weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": [200]}}], r"outside \[-180, 180\]"),
         ([{"weight": 1, "set": {"auditoryStimulus.initialAzimuthsDeg": ["left"]}}], r"Input should be 'all'"),
         ([{"weight": 1, "colour": 1}], "Extra inputs"),
-        ([{"weight": 1, "set": {"auditoryStimulus.levelDbfs": 0}}], r"(?s)trial_conditions\[0\] \(audiovisualCoherent\) with .*less than or equal to -1"),
-        ([{"weight": 1, "set": {"visualStimulus.contrasts": [0.5, -1]}}], r"(?s)with \{.*'visualStimulus.contrasts': \[-1\].*contrasts must each be 0 or more"),
-        ([{"weight": 1, "set": {"visualStimulus.contrasts": []}}], "visualStimulus.contrasts is an empty list"),
-        ([{"weight": 1, "set": {"visualStimulus.contrasts": [0.5, 1], "auditoryStimulus.levelDbfs": [-40]}, "pairs": [["visualStimulus.contrasts", "auditoryStimulus.levelDbfs"]]}],
+        ([{"weight": 1, "set": {"auditoryStimulus.initialLevelDbfs": 0}}], r"(?s)trial_conditions\[0\] \(audiovisualCoherent\) with .*less than or equal to -1"),
+        ([{"weight": 1, "set": {"visualStimulus.initialContrasts": [0.5, -1]}}], r"(?s)with \{.*'visualStimulus.initialContrasts': \[-1\].*initialContrasts must each be 0 or more"),
+        ([{"weight": 1, "set": {"visualStimulus.initialContrasts": []}}], "visualStimulus.initialContrasts is an empty list"),
+        ([{"weight": 1, "set": {"visualStimulus.initialContrasts": [0.5, 1], "auditoryStimulus.initialLevelDbfs": [-40]}, "pairs": [["visualStimulus.initialContrasts", "auditoryStimulus.initialLevelDbfs"]]}],
          "paired lists must be equally long"),
-        ([{"weight": 1, "pairs": [["visualStimulus.contrasts"]]}], "each pairs group needs two paths or more"),
+        ([{"weight": 1, "pairs": [["visualStimulus.initialContrasts"]]}], "each pairs group needs two paths or more"),
         # Every list field expands too: the task's 3 track lengths and 1 cutoff fraction times the set's 1 x 342.
-        ([{"weight": 1, "set": {"visualStimulus.contrasts": [1], "auditoryStimulus.levelDbfs": [-120 + i / 100 for i in range(342)]}}],
+        ([{"weight": 1, "set": {"visualStimulus.initialContrasts": [1], "auditoryStimulus.initialLevelDbfs": [-120 + i / 100 for i in range(342)]}}],
          r"expands into 1026 combinations, more than 1024 \(x-max-combinations\)"),
         # Counted before any is built, as TrialDraw.BuildConditions does: 3 x 1000^3 combinations would take hours and all
         # memory to build.
-        ([{"weight": 1, "set": {"auditoryStimulus.levelDbfs": [-120 + i / 1000 for i in range(1000)], "autoRewardProbability": [i / 1000 for i in range(1000)],
+        ([{"weight": 1, "set": {"auditoryStimulus.initialLevelDbfs": [-120 + i / 1000 for i in range(1000)], "autoRewardProbability": [i / 1000 for i in range(1000)],
                                                       "reward.sizeUl": [1 + i / 1000 for i in range(1000)]}}],
          r"expands into 3000000000 combinations"),
     ],
@@ -253,10 +253,10 @@ def test_conditions_need_a_weight_and_what_they_set_to_run(conditions, match):
 def test_a_condition_may_set_any_field_but_a_session_field_and_every_list_expands():
     params = task()["taskParameters"]
     params["trialConditions"] = [{"weight": 1, "set": {"track.wheelGain": 2, "track.lengthsCm": [40, 60], "penalty.incorrect.timeoutSeconds": 2,
-                                                                              "visualStimulus.spatialFrequencyEndCpd": 0.6, "rewardZoneMinHz": 15000}}]
+                                                                              "visualStimulus.trackEndSpatialFrequencyCpd": 0.6, "rewardZoneMinHz": 15000}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     # 342 levels times the task's 3 track and fraction picks is 1026; 341 is 1023, within the cap.
-    params["trialConditions"] = [{"weight": 1, "set": {"auditoryStimulus.levelDbfs": [-120 + i / 100 for i in range(341)]}}]
+    params["trialConditions"] = [{"weight": 1, "set": {"auditoryStimulus.initialLevelDbfs": [-120 + i / 100 for i in range(341)]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 
@@ -264,11 +264,11 @@ def test_combinations_are_ordered_by_path_the_first_changing_fastest():
     # TrialDraw.BuildConditions' order, Settings_Combinations' rows.
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"])
     combos = ct.condition_combinations(model.model_dump(by_alias=True, mode="json"),
-                                       {"visualStimulus.contrasts": [0.5, 1], "stimulusCutoff.trackFractions": [0.4, 0.6]}, [], LIST_FIELDS)
+                                       {"visualStimulus.initialContrasts": [0.5, 1], "stimulusCutoff.trackFractions": [0.4, 0.6]}, [], LIST_FIELDS)
     assert len(combos) == 12 and combos[:3] == [
-        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.4], "track.lengthsCm": [80.0], "visualStimulus.contrasts": [0.5]},
-        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.6], "track.lengthsCm": [80.0], "visualStimulus.contrasts": [0.5]},
-        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.4], "track.lengthsCm": [100.0], "visualStimulus.contrasts": [0.5]}]
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.4], "track.lengthsCm": [80.0], "visualStimulus.initialContrasts": [0.5]},
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.6], "track.lengthsCm": [80.0], "visualStimulus.initialContrasts": [0.5]},
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.4], "track.lengthsCm": [100.0], "visualStimulus.initialContrasts": [0.5]}]
 
 
 def test_the_committed_task_schema_cs_is_the_schema_s():
@@ -643,11 +643,11 @@ def test_the_laser_cap_and_trigger_hold_are_not_task_settings():
 
 
 @pytest.mark.parametrize("where, key, value", [
-    (("track",), "wheelGain", 0), (("track",), "autoProgressPerSecond", -0.1), (("visualStimulus",), "spatialFrequencyEndCpd", 0),
+    (("track",), "wheelGain", 0), (("track",), "autoProgressPerSecond", -0.1), (("visualStimulus",), "trackEndSpatialFrequencyCpd", 0),
     ((), "autoRewardProbability", 1.5), ((), "autoRewardProbability", -0.1),
     ((), "wrongLickLimit", -1), ((), "rewardZoneMinHz", 0), ((), "rewardZoneMaxHz", 0), (("reward",), "sizeUl", 0),
-    (("reward",), "largeMultiplier", 1), (("reward",), "largeProbability", 1.5), (("auditoryStimulus",), "levelDbfs", 0),
-    (("auditoryStimulus",), "levelDbfs", -121), (("auditoryStimulus",), "levelDbfs", "loud"),
+    (("reward",), "largeMultiplier", 1), (("reward",), "largeProbability", 1.5), (("auditoryStimulus",), "initialLevelDbfs", 0),
+    (("auditoryStimulus",), "initialLevelDbfs", -121), (("auditoryStimulus",), "initialLevelDbfs", "loud"),
     (("trialConditions", 0), "weight", -1)])
 def test_the_bounds_hold_with_the_lab_s_types(where, key, value):
     # The task model's types are decision-making's (Double, Bool, String; int, as open_rigs' Int drops a ge).
@@ -690,7 +690,7 @@ def test_the_task_file_dumps_back_unchanged():
 def test_a_condition_sets_its_reward_auto_reward_and_where_the_pips_play():
     params = task()["taskParameters"]
     params["trialConditions"] = [{"weight": 1, "set": {
-        "visualStimulus.contrasts": [0], "reward.sizeUl": [2, 4], "autoRewardProbability": 0, "auditoryStimulus.initialAzimuthsDeg": [-60, "all"]}}]
+        "visualStimulus.initialContrasts": [0], "reward.sizeUl": [2, 4], "autoRewardProbability": 0, "auditoryStimulus.initialAzimuthsDeg": [-60, "all"]}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     assert params["auditoryStimulus"]["initialAzimuthsDeg"] == ["all"]   # the task file's: every speaker, as before
 
@@ -701,11 +701,11 @@ def test_every_sound_s_level_is_a_condition_s_and_the_plan_s_values():
     # setting (the lab's -60).
     assert not {"reward", "penalty", "auditoryStimulus"} & {path.split(".")[0] for path in SESSION_FIELDS}
     params = task()["taskParameters"]
-    assert (params["auditoryStimulus"]["levelDbfs"], params["reward"]["tone"]["levelDbfs"], params["penalty"]["incorrect"]["sound"]["levelDbfs"],
+    assert (params["auditoryStimulus"]["initialLevelDbfs"], params["reward"]["tone"]["levelDbfs"], params["penalty"]["incorrect"]["sound"]["levelDbfs"],
             params["penalty"]["noResponse"]["sound"]["levelDbfs"]) == (-45, -45, -35, -35)
     assert "backgroundNoise" not in params and "rewardTone" not in params
-    conditions = [{"weight": 1, "set": {"visualStimulus.contrasts": [0], "reward.tone.levelDbfs": -50, "penalty.incorrect.sound.levelDbfs": "mute"}},
-                  {"weight": 1, "set": {"visualStimulus.contrasts": [0], "reward.tone.levelDbfs": "mute", "penalty.noResponse.sound.levelDbfs": -40}}]
+    conditions = [{"weight": 1, "set": {"visualStimulus.initialContrasts": [0], "reward.tone.levelDbfs": -50, "penalty.incorrect.sound.levelDbfs": "mute"}},
+                  {"weight": 1, "set": {"visualStimulus.initialContrasts": [0], "reward.tone.levelDbfs": "mute", "penalty.noResponse.sound.levelDbfs": -40}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate({**params, "trialConditions": conditions})
 
 

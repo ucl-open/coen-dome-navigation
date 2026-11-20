@@ -82,7 +82,7 @@ static class Fixture
         task.Track.AutoProgressPerSecond = v[7].Value;
         if (stage == 5)
         {
-            Func<Dictionary<object, object>> none = () => new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.0 } } };
+            Func<Dictionary<object, object>> none = () => new Dictionary<object, object> { { "visualStimulus.initialContrasts", new List<object> { 0.0 } } };
             var off = none();
             off["stimulusCutoff.stimuli"] = "both";
             off["stimulusCutoff.trackFractions"] = new List<object> { 0.4, 0.6 };
@@ -277,8 +277,8 @@ public class TrialDrawTests
     /// <summary>What a label's condition sets in the task file: visual the tone off, auditory the grating off, audiovisualCoherent nothing.</summary>
     static Dictionary<object, object> Shows(string label)
     {
-        if (label == "visual") return new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", "mute" } };
-        if (label == "auditory") return new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.0 } } };
+        if (label == "visual") return new Dictionary<object, object> { { "auditoryStimulus.initialLevelDbfs", "mute" } };
+        if (label == "auditory") return new Dictionary<object, object> { { "visualStimulus.initialContrasts", new List<object> { 0.0 } } };
         return new Dictionary<object, object>();
     }
 
@@ -376,12 +376,12 @@ public class TrialDrawTests
             c[1].Set = set;
             return c;
         };
-        var unequal = setting("visualStimulus.contrasts", new List<object> { 0.5, 1.0 });
+        var unequal = setting("visualStimulus.initialContrasts", new List<object> { 0.5, 1.0 });
         ((Dictionary<object, object>)unequal[1].Set)["auditoryStimulus.initialAzimuthsDeg"] = new List<object> { 20.0 };
-        unequal[1].Pairs = new List<List<string>> { new List<string> { "visualStimulus.contrasts", "auditoryStimulus.initialAzimuthsDeg" } };
+        unequal[1].Pairs = new List<List<string>> { new List<string> { "visualStimulus.initialContrasts", "auditoryStimulus.initialAzimuthsDeg" } };
         var alone = Conditions(0, 1, 0);
-        alone[1].Pairs = new List<List<string>> { new List<string> { "visualStimulus.contrasts" } };
-        var many = setting("visualStimulus.contrasts", Enumerable.Range(1, 33).Select(i => (object)(i / 100.0)).ToList());
+        alone[1].Pairs = new List<List<string>> { new List<string> { "visualStimulus.initialContrasts" } };
+        var many = setting("visualStimulus.initialContrasts", Enumerable.Range(1, 33).Select(i => (object)(i / 100.0)).ToList());
         ((Dictionary<object, object>)many[1].Set)["auditoryStimulus.initialAzimuthsDeg"] = Enumerable.Range(1, 32).Select(i => (object)(i - 16.0)).ToList();
         var cases = new[]
         {
@@ -398,12 +398,12 @@ public class TrialDrawTests
             Tuple.Create(setting("autoRewardProbability", 2.0), "trialConditions[1] (auditory): autoRewardProbability is 2, not from 0 to 1"),
             Tuple.Create(setting("auditoryStimulus.initialAzimuthsDeg", new List<object> { "left" }), "trialConditions[1] (auditory): auditoryStimulus.initialAzimuthsDeg must each be all or a number in [-180, 180]"),
             Tuple.Create(setting("auditoryStimulus.initialAzimuthsDeg", new List<object> { 200.0 }), "trialConditions[1] (auditory): auditoryStimulus.initialAzimuthsDeg must each be all or a number in [-180, 180]"),
-            Tuple.Create(setting("auditoryStimulus.levelDbfs", 0.0), "trialConditions[1] (auditory): auditoryStimulus.levelDbfs (0) must be from -120 to -1 dBFS, or mute"),
-            Tuple.Create(setting("auditoryStimulus.levelDbfs", "loud"), "trialConditions[1] (neutral): auditoryStimulus.levelDbfs: "),   // loud is no number, so no tone sounds
-            Tuple.Create(setting("visualStimulus.contrasts", 0.5), "trialConditions[1] (audiovisualCoherent): its values do not read as the task's fields"),
-            Tuple.Create(setting("visualStimulus.contrasts", new List<object> { 0.5, -1.0 }), "trialConditions[1] (audiovisualCoherent) with visualStimulus.contrasts [-1]: visualStimulus.contrasts must each be a finite number, 0 or more"),
-            Tuple.Create(setting("visualStimulus.contrasts", new List<object>()), "trialConditions[1] (auditory): visualStimulus.contrasts is an empty list"),
-            Tuple.Create(unequal, "trialConditions[1] (audiovisualCoherent): pairs [visualStimulus.contrasts, auditoryStimulus.initialAzimuthsDeg] have lists of lengths 2, 1; paired lists must be equally long"),
+            Tuple.Create(setting("auditoryStimulus.initialLevelDbfs", 0.0), "trialConditions[1] (auditory): auditoryStimulus.initialLevelDbfs (0) must be from -120 to -1 dBFS, or mute"),
+            Tuple.Create(setting("auditoryStimulus.initialLevelDbfs", "loud"), "trialConditions[1] (neutral): auditoryStimulus.initialLevelDbfs: "),   // loud is no number, so no tone sounds
+            Tuple.Create(setting("visualStimulus.initialContrasts", 0.5), "trialConditions[1] (audiovisualCoherent): its values do not read as the task's fields"),
+            Tuple.Create(setting("visualStimulus.initialContrasts", new List<object> { 0.5, -1.0 }), "trialConditions[1] (audiovisualCoherent) with visualStimulus.initialContrasts [-1]: visualStimulus.initialContrasts must each be a finite number, 0 or more"),
+            Tuple.Create(setting("visualStimulus.initialContrasts", new List<object>()), "trialConditions[1] (auditory): visualStimulus.initialContrasts is an empty list"),
+            Tuple.Create(unequal, "trialConditions[1] (audiovisualCoherent): pairs [visualStimulus.initialContrasts, auditoryStimulus.initialAzimuthsDeg] have lists of lengths 2, 1; paired lists must be equally long"),
             Tuple.Create(alone, "trialConditions[1] (auditory): each pairs group needs two paths or more"),
             Tuple.Create(many, "trialConditions[1] (audiovisualCoherent) expands into 1056 combinations, more than 1024 (x-max-combinations)"),
         };
@@ -454,7 +454,7 @@ public class TrialDrawTests
     public void TheTaskFilesConditionsAreReadByTheirYamlNamesAndDrawWhatTheirTrialTypesSay()
     {
         var text = File.ReadAllText(Path.Combine(Fixture.Repo(), "config", "task-abstract-corridor.yml"))
-            .Replace("- { weight: 0, set: { auditoryStimulus.levelDbfs: mute } }", "- { weight: 2, set: { auditoryStimulus.levelDbfs: mute } }");
+            .Replace("- { weight: 0, set: { auditoryStimulus.initialLevelDbfs: mute } }", "- { weight: 2, set: { auditoryStimulus.initialLevelDbfs: mute } }");
         foreach (var task in new[] { new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters, TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters })
         {
             Assert.AreEqual(0, ((System.Collections.IDictionary)task.TrialConditions[2].Set).Count, "set: {} reads as an empty map");
@@ -464,12 +464,12 @@ public class TrialDrawTests
             CollectionAssert.AreEqual(new[] { 2, 1, 0 }, built.Select(c => c.Weight).ToArray());
             // visual: the grating at the task's contrast, no tone; auditory: the tone at its level, no grating; both.
             // Each expands into the task's 3 track lengths times its 1 cutoff fraction (1.0, the default).
-            CollectionAssert.AreEqual(new[] { "1:mute", "0:-55", "1:-55" }, built.Select(c => c.Combinations[0].Task).Select(m => string.Join(",", m.VisualStimulus.Contrasts) + ":" + Convert.ToString(m.AuditoryStimulus.LevelDbfs, System.Globalization.CultureInfo.InvariantCulture)).ToArray());
+            CollectionAssert.AreEqual(new[] { "1:mute", "0:-45", "1:-45" }, built.Select(c => c.Combinations[0].Task).Select(m => string.Join(",", m.VisualStimulus.InitialContrasts) + ":" + Convert.ToString(m.AuditoryStimulus.InitialLevelDbfs, System.Globalization.CultureInfo.InvariantCulture)).ToArray());
             Assert.IsTrue(built.All(c => c.Combinations.Count == 3));
         }
         // ReadTask keeps a set value a number, so Settings_Task logs it as one (the typed read's text would log "0").
         var read = TaskYaml.Read<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
-        Assert.IsNotInstanceOfType(((System.Collections.IDictionary)read.TrialConditions[1].Set)["visualStimulus.contrasts"], typeof(string));
+        Assert.IsNotInstanceOfType(((System.Collections.IDictionary)read.TrialConditions[1].Set)["visualStimulus.initialContrasts"], typeof(string));
         // Each condition's trialType is derived from what it shows (x-trial-types) on the task as Go reads it (ReadTask: the
         // typed read's text values would name every condition visual).
         var names = TrialDraw.BuildConditions(text, read, new List<string>()).Select(c => c.TrialType).ToArray();
@@ -481,7 +481,7 @@ public class TrialDrawTests
     {
         // A condition setting a dim grating and a quieter tone shows both, as set, and is named audiovisualCoherent.
         var task = Fixture.Task(1);
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.5 } }, { "auditoryStimulus.levelDbfs", -64.1 } } } };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.initialContrasts", new List<object> { 0.5 } }, { "auditoryStimulus.initialLevelDbfs", -64.1 } } } };
         var rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         var pip = rig.RunTo(TrialEventKind.Update).Update;
@@ -491,10 +491,10 @@ public class TrialDrawTests
         rig.Wheel(1000);
         var row = rig.RunTo(TrialEventKind.Outcome).Outcome.Row.Value;
         Assert.AreEqual("audiovisualCoherent", row.trialType);
-        Assert.AreEqual(0.5, row.visualContrast);
-        Assert.AreEqual(-64.1, row.auditoryLevelDbfs);
+        Assert.AreEqual(0.5, row.visualInitialContrast);
+        Assert.AreEqual(-64.1, row.auditoryInitialLevelDbfs);
         // Neither: a neutral trial runs the track with nothing shown.
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.0 } }, { "auditoryStimulus.levelDbfs", "mute" } } } };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.initialContrasts", new List<object> { 0.0 } }, { "auditoryStimulus.initialLevelDbfs", "mute" } } } };
         rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         pip = rig.RunTo(TrialEventKind.Update).Update;
@@ -507,7 +507,7 @@ public class TrialDrawTests
     {
         // GratingStates (the Grating subject): each pip's grating as it comes; at the outcome the last pip's at opacity 0.
         var task = Fixture.Task(1);
-        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.5 } } } } };
+        task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.initialContrasts", new List<object> { 0.5 } } } } };
         var rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         rig.RunTo(TrialEventKind.Update);
@@ -532,19 +532,19 @@ public class TrialDrawTests
         Func<bool, List<Trial>> trials = pair =>
         {
             task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1,
-                Set = new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.25, 0.5 } }, { "auditoryStimulus.initialAzimuthsDeg", new List<object> { -90.0, 90.0 } } },
-                Pairs = pair ? new List<List<string>> { new List<string> { "visualStimulus.contrasts", "auditoryStimulus.initialAzimuthsDeg" } } : new List<List<string>>() } };
+                Set = new Dictionary<object, object> { { "visualStimulus.initialContrasts", new List<object> { 0.25, 0.5 } }, { "auditoryStimulus.initialAzimuthsDeg", new List<object> { -90.0, 90.0 } } },
+                Pairs = pair ? new List<List<string>> { new List<string> { "visualStimulus.initialContrasts", "auditoryStimulus.initialAzimuthsDeg" } } : new List<List<string>>() } };
             var draw = Fixture.Draw(task);
             return Enumerable.Range(0, 400).Select(i => draw.Next()).ToList();
         };
-        var paired = trials(true).Select(t => t.visualContrast + ":" + t.auditoryInitialAzimuthDeg).Distinct().OrderBy(x => x).ToArray();
+        var paired = trials(true).Select(t => t.visualInitialContrast + ":" + t.auditoryInitialAzimuthDeg).Distinct().OrderBy(x => x).ToArray();
         CollectionAssert.AreEqual(new[] { "0.25:-90", "0.5:90" }, paired);
-        Assert.AreEqual(4, trials(false).Select(t => t.visualContrast + ":" + t.auditoryInitialAzimuthDeg).Distinct().Count());
-        // The task's own contrasts list is drawn per trial too.
-        task.VisualStimulus.Contrasts = new List<double> { 0.3, 0.6 };
+        Assert.AreEqual(4, trials(false).Select(t => t.visualInitialContrast + ":" + t.auditoryInitialAzimuthDeg).Distinct().Count());
+        // The task's own initialContrasts list is drawn per trial too.
+        task.VisualStimulus.InitialContrasts = new List<double> { 0.3, 0.6 };
         task.TrialConditions = Conditions(1, 0, 0);
         var draw2 = Fixture.Draw(task);
-        CollectionAssert.AreEquivalent(new[] { 0.3, 0.6 }, Enumerable.Range(0, 100).Select(i => draw2.Next().visualContrast).Distinct().ToArray());
+        CollectionAssert.AreEquivalent(new[] { 0.3, 0.6 }, Enumerable.Range(0, 100).Select(i => draw2.Next().visualInitialContrast).Distinct().ToArray());
     }
 
     [TestMethod]
@@ -553,9 +553,9 @@ public class TrialDrawTests
         var task = Fixture.Task(1);
         task.TrialConditions = new List<TrialCondition>
         {
-            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", -50.0 } } },
-            new TrialCondition { Weight = 0, Set = new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", -30.0 } } },
-            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", "mute" } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "auditoryStimulus.initialLevelDbfs", -50.0 } } },
+            new TrialCondition { Weight = 0, Set = new Dictionary<object, object> { { "auditoryStimulus.initialLevelDbfs", -30.0 } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "auditoryStimulus.initialLevelDbfs", "mute" } } },
         };
         var max = Fixture.Setup(task).MaxStimulusLevel;
         Assert.AreEqual(-50.0, max.LevelDbfs);   // the weight 0 condition's -30 is never drawn
@@ -604,13 +604,13 @@ public class TrialDrawTests
             var rig = new Rig(Fixture.Setup(task));
             rig.RunTo(TrialEventKind.Start);
             var pip = rig.RunTo(TrialEventKind.Update).Update;
-            Assert.AreEqual(type == "visual" ? 0.0 : Fixture.Sweep().GainOf(-55), pip.AuditoryGain, 1e-9, type);
+            Assert.AreEqual(type == "visual" ? 0.0 : Fixture.Sweep().GainOf(-45), pip.AuditoryGain, 1e-9, type);
             Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, pip.Grating.Opacity, type);
             rig.Wheel(1000);
             var row = rig.RunTo(TrialEventKind.Outcome).Outcome.Row.Value;
             Assert.AreEqual(type, row.trialType);
-            Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, row.visualContrast, type);
-            Assert.AreEqual(type == "visual" ? double.NaN : -55, row.auditoryLevelDbfs, type);
+            Assert.AreEqual(type == "auditory" ? 0.0 : 1.0, row.visualInitialContrast, type);
+            Assert.AreEqual(type == "visual" ? double.NaN : -45, row.auditoryInitialLevelDbfs, type);
         }
     }
 
@@ -669,7 +669,7 @@ public class TrialDrawTests
             new TrialCondition { Weight = 1, Set = new Dictionary<object, object> {
                 { "reward.sizeUl", new List<object> { 2.0, 4.0 } }, { "autoRewardProbability", 1.0 }, { "optogenetics.laserOnProbability", 0.0 } } },
             new TrialCondition { Weight = 1, Set = new Dictionary<object, object> {
-                { "auditoryStimulus.levelDbfs", "mute" }, { "optogenetics.laserOnProbability", 1.0 } } },
+                { "auditoryStimulus.initialLevelDbfs", "mute" }, { "optogenetics.laserOnProbability", 1.0 } } },
         };
         var draw = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 400).Select(_ => draw.Next()).Skip(20).ToList();
@@ -687,15 +687,15 @@ public class TrialDrawTests
         var task = Fixture.Task(1);
         var all = Fixture.Draw(task).Next();
         Assert.AreEqual(SoundAzimuths.AllSpeakersChannel, all.speakerChannel);
-        Assert.IsTrue(double.IsNaN(all.auditoryInitialAzimuthDeg) && double.IsNaN(all.auditoryElevationDeg) && all.auditoryLevelDbfs == -55);
+        Assert.IsTrue(double.IsNaN(all.auditoryInitialAzimuthDeg) && double.IsNaN(all.auditoryInitialElevationDeg) && all.auditoryInitialLevelDbfs == -45);
         // A number: rig.yml's speaker nearest it.
         task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1,
             Set = new Dictionary<object, object> { { "auditoryStimulus.initialAzimuthsDeg", new List<object> { -70.0, "all", 20.0 } } } } };
         var draw = Fixture.Draw(task);
-        var picked = Enumerable.Range(0, 200).Select(_ => draw.Next()).Select(t => t.speakerChannel + ":" + t.auditoryInitialAzimuthDeg + ":" + t.auditoryElevationDeg).Distinct().OrderBy(x => x).ToArray();
+        var picked = Enumerable.Range(0, 200).Select(_ => draw.Next()).Select(t => t.speakerChannel + ":" + t.auditoryInitialAzimuthDeg + ":" + t.auditoryInitialElevationDeg).Distinct().OrderBy(x => x).ToArray();
         CollectionAssert.AreEqual(new[] { "0:-90:15", "-2:NaN:NaN", "2:0:15" }.OrderBy(x => x).ToArray(), picked);
         // Silent: no speaker, NaN.
-        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.levelDbfs", "mute" }, { "auditoryStimulus.initialAzimuthsDeg", new List<object> { 20.0 } } };
+        task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.initialLevelDbfs", "mute" }, { "auditoryStimulus.initialAzimuthsDeg", new List<object> { 20.0 } } };
         var silent = Fixture.Draw(task).Next();
         Assert.AreEqual(-1, silent.speakerChannel);
         Assert.IsTrue(double.IsNaN(silent.auditoryInitialAzimuthDeg));
@@ -705,7 +705,7 @@ public class TrialDrawTests
             task.TrialConditions[0].Set = new Dictionary<object, object> { { "auditoryStimulus.initialAzimuthsDeg", new List<object> { azimuth } } };
             StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Draw(task, false)).Message, "rig.yml has no speakerArray.speakers to play auditoryStimulus.initialAzimuthsDeg on");
         }
-        task.AuditoryStimulus.LevelDbfs = "mute";
+        task.AuditoryStimulus.InitialLevelDbfs = "mute";
         task.TrialConditions[0].Set = new Dictionary<object, object>();
         Fixture.Draw(task, false);
         // The trial row logs the speaker; the pip carries its channel to PipBuffer.
@@ -883,7 +883,7 @@ public class TrialRulesTests
         var rig = new Rig(Fixture.Setup(Fixture.Task(0)));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
-        Assert.IsTrue(outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz >= 18000);
+        Assert.IsTrue(outcome.Outcome.Row.Value.auditoryOutcomeFrequencyHz >= 18000);
         Assert.IsTrue(outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime > 10 && outcome.Seconds - outcome.Outcome.Row.Value.trialStartTime < 25);
         Assert.AreEqual(outcome.Seconds, outcome.Outcome.Row.Value.outcomeTime, "outcomeTime is the row's own time, harpTime");
     }
@@ -893,7 +893,7 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(0);
         task.Track.AutoProgressPerSecond = 0.2;   // the whole track in 5 s
-        task.VisualStimulus.SpatialFrequencyStartCpd = 0.05;
+        task.VisualStimulus.InitialSpatialFrequencyCpd = 0.05;
         var rig = new Rig(Fixture.Setup(task));
         var outcome = rig.RunTo(TrialEventKind.Outcome);
         var first = rig.Events.First(e => e.Kind == TrialEventKind.Update).Update.Row;
@@ -1186,7 +1186,7 @@ public class TrialRulesTests
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(3)));
         var start = rig.RunTo(TrialEventKind.Start);
-        start.Trial.visualContrast = 0.5;
+        start.Trial.visualInitialContrast = 0.5;
         start.Trial.cutoffFraction = 0.5;
         start.Trial.visualCutoff = true;
         rig.Wheel(start.Trial.trackLengthWheelCm * 0.3);
@@ -1208,23 +1208,23 @@ public class TrialRulesTests
         var start = rig.RunTo(TrialEventKind.Start);
         start.Trial.cutoffFraction = 0.5;
         start.Trial.auditoryCutoff = true;
-        start.Trial.visualContrast = 1;   // a grating shown (stage 3 also draws auditory-alone trials, contrast 0)
+        start.Trial.visualInitialContrast = 1;   // a grating shown (stage 3 also draws auditory-alone trials, contrast 0)
         rig.Wheel(start.Trial.trackLengthWheelCm * 0.3);
         rig.Until(rig.Now + 0.1);
         var before = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
-        Assert.AreEqual(Fixture.Sweep().GainOf(-55), before.AuditoryGain, 1e-9);
-        Assert.IsTrue(before.Row.auditoryLevelDbfs == -55 && before.Row.visualContrast == start.Trial.visualContrast);
+        Assert.AreEqual(Fixture.Sweep().GainOf(-45), before.AuditoryGain, 1e-9);
+        Assert.IsTrue(before.Row.auditoryLevelDbfs == -45 && before.Row.visualContrast == start.Trial.visualInitialContrast);
         rig.Wheel(start.Trial.trackLengthWheelCm * 0.7);
         rig.Until(rig.Now + 0.1);
         var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(0.0, pip.AuditoryGain);
         Assert.IsTrue(double.IsNaN(pip.Row.auditoryLevelDbfs));   // the cut, in each pip's row (and auditoryCutoffPositionCm)
-        Assert.AreEqual(start.Trial.visualContrast, pip.Row.visualContrast);   // the grating stays on
+        Assert.AreEqual(start.Trial.visualInitialContrast, pip.Row.visualContrast);   // the grating stays on
         rig.Wheel(start.Trial.trackLengthWheelCm + 5);
         var row = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
         Assert.AreEqual(pip.Row.positionCm, row.auditoryCutoffPositionCm, 1e-9);
         Assert.IsTrue(double.IsNaN(row.visualCutoffPositionCm));
-        Assert.AreEqual(-55, row.auditoryLevelDbfs);   // the trial's level; the pips' rows say where it was cut
+        Assert.AreEqual(-45, row.auditoryInitialLevelDbfs);   // the trial's level; the pips' rows say where it was cut
         Assert.AreEqual(row.outcomeTime, row.stimulusOffTime, "the grating played on, so the stimulus went off at the outcome");
         Assert.IsNull(typeof(StimulusStateRow).GetField("auditoryOn"));
         Assert.IsNull(typeof(StimulusStateRow).GetField("visualOn"));
@@ -1356,7 +1356,7 @@ public class TrialRulesTests
             outcome = rig.Events.Skip(seen).FirstOrDefault(e => e.Kind == TrialEventKind.Outcome);
         }
         Assert.AreEqual("rewardZoneReached", outcome.Outcome.Row.Value.outcomeReason);
-        Assert.IsTrue(outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz > 20000, outcome.Outcome.Row.Value.outcomeAuditoryFrequencyHz.ToString());
+        Assert.IsTrue(outcome.Outcome.Row.Value.auditoryOutcomeFrequencyHz > 20000, outcome.Outcome.Row.Value.auditoryOutcomeFrequencyHz.ToString());
         Assert.IsTrue(outcome.Outcome.Rewarded);
         Assert.AreEqual(TrialOutcomes.Auto, outcome.Outcome.Row.Value.outcome);
         Assert.IsFalse(outcome.Outcome.Penalised);
@@ -1523,7 +1523,7 @@ public class TrialRulesTests
         var task = Fixture.Task(2);
         task.TrialConditions = new List<TrialCondition>
         {
-            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.0 } } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "visualStimulus.initialContrasts", new List<object> { 0.0 } } } },
             new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", -30.0 } } },
             new TrialCondition { Weight = 0, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", -20.0 } } },
         };
@@ -1558,7 +1558,7 @@ public class TrialRulesTests
     {
         Func<object, object, List<TrialCondition>> conditions = (a, b) => new List<TrialCondition>
         {
-            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", a }, { "visualStimulus.contrasts", new List<object> { 0.0 } } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", a }, { "visualStimulus.initialContrasts", new List<object> { 0.0 } } } },
             new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", b } } },
         };
         var task = Fixture.Task(2);   // no auto-reward: a trial run to the track's end is a penalised miss
@@ -1665,7 +1665,7 @@ public class TrialRulesTests
             var outcome = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
             var rows = rig.Events.Where(e => e.Kind == TrialEventKind.Update).Select(e => e.Update.Row).ToList();
             Assert.IsTrue(rows.Count > 0);
-            Assert.IsTrue(rows.All(r => r.auditoryLevelDbfs.Equals(trial.auditoryLevelDbfs) && r.visualContrast == trial.visualContrast), "autoReward " + autoReward);
+            Assert.IsTrue(rows.All(r => r.auditoryLevelDbfs.Equals(trial.auditoryInitialLevelDbfs) && r.visualContrast == trial.visualInitialContrast), "autoReward " + autoReward);
             Assert.IsTrue(double.IsNaN(outcome.auditoryCutoffPositionCm) && double.IsNaN(outcome.visualCutoffPositionCm), "autoReward " + autoReward);
         }
     }

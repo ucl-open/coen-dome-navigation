@@ -125,81 +125,81 @@ namespace UclOpenCoenDomeNavigationTask
 
     /// <summary>
     /// The tone sweep's pips (src/sounds/pips.bin), each equalised for its speaker: on every rig.yml speaker where the
-    ///picked initial azimuth is "all", else on rig.yml's speaker nearest it at elevationDeg.
+    ///picked initial azimuth is "all", else on rig.yml's speaker nearest it at initialElevationDeg.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/sounds/pips.bin), each equalised for its speaker: on e" +
         "very rig.yml speaker where the\npicked initial azimuth is \"all\", else on rig.yml\'" +
-        "s speaker nearest it at elevationDeg.")]
+        "s speaker nearest it at initialElevationDeg.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class AuditoryStimulus
     {
     
-        private object _levelDbfs;
+        private object _initialLevelDbfs;
     
-        private double _elevationDeg;
+        private double _initialElevationDeg;
     
         private System.Collections.Generic.List<object> _initialAzimuthsDeg;
     
         public AuditoryStimulus()
         {
-            _elevationDeg = 0D;
+            _initialElevationDeg = 0D;
             _initialAzimuthsDeg = new System.Collections.Generic.List<object>();
         }
     
         protected AuditoryStimulus(AuditoryStimulus other)
         {
-            _levelDbfs = other._levelDbfs;
-            _elevationDeg = other._elevationDeg;
+            _initialLevelDbfs = other._initialLevelDbfs;
+            _initialElevationDeg = other._initialElevationDeg;
             _initialAzimuthsDeg = other._initialAzimuthsDeg;
         }
     
         /// <summary>
-        /// The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -55. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
+        /// The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -45. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute(@"The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -55. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
-        public object LevelDbfs
+        [Newtonsoft.Json.JsonPropertyAttribute("initialLevelDbfs")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="initialLevelDbfs")]
+        [System.ComponentModel.DescriptionAttribute(@"The tone sweep's pips's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -45. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
+        public object InitialLevelDbfs
         {
             get
             {
-                return _levelDbfs;
+                return _initialLevelDbfs;
             }
             set
             {
-                _levelDbfs = value;
+                _initialLevelDbfs = value;
             }
         }
     
         /// <summary>
-        /// Elevation the sound plays at, in degrees: with the azimuth drawn, it picks rig.yml's nearest speaker
+        /// Elevation the sound plays at as the trial starts, in degrees: with the azimuth drawn, it picks rig.yml's nearest speaker
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("elevationDeg")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="elevationDeg")]
-        [System.ComponentModel.DescriptionAttribute("Elevation the sound plays at, in degrees: with the azimuth drawn, it picks rig.ym" +
-            "l\'s nearest speaker")]
-        public double ElevationDeg
+        [Newtonsoft.Json.JsonPropertyAttribute("initialElevationDeg")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="initialElevationDeg")]
+        [System.ComponentModel.DescriptionAttribute("Elevation the sound plays at as the trial starts, in degrees: with the azimuth dr" +
+            "awn, it picks rig.yml\'s nearest speaker")]
+        public double InitialElevationDeg
         {
             get
             {
-                return _elevationDeg;
+                return _initialElevationDeg;
             }
             set
             {
-                _elevationDeg = value;
+                _initialElevationDeg = value;
             }
         }
     
         /// <summary>
-        /// Where the pips play, one picked per trial: "all" on every rig.yml speaker at once (the corridor's sound, logged auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryElevationDeg. Unused where the level is mute
+        /// Where the pips play, one picked per trial: "all" on every rig.yml speaker at once (the corridor's sound, logged auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at initialElevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryInitialElevationDeg. Unused where the level is mute
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("initialAzimuthsDeg")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="initialAzimuthsDeg")]
-        [System.ComponentModel.DescriptionAttribute(@"Where the pips play, one picked per trial: ""all"" on every rig.yml speaker at once (the corridor's sound, logged auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at elevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryElevationDeg. Unused where the level is mute")]
+        [System.ComponentModel.DescriptionAttribute(@"Where the pips play, one picked per trial: ""all"" on every rig.yml speaker at once (the corridor's sound, logged auditoryInitialAzimuthDeg NaN with a level); a signed azimuth in degrees (positive right, 0 the centre) on rig.yml's speaker nearest it at initialElevationDeg, logged as that speaker's auditoryInitialAzimuthDeg and auditoryInitialElevationDeg. Unused where the level is mute")]
         public System.Collections.Generic.List<object> InitialAzimuthsDeg
         {
             get
@@ -224,8 +224,8 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("LevelDbfs = " + _levelDbfs + ", ");
-            stringBuilder.Append("ElevationDeg = " + _elevationDeg + ", ");
+            stringBuilder.Append("InitialLevelDbfs = " + _initialLevelDbfs + ", ");
+            stringBuilder.Append("InitialElevationDeg = " + _initialElevationDeg + ", ");
             stringBuilder.Append("InitialAzimuthsDeg = " + _initialAzimuthsDeg);
             return true;
         }
@@ -1709,13 +1709,13 @@ namespace UclOpenCoenDomeNavigationTask
 
     /// <summary>
     /// One kind of trial in the mix (coen-dome-decision-making's shape): its relative weight, its condition-level values (set)
-    ///by dotted path and the lists it pairs; its trialType is derived from its contrasts and level (TRIAL_TYPES), never stored.
+    ///by dotted path and the lists it pairs; its trialType is derived from its initial contrasts and level (TRIAL_TYPES), never stored.
     ///A list in a scalar field's cell is one value picked per trial; a list field's list (LIST_FIELDS), at any level, one entry
     ///picked per trial. Paired lists share one picked index per trial.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute(@"One kind of trial in the mix (coen-dome-decision-making's shape): its relative weight, its condition-level values (set)
-    by dotted path and the lists it pairs; its trialType is derived from its contrasts and level (TRIAL_TYPES), never stored.
+    by dotted path and the lists it pairs; its trialType is derived from its initial contrasts and level (TRIAL_TYPES), never stored.
     A list in a scalar field's cell is one value picked per trial; a list field's list (LIST_FIELDS), at any level, one entry
     picked per trial. Paired lists share one picked index per trial.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
@@ -2223,12 +2223,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The grating: its contrasts and spatial frequencies along the track
+        /// The grating: its initial contrasts and spatial frequencies along the track
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("visualStimulus", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="visualStimulus")]
-        [System.ComponentModel.DescriptionAttribute("The grating: its contrasts and spatial frequencies along the track")]
+        [System.ComponentModel.DescriptionAttribute("The grating: its initial contrasts and spatial frequencies along the track")]
         public VisualStimulus VisualStimulus
         {
             get
@@ -2242,12 +2242,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The tone sweep's pips (src/sounds/pips.bin), each played at levelDbfs
+        /// The tone sweep's pips (src/sounds/pips.bin), each played at initialLevelDbfs
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("auditoryStimulus", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="auditoryStimulus")]
-        [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/sounds/pips.bin), each played at levelDbfs")]
+        [System.ComponentModel.DescriptionAttribute("The tone sweep\'s pips (src/sounds/pips.bin), each played at initialLevelDbfs")]
         public AuditoryStimulus AuditoryStimulus
         {
             get
@@ -2519,90 +2519,91 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// The grating: its contrast, and its spatial frequency from start to end along the track on a log scale, as the tone does
-    ///(TrialLogic.cs TrialRules.Frame).
+    /// The grating: its initial contrast, and its spatial frequency from the initial one at the track's start to the one at
+    ///its end on a log scale, as the tone does (TrialLogic.cs TrialRules.Frame).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("The grating: its contrast, and its spatial frequency from start to end along the " +
-        "track on a log scale, as the tone does\n(TrialLogic.cs TrialRules.Frame).")]
+    [System.ComponentModel.DescriptionAttribute("The grating: its initial contrast, and its spatial frequency from the initial one" +
+        " at the track\'s start to the one at\nits end on a log scale, as the tone does (Tr" +
+        "ialLogic.cs TrialRules.Frame).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class VisualStimulus
     {
     
-        private System.Collections.Generic.List<double> _contrasts;
+        private System.Collections.Generic.List<double> _initialContrasts;
     
-        private double _spatialFrequencyStartCpd;
+        private double _initialSpatialFrequencyCpd;
     
-        private double _spatialFrequencyEndCpd;
+        private double _trackEndSpatialFrequencyCpd;
     
         public VisualStimulus()
         {
-            _contrasts = new System.Collections.Generic.List<double>();
-            _spatialFrequencyStartCpd = 0.03D;
-            _spatialFrequencyEndCpd = 0.3D;
+            _initialContrasts = new System.Collections.Generic.List<double>();
+            _initialSpatialFrequencyCpd = 0.03D;
+            _trackEndSpatialFrequencyCpd = 0.3D;
         }
     
         protected VisualStimulus(VisualStimulus other)
         {
-            _contrasts = other._contrasts;
-            _spatialFrequencyStartCpd = other._spatialFrequencyStartCpd;
-            _spatialFrequencyEndCpd = other._spatialFrequencyEndCpd;
+            _initialContrasts = other._initialContrasts;
+            _initialSpatialFrequencyCpd = other._initialSpatialFrequencyCpd;
+            _trackEndSpatialFrequencyCpd = other._trackEndSpatialFrequencyCpd;
         }
     
         /// <summary>
-        /// Candidate grating contrasts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating
+        /// Candidate grating contrasts as the trial starts (BonVision's Contrast, 1 full contrast), one drawn per trial; 0 shows no grating
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("contrasts")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="contrasts")]
-        [System.ComponentModel.DescriptionAttribute("Candidate grating contrasts (BonVision\'s Contrast, 1 full contrast), one drawn pe" +
-            "r trial; 0 shows no grating")]
-        public System.Collections.Generic.List<double> Contrasts
+        [Newtonsoft.Json.JsonPropertyAttribute("initialContrasts")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="initialContrasts")]
+        [System.ComponentModel.DescriptionAttribute("Candidate grating contrasts as the trial starts (BonVision\'s Contrast, 1 full con" +
+            "trast), one drawn per trial; 0 shows no grating")]
+        public System.Collections.Generic.List<double> InitialContrasts
         {
             get
             {
-                return _contrasts;
+                return _initialContrasts;
             }
             set
             {
-                _contrasts = value;
+                _initialContrasts = value;
             }
         }
     
         /// <summary>
         /// The grating's spatial frequency at the track's start, in cycles per degree
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("spatialFrequencyStartCpd")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="spatialFrequencyStartCpd")]
+        [Newtonsoft.Json.JsonPropertyAttribute("initialSpatialFrequencyCpd")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="initialSpatialFrequencyCpd")]
         [System.ComponentModel.DescriptionAttribute("The grating\'s spatial frequency at the track\'s start, in cycles per degree")]
-        public double SpatialFrequencyStartCpd
+        public double InitialSpatialFrequencyCpd
         {
             get
             {
-                return _spatialFrequencyStartCpd;
+                return _initialSpatialFrequencyCpd;
             }
             set
             {
-                _spatialFrequencyStartCpd = value;
+                _initialSpatialFrequencyCpd = value;
             }
         }
     
         /// <summary>
         /// The grating's spatial frequency at the track's end, in cycles per degree
         /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("spatialFrequencyEndCpd")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="spatialFrequencyEndCpd")]
+        [Newtonsoft.Json.JsonPropertyAttribute("trackEndSpatialFrequencyCpd")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackEndSpatialFrequencyCpd")]
         [System.ComponentModel.DescriptionAttribute("The grating\'s spatial frequency at the track\'s end, in cycles per degree")]
-        public double SpatialFrequencyEndCpd
+        public double TrackEndSpatialFrequencyCpd
         {
             get
             {
-                return _spatialFrequencyEndCpd;
+                return _trackEndSpatialFrequencyCpd;
             }
             set
             {
-                _spatialFrequencyEndCpd = value;
+                _trackEndSpatialFrequencyCpd = value;
             }
         }
     
@@ -2618,9 +2619,9 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("Contrasts = " + _contrasts + ", ");
-            stringBuilder.Append("SpatialFrequencyStartCpd = " + _spatialFrequencyStartCpd + ", ");
-            stringBuilder.Append("SpatialFrequencyEndCpd = " + _spatialFrequencyEndCpd);
+            stringBuilder.Append("InitialContrasts = " + _initialContrasts + ", ");
+            stringBuilder.Append("InitialSpatialFrequencyCpd = " + _initialSpatialFrequencyCpd + ", ");
+            stringBuilder.Append("TrackEndSpatialFrequencyCpd = " + _trackEndSpatialFrequencyCpd);
             return true;
         }
     

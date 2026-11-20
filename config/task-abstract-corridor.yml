@@ -13,14 +13,14 @@ taskParameters:
   # (id, code, version, path, label, sha256), and Go refuses a task whose curriculum is empty or malformed. Empty here.
   curriculum:
   # The trial mix, one whole value: each condition's relative chance and what its trials show, its set over the task's
-  # values (any field but x-session-fields': visualStimulus.contrasts, 0 no grating; auditoryStimulus.levelDbfs, mute no
+  # values (any field but x-session-fields': visualStimulus.initialContrasts, 0 no grating; auditoryStimulus.initialLevelDbfs, mute no
   # tone; ...), every list field one entry per combination (a row of Settings_Combinations, logged trialCombinationId), its
   # pairs picking listed values together; its trialType is derived from its values at Go (x-trial-types: visual,
   # auditory, audiovisualCoherent below). A curriculum stage's conditions replace it; Setup edits
   # only the weights.
   trialConditions:
-    - { weight: 0, set: { auditoryStimulus.levelDbfs: mute } }
-    - { weight: 1, set: { visualStimulus.contrasts: [0] } }
+    - { weight: 0, set: { auditoryStimulus.initialLevelDbfs: mute } }
+    - { weight: 1, set: { visualStimulus.initialContrasts: [0] } }
     - { weight: 0, set: {} }
   trialStructure:
     # The interval, drawn evenly between, to the first pip: rewarded = outcome, then ITI (the spouts out
@@ -32,15 +32,15 @@ taskParameters:
     lickQuietSeconds: 0       # s without licks before the trial start, from the interval's start; 0 off
     wheelQuietSeconds: 0      # s with the wheel still before the trial start, from the interval's start; 0 off
     wheelQuietCm: 0           # cm of wheel travel (forward and back added) allowed in the last wheelQuietSeconds; 0 none
-  visualStimulus:             # the grating: its contrast, and its spatial frequency from the track's start to its end on a log scale
-    contrasts: [1.0]          # grating contrasts (BonVision's Contrast), one drawn per trial; 0 no grating
-    spatialFrequencyStartCpd: 0.03
-    spatialFrequencyEndCpd: 0.3
+  visualStimulus:             # the grating: its initial contrast, and its spatial frequency from the initial one at the track's start to the one at its end on a log scale
+    initialContrasts: [1.0]   # grating contrasts (BonVision's Contrast), one drawn per trial; 0 no grating
+    initialSpatialFrequencyCpd: 0.03
+    trackEndSpatialFrequencyCpd: 0.3
   # Every sound plays at a level in dBFS RMS of the sound as stored, before equalisation (lib-open-rigs OpenRigs.Audio
   # SoundLevel); mute plays nothing. Each is condition-level; the background noise is the lab's constant, -60. The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms).
   auditoryStimulus:           # the tone sweep's pips
-    levelDbfs: -45            # dBFS RMS; mute: no tone
-    elevationDeg: 0           # the elevation the nearest speaker is found at
+    initialLevelDbfs: -45     # dBFS RMS; mute: no tone
+    initialElevationDeg: 0    # the elevation the nearest speaker is found at
     initialAzimuthsDeg: [all]   # one picked per trial: all, every rig.yml speaker; a number, rig.yml's speaker nearest that azimuth
   reward:
     sizeUl: 3.0               # ul on the left spout's valve, planned from its calibration

@@ -11,7 +11,7 @@ taskParameters:
   trialConditions:
   - weight: 1
     set:
-      visualStimulus.contrasts:
+      visualStimulus.initialContrasts:
       - 0
   trialStructure:
     itiMinSeconds: 2.5
@@ -22,13 +22,13 @@ taskParameters:
     wheelQuietSeconds: 0
     wheelQuietCm: 0
   visualStimulus:
-    contrasts:
+    initialContrasts:
     - 1.0
-    spatialFrequencyStartCpd: 0.03
-    spatialFrequencyEndCpd: 0.3
+    initialSpatialFrequencyCpd: 0.03
+    trackEndSpatialFrequencyCpd: 0.3
   auditoryStimulus:
-    levelDbfs: -55
-    elevationDeg: 0
+    initialLevelDbfs: -55
+    initialElevationDeg: 0
     initialAzimuthsDeg:
     - all
   reward:

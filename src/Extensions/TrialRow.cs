@@ -24,17 +24,17 @@ public class TrialRow
     public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
     public int trialConditionId;        // the 0-based index of its condition in the task's trialConditions
     public int trialCombinationId;      // its combination's row in Settings_Combinations
-    public double visualContrast;       // 0: no grating
+    public double visualInitialContrast;   // 0: no grating
     public double visualPhaseRad;
-    public double auditoryLevelDbfs;    // NaN: no tone (mute)
+    public double auditoryInitialLevelDbfs;   // NaN: no tone (mute)
     public double auditoryInitialAzimuthDeg;   // the one speaker's; NaN on every speaker or with no tone
-    public double auditoryElevationDeg;
+    public double auditoryInitialElevationDeg;
     public bool autoReward;
     public string outcomeReason;
     public double trackLengthCm;
     public double outcomePositionCm;
-    public double outcomeAuditoryFrequencyHz;
-    public double outcomeVisualSpatialFrequencyCpd;
+    public double auditoryOutcomeFrequencyHz;
+    public double visualOutcomeSpatialFrequencyCpd;
     public double auditoryCutoffPositionCm;   // NaN when the tone never switched off
     public double visualCutoffPositionCm;     // NaN when the grating never switched off
 }
