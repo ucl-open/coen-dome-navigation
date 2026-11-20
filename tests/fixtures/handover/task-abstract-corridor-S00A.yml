@@ -27,7 +27,7 @@ taskParameters:
     initialSpatialFrequencyCpd: 0.03
     trackEndSpatialFrequencyCpd: 0.3
   auditoryStimulus:
-    initialLevelDbfs: -55
+    initialLevelDbfs: -45
     initialElevationDeg: 0
     initialAzimuthsDeg:
     - all
@@ -36,7 +36,7 @@ taskParameters:
     largeMultiplier: 2
     largeProbability: 0
     tone:
-      levelDbfs: -55
+      levelDbfs: -45
   autoRewardProbability: 1.0
   penalty:
     incorrect:
