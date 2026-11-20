@@ -32,6 +32,10 @@ regenerate-schemas = "ucl_open_coen_dome_navigation.regenerate:main"
 generate-waveforms = "ucl_open_coen_dome_navigation.waveforms:main"
 summarise-experiment = "open_rigs.rigs.trials:main"
 
+# The model app-rig-control runs on each task field edit and at Launch (open_rigs.rigs.check_task).
+[project.entry-points."open_rigs.task"]
+parameters = "ucl_open_coen_dome_navigation.task:UclOpenCoenDomeNavigationTaskParameters"
+
 [tool.ruff]
 line-length = 120
 target-version = 'py311'
