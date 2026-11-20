@@ -1,6 +1,7 @@
 using Bonsai;
 using OpenRigs.Core;
 using OpenRigs.Trials;
+using OpenRigs.Devices;
 using OpenRigs.Devices.Zapit;
 using System;
 using System.Collections.Generic;
@@ -48,13 +49,20 @@ public class VirtualTrack
 
 /// <summary>One trial as drawn: the lab's conditioned trial (lib-open-rigs ConditionedTrial, the trial log's shared columns) and
 /// this task's own draws; every other value the rules read from its combination (values).</summary>
-public class Trial : ConditionedTrial
+public class Trial : ConditionedTrial, ISpoutTrial
 {
     public double trackLengthWheelCm;   // wheel cm to the track's end: the drawn track cm / the combination's track.wheelGain
-    public double stimulusOffFraction;  // a stimulus-off trial's track fraction (stimulusOff.trackFractions); NaN: every stimulus stays on
-    public bool auditoryOff;            // on a stimulus-off trial, whether the tone switches off (stimulusOff.stimuli)
-    public bool visualOff;              // and the grating
+    public double cutoffFraction;       // a cutoff trial's track fraction (stimulusCutoff.trackFractions); NaN: every stimulus stays on
+    public bool auditoryCutoff;         // on a cutoff trial, whether the tone switches off (stimulusCutoff.stimuli)
+    public bool visualCutoff;           // and the grating
     internal UclOpenCoenDomeNavigationTaskParameters values;  // its combination's values, which the rules read per trial
+
+    /// <summary>Whether its spouts stay where Ready put them (spouts.alwaysIn).</summary>
+    public bool SpoutsAlwaysIn { get { return values.Spouts.AlwaysIn; } }
+
+    /// <summary>Where the spouts go at its SpoutsIn cue: the left spout alone; with spouts.alwaysIn both in, where Ready put them,
+    /// so the stage does not move.</summary>
+    public LickSpoutCommand SpoutsInCommand { get { return SpoutsAlwaysIn ? LickSpoutCommand.SpoutsIn : LickSpoutCommand.LeftOnly; } }
 
     /// <summary>The track's length drawn for it, in track cm.</summary>
     public double TrackLengthCm { get { return values.Track.LengthsCm[0]; } }
@@ -63,29 +71,33 @@ public class Trial : ConditionedTrial
     public double WheelGain { get { return values.Track.WheelGain; } }
 }
 
-/// <summary>A trial's outcome (lib-open-rigs' TrialOutcome): its row, the reward at the left valve, the penalty at the trial's
-/// level, the timeout before the next interval, and the reward tone's level (PlayRewardTone).</summary>
+/// <summary>A trial's outcome (lib-open-rigs' TrialOutcome): its row, the reward at the left valve, the penalty sound at the
+/// trial's level and its flash (PlayPenaltyFlash), the timeout before the next interval, and the
+/// reward tone's level (PlayRewardTone).</summary>
 public class TrialOutcome : OpenRigs.Trials.TrialOutcome<TrialRow>
 {
-    public TrialOutcome(TrialRow row, double penaltyLevelDbfs, double rewardToneLevelDbfs) : base(row, "left", penaltyLevelDbfs)
+    public TrialOutcome(TrialRow row, double penaltyLevelDbfs, double penaltyFlashRateHz, double rewardToneLevelDbfs) : base(row, "left", penaltyLevelDbfs, penaltyFlashRateHz)
     {
         RewardToneLevelDbfs = rewardToneLevelDbfs;
     }
 
-    /// <summary>The trial's rewardTone.levelDbfs in dBFS RMS, NaN when mute: what PlayRewardTone plays a rewarded outcome at.</summary>
+    /// <summary>The trial's reward.tone.levelDbfs in dBFS RMS, NaN when mute: what PlayRewardTone plays a rewarded outcome at.</summary>
     public double RewardToneLevelDbfs { get; private set; }
 }
 
 /// <summary>
 /// This task's rules for lib-open-rigs' TrialLoop, with everything fixed for the experiment that the trials are
-/// drawn from and run on. The loop times each trial: its interval from the last outcome (after any
-/// timeout; trial 1 from the first clock tick), a hardware-triggered Zapit armed during it once the last trial's trigger
-/// line has fallen, the trial start (step 0) at the interval's end less the lead, max(laserToStimulusSeconds, 0), or later
-/// until the quiet waits hold, the trigger laserToStimulusSeconds before the first pip, the first pip the lead
-/// after the start. These rules run the trial along the virtual track: a pip every 50 ms on the trial start's grid, the
-/// left spout's licks from the first pip, the end of the track, and the outcome.
+/// drawn from and run on. The loop times each trial: its interval from the last outcome plus its timeout when penalised
+/// (trial 1 from the first clock tick), a hardware-triggered Zapit armed during it once the last trial's trigger
+/// line has fallen, the trial start (step 0) at the interval's end less the lead, max(laserToStimulusSeconds,
+/// -spouts.stimulusToSpoutsInSeconds unless alwaysIn, 0), or later until the quiet waits hold, the SpoutsIn cue stimulusToSpoutsInSeconds
+/// from the first pip and the SpoutsOut cue spouts.rewardConsumptionSeconds into the next interval (OpenRigs.Trials Spouts), the
+/// trigger laserToStimulusSeconds before the first pip, the first pip the lead after the start, and the StimulusOff
+/// (StimulusTiming: the stimulus block). These rules run the trial along the virtual track: a pip every 50 ms on the trial
+/// start's grid, the left spout's licks from the first pip, the end of the track, and the outcome; after the outcome, until
+/// the StimulusOff, the tone and grating go on following the wheel and the auto-progress (AfterOutcome).
 /// </summary>
-public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
+public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>, IStimulusAfterOutcome<Trial, StimulusFrame>
 {
     public const double StepSeconds = 0.05;       // task.py STEP_SECONDS
     public const double LaserCapMarginSeconds = 0.25; // task.py LASER_CAP_MARGIN_SECONDS
@@ -99,7 +111,9 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     VirtualTrack track;
     StimulusFrame last;
     int nextStep, wrongLicks;
-    double auditoryOffPositionCm, visualOffPositionCm;  // where each switched off this trial, in track cm; NaN: it never did
+    double auditoryCutoffPositionCm, visualCutoffPositionCm;  // where each switched off this trial, in track cm; NaN: it never did
+    double cutoffTime;  // the first step's Harp time at which a cutoff left neither the tone nor the grating playing; NaN: none
+    bool ended;         // the outcome has come: a stimulus cut off stays off (AfterOutcome)
 
     /// <summary>The rules for a task file's text; zapitConditions gives a conditions file's count and max ramp-down in
     /// seconds (null: ZapitConditions.Check reads the file).</summary>
@@ -127,12 +141,22 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     /// <summary>The highest tone the task's conditions can draw (OpenRigs.Trials MaxSoundLevel.Of), for the pips' peak check (LayOutPips).</summary>
     public MaxSoundLevel MaxStimulusLevel { get { return MaxSoundLevel.Of(draw.Conditions, t => t.AuditoryStimulus.LevelDbfs); } }
 
-    /// <summary>The highest penalty.sound.levelDbfs or penalty.noResponse.sound.levelDbfs any condition can draw (NaN: every one
-    /// mute), PlayPenaltySound's buffer level.</summary>
-    public double MaxPenaltyLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.Penalty.Sound.LevelDbfs, t => t.Penalty.NoResponse.Sound.LevelDbfs).LevelDbfs; } }
+    /// <summary>The highest penalty.incorrect.sound.levelDbfs or penalty.noResponse.sound.levelDbfs any condition can draw (NaN:
+    /// every one mute), PlayPenaltySound's buffer level.</summary>
+    public double MaxPenaltyLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.Penalty.Incorrect.Sound.LevelDbfs, t => t.Penalty.NoResponse == null ? null : t.Penalty.NoResponse.Sound.LevelDbfs).LevelDbfs; } }
 
-    /// <summary>The highest rewardTone.levelDbfs any condition can draw (NaN: every one mute), PlayRewardTone's buffer level.</summary>
-    public double MaxRewardToneLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.RewardTone.LevelDbfs).LevelDbfs; } }
+    /// <summary>The penalty flashes the weighted conditions can draw (OpenRigs.Trials PenaltyFlashRules), checked at Go by
+    /// PlayPenaltyFlash against the penalty sound's length.</summary>
+    public PenaltyFlashRules PenaltyFlashes { get { return PenaltyFlashRules.Of(draw.Conditions, t => Cost(t.Penalty.Incorrect), t => Cost(t.Penalty.NoResponse)); } }
+
+    /// <summary>The highest reward.tone.levelDbfs any condition can draw (NaN: every one mute), PlayRewardTone's buffer level.</summary>
+    public double MaxRewardToneLevelDbfs { get { return MaxSoundLevel.Of(draw.Conditions, t => t.Reward.Tone.LevelDbfs).LevelDbfs; } }
+
+    // One penalty kind's cost (OpenRigs.Trials Penalties.Of); null for a null kind.
+    static ResolvedPenalty Cost(PenaltyCost kind)
+    {
+        return kind == null ? null : Penalties.Of(kind.TimeoutSeconds, kind.Sound.LevelDbfs, kind.Flash.Brightness, kind.Flash.RateHz);
+    }
 
     /// <summary>Settings_Combinations' text (OpenRigs.Trials TrialConditions.CombinationsJson): every combination built at Go, each a row the trial
     /// log's trialCombinationId names; logged by ConditionedTaskLogs in the Logging group.</summary>
@@ -150,15 +174,20 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         return draw.Next();
     }
 
-    /// <summary>The first pip's step after the trial start: the lead, max(laserToStimulusSeconds, 0), in steps, in every experiment.</summary>
+    /// <summary>The first pip's step after the trial start: the lead (TrialLoop.Lead: max(laserToStimulusSeconds,
+    /// -spouts.stimulusToSpoutsInSeconds unless the spouts are always in (Spouts.Cues), 0), each whole steps), in steps, in every experiment.</summary>
     public static int FirstPipStep(Trial trial)
     {
-        return Math.Max((int)Math.Round(trial.values.Optogenetics.LaserToStimulusSeconds / StepSeconds), 0);
+        var spouts = trial.values.Spouts;
+        var lead = Math.Max(trial.values.Optogenetics.LaserToStimulusSeconds, spouts.AlwaysIn ? 0 : -spouts.StimulusToSpoutsInSeconds);
+        return Math.Max((int)Math.Round(lead / StepSeconds), 0);
     }
 
     public TrialTiming Timing(Trial trial)
     {
         var structure = trial.values.TrialStructure;
+        var spouts = trial.values.Spouts;
+        var stimulus = trial.values.Stimulus;
         return new TrialTiming
         {
             ItiSeconds = trial.itiSeconds,
@@ -169,7 +198,12 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             WheelQuietCm = structure.WheelQuietCm,
             // Every trial of an optogenetics experiment sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
             Laser = task.Optogenetics.Enabled,
-            ResponseWindowSeconds = structure.ResponseWindowSeconds ?? double.PositiveInfinity
+            ResponseDelaySeconds = structure.StimulusToResponseWindowSeconds,
+            ResponseWindowSeconds = structure.ResponseWindowSeconds ?? double.PositiveInfinity,
+            // The spouts' cues (SpoutCommands moves them; with alwaysIn only the SpoutsIn cue's SpoutsIn, where they already are, and no lead).
+            Cues = Spouts.Cues(spouts.StimulusToSpoutsInSeconds, spouts.AlwaysIn, spouts.RewardConsumptionSeconds),
+            StimulusDurationSeconds = stimulus.DurationSeconds ?? double.NaN,
+            ResponseToStimulusOffSeconds = stimulus.ResponseToStimulusOffSeconds
         };
     }
 
@@ -181,8 +215,10 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         nextStep = FirstPipStep(trial);
         wrongLicks = 0;
         last = null;
-        auditoryOffPositionCm = double.NaN;
-        visualOffPositionCm = double.NaN;
+        auditoryCutoffPositionCm = double.NaN;
+        visualCutoffPositionCm = double.NaN;
+        cutoffTime = double.NaN;
+        ended = false;
     }
 
     public void Stimulus(Trial trial, TrialTimes times, ICollection<StimulusFrame> updates)
@@ -194,19 +230,43 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
     /// missed pips not played at once. An auto-reward trial ends on the pip that reaches the reward zone's floor.</summary>
     public TrialOutcome Tick(Trial trial, TrialTimes times, ICollection<StimulusFrame> updates)
     {
-        var due = Math.Max((int)Math.Floor((times.Now - times.TrialStartTime + 1e-9) / StepSeconds), FirstPipStep(trial));
-        if (due < nextStep) return null;
-        nextStep = due + 1;
-        last = Frame(trial, due);
-        updates.Add(last);
+        if (!Step(trial, times, updates)) return null;
         return trial.autoReward && last.Row.auditoryFrequencyHz >= trial.values.RewardZoneMinHz ? End(trial, "rewardZoneReached", times) : null;
     }
 
-    /// <summary>The left spout's licks count from the first pip: in the zone rewarded, outside toward wrongLickLimit;
+    /// <summary>After the outcome, until the loop's StimulusOff (stimulus.responseToStimulusOffSeconds after it, or
+    /// durationSeconds after the first pip): the tone and grating go on following the wheel and the auto-progress, a pip every
+    /// 50 ms on the trial's grid, held at the track's end; a stimulus cut off stays off. Never ends the trial.</summary>
+    public void AfterOutcome(Trial trial, TrialTimes times, double wheelCm, ICollection<StimulusFrame> updates)
+    {
+        if (!double.IsNaN(wheelCm)) track.Update(wheelCm);
+        Step(trial, times, updates);
+    }
+
+    // The pip due at times.Now, if a new step has come: true when it was played (last).
+    bool Step(Trial trial, TrialTimes times, ICollection<StimulusFrame> updates)
+    {
+        var due = Math.Max((int)Math.Floor((times.Now - times.TrialStartTime + 1e-9) / StepSeconds), FirstPipStep(trial));
+        if (due < nextStep) return false;
+        nextStep = due + 1;
+        // Past stimulus.durationSeconds from the first pip the stimulus is off (the loop's StimulusOff): silent and hidden.
+        var duration = trial.values.Stimulus.DurationSeconds;
+        var timedOff = duration.HasValue && times.Now >= times.StimulusOnsetTime + duration.Value - TrialLoop.Tolerance;
+        last = Frame(trial, due, timedOff);
+        // A cutoff leaves neither stimulus playing from this step on (every playing stimulus listed): commanded off at the
+        // step's moment on the pip grid.
+        var cut = !double.IsNaN(auditoryCutoffPositionCm) || !double.IsNaN(visualCutoffPositionCm);
+        if (!timedOff && cut && double.IsNaN(cutoffTime) && double.IsNaN(last.Row.auditoryLevelDbfs) && !(last.Row.visualContrast > 0))
+            cutoffTime = times.TrialStartTime + due * StepSeconds;
+        updates.Add(last);
+        return true;
+    }
+
+    /// <summary>The left spout's licks count from the response window's opening (stimulusToResponseWindowSeconds after the first pip):
     /// an auto-reward trial's licks are ignored.</summary>
     public TrialOutcome Lick(Trial trial, int spout, TrialTimes times, ICollection<StimulusFrame> updates)
     {
-        if (spout != 0 || last == null || trial.autoReward) return null;
+        if (spout != 0 || last == null || trial.autoReward || !times.Responding) return null;
         if (OnTarget(trial, last.Row.auditoryFrequencyHz)) return End(trial, "correctLick", times);
         wrongLicks++;
         var limit = trial.values.WrongLickLimit;
@@ -222,13 +282,13 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         return !trial.autoReward && track.AtEnd ? End(trial, "trackEnd", times) : null;
     }
 
-    /// <summary>responseWindowSeconds from the first pip.</summary>
+    /// <summary>responseWindowSeconds from the response window's opening.</summary>
     public TrialOutcome ResponseEnd(Trial trial, TrialTimes times)
     {
         return End(trial, "responseWindowEnd", times);
     }
 
-    StimulusFrame Frame(Trial trial, int step)
+    StimulusFrame Frame(Trial trial, int step, bool timedOff)
     {
         // The mouse's place on the track, from the wheel alone (wheel cm over the trial's wheel cm to the end, so gain
         // included); the stimulus's progress adds the auto-progress since the trial start. Tone and grating are
@@ -240,16 +300,17 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var visual = trial.values.VisualStimulus;
         var gratingStart = visual.SpatialFrequencyStartCpd;
         var grating = gratingStart * Math.Pow(visual.SpatialFrequencyEndCpd / gratingStart, progress);
-        // A stimulus-off trial's listed stimuli switch off once the mouse has run its fraction of the track.
-        var off = !double.IsNaN(trial.stimulusOffFraction) && Math.Round(fraction, 3) >= trial.stimulusOffFraction;
-        // The tone switched off plays nothing, logged at level NaN in each pip's row.
-        var auditoryOff = off && trial.auditoryOff;
-        var visualOn = !(off && trial.visualOff);
-        var contrast = visualOn ? trial.visualContrast : 0;
+        // A cutoff trial's listed stimuli switch off once the mouse has run its fraction of the track; after the outcome
+        // one cut off stays off.
+        var off = !double.IsNaN(trial.cutoffFraction) && Math.Round(fraction, 3) >= trial.cutoffFraction;
+        var auditoryCut = off && trial.auditoryCutoff || ended && !double.IsNaN(auditoryCutoffPositionCm);
+        var visualCut = off && trial.visualCutoff || ended && !double.IsNaN(visualCutoffPositionCm);
         var trackCm = position * trial.WheelGain;
-        if (auditoryOff && double.IsNaN(auditoryOffPositionCm)) auditoryOffPositionCm = trackCm;
-        if (!visualOn && double.IsNaN(visualOffPositionCm)) visualOffPositionCm = trackCm;
-        var level = auditoryOff ? double.NaN : trial.auditoryLevelDbfs;
+        if (auditoryCut && double.IsNaN(auditoryCutoffPositionCm)) auditoryCutoffPositionCm = trackCm;
+        if (visualCut && double.IsNaN(visualCutoffPositionCm)) visualCutoffPositionCm = trackCm;
+        // A stimulus off (cut, or past stimulus.durationSeconds) plays nothing: the tone logged at level NaN in each pip's row.
+        var contrast = visualCut || timedOff ? 0 : trial.visualContrast;
+        var level = auditoryCut || timedOff ? double.NaN : trial.auditoryLevelDbfs;
         return new StimulusFrame
         {
             Row = new StimulusStateRow { trialNumber = trial.trialNumber, positionCm = trackCm, auditoryFrequencyHz = hz, auditoryLevelDbfs = level, visualSpatialFrequencyCpd = grating, visualContrast = contrast },
@@ -277,9 +338,9 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
         var rewarded = onTarget && (reason == "correctLick" || reason == "rewardZoneReached");
         var penalised = !onTarget || ranOut;
         var p = trial.values;
-        // What a penalised trial costs, resolved once for the row's timeout and the sound's level: a trial that ran out
-        // (a miss) penalty.noResponse's values where not null, else penalty.timeoutSeconds and penalty.sound.levelDbfs.
-        var cost = Penalties.Resolve(p.Penalty.TimeoutSeconds, p.Penalty.Sound.LevelDbfs, p.Penalty.NoResponse.TimeoutSeconds, p.Penalty.NoResponse.Sound.LevelDbfs, ranOut);
+        // What a penalised trial costs by its kind, resolved once for the row's timeout and flash and the sound's level: a trial
+        // that ran out (a miss) penalty.noResponse's, else penalty.incorrect's (Go refuses noResponse null: misses are penalised).
+        var cost = ranOut ? Cost(p.Penalty.NoResponse) : Cost(p.Penalty.Incorrect);
         // The shared block (trialNumber, the times, rewardOfferedUl, rewarded, the penalty, the laser) is lib-open-rigs';
         // the conditions, stimulus and autoReward blocks are the trial's (ConditionedTrial). Distances in track cm.
         var row = SharedTrialColumns.Fill(new TrialRow
@@ -300,10 +361,13 @@ public class TrialRules : ITrialRules<Trial, StimulusFrame, TrialOutcome>
             outcomePositionCm = track.Position * trial.WheelGain,
             outcomeAuditoryFrequencyHz = hz,
             outcomeVisualSpatialFrequencyCpd = last != null ? last.Row.visualSpatialFrequencyCpd : 0,
-            auditoryOffPositionCm = auditoryOffPositionCm,
-            visualOffPositionCm = visualOffPositionCm
-        }, trial, times, trial.rewardOfferedUl, rewarded, penalised, cost.TimeoutSeconds);
-        return new TrialOutcome(row, cost.LevelDbfs, SoundLevels.Parse(p.RewardTone.LevelDbfs));
+            auditoryCutoffPositionCm = auditoryCutoffPositionCm,
+            visualCutoffPositionCm = visualCutoffPositionCm
+        }, trial, times, trial.rewardOfferedUl, rewarded, penalised, cost.TimeoutSeconds, cost.Flash.Brightness);
+        // stimulusOffTime is the loop's (StimulusTiming), or a cutoff's step where neither stimulus plays when that is earlier.
+        if (!double.IsNaN(cutoffTime) && !(row.stimulusOffTime <= cutoffTime)) row.stimulusOffTime = cutoffTime;
+        ended = true;
+        return new TrialOutcome(row, cost.LevelDbfs, cost.Flash.RateHz, SoundLevels.Parse(p.Reward.Tone.LevelDbfs));
     }
 }
 
@@ -354,7 +418,7 @@ public class TrialDraw
             conditionCount = file.Count;
             MaxRampDownSeconds = file.MaxRampDownSeconds;
             var weighted = Weighted(conditions).ToList();
-            LaserCapSeconds = weighted.Max(c => c.Task.TrialStructure.ResponseWindowSeconds.Value + c.Task.Optogenetics.LaserToStimulusSeconds) + TrialRules.LaserCapMarginSeconds;
+            LaserCapSeconds = weighted.Max(c => c.Task.TrialStructure.StimulusToResponseWindowSeconds + c.Task.TrialStructure.ResponseWindowSeconds.Value + c.Task.Optogenetics.LaserToStimulusSeconds) + TrialRules.LaserCapMarginSeconds;
             var problems = new List<string>();
             foreach (var condition in conditions)
             {
@@ -410,9 +474,25 @@ public class TrialDraw
                     problems.AddRange(own.Select(p => condition.Where + (combination.Picks.Length == 0 ? "" : " with " + combination.Picks) + ": " + p));
                 }
             }
+            // Between a trial and the next, across the weighted combinations (task.py between_trials): the stimulus off before
+            // the soonest next one's, its soonest outcome the response window's opening.
+            var weighted = Weighted(built).Select(c => c.Task).ToList();
+            if (weighted.Count > 0 && problems.Count == 0)
+            {
+                problems.AddRange(StimulusTiming.BetweenTrialsProblems(weighted.Select(t => t.Stimulus.DurationSeconds), weighted.Select(t => t.TrialStructure.StimulusToResponseWindowSeconds), weighted.Select(t => t.Stimulus.ResponseToStimulusOffSeconds), weighted.Select(t => t.TrialStructure.ItiMinSeconds), weighted.Min(t => MinOutcomeToItiSeconds(t))));
+                problems.AddRange(Spouts.BetweenTrialsProblems(weighted.Select(t => t.Spouts.StimulusToSpoutsInSeconds), weighted.Select(t => t.Spouts.AlwaysIn), weighted.Select(t => t.Spouts.RewardConsumptionSeconds), weighted.Select(t => t.TrialStructure.ItiMinSeconds)));
+            }
         }
         if (problems.Count > 0) throw new InvalidOperationException("The task cannot be run: " + string.Join("; ", problems.Distinct()) + ".");
         return built;
+    }
+
+    /// <summary>The shortest outcome to next interval a trial of <paramref name="task"/> can have: the shortest penalty timeout
+    /// among the outcomes that can occur, 0 where a reward can come. Every trial here can be rewarded (a lick in the zone, or
+    /// auto-reward), so 0 (task.py min_outcome_to_iti).</summary>
+    public static double MinOutcomeToItiSeconds(UclOpenCoenDomeNavigationTaskParameters task)
+    {
+        return 0;
     }
 
     // A sound's levelDbfs: a number of dBFS RMS from -120 to -1, or mute (OpenRigs.Trials SoundLevels; task.py SoundLevelDbfs).
@@ -428,9 +508,9 @@ public class TrialDraw
     // combination; an azimuth needs rig.yml's speakers, the reward zone the sweep. x-rules are Python's alone.
     static void Check(List<string> problems, UclOpenCoenDomeNavigationTaskParameters task, Sweep sweep, EqualisedSpeakerArray speakers)
     {
-        if (task.AuditoryStimulus == null || task.Reward == null || task.TrialStructure == null || task.Optogenetics == null || task.StimulusOff == null || task.VisualStimulus == null || task.Penalty == null || task.Track == null)
+        if (task.AuditoryStimulus == null || task.Reward == null || task.TrialStructure == null || task.Optogenetics == null || task.StimulusCutoff == null || task.VisualStimulus == null || task.Penalty == null || task.Track == null || task.Spouts == null || task.Stimulus == null)
         {
-            problems.Add("auditoryStimulus, reward, trialStructure, optogenetics, stimulusOff, visualStimulus, penalty and track are required");
+            problems.Add("auditoryStimulus, reward, trialStructure, spouts, stimulus, optogenetics, stimulusCutoff, visualStimulus, penalty and track are required");
             return;
         }
         // A NaN or infinite value (YAML's .nan or .inf) would hold the trial start or a penalty timeout for ever, with no error.
@@ -443,7 +523,6 @@ public class TrialDraw
         if (trackBlock.LengthsCm == null || trackBlock.LengthsCm.Count == 0 || trackBlock.LengthsCm.Any(l => !(l > 0) || double.IsInfinity(l))) problems.Add("track.lengthsCm needs at least one length, each a finite number above 0");
         // The lab's blocks, checked by their one C# check each (OpenRigs.Core TaskBlocks, QuietWait).
         foreach (var p in TaskBlocks.ItiProblems(structure.ItiMinSeconds, structure.ItiMaxSeconds)) problems.Add("trialStructure." + p);
-        number("penalty.timeoutSeconds", task.Penalty.TimeoutSeconds, false);
         // The quiet waits, the lab's one check each (OpenRigs.Core QuietWait: finite, 0 or more, at most 10 s and 20 cm): a long
         // wait and a licking mouse would hold the trial start with no message.
         foreach (var p in QuietWait.LickProblems(structure.LickQuietSeconds)) problems.Add("trialStructure." + p);
@@ -456,16 +535,18 @@ public class TrialDraw
         if (contrasts == null || contrasts.Count == 0 || contrasts.Any(c => !(c >= 0) || double.IsInfinity(c))) problems.Add("visualStimulus.contrasts must each be a finite number, 0 or more, at least one");
         var sound = task.AuditoryStimulus;
         Level(problems, "auditoryStimulus.levelDbfs", sound.LevelDbfs);
-        Level(problems, "penalty.sound.levelDbfs", task.Penalty.Sound == null ? null : task.Penalty.Sound.LevelDbfs);
-        // A penalised miss's own cost (out of time or track): each field null (the choice's) or checked as the choice's.
-        var miss = task.Penalty.NoResponse;
-        if (miss == null || miss.Sound == null) problems.Add("penalty.noResponse and its sound must be given (their fields may be null)");
-        else
+        // Each penalty kind its own full values (a miss is penalised here, so noResponse must be given: Penalties.Problems); the
+        // flashes are checked at Go by PlayPenaltyFlash (PenaltyFlashes).
+        var kinds = new[] { Tuple.Create("penalty.incorrect", task.Penalty.Incorrect), Tuple.Create("penalty.noResponse", task.Penalty.NoResponse) };
+        problems.AddRange(Penalties.Problems(true, task.Penalty.NoResponse != null));
+        foreach (var kind in kinds.Where(k => k.Item2 != null))
         {
-            if (miss.Sound.LevelDbfs != null) Level(problems, "penalty.noResponse.sound.levelDbfs", miss.Sound.LevelDbfs);
-            if (miss.TimeoutSeconds.HasValue) number("penalty.noResponse.timeoutSeconds", miss.TimeoutSeconds.Value, false);
+            if (kind.Item2.Sound == null || kind.Item2.Flash == null) { problems.Add(kind.Item1 + ".sound and " + kind.Item1 + ".flash must be given"); continue; }
+            number(kind.Item1 + ".timeoutSeconds", kind.Item2.TimeoutSeconds, false);
+            Level(problems, kind.Item1 + ".sound.levelDbfs", kind.Item2.Sound.LevelDbfs);
         }
-        Level(problems, "rewardTone.levelDbfs", task.RewardTone == null ? null : task.RewardTone.LevelDbfs);
+        if (task.Penalty.Incorrect == null) problems.Add("penalty.incorrect must be given");
+        Level(problems, "reward.tone.levelDbfs", task.Reward.Tone == null ? null : task.Reward.Tone.LevelDbfs);
         if (!(sound.ElevationDeg >= -90 && sound.ElevationDeg <= 90)) problems.Add("auditoryStimulus.elevationDeg must be in [-90, 90]");
         var azimuths = (sound.InitialAzimuthsDeg ?? new List<object>()).Select(SoundAzimuths.Parse).ToList();
         if (azimuths.Count == 0 || azimuths.Any(a => !(a.HasValue && (double.IsNaN(a.Value) || a.Value >= -180 && a.Value <= 180))))
@@ -486,11 +567,24 @@ public class TrialDraw
         if (lead > TrialRules.MaxLeadSeconds + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) must be at most {1} s", lead, TrialRules.MaxLeadSeconds));
         var leadProblem = ZapitTrial.LeadProblem(lead, structure.ItiMinSeconds);
         if (leadProblem != null) problems.Add(leadProblem);
-        var after = structure.ResponseWindowSeconds ?? TrialRules.UnlimitedWindowTriggerAfterSeconds;
-        if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past the {2}", lead, after, structure.ResponseWindowSeconds.HasValue ? "responseWindowSeconds" : "limit without responseWindowSeconds"));
-        var off = task.StimulusOff;
-        if (off.Stimuli != StimulusOffStimuli.None && (off.TrackFractions == null || off.TrackFractions.Count == 0 || off.TrackFractions.Any(f => !(f > 0 && f <= 1))))
-            problems.Add("stimulusOff.stimuli is " + off.Stimuli + " but stimulusOff.trackFractions is empty or not all above 0 and at most 1");
+        // The response window opens stimulusToResponseWindowSeconds after the first pip (licks before it not counted).
+        var delay = structure.StimulusToResponseWindowSeconds;
+        number("trialStructure.stimulusToResponseWindowSeconds", delay, false);
+        var after = delay + (structure.ResponseWindowSeconds ?? TrialRules.UnlimitedWindowTriggerAfterSeconds);
+        if (-lead > after + 1e-9) problems.Add(string.Format("optogenetics.laserToStimulusSeconds ({0} s) puts the trigger more than {1} s after the first pip, past the {2}", lead, after, structure.ResponseWindowSeconds.HasValue ? "close of the response window (stimulusToResponseWindowSeconds + responseWindowSeconds)" : "limit without responseWindowSeconds"));
+        // The spouts and the stimulus off, the lab's checks (OpenRigs.Trials Spouts.Problems, StimulusTiming.Problems; task.py's
+        // same): a positive stimulusToSpoutsInSeconds at most the response window's opening; a negative one, the trial's lead,
+        // in whole steps (the pips' grid); the stimulus off before the soonest next one (its soonest outcome the response
+        // window's opening, then the shortest penalty timeout, 0 where a reward can come, and itiMinSeconds).
+        var spouts = task.Spouts;
+        var spoutSteps = spouts.StimulusToSpoutsInSeconds / TrialRules.StepSeconds;
+        if (spouts.StimulusToSpoutsInSeconds < 0 && !(Math.Abs(spoutSteps - Math.Round(spoutSteps)) < 1e-6)) problems.Add("spouts.stimulusToSpoutsInSeconds must be a whole number of 0.05 s steps when negative");
+        problems.AddRange(Spouts.Problems(spouts.StimulusToSpoutsInSeconds, spouts.AlwaysIn, spouts.RewardConsumptionSeconds, structure.ItiMinSeconds, delay));
+        if (task.Penalty.Incorrect != null)
+            problems.AddRange(StimulusTiming.Problems(task.Stimulus.DurationSeconds, task.Stimulus.ResponseToStimulusOffSeconds, structure.ItiMinSeconds, structure.ResponseWindowSeconds.HasValue ? delay + structure.ResponseWindowSeconds.Value : double.PositiveInfinity, delay, MinOutcomeToItiSeconds(task)));
+        var off = task.StimulusCutoff;
+        if (off.Stimuli != StimulusCutoffStimuli.None && (off.TrackFractions == null || off.TrackFractions.Count == 0 || off.TrackFractions.Any(f => !(f > 0 && f <= 1))))
+            problems.Add("stimulusCutoff.stimuli is " + off.Stimuli + " but stimulusCutoff.trackFractions is empty or not all above 0 and at most 1");
         // The reward zone lies in the tones the track plays: above its start, at most its top (Sweep.TrackEndHz, 24 kHz).
         if (!(task.RewardZoneMinHz > sweep.StartHz && task.RewardZoneMinHz < task.RewardZoneMaxHz && task.RewardZoneMaxHz <= sweep.TrackEndHz)) problems.Add(string.Format("the reward zone ({0} to {1} Hz) is not inside the track's tones ({2} to {3} Hz)", task.RewardZoneMinHz, task.RewardZoneMaxHz, sweep.StartHz, sweep.TrackEndHz));
         var opto = task.Optogenetics;
@@ -516,13 +610,13 @@ public class TrialDraw
         var structure = p.TrialStructure;
         t.itiSeconds = structure.ItiMinSeconds + (structure.ItiMaxSeconds - structure.ItiMinSeconds) * random.NextDouble();  // trial 1 too, from the first clock tick, so Zapit is armed before its trigger
         t.trackLengthWheelCm = p.Track.LengthsCm[0] / p.Track.WheelGain;  // wheel cm to the end
-        // A stimulus-off trial's combination says which stimuli switch off and at which fraction. A fraction of 1 is the
+        // A cutoff trial's combination says which stimuli switch off and at which fraction. A fraction of 1 is the
         // track's end, where the trial ends (or, on auto-reward, its last pip plays): never, so the trial is an ordinary one.
-        var stimuli = p.StimulusOff.Stimuli;
-        var off = stimuli != StimulusOffStimuli.None && p.StimulusOff.TrackFractions[0] < 1;
-        t.stimulusOffFraction = off ? p.StimulusOff.TrackFractions[0] : double.NaN;
-        t.auditoryOff = stimuli == StimulusOffStimuli.Auditory || stimuli == StimulusOffStimuli.Both;
-        t.visualOff = stimuli == StimulusOffStimuli.Visual || stimuli == StimulusOffStimuli.Both;
+        var stimuli = p.StimulusCutoff.Stimuli;
+        var off = stimuli != StimulusCutoffStimuli.None && p.StimulusCutoff.TrackFractions[0] < 1;
+        t.cutoffFraction = off ? p.StimulusCutoff.TrackFractions[0] : double.NaN;
+        t.auditoryCutoff = stimuli == StimulusCutoffStimuli.Auditory || stimuli == StimulusCutoffStimuli.Both;
+        t.visualCutoff = stimuli == StimulusCutoffStimuli.Visual || stimuli == StimulusCutoffStimuli.Both;
         t.autoReward = random.NextDouble() < p.AutoRewardProbability;   // so 1 is every trial and 0 none
         t.visualContrast = p.VisualStimulus.Contrasts[0];
         t.auditoryLevelDbfs = SoundLevels.Parse(p.AuditoryStimulus.LevelDbfs);

@@ -53,7 +53,7 @@ def test_the_stages_are_the_curriculum_s_and_the_file_has_stage_0_s_values():
     assert {key: params[key] for key in stage_0} == stage_0
     structure = params["trialStructure"]
     assert (structure["lickQuietSeconds"], structure["responseWindowSeconds"], structure["wheelQuietSeconds"], structure["wheelQuietCm"]) == (0, None, 0, 0)
-    assert (params["track"]["wheelGain"], params["track"]["autoProgressPerSecond"], params["stimulusOff"]["stimuli"]) == (8.0, 0.04, "none")
+    assert (params["track"]["wheelGain"], params["track"]["autoProgressPerSecond"], params["stimulusCutoff"]["stimuli"]) == (8.0, 0.04, "none")
     assert not {"rewardFloorHz", "rewardCeilingHz", "stimulusOffProbability", "contrasts", "wheelGain", "backgroundNoise"} & set(params)
 
 
@@ -122,8 +122,8 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
     assert params_schema["x-session-fields"] == list(SESSION_FIELDS) and "x-condition-fields" not in params_schema
     assert params_schema["x-required-conditions"] == list(REQUIRED_CONDITIONS) == []
     assert params_schema["x-max-combinations"] == MAX_COMBINATIONS == 1024
-    assert list(LIST_FIELDS) == ["auditoryStimulus.initialAzimuthsDeg", "stimulusOff.trackFractions", "track.lengthsCm", "visualStimulus.contrasts"]
-    assert "x-whole" not in schema["$defs"]["StimulusOff"]["properties"]["stimuli"]
+    assert list(LIST_FIELDS) == ["auditoryStimulus.initialAzimuthsDeg", "stimulusCutoff.trackFractions", "track.lengthsCm", "visualStimulus.contrasts"]
+    assert "x-whole" not in schema["$defs"]["StimulusCutoff"]["properties"]["stimuli"]
     # Every path a rule or trial type names is a task field, and none a session field; every session field is one.
     leaves = set(flatten(model.model_dump(by_alias=True, mode="json")))
     named = {path for entry in [*RULES, *TRIAL_TYPES] for path in [*entry.get("if", {}).get("properties", {}), *entry.get("unused", [])]}
@@ -158,9 +158,9 @@ def test_a_task_file_expresses_a_visual_path_and_an_auditory_path():
     ({"visualStimulus.contrasts": [0.5], "auditoryStimulus.levelDbfs": ["mute", "mute"]}, "visual"),
     ({"visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": -30}, "auditory"),
     ({"visualStimulus.contrasts": [0.5], "auditoryStimulus.levelDbfs": -30}, "audiovisualCoherent"),
-    ({"stimulusOff.stimuli": "both"}, "audiovisualCoherentTruncated"), ({"stimulusOff.stimuli": "auditory", "visualStimulus.contrasts": [0]}, "auditoryTruncated"),
-    ({"stimulusOff.stimuli": "visual", "auditoryStimulus.levelDbfs": "mute"}, "visualTruncated"), ({"stimulusOff.stimuli": "none", "visualStimulus.contrasts": [0]}, "auditory"),
-    ({"stimulusOff.stimuli": "both", "visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": "mute"}, "neutral")])
+    ({"stimulusCutoff.stimuli": "both"}, "audiovisualCoherentTruncated"), ({"stimulusCutoff.stimuli": "auditory", "visualStimulus.contrasts": [0]}, "auditoryTruncated"),
+    ({"stimulusCutoff.stimuli": "visual", "auditoryStimulus.levelDbfs": "mute"}, "visualTruncated"), ({"stimulusCutoff.stimuli": "none", "visualStimulus.contrasts": [0]}, "auditory"),
+    ({"stimulusCutoff.stimuli": "both", "visualStimulus.contrasts": [0], "auditoryStimulus.levelDbfs": "mute"}, "neutral")])
 def test_the_trial_type_is_derived_from_what_the_condition_shows(set_, trial_type):
     # A grating shows at a contrast above 0 and a tone sounds at a number (ct.SOUNDING), not at mute: both audiovisualCoherent,
     # one alone visual or auditory, neither neutral; a list counts as shown when any entry shows.
@@ -181,32 +181,32 @@ def test_the_rules_say_what_goes_unread():
     values = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"]).model_dump(by_alias=True, mode="json")
     values["visualStimulus"]["contrasts"] = [0, 0]
     values.update(autoRewardProbability=0.5)
-    assert unused_paths(RULES, values) == {"visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd", "stimulusOff.trackFractions"}
+    assert unused_paths(RULES, values) == {"visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd", "stimulusCutoff.trackFractions"}
     values["auditoryStimulus"]["levelDbfs"] = "mute"
-    values["stimulusOff"]["stimuli"] = "both"
+    values["stimulusCutoff"]["stimuli"] = "both"
     values["autoRewardProbability"] = 1
     assert unused_paths(RULES, values) == {"visualStimulus.spatialFrequencyStartCpd", "visualStimulus.spatialFrequencyEndCpd", "auditoryStimulus.initialAzimuthsDeg",
                                            "auditoryStimulus.elevationDeg", "wrongLickLimit", "rewardZoneMaxHz"}
 
 
 @pytest.mark.parametrize("stimuli", ["none", "auditory", "visual", "both"])
-def test_a_condition_may_set_what_the_stimulus_off_trials_switch_off(stimuli):
-    # stimulusOff.stimuli is one condition-level value (no stimulusOffProbability): only at none are the track fractions unread (x-rules).
+def test_a_condition_may_set_what_the_stimulus_cutoff_trials_switch_off(stimuli):
+    # stimulusCutoff.stimuli is one condition-level value (no stimulusOffProbability): only at none are the track fractions unread (x-rules).
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"weight": 1, "set": {"stimulusOff.stimuli": stimuli}}]
+    params["trialConditions"] = [{"weight": 1, "set": {"stimulusCutoff.stimuli": stimuli}}]
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     values = model.model_dump(by_alias=True, mode="json")
-    values["stimulusOff"]["stimuli"] = stimuli
-    assert ("stimulusOff.trackFractions" in unused_paths(RULES, values)) == (stimuli == "none")
-    rule = next(r for r in RULES if r["unused"] == ["stimulusOff.trackFractions"])
-    assert rule["if"] == ct.if_({"stimulusOff.stimuli": {"const": "none"}})
-    assert "stimulusOff.stimuli" not in LIST_FIELDS and "stimulusOffProbability" not in task()["taskParameters"]
+    values["stimulusCutoff"]["stimuli"] = stimuli
+    assert ("stimulusCutoff.trackFractions" in unused_paths(RULES, values)) == (stimuli == "none")
+    rule = next(r for r in RULES if r["unused"] == ["stimulusCutoff.trackFractions"])
+    assert rule["if"] == ct.if_({"stimulusCutoff.stimuli": {"const": "none"}})
+    assert "stimulusCutoff.stimuli" not in LIST_FIELDS and "stimulusOffProbability" not in task()["taskParameters"]
 
 
-def test_a_stimulus_off_value_outside_the_four_is_refused():
+def test_a_stimulus_cutoff_value_outside_the_four_is_refused():
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"weight": 1, "set": {"stimulusOff.stimuli": "tone"}}]
-    with pytest.raises(pydantic.ValidationError, match="stimulusOff"):
+    params["trialConditions"] = [{"weight": 1, "set": {"stimulusCutoff.stimuli": "tone"}}]
+    with pytest.raises(pydantic.ValidationError, match="stimulusCutoff"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 
@@ -233,7 +233,7 @@ def test_a_stimulus_off_value_outside_the_four_is_refused():
         ([{"weight": 1, "set": {"visualStimulus.contrasts": [0.5, 1], "auditoryStimulus.levelDbfs": [-40]}, "pairs": [["visualStimulus.contrasts", "auditoryStimulus.levelDbfs"]]}],
          "paired lists must be equally long"),
         ([{"weight": 1, "pairs": [["visualStimulus.contrasts"]]}], "each pairs group needs two paths or more"),
-        # Every list field expands too: the task's 3 track lengths and 1 stimulus-off fraction times the set's 1 x 342.
+        # Every list field expands too: the task's 3 track lengths and 1 cutoff fraction times the set's 1 x 342.
         ([{"weight": 1, "set": {"visualStimulus.contrasts": [1], "auditoryStimulus.levelDbfs": [-120 + i / 100 for i in range(342)]}}],
          r"expands into 1026 combinations, more than 1024 \(x-max-combinations\)"),
         # Counted before any is built, as TrialDraw.BuildConditions does: 3 x 1000^3 combinations would take hours and all
@@ -252,7 +252,7 @@ def test_conditions_need_a_weight_and_what_they_set_to_run(conditions, match):
 
 def test_a_condition_may_set_any_field_but_a_session_field_and_every_list_expands():
     params = task()["taskParameters"]
-    params["trialConditions"] = [{"weight": 1, "set": {"track.wheelGain": 2, "track.lengthsCm": [40, 60], "penalty.timeoutSeconds": 2,
+    params["trialConditions"] = [{"weight": 1, "set": {"track.wheelGain": 2, "track.lengthsCm": [40, 60], "penalty.incorrect.timeoutSeconds": 2,
                                                                               "visualStimulus.spatialFrequencyEndCpd": 0.6, "rewardZoneMinHz": 15000}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     # 342 levels times the task's 3 track and fraction picks is 1026; 341 is 1023, within the cap.
@@ -264,11 +264,11 @@ def test_combinations_are_ordered_by_path_the_first_changing_fastest():
     # TrialDraw.BuildConditions' order, Settings_Combinations' rows.
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(task()["taskParameters"])
     combos = ct.condition_combinations(model.model_dump(by_alias=True, mode="json"),
-                                       {"visualStimulus.contrasts": [0.5, 1], "stimulusOff.trackFractions": [0.4, 0.6]}, [], LIST_FIELDS)
+                                       {"visualStimulus.contrasts": [0.5, 1], "stimulusCutoff.trackFractions": [0.4, 0.6]}, [], LIST_FIELDS)
     assert len(combos) == 12 and combos[:3] == [
-        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusOff.trackFractions": [0.4], "track.lengthsCm": [80.0], "visualStimulus.contrasts": [0.5]},
-        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusOff.trackFractions": [0.6], "track.lengthsCm": [80.0], "visualStimulus.contrasts": [0.5]},
-        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusOff.trackFractions": [0.4], "track.lengthsCm": [100.0], "visualStimulus.contrasts": [0.5]}]
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.4], "track.lengthsCm": [80.0], "visualStimulus.contrasts": [0.5]},
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.6], "track.lengthsCm": [80.0], "visualStimulus.contrasts": [0.5]},
+        {"auditoryStimulus.initialAzimuthsDeg": ["all"], "stimulusCutoff.trackFractions": [0.4], "track.lengthsCm": [100.0], "visualStimulus.contrasts": [0.5]}]
 
 
 def test_the_committed_task_schema_cs_is_the_schema_s():
@@ -296,11 +296,14 @@ def test_a_condition_s_set_may_be_left_out_and_the_mix_is_required():
         UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
 
 
-def test_the_interval_runs_from_the_outcome_and_keeps_tom_s_timing():
-    # As decision-making's, itiSeconds runs from the outcome (after any timeout) and includes the drink,
-    # so Tom's fixed 2 s then 0 to 1 s is 2 to 3 s.
-    structure = task()["taskParameters"]["trialStructure"]
-    assert (structure["itiMinSeconds"], structure["itiMaxSeconds"]) == (2.0, 3.0) and "drinkSeconds" not in structure
+def test_the_interval_follows_the_outcome_or_the_penalty_s_timeout():
+    # The lab's: rewarded = outcome, ITI (the spouts out spouts.rewardConsumptionSeconds into it); penalised = outcome,
+    # timeout, ITI. The file's defaults: an interval of 2.5 to 3.5 s, 1.5 s to drink, 4 s timeouts.
+    params = task()["taskParameters"]
+    structure = params["trialStructure"]
+    assert (structure["itiMinSeconds"], structure["itiMaxSeconds"]) == (2.5, 3.5) and "drinkSeconds" not in structure
+    assert params["spouts"]["rewardConsumptionSeconds"] == 1.5 and "consumptionSeconds" not in params["reward"]
+    assert [params["penalty"][kind]["timeoutSeconds"] for kind in ("incorrect", "noResponse")] == [4.0, 4.0]
 
 
 def test_trial_structure_has_no_coded_default():
@@ -345,13 +348,16 @@ def test_the_sweep_s_frequencies_are_the_c_sharp_sweep_s():
 
 def test_the_penalty_sound_is_the_lab_s():
     # The penalty sound is OpenRigs.Audio's (PenaltySoundBuffer), so the task file names no file and
-    # waveforms.py makes none; it plays at levelDbfs (mute: none), with no enabled switch.
-    assert set(task()["taskParameters"]["penalty"]["sound"]) == {"levelDbfs"}
+    # waveforms.py makes none; it plays at levelDbfs (mute: none), with no enabled switch. Each kind has its own full
+    # values (nothing inherited), the flash off.
+    penalty = task()["taskParameters"]["penalty"]
+    for kind in ("incorrect", "noResponse"):
+        assert penalty[kind] == {"timeoutSeconds": 4.0, "sound": {"levelDbfs": -35}, "flash": {"brightness": 0, "rateHz": 10}}
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert set(schema["$defs"]["PenaltySound"]["properties"]) == {"levelDbfs"}
     # app-rig-control checks the task file against the closed schema, so a file naming a sound path is refused.
     doc = task()
-    doc["taskParameters"]["penalty"]["sound"]["path"] = "sounds\\penalty.wav"
+    doc["taskParameters"]["penalty"]["incorrect"]["sound"]["path"] = "sounds\\penalty.wav"
     errors = [e.message for e in jsonschema.Draft202012Validator(_closed(schema)).iter_errors(doc)]
     assert len(errors) == 1 and "'path'" in errors[0]
 
@@ -399,7 +405,7 @@ def test_the_task_file_s_optogenetics_and_reward_are_the_agreed_ones():
     params = task()["taskParameters"]
     opto = params["optogenetics"]
     assert (opto["laserOnProbability"], opto["trialsBeforeLaser"], opto["laserToStimulusSeconds"]) == (0.4, 20, 0.1)
-    assert params["reward"] == {"sizeUl": 3.0, "largeMultiplier": 2, "largeProbability": 0}
+    assert params["reward"] == {"sizeUl": 3.0, "largeMultiplier": 2, "largeProbability": 0, "tone": {"levelDbfs": -55}}
 
 
 def test_optogenetics_without_a_response_window_is_refused():
@@ -415,7 +421,7 @@ def test_optogenetics_without_a_response_window_is_refused():
 
 @pytest.mark.parametrize(
     "block, key, value",
-    [("trialStructure", "itiMaxSeconds", math.inf), ("stimulusOff", "trackFractions", [math.nan]), ("optogenetics", "laserToStimulusSeconds", math.inf)],
+    [("trialStructure", "itiMaxSeconds", math.inf), ("stimulusCutoff", "trackFractions", [math.nan]), ("optogenetics", "laserToStimulusSeconds", math.inf)],
 )
 def test_the_task_s_own_blocks_refuse_inf_and_nan(block, key, value):
     # Each is a lib-open-rigs TaskBlock (allow_inf_nan off), as the lab's blocks are.
@@ -430,9 +436,9 @@ def test_the_task_s_own_blocks_refuse_inf_and_nan(block, key, value):
     [("stimuli", ["auditory"], "'none', 'auditory', 'visual' or 'both'"), ("stimuli", "tone", "'none', 'auditory', 'visual' or 'both'"),
      ("trackFractions", [1.01], "at most 1"), ("trackFractions", [0.0], "above 0"), ("trackFractions", [], "at least 1")],
 )
-def test_a_bad_stimulus_off_block_is_refused(key, value, match):
+def test_a_bad_stimulus_cutoff_block_is_refused(key, value, match):
     doc = task()
-    doc["taskParameters"]["stimulusOff"][key] = value
+    doc["taskParameters"]["stimulusCutoff"][key] = value
     with pytest.raises(pydantic.ValidationError, match=match):
         UclOpenCoenDomeNavigationTaskLogic.model_validate(doc)
 
@@ -441,8 +447,8 @@ def test_the_default_cut_point_is_the_track_s_end():
     """1.0 (the track's end, never during the trial) is the default and is taken, so a condition with stimuli none draws one
     combination, not one per fraction."""
     doc = task()
-    doc["taskParameters"]["stimulusOff"].pop("trackFractions")
-    assert UclOpenCoenDomeNavigationTaskLogic.model_validate(doc).task_parameters.stimulus_off.track_fractions == [1.0]
+    doc["taskParameters"]["stimulusCutoff"].pop("trackFractions")
+    assert UclOpenCoenDomeNavigationTaskLogic.model_validate(doc).task_parameters.stimulus_cutoff.track_fractions == [1.0]
 
 
 @pytest.mark.parametrize("key, value, pair", [("lickQuietSeconds", 10.5, None), ("wheelQuietSeconds", 10.5, ("wheelQuietCm", 1)), ("wheelQuietCm", 20.5, ("wheelQuietSeconds", 1))])
@@ -576,9 +582,23 @@ def test_a_trigger_past_the_response_window_is_refused():
         UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
 
 
+def test_the_conditions_file_s_ramp_down_given_as_context_must_end_before_the_next_trigger():
+    # On the rig check_task passes the file's largest ramp-down (TrialDraw.CheckTask's holdMax); without it Go decides.
+    from open_rigs.components.zapit import RAMP_DOWN_CONTEXT
+    doc = copy.deepcopy(PARAMS)
+    doc["optogenetics"].update({"enabled": True, "zapitConditionsPath": r"C:\Zapit\conditions.yml", "laserPowerMw": 2.0})
+    doc["trialStructure"]["responseWindowSeconds"] = 12
+    hold = doc["trialStructure"]["itiMinSeconds"] - doc["optogenetics"]["laserToStimulusSeconds"] - 0.2
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(doc, context={RAMP_DOWN_CONTEXT: hold})
+    with pytest.raises(pydantic.ValidationError, match="largest ramp-down"):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(doc, context={RAMP_DOWN_CONTEXT: hold + 0.05})
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+
+
 def test_a_lead_needs_zapit_s_reply_margin_inside_the_shortest_interval():
     doc = copy.deepcopy(PARAMS)
     doc["trialStructure"]["itiMinSeconds"] = 0.35
+    doc["spouts"].update(alwaysIn=False, stimulusToSpoutsInSeconds=0, rewardConsumptionSeconds=0)  # the laser's lead alone
     doc["optogenetics"]["laserToStimulusSeconds"] = 0.2
     with pytest.raises(pydantic.ValidationError, match="reply margin"):
         UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
@@ -677,13 +697,15 @@ def test_a_condition_sets_its_reward_auto_reward_and_where_the_pips_play():
 
 def test_every_sound_s_level_is_a_condition_s_and_the_plan_s_values():
     # Every sound's level is condition-level (P19), none a session field; the task file's levels are the lab's 5 dB steps
-    # (stimulus -55, reward tone -55, penalty -35) and the background noise has no task setting (the lab's -60).
-    assert not {"rewardTone", "penalty", "auditoryStimulus"} & {path.split(".")[0] for path in SESSION_FIELDS}
+    # (stimulus -55, reward tone -55, Tom's, set as lib's default is mute; penalty -35) and the background noise has no task
+    # setting (the lab's -60).
+    assert not {"reward", "penalty", "auditoryStimulus"} & {path.split(".")[0] for path in SESSION_FIELDS}
     params = task()["taskParameters"]
-    assert (params["auditoryStimulus"]["levelDbfs"], params["rewardTone"]["levelDbfs"], params["penalty"]["sound"]["levelDbfs"]) == (-55, -55, -35)
-    assert "backgroundNoise" not in params
-    conditions = [{"weight": 1, "set": {"visualStimulus.contrasts": [0], "rewardTone.levelDbfs": -50, "penalty.sound.levelDbfs": "mute"}},
-                  {"weight": 1, "set": {"visualStimulus.contrasts": [0], "rewardTone.levelDbfs": "mute"}}]
+    assert (params["auditoryStimulus"]["levelDbfs"], params["reward"]["tone"]["levelDbfs"], params["penalty"]["incorrect"]["sound"]["levelDbfs"],
+            params["penalty"]["noResponse"]["sound"]["levelDbfs"]) == (-55, -55, -35, -35)
+    assert "backgroundNoise" not in params and "rewardTone" not in params
+    conditions = [{"weight": 1, "set": {"visualStimulus.contrasts": [0], "reward.tone.levelDbfs": -50, "penalty.incorrect.sound.levelDbfs": "mute"}},
+                  {"weight": 1, "set": {"visualStimulus.contrasts": [0], "reward.tone.levelDbfs": "mute", "penalty.noResponse.sound.levelDbfs": -40}}]
     UclOpenCoenDomeNavigationTaskParameters.model_validate({**params, "trialConditions": conditions})
 
 
@@ -695,3 +717,67 @@ def test_the_pips_level_is_measured_by_the_lab_s_rule():
     assert waveforms.level_dbfs(np.concatenate([on, np.zeros(48), on])) == waveforms.level_dbfs(on)
     assert waveforms.level_dbfs(np.concatenate([on, np.zeros(47), on])) < waveforms.level_dbfs(on)
     assert waveforms.level_dbfs(np.concatenate([on, [0.0], on])) < waveforms.level_dbfs(on)
+
+
+def test_the_spouts_stay_in_by_default_and_come_in_by_the_first_pip():
+    # The lab's spouts block (open_rigs.core.task Spouts): the file keeps them always in, as before the block (no lead then),
+    # with the left spout in 0.5 s before the first pip when they move; a file without the block is always in with no lead.
+    params = task()["taskParameters"]
+    assert params["spouts"] == {"alwaysIn": True, "stimulusToSpoutsInSeconds": -0.5, "rewardConsumptionSeconds": 1.5}
+    bare = copy.deepcopy(params)
+    bare.pop("spouts")
+    spouts = UclOpenCoenDomeNavigationTaskParameters.model_validate(bare).spouts
+    assert (spouts.always_in, spouts.stimulus_to_spouts_in_seconds) == (True, 0.0)
+    # A lick counts from the response window's opening, so the spout comes in by then, a lead on the pips' 50 ms grid; moving
+    # spouts go out rewardConsumptionSeconds into the interval, before they come back in (an always-in lead counts as 0).
+    long_lead = copy.deepcopy(params)
+    long_lead["spouts"].update(stimulusToSpoutsInSeconds=-1.5)
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(long_lead)
+    for change, match in (({"stimulusToSpoutsInSeconds": 0.1}, "response window would open before the spouts arrive"), ({"stimulusToSpoutsInSeconds": -0.07}, "multiple of"),
+                          ({"alwaysIn": False, "stimulusToSpoutsInSeconds": -1.5}, "come in before they are drawn out"),
+                          ({"rewardConsumptionSeconds": 3}, "above iti_min_seconds")):
+        doc = copy.deepcopy(params)
+        doc["spouts"].update(change)
+        with pytest.raises(pydantic.ValidationError, match=match):
+            UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+
+
+def test_the_stimulus_goes_off_at_the_outcome_by_default_and_within_the_interval():
+    params = task()["taskParameters"]
+    assert params["stimulus"] == {"durationSeconds": None, "responseToStimulusOffSeconds": 0}
+    bare = copy.deepcopy(params)
+    bare.pop("stimulus")
+    stimulus = UclOpenCoenDomeNavigationTaskParameters.model_validate(bare).stimulus
+    assert (stimulus.duration_seconds, stimulus.response_to_stimulus_off_seconds) == (None, 0.0)
+    # Off before the soonest next stimulus: the shortest outcome to next interval (0, as every trial can be rewarded) plus itiMinSeconds (2.5).
+    for ok in ({"responseToStimulusOffSeconds": 2.5}, {"durationSeconds": 2.5}):
+        doc = copy.deepcopy(params)
+        doc["stimulus"].update(ok)
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+    for change, match in (({"responseToStimulusOffSeconds": None}, "never end"), ({"responseToStimulusOffSeconds": 2.6}, "still be on"),
+                          ({"durationSeconds": 2.6}, "still be on")):
+        doc = copy.deepcopy(params)
+        doc["stimulus"].update(change)
+        with pytest.raises(pydantic.ValidationError, match=match):
+            UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+
+
+def test_between_trials_the_longest_spouts_and_stimulus_fit_the_shortest_interval():
+    # task.py between_trials, TrialDraw.CheckTask's: a condition with a longer interval may hold a longer off, but not when a
+    # condition with the shortest interval may come next.
+    doc = copy.deepcopy(task()["taskParameters"])
+    doc["trialConditions"] = [{"weight": 1, "set": {"trialStructure.itiMinSeconds": 3.5, "trialStructure.itiMaxSeconds": 4, "stimulus.responseToStimulusOffSeconds": 3}},
+                              {"weight": 1, "set": {}}]
+    with pytest.raises(pydantic.ValidationError, match="responseToStimulusOffSeconds 3"):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+    doc["trialConditions"][1]["weight"] = 0
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+    # The spouts (Spouts.BetweenTrialsProblems): the longest rewardConsumptionSeconds plus the longest lead within the shortest itiMinSeconds.
+    doc = copy.deepcopy(task()["taskParameters"])
+    spouts = {"spouts.alwaysIn": False, "spouts.stimulusToSpoutsInSeconds": -0.5, "spouts.rewardConsumptionSeconds": 2.5}
+    doc["trialConditions"] = [{"weight": 1, "set": {"trialStructure.itiMinSeconds": 3.5, "trialStructure.itiMaxSeconds": 4, **spouts}},
+                              {"weight": 1, "set": {}}]
+    with pytest.raises(pydantic.ValidationError, match="rewardConsumptionSeconds 2.5 s plus"):
+        UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)
+    doc["trialConditions"][1]["weight"] = 0
+    UclOpenCoenDomeNavigationTaskParameters.model_validate(doc)

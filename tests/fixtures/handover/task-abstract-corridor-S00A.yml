@@ -14,8 +14,9 @@ taskParameters:
       visualStimulus.contrasts:
       - 0
   trialStructure:
-    itiMinSeconds: 2.0
-    itiMaxSeconds: 3.0
+    itiMinSeconds: 2.5
+    itiMaxSeconds: 3.5
+    stimulusToResponseWindowSeconds: 0
     responseWindowSeconds: null
     lickQuietSeconds: 0
     wheelQuietSeconds: 0
@@ -34,13 +35,24 @@ taskParameters:
     sizeUl: 3.0
     largeMultiplier: 2
     largeProbability: 0
+    tone:
+      levelDbfs: -55
   autoRewardProbability: 1.0
   penalty:
-    timeoutSeconds: 2.0
-    sound:
-      levelDbfs: -45
-  rewardTone:
-    levelDbfs: -55
+    incorrect:
+      timeoutSeconds: 4.0
+      sound:
+        levelDbfs: -35
+      flash:
+        brightness: 0
+        rateHz: 10
+    noResponse:
+      timeoutSeconds: 4.0
+      sound:
+        levelDbfs: -35
+      flash:
+        brightness: 0
+        rateHz: 10
   optogenetics:
     enabled: false
     zapitConditionsPath: ''
@@ -48,6 +60,13 @@ taskParameters:
     laserOnProbability: 0.4
     laserToStimulusSeconds: 0.1
     trialsBeforeLaser: 20
+  spouts:
+    alwaysIn: true
+    stimulusToSpoutsInSeconds: -0.5
+    rewardConsumptionSeconds: 1.5
+  stimulus:
+    durationSeconds: null
+    responseToStimulusOffSeconds: 0
   track:
     lengthsCm:
     - 80
@@ -58,7 +77,7 @@ taskParameters:
   rewardZoneMinHz: 18000
   rewardZoneMaxHz: 24000
   wrongLickLimit: 0
-  stimulusOff:
+  stimulusCutoff:
     stimuli: none
     trackFractions:
     - 1.0

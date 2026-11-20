@@ -160,7 +160,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Display</Name>
-        <Description>The grating (BonVision DrawGratings) on the dome: one subject, Grating (TaskLogic's GratingStates), sets its spatial frequency, opacity, contrast and phase at once: each pip's (the trial's visualContrast and visualPhaseRad; opacity 0 at contrast 0), then from the outcome the last pip's at opacity 0, so off between trials.</Description>
+        <Description>The grating (BonVision DrawGratings) on the dome: one subject, Grating (TaskLogic's GratingStates), sets its spatial frequency, opacity, contrast and phase at once: each pip's (the trial's visualContrast and visualPhaseRad; opacity 0 at contrast 0), after the outcome until the StimulusOff too, then the last pip's at opacity 0 from the StimulusOff, so off between trials.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -204,7 +204,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Audio</Name>
-        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (StimulusSoundBuffers, LayOutPips: pips.bin read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) as stored (sweep.json's pipLevelDbfs), checked at the highest auditoryStimulus.levelDbfs any condition can draw (TrialRules.MaxStimulusLevel), each pip then played at its trial's auditoryLevelDbfs (PipBuffer); the reward tone (OpenRigs.Audio PlayRewardTone) at each rewarded trial's rewardTone.levelDbfs and the lab's penalty sound (PlayPenaltySound, in OpenRigs.Trials TrialOutcomeEffects) are made in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
+        <Description>The dome's sounds, played by DomeHardware's speakers and mixer (OpenRigs.Audio SpeakerMixer: Speakers, rig.yml's speakers and filters loaded once at Start, and the mixer started no sooner than 3 s after Start, as a fault while the sound card boots can blue-screen the PC). At Go, each sound is laid out on every rig.yml speaker, each equalised with its filter, and stops the workflow if any would peak at -1 dBFS after equalisation: the pips (StimulusSoundBuffers, LayOutPips: pips.bin read at Start at sweep.json's rate, one 50 ms pip a buffer, both from Sweep) as stored (sweep.json's pipLevelDbfs), checked at the highest auditoryStimulus.levelDbfs any condition can draw (TrialRules.MaxStimulusLevel), each pip then played at its trial's auditoryLevelDbfs (PipBuffer); the reward tone (OpenRigs.Audio PlayRewardTone) at each rewarded trial's reward.tone.levelDbfs and the lab's penalty sound (PlayPenaltySound, in OpenRigs.Trials TrialOutcomeEffects) are made in TaskLogic. The background noise is the BackgroundNoise include's, after this group. TaskLogic sends the pips, the reward tone and the penalty sound to the mixer (StimulusSounds, RewardToneSounds, PenaltySounds), which plays them over each other.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="SubscribeSubject">
@@ -338,7 +338,7 @@
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>TaskLogic</Name>
-        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome after any timeout), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, step 0: the interval's end less the lead, max(laserToStimulusSeconds, 0), or later until the quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); OpenRigs.Trials ZapitTrials, in an optogenetics experiment only, sends Zapit the trial's condition at Arm (laser-off trials at 0 mW), raises the ZapitTrigger line at the Trigger, laserToStimulusSeconds before the first pip (after it if negative; on a software-triggered rig it sends the StartStimulus then), stops the laser at the outcome or its cap and clears the line at TriggerOff; RunTrials stops the task if Zapit has not answered by the Trigger; each Update (a pip) plays the pip and sets the grating (GratingStates, which hides it at the Outcome); Outcome (OpenRigs.Trials TrialOutcomeEffects) writes the trial row, rewards (RewardRequests, the left valve) and plays the reward tone at the trial's level (PlayRewardTone) or plays the penalty sound at the trial's level (PlayPenaltySound); TriggerOff comes the Zapit conditions file's max ramp-down after the outcome. Zapit adds no time.</Description>
+        <Description>The task in tested C# (src\Extensions\TrialLogic.cs, tests\Extensions.Tests) on lib-open-rigs' TrialLoop: once the experiment folder exists and the tones are loaded, TrialRules comes on the next Harp clock tick (OnNextTick); RunTrials draws each trial (TrialDraw) at the start of its interval (the last outcome, plus its timeout when penalised), has a hardware-triggered Zapit armed during it (Arm, once the last trigger line has fallen), starts it (Start, step 0: the interval's end less the lead, max(laserToStimulusSeconds, -spouts.stimulusToSpoutsInSeconds unless spouts.alwaysIn, 0), or later until the quiet waits hold, both spouts released), then runs it along the virtual track (VirtualTrack) with a pip every 50 ms from the lead after the trial start, all on the Harp clock (Timestamp), until the outcome. Its events (TrialEvents, each kind picked by PickTrialEvents) drive the hardware here: Start publishes the trial (Trial); OpenRigs.Trials ZapitTrials, in an optogenetics experiment only, sends Zapit the trial's condition at Arm (laser-off trials at 0 mW), raises the ZapitTrigger line at the Trigger, laserToStimulusSeconds before the first pip (after it if negative; on a software-triggered rig it sends the StartStimulus then), stops the laser at the outcome or its cap and clears the line at TriggerOff; RunTrials stops the task if Zapit has not answered by the Trigger; each Update (a pip, after the outcome too until the StimulusOff, IStimulusAfterOutcome) plays the pip and sets the grating (GratingStates, which hides it at the StimulusOff, as StopStimulusSounds stops the pips); every spout move is SpoutCommands' over all the events, into LickSpoutStage.Commands; Outcome (OpenRigs.Trials TrialOutcomeEffects) writes the trial row, rewards (RewardRequests, the left valve) and plays the reward tone at the trial's level (PlayRewardTone) or plays the penalty sound at the trial's level (PlayPenaltySound) and the penalty flash (OpenRigs.Vision PlayPenaltyFlash, at its kind's penalty.&lt;kind&gt;.flash); TriggerOff comes the Zapit conditions file's max ramp-down after the outcome. Zapit adds no time.</Description>
         <Workflow>
           <Nodes>
             <Expression xsi:type="MemberSelector">
@@ -421,7 +421,7 @@
               <Selector>Outcome</Selector>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Trials:TrialOutcomeEffects.bonsai">
-              <Description>A rewarded outcome's reward into RewardRequests (the left valve) first, then each outcome's row into TrialRow, rewarded only when the valve's RewardDelivered came for it (RewardedAsDelivered), the penalty sound (PlayPenaltySound) when penalised, at the trial's penalty.sound.levelDbfs (none when mute); the outcome passed on.</Description>
+              <Description>A rewarded outcome's reward into RewardRequests (the left valve) first, then each outcome's row into TrialRow, rewarded only when the valve's RewardDelivered came for it (RewardedAsDelivered), the penalty sound (PlayPenaltySound) when penalised, at its kind's level (penalty.incorrect.sound.levelDbfs, or on a miss penalty.noResponse's; none when mute); the outcome passed on.</Description>
             </Expression>
             <Expression xsi:type="rx:Condition">
               <Name>Rewarded?</Name>
@@ -442,7 +442,7 @@
               </Workflow>
             </Expression>
             <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Audio:PlayRewardTone.bonsai">
-              <Description>The reward tone at each rewarded outcome, at its trial's rewardTone.levelDbfs (RewardToneLevelDbfs; nothing when mute): sounds/reward_tone.bin laid out at Go on every speaker, equalised, at the highest level any condition can draw (RewardToneBuffer), into RewardToneSounds.</Description>
+              <Description>The reward tone at each rewarded outcome, at its trial's reward.tone.levelDbfs (RewardToneLevelDbfs; nothing when mute): sounds/reward_tone.bin laid out at Go on every speaker, equalised, at the highest level any condition can draw (RewardToneBuffer), into RewardToneSounds.</Description>
               <RewardToneFile>./sounds/reward_tone.bin</RewardToneFile>
             </Expression>
             <Expression xsi:type="SubscribeSubject">
@@ -494,6 +494,32 @@
             <Expression xsi:type="MemberSelector">
               <Selector>RewardToneLevelDbfs</Selector>
             </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TrialEvents</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Name>SpoutCommands</Name>
+              <Description>Every spout move from the trial events (OpenRigs.Trials SpoutCommands, the task's spouts block): with spouts.alwaysIn only each SpoutsIn cue's SpoutsIn, where Ready left the spouts, so the stage does not move; otherwise both out at trial 1's interval start, the left spout alone at each SpoutsIn cue (stimulusToSpoutsInSeconds from the first pip), the left alone at a reward else both out at the outcome, and both out at each SpoutsOut cue (spouts.rewardConsumptionSeconds into the next interval) unless the coming trial's are always in.</Description>
+              <Combinator xsi:type="trl:SpoutCommands" />
+            </Expression>
+            <Expression xsi:type="MulticastSubject">
+              <Name>LickSpoutStage.Commands</Name>
+            </Expression>
+            <Expression xsi:type="SubscribeSubject">
+              <Name>TrialEvents</Name>
+            </Expression>
+            <Expression xsi:type="Combinator">
+              <Combinator xsi:type="trl:PickTrialEvents">
+                <trl:Kind>StimulusOff</trl:Kind>
+              </Combinator>
+            </Expression>
+            <Expression xsi:type="MulticastSubject">
+              <Name>StopStimulusSounds</Name>
+              <Description>The pips stopped as the grating hides (OpenRigs.Audio SpeakerMixer: faded over 5 ms) at each StimulusOff: at the outcome, stimulus.responseToStimulusOffSeconds after it, or stimulus.durationSeconds after the first pip, whichever comes first.</Description>
+            </Expression>
+            <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Vision:PlayPenaltyFlash.bonsai">
+              <Description>The penalty flash at each penalised outcome whose kind's penalty.&lt;kind&gt;.flash.brightness is above 0 (penalty.incorrect, or on a miss penalty.noResponse): the whole projector field on DrawStimuli at that brightness, white the first half of each 1/rateHz cycle, for the penalty sound's length; its rules checked at Go (TrialRules.PenaltyFlashes); the outcome passed on.</Description>
+            </Expression>
           </Nodes>
           <Edges>
             <Edge From="0" To="5" Label="Source1" />
@@ -531,9 +557,14 @@
             <Edge From="40" To="30" Label="Source1" />
             <Edge From="22" To="23" Label="Source1" />
             <Edge From="23" To="24" Label="Source1" />
-            <Edge From="24" To="25" Label="Source1" />
+            <Edge From="24" To="48" Label="Source1" />
+            <Edge From="48" To="25" Label="Source1" />
             <Edge From="25" To="41" Label="Source1" />
             <Edge From="41" To="26" Label="Source1" />
+            <Edge From="42" To="43" Label="Source1" />
+            <Edge From="43" To="44" Label="Source1" />
+            <Edge From="45" To="46" Label="Source1" />
+            <Edge From="46" To="47" Label="Source1" />
           </Edges>
         </Workflow>
       </Expression>

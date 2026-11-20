@@ -28,7 +28,19 @@ static class Fixture
         var text = File.ReadAllText(Path.Combine(Repo(), "config", "task-abstract-corridor.yml"));
         var task = new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
         task.RngSeed = 1;
+        // The spouts' lead set to 0, so the trial start is the laser's lead before the first pip, as these tests time it;
+        // SpoutAndStimulusOffTests times the file's spouts lead.
+        task.Spouts.StimulusToSpoutsInSeconds = 0;
         return task;
+    }
+
+    /// <summary>The task file as written, its spouts' lead too.</summary>
+    public static UclOpenCoenDomeNavigationTaskParameters AsWritten(int stage = 0)
+    {
+        var text = File.ReadAllText(Path.Combine(Repo(), "config", "task-abstract-corridor.yml"));
+        var task = new DeserializerBuilder().Build().Deserialize<UclOpenCoenDomeNavigationTaskLogic>(text).TaskParameters;
+        task.RngSeed = 1;
+        return Stage(task, stage);
     }
 
     /// <summary>The task file as app-rig-control writes it for a curriculum stage: that stage's values over the file's, and
@@ -41,7 +53,7 @@ static class Fixture
     // The stages of the lab's curriculum (K:\config\curricula\coen-dome-navigation\task-abstract-corridor.conditions.yml)
     // when the rows left the task file, by id: rewardZoneMinHz, rewardZoneMaxHz, autoRewardProbability, wrongLickLimit,
     // trialStructure.lickQuietSeconds, trialStructure.responseWindowSeconds, track.wheelGain, track.autoProgressPerSecond.
-    // Stage 5's stimulus-off trials are a second condition (weight 16, stimulusOff.stimuli both, trackFractions 0.4 and 0.6)
+    // Stage 5's cutoff trials are a second condition (weight 16, stimulusCutoff.stimuli both, trackFractions 0.4 and 0.6)
     // beside the first (84).
     static readonly double?[][] Stages =
     {
@@ -50,11 +62,11 @@ static class Fixture
         new double?[] { 15248, 24000, 0, 0, 0, null, 1, 0 },     // Lick to Report
         new double?[] { 15248, 21248, 0, 8, 1, 12, 1, 0 },       // Ceiling In
         new double?[] { 15248, 21248, 0, 5, 1, 12, 1, 0 },       // Fewer Wrong Licks
-        new double?[] { 15248, 21248, 0, 5, 1, 12, 1, 0 },       // Stimulus Off
+        new double?[] { 15248, 21248, 0, 5, 1, 12, 1, 0 },       // Stimulus Cutoff
     };
 
     /// <summary>The max ramp-down in the stand-in Zapit conditions file, s.</summary>
-    public const double RampDown = 1.0;
+    public const double RampDown = 0.5;
 
     /// <summary>The task with a curriculum stage's values written over it, as app-rig-control does at launch.</summary>
     public static UclOpenCoenDomeNavigationTaskParameters Stage(UclOpenCoenDomeNavigationTaskParameters task, int stage)
@@ -72,8 +84,8 @@ static class Fixture
         {
             Func<Dictionary<object, object>> none = () => new Dictionary<object, object> { { "visualStimulus.contrasts", new List<object> { 0.0 } } };
             var off = none();
-            off["stimulusOff.stimuli"] = "both";
-            off["stimulusOff.trackFractions"] = new List<object> { 0.4, 0.6 };
+            off["stimulusCutoff.stimuli"] = "both";
+            off["stimulusCutoff.trackFractions"] = new List<object> { 0.4, 0.6 };
             task.TrialConditions = new List<TrialCondition>
             {
                 new TrialCondition { Weight = 84, Set = none() },
@@ -254,7 +266,7 @@ public class TrialDrawTests
             var x = a.Next();
             var y = b.Next();
             Assert.AreEqual(x.TrackLengthCm, y.TrackLengthCm);
-            Assert.AreEqual(x.stimulusOffFraction, y.stimulusOffFraction);
+            Assert.AreEqual(x.cutoffFraction, y.cutoffFraction);
             Assert.AreEqual(x.itiSeconds, y.itiSeconds);
             Assert.AreEqual(x.trialType, y.trialType);
         }
@@ -400,7 +412,7 @@ public class TrialDrawTests
             var task = Fixture.Task(2);
             // One track length and one fraction, so a combination is named by the condition's own picks alone.
             task.Track.LengthsCm = new List<double> { 100 };
-            task.StimulusOff.TrackFractions = new List<double> { 0.5 };
+            task.StimulusCutoff.TrackFractions = new List<double> { 0.5 };
             task.TrialConditions = c.Item1;
             StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, c.Item2);
         }
@@ -451,7 +463,7 @@ public class TrialDrawTests
             Assert.AreEqual(0, problems.Count, string.Join("; ", problems));
             CollectionAssert.AreEqual(new[] { 2, 1, 0 }, built.Select(c => c.Weight).ToArray());
             // visual: the grating at the task's contrast, no tone; auditory: the tone at its level, no grating; both.
-            // Each expands into the task's 3 track lengths times its 1 stimulus-off fraction (1.0, the default).
+            // Each expands into the task's 3 track lengths times its 1 cutoff fraction (1.0, the default).
             CollectionAssert.AreEqual(new[] { "1:mute", "0:-55", "1:-55" }, built.Select(c => c.Combinations[0].Task).Select(m => string.Join(",", m.VisualStimulus.Contrasts) + ":" + Convert.ToString(m.AuditoryStimulus.LevelDbfs, System.Globalization.CultureInfo.InvariantCulture)).ToArray());
             Assert.IsTrue(built.All(c => c.Combinations.Count == 3));
         }
@@ -563,9 +575,9 @@ public class TrialDrawTests
     public void EachTrialReadsItsCombinationAndLogsItsIndex()
     {
         var task = Fixture.Task(2);
-        task.StimulusOff.TrackFractions = new List<double> { 0.5 };
+        task.StimulusCutoff.TrackFractions = new List<double> { 0.5 };
         task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1,
-            Set = new Dictionary<object, object> { { "track.lengthsCm", new List<object> { 40.0, 80.0 } }, { "track.wheelGain", 2.0 }, { "penalty.timeoutSeconds", 0.5 } } } };
+            Set = new Dictionary<object, object> { { "track.lengthsCm", new List<object> { 40.0, 80.0 } }, { "track.wheelGain", 2.0 }, { "penalty.noResponse.timeoutSeconds", 0.5 } } } };
         var draw = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 200).Select(i => draw.Next()).ToList();
         // The lengths are the one list with a choice: combination 0 draws 40 track cm, 1 draws 80, each at the condition's gain.
@@ -577,7 +589,7 @@ public class TrialDrawTests
         rig.Wheel(1000);
         var outcome = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome;
         Assert.AreEqual(trial.trialCombinationId, outcome.Row.Value.trialCombinationId);
-        // Run to the track's end: penalised, with the condition's timeout.
+        // Run to the track's end: a miss, penalised with the condition's penalty.noResponse timeout.
         Assert.AreEqual(0.5, outcome.PenaltyTimeoutSeconds);
     }
 
@@ -609,12 +621,12 @@ public class TrialDrawTests
         for (int i = 0; i < 100; i++)
         {
             var iti = draw.Next().itiSeconds;
-            Assert.IsTrue(iti >= 2.0 && iti <= 3.0, iti.ToString());
+            Assert.IsTrue(iti >= 2.5 && iti <= 3.5, iti.ToString());
         }
     }
 
     [TestMethod]
-    public void TheWheelRunsTheTrackOverTheStagesGainAndStimulusOffFollowsItsConditionsShare()
+    public void TheWheelRunsTheTrackOverTheStagesGainAndStimulusCutoffFollowsItsConditionsShare()
     {
         var draw = Fixture.Draw(Fixture.Task(0));
         var drawn = Enumerable.Range(0, 200).Select(_ => draw.Next()).ToList();
@@ -623,11 +635,11 @@ public class TrialDrawTests
         Assert.IsTrue(drawn.All(t => t.WheelGain == 8));
         draw = Fixture.Draw(Fixture.Task(5));
         var trials = Enumerable.Range(0, 2000).Select(_ => draw.Next()).ToList();
-        var off = trials.Where(t => !double.IsNaN(t.stimulusOffFraction)).ToList();
+        var off = trials.Where(t => !double.IsNaN(t.cutoffFraction)).ToList();
         Assert.AreEqual(0.16, off.Count / 2000.0, 0.03);
-        CollectionAssert.AreEquivalent(new[] { 0.4, 0.6 }, off.Select(t => t.stimulusOffFraction).Distinct().ToList());
-        Assert.IsTrue(off.All(t => t.auditoryOff && t.visualOff));
-        Assert.IsTrue(trials.Except(off).All(t => !t.auditoryOff && !t.visualOff));
+        CollectionAssert.AreEquivalent(new[] { 0.4, 0.6 }, off.Select(t => t.cutoffFraction).Distinct().ToList());
+        Assert.IsTrue(off.All(t => t.auditoryCutoff && t.visualCutoff));
+        Assert.IsTrue(trials.Except(off).All(t => !t.auditoryCutoff && !t.visualCutoff));
     }
 
     [TestMethod]
@@ -785,7 +797,7 @@ public class TrialDrawTests
         {
             { "itiMaxSeconds", t => t.TrialStructure.ItiMaxSeconds = double.PositiveInfinity },
             { "itiMinSeconds", t => t.TrialStructure.ItiMinSeconds = double.NaN },
-            { "timeoutSeconds", t => t.Penalty.TimeoutSeconds = double.NaN },
+            { "timeoutSeconds", t => t.Penalty.Incorrect.TimeoutSeconds = double.NaN },
             { "lickQuietSeconds", t => t.TrialStructure.LickQuietSeconds = double.NaN },
             { "wheelQuietSeconds", t => t.TrialStructure.WheelQuietSeconds = double.PositiveInfinity },
             { "wheelGain", t => t.Track.WheelGain = 0 },
@@ -841,7 +853,7 @@ public class TrialRulesTests
     }
 
     [TestMethod]
-    public void ReachingTheZoneOnStage1IsRewardedAndTheNextIntervalRunsFromTheOutcome()
+    public void ReachingTheZoneOnStage1IsRewardedAndTheNextIntervalStartsAtTheOutcome()
     {
         var task = Fixture.Task(1);
         var rig = new Rig(Fixture.Setup(task));
@@ -854,6 +866,10 @@ public class TrialRulesTests
         Assert.AreEqual(Tuple.Create("left", 3.0), outcome.Outcome.Reward);   // the task file's reward.sizeUl, 3 ul
         Assert.IsTrue(outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Row.Value.penalised && outcome.Outcome.Row.Value.rewardOfferedUl == 3, "the row says what the valve did");
         Assert.IsTrue(outcome.Outcome.Row.Value.autoReward, "stage 1 auto-rewards every trial");
+        // Rewarded: outcome, then the interval (spouts.rewardConsumptionSeconds inside it); no timeout, no flash.
+        Assert.AreEqual(0.0, outcome.Outcome.Row.Value.penaltyTimeoutSeconds);
+        Assert.AreEqual(0.0, outcome.Outcome.Row.Value.penaltyFlashBrightness);
+        Assert.IsFalse(outcome.Outcome.PenaltyFlash.Plays);
         var next = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(outcome.Seconds + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
         rig.Until(rig.Now + 0.2);
@@ -945,11 +961,12 @@ public class TrialRulesTests
         Assert.IsTrue(outcome.Outcome.Penalised && outcome.Outcome.PenaltyLevelDbfs == -35);
         Assert.IsTrue(outcome.Outcome.Row.Value.penalised && !outcome.Outcome.Row.Value.rewarded && !outcome.Outcome.Rewarded, "penalised, unrewarded");
         Assert.AreEqual(3.0, outcome.Outcome.Row.Value.rewardOfferedUl, "the offer kept on a trial not rewarded");
-        Assert.AreEqual(2.0, outcome.Outcome.Row.Value.penaltyTimeoutSeconds);
+        Assert.AreEqual(4.0, outcome.Outcome.Row.Value.penaltyTimeoutSeconds, "penalty.incorrect's");
+        Assert.AreEqual(0.0, outcome.Outcome.Row.Value.penaltyFlashBrightness, "the file's flash is off");
 
         // the next trial waits the timeout and its interval; the quiet second, counted from the interval's start, adds nothing
         var next = rig.RunTo(TrialEventKind.Start);
-        Assert.AreEqual(outcome.Seconds + 2.0 + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
+        Assert.AreEqual(outcome.Seconds + 4.0 + next.Trial.itiSeconds - 0.1, next.Seconds, 1e-9);
         rig.Until(rig.Now + 0.2);
         var track = next.Trial.trackLengthWheelCm;
         rig.Wheel(track * 0.85);  // inside the zone
@@ -958,7 +975,7 @@ public class TrialRulesTests
         var rewarded = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome);
         Assert.AreEqual("correctLick", rewarded.Outcome.Row.Value.outcomeReason);
         Assert.IsTrue(rewarded.Outcome.Row.Value.rewarded && !rewarded.Outcome.Row.Value.autoReward, "earned, not auto-rewarded");
-        Assert.AreEqual(2.0, rewarded.Outcome.Row.Value.itiStartTime - outcome.Seconds, 0.0011);
+        Assert.AreEqual(4.0, rewarded.Outcome.Row.Value.itiStartTime - outcome.Seconds, 0.0011);
         Assert.AreEqual(next.Trial.itiSeconds, rewarded.Outcome.Row.Value.itiSeconds);
     }
 
@@ -1165,13 +1182,13 @@ public class TrialRulesTests
     }
 
     [TestMethod]
-    public void AStimulusOffTrialCutsTheGratingsVisualContrastToZero()
+    public void AStimulusCutoffTrialCutsTheGratingsVisualContrastToZero()
     {
         var rig = new Rig(Fixture.Setup(Fixture.Task(3)));
         var start = rig.RunTo(TrialEventKind.Start);
         start.Trial.visualContrast = 0.5;
-        start.Trial.stimulusOffFraction = 0.5;
-        start.Trial.visualOff = true;
+        start.Trial.cutoffFraction = 0.5;
+        start.Trial.visualCutoff = true;
         rig.Wheel(start.Trial.trackLengthWheelCm * 0.3);
         rig.Until(rig.Now + 0.1);
         Assert.AreEqual(0.5, rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update.Row.visualContrast);
@@ -1183,14 +1200,15 @@ public class TrialRulesTests
     }
 
     [TestMethod]
-    public void AStimulusOffTrialSwitchesOffItsListedStimuliPastItsTrackFraction()
+    public void AStimulusCutoffTrialSwitchesOffItsListedStimuliPastItsTrackFraction()
     {
         // The tone alone listed: it goes off once the mouse has run half the track; the grating stays on.
         var setup = Fixture.Setup(Fixture.Task(3));
         var rig = new Rig(setup);
         var start = rig.RunTo(TrialEventKind.Start);
-        start.Trial.stimulusOffFraction = 0.5;
-        start.Trial.auditoryOff = true;
+        start.Trial.cutoffFraction = 0.5;
+        start.Trial.auditoryCutoff = true;
+        start.Trial.visualContrast = 1;   // a grating shown (stage 3 also draws auditory-alone trials, contrast 0)
         rig.Wheel(start.Trial.trackLengthWheelCm * 0.3);
         rig.Until(rig.Now + 0.1);
         var before = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
@@ -1200,13 +1218,14 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.1);
         var pip = rig.Events.Last(e => e.Kind == TrialEventKind.Update).Update;
         Assert.AreEqual(0.0, pip.AuditoryGain);
-        Assert.IsTrue(double.IsNaN(pip.Row.auditoryLevelDbfs));   // the cut, in each pip's row (and auditoryOffPositionCm)
+        Assert.IsTrue(double.IsNaN(pip.Row.auditoryLevelDbfs));   // the cut, in each pip's row (and auditoryCutoffPositionCm)
         Assert.AreEqual(start.Trial.visualContrast, pip.Row.visualContrast);   // the grating stays on
         rig.Wheel(start.Trial.trackLengthWheelCm + 5);
         var row = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
-        Assert.AreEqual(pip.Row.positionCm, row.auditoryOffPositionCm, 1e-9);
-        Assert.IsTrue(double.IsNaN(row.visualOffPositionCm));
+        Assert.AreEqual(pip.Row.positionCm, row.auditoryCutoffPositionCm, 1e-9);
+        Assert.IsTrue(double.IsNaN(row.visualCutoffPositionCm));
         Assert.AreEqual(-55, row.auditoryLevelDbfs);   // the trial's level; the pips' rows say where it was cut
+        Assert.AreEqual(row.outcomeTime, row.stimulusOffTime, "the grating played on, so the stimulus went off at the outcome");
         Assert.IsNull(typeof(StimulusStateRow).GetField("auditoryOn"));
         Assert.IsNull(typeof(StimulusStateRow).GetField("visualOn"));
         Assert.AreEqual(typeof(double), typeof(StimulusStateRow).GetField("visualContrast").FieldType);
@@ -1220,7 +1239,32 @@ public class TrialRulesTests
         rig.Until(rig.Now + 0.1);
         rig.Wheel(start.Trial.trackLengthWheelCm + 5);
         var row = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
-        Assert.IsTrue(double.IsNaN(row.auditoryOffPositionCm) && double.IsNaN(row.visualOffPositionCm));
+        Assert.IsTrue(double.IsNaN(row.auditoryCutoffPositionCm) && double.IsNaN(row.visualCutoffPositionCm));
+        Assert.AreEqual(row.outcomeTime, row.stimulusOffTime, "both played to the outcome");
+    }
+
+    [TestMethod]
+    public void AStimulusCutoffTrialWithBothListedGoesOffAtTheStepNeitherPlays()
+    {
+        // Tone and grating listed: past half the track neither plays, so stimulusOffTime is that pip's step on the 50 ms
+        // grid from the trial start, before the outcome.
+        var rig = new Rig(Fixture.Setup(Fixture.Task(3)));
+        var start = rig.RunTo(TrialEventKind.Start);
+        start.Trial.cutoffFraction = 0.5;
+        start.Trial.auditoryCutoff = true;
+        start.Trial.visualCutoff = true;
+        rig.Wheel(start.Trial.trackLengthWheelCm * 0.3);
+        rig.Until(rig.Now + 0.1);
+        rig.Wheel(start.Trial.trackLengthWheelCm * 0.7);
+        rig.Until(rig.Now + 0.1);
+        var first = rig.Events.First(e => e.Kind == TrialEventKind.Update && double.IsNaN(e.Update.Row.auditoryLevelDbfs));
+        Assert.AreEqual(0.0, first.Update.Row.visualContrast);
+        rig.Wheel(start.Trial.trackLengthWheelCm + 5);
+        var row = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
+        var steps = (row.stimulusOffTime - row.trialStartTime) / TrialRules.StepSeconds;
+        Assert.AreEqual(Math.Round(steps), steps, 1e-6, "on the pip grid");
+        Assert.IsTrue(first.Seconds - row.stimulusOffTime >= -1e-9 && first.Seconds - row.stimulusOffTime < TrialRules.StepSeconds, "the step of the first silent pip");
+        Assert.IsTrue(row.stimulusOffTime < row.outcomeTime);
     }
 
     [TestMethod]
@@ -1356,7 +1400,7 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(4);
         Fixture.Opto(task);
-        task.Penalty.TimeoutSeconds = 0;   // the next interval from the outcome: armed once the line falls, not at its start
+        task.Penalty.NoResponse.TimeoutSeconds = 0;   // the next interval from the outcome (the track's end, a miss): armed once the line falls, not at its start
         var rig = new Rig(Fixture.Setup(task));
         var arm = rig.RunTo(TrialEventKind.Arm);
         rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 });
@@ -1364,7 +1408,7 @@ public class TrialRulesTests
         rig.Wheel(1000);   // the end of the track ends the trial
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
         var off = rig.RunTo(TrialEventKind.TriggerOff);
-        Assert.AreEqual(outcome.Seconds + 1.0, off.Seconds, 0.0011);
+        Assert.AreEqual(outcome.Seconds + Fixture.RampDown, off.Seconds, 0.0011);
         var next = rig.Events.Single(e => e.Kind == TrialEventKind.Arm && e.Trial.trialNumber == 2);   // on the line's tick
         Assert.AreEqual(off.Seconds, next.Seconds, 1e-9);
     }
@@ -1386,8 +1430,8 @@ public class TrialRulesTests
         var draw = Fixture.Draw(task);
         Assert.AreEqual(15.0 + 0.15 + 0.25, draw.LaserCapSeconds, 1e-9);
         Assert.AreEqual(Fixture.RampDown, draw.MaxRampDownSeconds);
-        var rules = TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, 0.7), Fixture.Speakers());
-        Assert.AreEqual(0.7, rules.Laser.TriggerHoldSeconds);
+        var rules = TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, 0.6), Fixture.Speakers());
+        Assert.AreEqual(0.6, rules.Laser.TriggerHoldSeconds);
         Assert.AreEqual(15.0 + 0.15 + 0.25, rules.Laser.LaserCapSeconds, 1e-9);
         Assert.AreEqual(double.PositiveInfinity, Fixture.Draw(Fixture.Task(4)).LaserCapSeconds, "without optogenetics: no cap");
         Assert.AreEqual(0.0, Fixture.Draw(Fixture.Task(4)).MaxRampDownSeconds);
@@ -1398,7 +1442,7 @@ public class TrialRulesTests
     {
         var task = Fixture.Task(4);
         var lead = task.Optogenetics.LaserToStimulusSeconds;
-        var maxRampDown = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;   // 1.7 s
+        var maxRampDown = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;   // 2.2 s
         Fixture.Opto(task);
         TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, maxRampDown), Fixture.Speakers());   // exactly the max: allowed
         var message = Assert.ThrowsException<InvalidOperationException>(() => TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, maxRampDown + 0.1), Fixture.Speakers())).Message;
@@ -1430,29 +1474,47 @@ public class TrialRulesTests
     }
 
     [TestMethod]
-    public void ATrialThatRunsOutCostsPenaltyNoResponseWhereSetAndTheWrongLickLimitTheChoices()
+    public void ATrialThatRunsOutCostsPenaltyNoResponseAndTheWrongLickLimitPenaltyIncorrect()
     {
-        // Out of track (ranOut, outcome noResponse): the miss's own timeout and level, the row logging the timeout used.
+        // Out of track (ranOut, outcome noResponse): the miss's own timeout, level and flash, the row logging the timeout
+        // and flash brightness used.
         var task = Fixture.Task(2);
         task.Penalty.NoResponse.TimeoutSeconds = 5;
         task.Penalty.NoResponse.Sound.LevelDbfs = "mute";
-        var rig = new Rig(Fixture.Setup(task));
+        task.Penalty.NoResponse.Flash.Brightness = 0.5;
+        task.Penalty.NoResponse.Flash.RateHz = 5;
+        var rules = Fixture.Setup(task);
+        Assert.IsTrue(rules.PenaltyFlashes.Plays);
+        Assert.AreEqual(5.0, rules.PenaltyFlashes.ShortestTimeoutSeconds, "the shortest timeout of a kind that flashes");
+        var rig = new Rig(rules);
         rig.RunTo(TrialEventKind.Start);
         rig.Wheel(1000);
         var ran = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome;
         Assert.AreEqual(TrialOutcomes.NoResponse, ran.Row.Value.outcome);
         Assert.IsTrue(ran.Penalised && ran.PenaltyTimeoutSeconds == 5 && ran.Row.Value.penaltyTimeoutSeconds == 5 && double.IsNaN(ran.PenaltyLevelDbfs));
-        // The wrong-lick limit is a choice: the block's own values whatever noResponse says.
+        Assert.AreEqual(0.5, ran.Row.Value.penaltyFlashBrightness);
+        Assert.IsTrue(ran.PenaltyFlash.Plays && ran.PenaltyFlash.Brightness == 0.5 && ran.PenaltyFlash.RateHz == 5);
+        // The wrong-lick limit is incorrect: penalty.incorrect's values whatever noResponse says, its flash off.
         task = Fixture.Task(4);
         task.Penalty.NoResponse.TimeoutSeconds = 5;
         task.Penalty.NoResponse.Sound.LevelDbfs = "mute";
+        task.Penalty.NoResponse.Flash.Brightness = 0.5;
         rig = new Rig(Fixture.Setup(task));
         rig.RunTo(TrialEventKind.Start);
         rig.Until(rig.Now + 0.2);
         for (int i = 0; i < 5; i++) rig.Lick();
         var wrong = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome).Outcome;
         Assert.AreEqual("wrongLickLimit", wrong.Row.Value.outcomeReason);
-        Assert.IsTrue(wrong.Penalised && wrong.PenaltyTimeoutSeconds == 2 && wrong.Row.Value.penaltyTimeoutSeconds == 2 && wrong.PenaltyLevelDbfs == -35);
+        Assert.IsTrue(wrong.Penalised && wrong.PenaltyTimeoutSeconds == 4 && wrong.Row.Value.penaltyTimeoutSeconds == 4 && wrong.PenaltyLevelDbfs == -35);
+        Assert.IsTrue(wrong.Row.Value.penaltyFlashBrightness == 0 && !wrong.PenaltyFlash.Plays);
+    }
+
+    [TestMethod]
+    public void APenaltyNoResponseOfNullIsRefusedAsMissesArePenalised()
+    {
+        var task = Fixture.Task(4);
+        task.Penalty.NoResponse = null;
+        StringAssert.Contains(Assert.ThrowsException<InvalidOperationException>(() => Fixture.Setup(task)).Message, "penalty.noResponse is null, but this task penalises a miss");
     }
 
     [TestMethod]
@@ -1477,7 +1539,7 @@ public class TrialRulesTests
             seen[outcome.Row.Value.trialConditionId] = outcome.PenaltyLevelDbfs;
         }
         Assert.AreEqual(-30.0, seen[1], "the condition's miss level");
-        Assert.AreEqual(Fixture.Setup(Fixture.Task(2)).MaxPenaltyLevelDbfs, seen[0], "null: the choice's");
+        Assert.AreEqual(-35.0, seen[0], "the file's own penalty.noResponse level");
     }
 
     [TestMethod]
@@ -1496,10 +1558,11 @@ public class TrialRulesTests
     {
         Func<object, object, List<TrialCondition>> conditions = (a, b) => new List<TrialCondition>
         {
-            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.sound.levelDbfs", a }, { "visualStimulus.contrasts", new List<object> { 0.0 } } } },
-            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.sound.levelDbfs", b } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", a }, { "visualStimulus.contrasts", new List<object> { 0.0 } } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "penalty.noResponse.sound.levelDbfs", b } } },
         };
-        var task = Fixture.Task(2);   // no auto-reward: a trial run to the track's end is penalised
+        var task = Fixture.Task(2);   // no auto-reward: a trial run to the track's end is a penalised miss
+        task.Penalty.Incorrect.Sound.LevelDbfs = "mute";   // so the max is the misses' alone
         task.TrialConditions = conditions(-40.0, "mute");
         var rules = Fixture.Setup(task);
         Assert.AreEqual(-40.0, rules.MaxPenaltyLevelDbfs);
@@ -1523,8 +1586,8 @@ public class TrialRulesTests
         var tones = Fixture.Task(1);
         tones.TrialConditions = new List<TrialCondition>
         {
-            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "rewardTone.levelDbfs", -50.0 } } },
-            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "rewardTone.levelDbfs", "mute" } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "reward.tone.levelDbfs", -50.0 } } },
+            new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "reward.tone.levelDbfs", "mute" } } },
         };
         var toneRules = Fixture.Setup(tones);
         Assert.AreEqual(-50.0, toneRules.MaxRewardToneLevelDbfs);
@@ -1548,7 +1611,7 @@ public class TrialRulesTests
         var task = Fixture.Task(2);
         task.Track.WheelGain = 2;
         task.Track.LengthsCm = new List<double> { 100 };
-        task.StimulusOff.TrackFractions = new List<double> { 0.5 };
+        task.StimulusCutoff.TrackFractions = new List<double> { 0.5 };
         var rig = new Rig(Fixture.Setup(task));
         var start = rig.RunTo(TrialEventKind.Start);
         Assert.AreEqual(50, start.Trial.trackLengthWheelCm, 1e-9);   // 100 track cm: 50 wheel cm
@@ -1563,25 +1626,25 @@ public class TrialRulesTests
         var logged = rig.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
         Assert.AreEqual(100, logged.trackLengthCm, 1e-9);
         Assert.AreEqual(100, logged.outcomePositionCm, 1e-9);
-        // A stimulus-off trial's off position is in track cm too: the tone off at half the track, 50 track cm.
+        // A cutoff trial's off position is in track cm too: the tone off at half the track, 50 track cm.
         var off = Fixture.Task(2);
         off.Track.WheelGain = 2;
         off.Track.LengthsCm = new List<double> { 100 };
-        off.StimulusOff.TrackFractions = new List<double> { 0.5 };
-        off.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "stimulusOff.stimuli", "auditory" } } } };
+        off.StimulusCutoff.TrackFractions = new List<double> { 0.5 };
+        off.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "stimulusCutoff.stimuli", "auditory" } } } };
         var rig2 = new Rig(Fixture.Setup(off));
         rig2.RunTo(TrialEventKind.Start);
         rig2.Wheel(30);
         rig2.Until(rig2.Now + 0.1);
         rig2.Wheel(1000);
         var row2 = rig2.Events.Last(e => e.Kind == TrialEventKind.Outcome).Outcome.Row.Value;
-        Assert.AreEqual(60, row2.auditoryOffPositionCm, 1e-9);   // the first pip after 30 wheel cm, past the half track (50 track cm)
-        Assert.IsTrue(double.IsNaN(row2.visualOffPositionCm));
-        Assert.AreEqual("audiovisualCoherentTruncated", row2.trialType);   // a stimulus-off condition's trialType takes Truncated
+        Assert.AreEqual(60, row2.auditoryCutoffPositionCm, 1e-9);   // the first pip after 30 wheel cm, past the half track (50 track cm)
+        Assert.IsTrue(double.IsNaN(row2.visualCutoffPositionCm));
+        Assert.AreEqual("audiovisualCoherentTruncated", row2.trialType);   // a cutoff condition's trialType takes Truncated
     }
 
     [TestMethod]
-    public void ACutPointOfOneNeverSwitchesAStimulusOff()
+    public void ACutPointOfOneNeverSwitchesAStimulusCutoff()
     {
         // 1.0 is the track's end: never during the trial, on a trial ended at the track's end (past 0.9995, which rounds
         // to 1.000) and on an auto-reward trial whose last pip plays at the end; both off positions NaN.
@@ -1590,11 +1653,11 @@ public class TrialRulesTests
             var task = Fixture.Task(2);
             task.Track.LengthsCm = new List<double> { 100 };
             task.AutoRewardProbability = autoReward;
-            task.StimulusOff.TrackFractions = new List<double> { 1.0 };
-            task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "stimulusOff.stimuli", "both" } } } };
+            task.StimulusCutoff.TrackFractions = new List<double> { 1.0 };
+            task.TrialConditions = new List<TrialCondition> { new TrialCondition { Weight = 1, Set = new Dictionary<object, object> { { "stimulusCutoff.stimuli", "both" } } } };
             var rig = new Rig(Fixture.Setup(task));
             var trial = rig.RunTo(TrialEventKind.Start).Trial;
-            Assert.IsTrue(double.IsNaN(trial.stimulusOffFraction));
+            Assert.IsTrue(double.IsNaN(trial.cutoffFraction));
             rig.Wheel(trial.trackLengthWheelCm * 0.9996);
             rig.Until(rig.Now + 0.1);
             rig.Wheel(trial.trackLengthWheelCm + 1);
@@ -1603,7 +1666,7 @@ public class TrialRulesTests
             var rows = rig.Events.Where(e => e.Kind == TrialEventKind.Update).Select(e => e.Update.Row).ToList();
             Assert.IsTrue(rows.Count > 0);
             Assert.IsTrue(rows.All(r => r.auditoryLevelDbfs.Equals(trial.auditoryLevelDbfs) && r.visualContrast == trial.visualContrast), "autoReward " + autoReward);
-            Assert.IsTrue(double.IsNaN(outcome.auditoryOffPositionCm) && double.IsNaN(outcome.visualOffPositionCm), "autoReward " + autoReward);
+            Assert.IsTrue(double.IsNaN(outcome.auditoryCutoffPositionCm) && double.IsNaN(outcome.visualCutoffPositionCm), "autoReward " + autoReward);
         }
     }
 

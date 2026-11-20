@@ -23,6 +23,7 @@ MAIN = ET.fromstring(TEXT.encode("utf-8"))
 OUTCOME_EFFECTS = "OpenRigs.Trials:TrialOutcomeEffects.bonsai"
 PLAY_REWARD_TONE = "OpenRigs.Audio:PlayRewardTone.bonsai"
 ZAPIT_TRIALS = "OpenRigs.Trials:ZapitTrials.bonsai"
+PLAY_PENALTY_FLASH = "OpenRigs.Vision:PlayPenaltyFlash.bonsai"
 
 
 def group(name: str) -> ET.Element:
@@ -184,15 +185,15 @@ def _speaker_buffer(nodes: list[ET.Element], upstream: set[int]) -> ET.Element:
 
 def test_the_pips_and_the_reward_tone_play_equalised_on_every_speaker():
     # Each sound is one row laid out on rig.yml's channels, equalised for each speaker: the reward tone by OpenRigs.Audio's
-    # PlayRewardTone (SpeakerBuffer at the highest rewardTone.levelDbfs on every speaker, played at the trial's) on each rewarded
-    # outcome TrialOutcomeEffects passes on, its input the trial's RewardToneLevelDbfs, from this repo's file; the pips by
+    # PlayRewardTone (SpeakerBuffer at the highest reward.tone.levelDbfs on every speaker, played at the trial's) on each rewarded
+    # outcome TrialOutcomeEffects and PlayPenaltyFlash pass on, its input the trial's RewardToneLevelDbfs, from this repo's file; the pips by
     # LayOutPips (PipSet: SpeakerSet.Layout on every speaker as stored, checked at the highest level the conditions draw,
     # TrialRules.MaxStimulusLevel), fed Zip(MaxStimulusLevel, Sweep, Zip(Speakers, pips)).
     nodes, edges = _scope(group("TaskLogic"))
     (tone,) = [i for i, n in enumerate(nodes) if n.get("Path") == PLAY_REWARD_TONE]
     assert nodes[tone].findtext(W + "RewardToneFile") == "./sounds/reward_tone.bin"
-    assert [nodes[i].get("Path") or nodes[i].findtext(W + "Name") or nodes[i].findtext(W + "Selector") for i in sorted(_upstream(edges, tone))][-3:] == [
-        OUTCOME_EFFECTS, "Rewarded?", "RewardToneLevelDbfs"]
+    assert [nodes[i].get("Path") or nodes[i].findtext(W + "Name") or nodes[i].findtext(W + "Selector") for i in sorted(_upstream(edges, tone))][-4:] == [
+        OUTCOME_EFFECTS, "Rewarded?", "RewardToneLevelDbfs", PLAY_PENALTY_FLASH]
     (level,) = [a for a, b in edges if b == tone]
     assert nodes[level].get(XSI) == "MemberSelector" and nodes[level].findtext(W + "Selector") == "RewardToneLevelDbfs"
     (before,) = [a for a, b in edges if b == level]
@@ -354,3 +355,15 @@ def test_one_grating_subject_sets_the_grating():
     (source,) = [a for a, b in edges if b == states]
     assert nodes[source].get(XSI) == "SubscribeSubject" and nodes[source].findtext(W + "Name") == "TrialEvents"
     assert not re.search(r"<(?:rx:)?Name>Grating\w", TEXT)
+
+
+def test_the_penalty_flash_is_the_shared_include_fed_each_outcome():
+    # OpenRigs.Vision PlayPenaltyFlash, once, on each outcome TrialOutcomeEffects passes on (a penalised one's kind's
+    # penalty.<kind>.flash, checked at Go against the penalty sound by TrialRules.PenaltyFlashes); it passes each one on.
+    nodes, edges = _scope(group("TaskLogic"))
+    assert TEXT.count(f'Path="{PLAY_PENALTY_FLASH}"') == 1
+    (flash,) = [i for i, n in enumerate(nodes) if n.get("Path") == PLAY_PENALTY_FLASH]
+    assert [nodes[a].get("Path") for a, b in edges if b == flash] == [OUTCOME_EFFECTS]
+    assert [nodes[b].findtext(W + "Name") for a, b in edges if a == flash] == ["Rewarded?"]
+    logic = (ROOT / "src" / "Extensions" / "TrialLogic.cs").read_text(encoding="utf-8-sig")
+    assert "public PenaltyFlashRules PenaltyFlashes" in logic

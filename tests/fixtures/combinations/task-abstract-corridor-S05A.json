@@ -6,8 +6,8 @@
       "trialType": "auditory",
       "conditionWeight": 84,
       "values": {
-        "stimulusOff.stimuli": "none",
-        "stimulusOff.trackFractions": 1.0,
+        "stimulusCutoff.stimuli": "none",
+        "stimulusCutoff.trackFractions": 1.0,
         "track.lengthsCm": 80.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -18,8 +18,8 @@
       "trialType": "auditory",
       "conditionWeight": 84,
       "values": {
-        "stimulusOff.stimuli": "none",
-        "stimulusOff.trackFractions": 1.0,
+        "stimulusCutoff.stimuli": "none",
+        "stimulusCutoff.trackFractions": 1.0,
         "track.lengthsCm": 100.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -30,8 +30,8 @@
       "trialType": "auditory",
       "conditionWeight": 84,
       "values": {
-        "stimulusOff.stimuli": "none",
-        "stimulusOff.trackFractions": 1.0,
+        "stimulusCutoff.stimuli": "none",
+        "stimulusCutoff.trackFractions": 1.0,
         "track.lengthsCm": 120.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -42,8 +42,8 @@
       "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
-        "stimulusOff.stimuli": "both",
-        "stimulusOff.trackFractions": 0.4,
+        "stimulusCutoff.stimuli": "both",
+        "stimulusCutoff.trackFractions": 0.4,
         "track.lengthsCm": 80.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -54,8 +54,8 @@
       "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
-        "stimulusOff.stimuli": "both",
-        "stimulusOff.trackFractions": 0.6,
+        "stimulusCutoff.stimuli": "both",
+        "stimulusCutoff.trackFractions": 0.6,
         "track.lengthsCm": 80.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -66,8 +66,8 @@
       "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
-        "stimulusOff.stimuli": "both",
-        "stimulusOff.trackFractions": 0.4,
+        "stimulusCutoff.stimuli": "both",
+        "stimulusCutoff.trackFractions": 0.4,
         "track.lengthsCm": 100.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -78,8 +78,8 @@
       "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
-        "stimulusOff.stimuli": "both",
-        "stimulusOff.trackFractions": 0.6,
+        "stimulusCutoff.stimuli": "both",
+        "stimulusCutoff.trackFractions": 0.6,
         "track.lengthsCm": 100.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -90,8 +90,8 @@
       "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
-        "stimulusOff.stimuli": "both",
-        "stimulusOff.trackFractions": 0.4,
+        "stimulusCutoff.stimuli": "both",
+        "stimulusCutoff.trackFractions": 0.4,
         "track.lengthsCm": 120.0,
         "visualStimulus.contrasts": 0.0
       }
@@ -102,8 +102,8 @@
       "trialType": "auditoryTruncated",
       "conditionWeight": 16,
       "values": {
-        "stimulusOff.stimuli": "both",
-        "stimulusOff.trackFractions": 0.6,
+        "stimulusCutoff.stimuli": "both",
+        "stimulusCutoff.trackFractions": 0.6,
         "track.lengthsCm": 120.0,
         "visualStimulus.contrasts": 0.0
       }

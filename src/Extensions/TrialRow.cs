@@ -12,10 +12,12 @@ public class TrialRow
     public double quietWaitSeconds;
     public double trialStartTime;
     public double stimulusOnsetTime;
+    public double stimulusOffTime;      // the loop's (StimulusTiming), or a cutoff's step where neither stimulus plays when earlier
     public double outcomeTime;
     public double rewardOfferedUl;
     public bool rewarded;
     public double penaltyTimeoutSeconds;
+    public double penaltyFlashBrightness;   // 0: no flash
     public bool penalised;
     public int laserCondition;
     public double laserPowerMw;
@@ -33,6 +35,6 @@ public class TrialRow
     public double outcomePositionCm;
     public double outcomeAuditoryFrequencyHz;
     public double outcomeVisualSpatialFrequencyCpd;
-    public double auditoryOffPositionCm;  // NaN when the tone never switched off
-    public double visualOffPositionCm;    // NaN when the grating never switched off
+    public double auditoryCutoffPositionCm;   // NaN when the tone never switched off
+    public double visualCutoffPositionCm;     // NaN when the grating never switched off
 }

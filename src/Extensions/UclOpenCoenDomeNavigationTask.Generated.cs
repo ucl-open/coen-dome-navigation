@@ -437,7 +437,7 @@ namespace UclOpenCoenDomeNavigationTask
     ///the same file to list its conditions and its max ramp-down. "Stimulus" is the tone and grating; the laser is
     ///continuous: it starts at the trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds
     ///before the first tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the
-    ///trial's outcome, or at a cap derived at Go (the max responseWindowSeconds any condition can draw plus
+    ///trial's outcome, or at a cap derived at Go (the max stimulusToResponseWindowSeconds plus responseWindowSeconds any condition can draw plus
     ///laser_to_stimulus_seconds plus 0.25 s) if that comes first. The trigger line, and the masking light on it, stays high past
     ///the outcome for the conditions file's max ramp-down. A trial that ends before its trigger has no laser.
     /// </summary>
@@ -448,7 +448,7 @@ namespace UclOpenCoenDomeNavigationTask
     the same file to list its conditions and its max ramp-down. ""Stimulus"" is the tone and grating; the laser is
     continuous: it starts at the trigger (the trigger line's rising edge on a hardware-triggered rig), laser_to_stimulus_seconds
     before the first tone pip (after it if negative), in whole 50 ms steps and at most 0.2 s, and Bonsai stops it at the
-    trial's outcome, or at a cap derived at Go (the max responseWindowSeconds any condition can draw plus
+    trial's outcome, or at a cap derived at Go (the max stimulusToResponseWindowSeconds plus responseWindowSeconds any condition can draw plus
     laser_to_stimulus_seconds plus 0.25 s) if that comes first. The trigger line, and the masking light on it, stays high past
     the outcome for the conditions file's max ramp-down. A trial that ends before its trigger has no laser.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
@@ -634,86 +634,64 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// What a penalised trial costs: a timeout (the trial log's penaltyTimeoutSeconds), and the penalty sound with it
-    ///unless its level is mute. A penalised choice costs this block's own values, a penalised miss its noResponse override
-    ///(a null field the choice's). Each task decides which trials are penalised and which are misses; timeoutSeconds has no
-    ///lab default: each task file gives it.
+    /// What a penalised trial costs, by its kind (OpenRigs.Trials Penalties.For): incorrect (a wrong choice, a go/no-go
+    ///false alarm, a probe's tails) or noResponse (a miss), each its own full values, nothing inherited. noResponse null:
+    ///misses are never penalised, and a task that penalises one refuses it at Go (check_misses). Which trials are penalised,
+    ///and of which kind, is the task's.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"What a penalised trial costs: a timeout (the trial log's penaltyTimeoutSeconds), and the penalty sound with it
-    unless its level is mute. A penalised choice costs this block's own values, a penalised miss its noResponse override
-    (a null field the choice's). Each task decides which trials are penalised and which are misses; timeoutSeconds has no
-    lab default: each task file gives it.")]
+    [System.ComponentModel.DescriptionAttribute(@"What a penalised trial costs, by its kind (OpenRigs.Trials Penalties.For): incorrect (a wrong choice, a go/no-go
+    false alarm, a probe's tails) or noResponse (a miss), each its own full values, nothing inherited. noResponse null:
+    misses are never penalised, and a task that penalises one refuses it at Go (check_misses). Which trials are penalised,
+    and of which kind, is the task's.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Penalty
     {
     
-        private double _timeoutSeconds;
-    
-        private PenaltySound _sound;
+        private PenaltyCost _incorrect;
     
         private PenaltyCost _noResponse;
     
         public Penalty()
         {
-            _sound = new PenaltySound();
+            _incorrect = new PenaltyCost();
             _noResponse = new PenaltyCost();
         }
     
         protected Penalty(Penalty other)
         {
-            _timeoutSeconds = other._timeoutSeconds;
-            _sound = other._sound;
+            _incorrect = other._incorrect;
             _noResponse = other._noResponse;
         }
     
         /// <summary>
-        /// Timeout after a penalised choice, in seconds, and after a penalised miss unless noResponse.timeoutSeconds sets its own; the next interval starts after it
-        /// </summary>
-        [Newtonsoft.Json.JsonPropertyAttribute("timeoutSeconds", Required=Newtonsoft.Json.Required.Always)]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeoutSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Timeout after a penalised choice, in seconds, and after a penalised miss unless n" +
-            "oResponse.timeoutSeconds sets its own; the next interval starts after it")]
-        public double TimeoutSeconds
-        {
-            get
-            {
-                return _timeoutSeconds;
-            }
-            set
-            {
-                _timeoutSeconds = value;
-            }
-        }
-    
-        /// <summary>
-        /// The penalty sound, with every timeout
+        /// What a penalised wrong choice costs (a go/no-go false alarm, a probe's tails)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("sound")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sound")]
-        [System.ComponentModel.DescriptionAttribute("The penalty sound, with every timeout")]
-        public PenaltySound Sound
+        [Newtonsoft.Json.JsonPropertyAttribute("incorrect")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="incorrect")]
+        [System.ComponentModel.DescriptionAttribute("What a penalised wrong choice costs (a go/no-go false alarm, a probe\'s tails)")]
+        public PenaltyCost Incorrect
         {
             get
             {
-                return _sound;
+                return _incorrect;
             }
             set
             {
-                _sound = value;
+                _incorrect = value;
             }
         }
     
         /// <summary>
-        /// What a penalised miss costs where it differs from a penalised choice: each null field the choice's
+        /// What a penalised miss costs; null: misses are never penalised (refused at Go by a task that penalises one)
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("noResponse")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="noResponse")]
-        [System.ComponentModel.DescriptionAttribute("What a penalised miss costs where it differs from a penalised choice: each null f" +
-            "ield the choice\'s")]
+        [System.ComponentModel.DescriptionAttribute("What a penalised miss costs; null: misses are never penalised (refused at Go by a" +
+            " task that penalises one)")]
         public PenaltyCost NoResponse
         {
             get
@@ -738,8 +716,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("TimeoutSeconds = " + _timeoutSeconds + ", ");
-            stringBuilder.Append("Sound = " + _sound + ", ");
+            stringBuilder.Append("Incorrect = " + _incorrect + ", ");
             stringBuilder.Append("NoResponse = " + _noResponse);
             return true;
         }
@@ -760,40 +737,45 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// What a penalised miss costs, each field null for the penalised choice's (penalty's own): never null itself, so a
-    ///condition or a training stage can set any one of its fields by its dotted path.
+    /// What one kind of penalised outcome costs: its timeout (the trial log's penaltyTimeoutSeconds), the penalty sound and
+    ///the penalty flash (penaltyFlashBrightness).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("What a penalised miss costs, each field null for the penalised choice\'s (penalty\'" +
-        "s own): never null itself, so a\ncondition or a training stage can set any one of" +
-        " its fields by its dotted path.")]
+    [System.ComponentModel.DescriptionAttribute("What one kind of penalised outcome costs: its timeout (the trial log\'s penaltyTim" +
+        "eoutSeconds), the penalty sound and\nthe penalty flash (penaltyFlashBrightness).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class PenaltyCost
     {
     
-        private double? _timeoutSeconds;
+        private double _timeoutSeconds;
     
-        private PenaltyCostSound _sound;
+        private PenaltySound _sound;
+    
+        private PenaltyFlash _flash;
     
         public PenaltyCost()
         {
-            _sound = new PenaltyCostSound();
+            _timeoutSeconds = 4D;
+            _sound = new PenaltySound();
+            _flash = new PenaltyFlash();
         }
     
         protected PenaltyCost(PenaltyCost other)
         {
             _timeoutSeconds = other._timeoutSeconds;
             _sound = other._sound;
+            _flash = other._flash;
         }
     
         /// <summary>
-        /// Timeout after a penalised miss, in seconds; null: penalty.timeoutSeconds
+        /// Timeout after the penalised outcome, in seconds; the next interval starts after it
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("timeoutSeconds")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="timeoutSeconds")]
-        [System.ComponentModel.DescriptionAttribute("Timeout after a penalised miss, in seconds; null: penalty.timeoutSeconds")]
-        public double? TimeoutSeconds
+        [System.ComponentModel.DescriptionAttribute("Timeout after the penalised outcome, in seconds; the next interval starts after i" +
+            "t")]
+        public double TimeoutSeconds
         {
             get
             {
@@ -806,13 +788,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The penalty sound on a penalised miss
+        /// The penalty sound, with the timeout
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("sound")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="sound")]
-        [System.ComponentModel.DescriptionAttribute("The penalty sound on a penalised miss")]
-        public PenaltyCostSound Sound
+        [System.ComponentModel.DescriptionAttribute("The penalty sound, with the timeout")]
+        public PenaltySound Sound
         {
             get
             {
@@ -821,6 +803,25 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _sound = value;
+            }
+        }
+    
+        /// <summary>
+        /// The penalty flash, with the sound; off (brightness 0) by default
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("flash")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="flash")]
+        [System.ComponentModel.DescriptionAttribute("The penalty flash, with the sound; off (brightness 0) by default")]
+        public PenaltyFlash Flash
+        {
+            get
+            {
+                return _flash;
+            }
+            set
+            {
+                _flash = value;
             }
         }
     
@@ -837,7 +838,8 @@ namespace UclOpenCoenDomeNavigationTask
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
             stringBuilder.Append("TimeoutSeconds = " + _timeoutSeconds + ", ");
-            stringBuilder.Append("Sound = " + _sound);
+            stringBuilder.Append("Sound = " + _sound + ", ");
+            stringBuilder.Append("Flash = " + _flash);
             return true;
         }
     
@@ -857,60 +859,88 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// A penalised miss's penalty sound: its level, or null for the penalised choice's (penalty.sound.levelDbfs).
+    /// The penalty flash (OpenRigs.Vision PlayPenaltyFlash, the same in every task with a projector): the whole projector
+    ///field at brightness of full white, flashing at rateHz from the outcome for the penalty sound's length, which must fit in
+    ///the kind's timeout (checked at Go against the sound file, OpenRigs.Trials PenaltyFlashRules, the same rules).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("A penalised miss\'s penalty sound: its level, or null for the penalised choice\'s (" +
-        "penalty.sound.levelDbfs).")]
+    [System.ComponentModel.DescriptionAttribute(@"The penalty flash (OpenRigs.Vision PlayPenaltyFlash, the same in every task with a projector): the whole projector
+    field at brightness of full white, flashing at rateHz from the outcome for the penalty sound's length, which must fit in
+    the kind's timeout (checked at Go against the sound file, OpenRigs.Trials PenaltyFlashRules, the same rules).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class PenaltyCostSound
+    public partial class PenaltyFlash
     {
     
-        private object _levelDbfs;
+        private double _brightness;
     
-        public PenaltyCostSound()
+        private double _rateHz;
+    
+        public PenaltyFlash()
         {
+            _brightness = 0D;
+            _rateHz = 10D;
         }
     
-        protected PenaltyCostSound(PenaltyCostSound other)
+        protected PenaltyFlash(PenaltyFlash other)
         {
-            _levelDbfs = other._levelDbfs;
+            _brightness = other._brightness;
+            _rateHz = other._rateHz;
         }
     
         /// <summary>
-        /// The penalty sound's level on a penalised miss, in dBFS RMS as penalty.sound.levelDbfs; mute: no sound; null: penalty.sound.levelDbfs
+        /// Brightness of the flash, 0 to 1 of the projector's full white after gamma correction (1: full white), over the whole field and everything drawn, a stimulus still on included; 0: no flash (as the sound's mute). Logged as penaltyFlashBrightness
         /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute("The penalty sound\'s level on a penalised miss, in dBFS RMS as penalty.sound.level" +
-            "Dbfs; mute: no sound; null: penalty.sound.levelDbfs")]
-        public object LevelDbfs
+        [Newtonsoft.Json.JsonPropertyAttribute("brightness")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="brightness")]
+        [System.ComponentModel.DescriptionAttribute("Brightness of the flash, 0 to 1 of the projector\'s full white after gamma correct" +
+            "ion (1: full white), over the whole field and everything drawn, a stimulus still" +
+            " on included; 0: no flash (as the sound\'s mute). Logged as penaltyFlashBrightnes" +
+            "s")]
+        public double Brightness
         {
             get
             {
-                return _levelDbfs;
+                return _brightness;
             }
             set
             {
-                _levelDbfs = value;
+                _brightness = value;
             }
         }
     
-        public System.IObservable<PenaltyCostSound> Generate()
+        /// <summary>
+        /// Flash rate in Hz: the field is white for the first half of each 1/rateHz cycle and the normal display the other half, from the outcome for the penalty sound's length (refused at Go when longer than timeoutSeconds); at most 30, half the projector's 60 Hz render loop
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rateHz")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rateHz")]
+        [System.ComponentModel.DescriptionAttribute(@"Flash rate in Hz: the field is white for the first half of each 1/rateHz cycle and the normal display the other half, from the outcome for the penalty sound's length (refused at Go when longer than timeoutSeconds); at most 30, half the projector's 60 Hz render loop")]
+        public double RateHz
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PenaltyCostSound(this)));
+            get
+            {
+                return _rateHz;
+            }
+            set
+            {
+                _rateHz = value;
+            }
         }
     
-        public System.IObservable<PenaltyCostSound> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<PenaltyFlash> Generate()
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new PenaltyCostSound(this));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PenaltyFlash(this)));
+        }
+    
+        public System.IObservable<PenaltyFlash> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new PenaltyFlash(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
         {
-            stringBuilder.Append("LevelDbfs = " + _levelDbfs);
+            stringBuilder.Append("Brightness = " + _brightness + ", ");
+            stringBuilder.Append("RateHz = " + _rateHz);
             return true;
         }
     
@@ -1004,11 +1034,13 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Reward delivery on the left spout's valve: the size, and the large-reward trials (the lab's reward block).
+    /// Reward delivery on the left spout's valve (the lab's reward block): the size, the large-reward trials and the reward
+    ///tone (src/sounds/reward_tone.bin, OpenRigs.Audio PlayRewardTone) at tone.levelDbfs, on every speaker.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("Reward delivery on the left spout\'s valve: the size, and the large-reward trials " +
-        "(the lab\'s reward block).")]
+    [System.ComponentModel.DescriptionAttribute("Reward delivery on the left spout\'s valve (the lab\'s reward block): the size, the" +
+        " large-reward trials and the reward\ntone (src/sounds/reward_tone.bin, OpenRigs.A" +
+        "udio PlayRewardTone) at tone.levelDbfs, on every speaker.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Reward
@@ -1020,10 +1052,13 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _largeProbability;
     
+        private RewardTone _tone;
+    
         public Reward()
         {
             _largeMultiplier = 2D;
             _largeProbability = 0D;
+            _tone = new RewardTone();
         }
     
         protected Reward(Reward other)
@@ -1031,6 +1066,7 @@ namespace UclOpenCoenDomeNavigationTask
             _sizeUl = other._sizeUl;
             _largeMultiplier = other._largeMultiplier;
             _largeProbability = other._largeProbability;
+            _tone = other._tone;
         }
     
         /// <summary>
@@ -1088,6 +1124,25 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
+        /// <summary>
+        /// The reward tone, with every reward
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("tone")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="tone")]
+        [System.ComponentModel.DescriptionAttribute("The reward tone, with every reward")]
+        public RewardTone Tone
+        {
+            get
+            {
+                return _tone;
+            }
+            set
+            {
+                _tone = value;
+            }
+        }
+    
         public System.IObservable<Reward> Generate()
         {
             return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Reward(this)));
@@ -1102,7 +1157,8 @@ namespace UclOpenCoenDomeNavigationTask
         {
             stringBuilder.Append("SizeUl = " + _sizeUl + ", ");
             stringBuilder.Append("LargeMultiplier = " + _largeMultiplier + ", ");
-            stringBuilder.Append("LargeProbability = " + _largeProbability);
+            stringBuilder.Append("LargeProbability = " + _largeProbability + ", ");
+            stringBuilder.Append("Tone = " + _tone);
             return true;
         }
     
@@ -1122,11 +1178,11 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// A task's reward tone, played at each trial's levelDbfs (OpenRigs.Audio PlayRewardTone).
+    /// A task's reward tone, played at each rewarded trial's levelDbfs (OpenRigs.Audio PlayRewardTone): reward.tone.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute("A task\'s reward tone, played at each trial\'s levelDbfs (OpenRigs.Audio PlayReward" +
-        "Tone).")]
+    [System.ComponentModel.DescriptionAttribute("A task\'s reward tone, played at each rewarded trial\'s levelDbfs (OpenRigs.Audio P" +
+        "layRewardTone): reward.tone.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class RewardTone
@@ -1144,12 +1200,12 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The reward tone's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -35. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
+        /// The reward tone's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default mute. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("levelDbfs")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="levelDbfs")]
-        [System.ComponentModel.DescriptionAttribute(@"The reward tone's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default -35. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
+        [System.ComponentModel.DescriptionAttribute(@"The reward tone's level in dBFS RMS: the RMS of the sound over its samples outside silent stretches (runs of exactly-zero samples at least 1 ms long), as the task gives it, before the speaker's equalisation, against full scale (a full-scale sine is -3); mute: no sound. The lab's default mute. The workflow stops at Go if any peak at the highest level a trial can draw would reach -1 dBFS after equalisation. Sounds overlapping on a speaker share its headroom: each buffer's peak is checked, not their mix")]
         public object LevelDbfs
         {
             get
@@ -1194,34 +1250,262 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// A stimulus-off trial: which stimuli switch off, and where (a condition sets stimuli to make its trials stimulus-off ones).
+    /// The spouts (the lab's block, open_rigs.core.task Spouts; OpenRigs.Trials SpoutCommands): only the left spout counts.
+    ///Always in (this task's default): both spouts stay where Ready put them all session, as before the block. Otherwise the left
+    ///spout alone comes in at the SpoutsIn cue, stimulusToSpoutsInSeconds from the first pip (negative: before it, the trial
+    ///starting that much earlier; always in, no lead), stays in on a reward and goes out without one, and goes out
+    ///rewardConsumptionSeconds into the next interval (time to drink a reward, inside the interval; nothing while always in). A lick counts from the response window's opening (trialStructure.stimulusToResponseWindowSeconds after
+    ///the first pip), so a positive stimulusToSpoutsInSeconds is at most that (lib's Spouts.check_fits); a negative one, the
+    ///trial's lead, is in whole 50 ms steps (the pips' grid from the trial start).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute(@"The spouts (the lab's block, open_rigs.core.task Spouts; OpenRigs.Trials SpoutCommands): only the left spout counts.
+    Always in (this task's default): both spouts stay where Ready put them all session, as before the block. Otherwise the left
+    spout alone comes in at the SpoutsIn cue, stimulusToSpoutsInSeconds from the first pip (negative: before it, the trial
+    starting that much earlier; always in, no lead), stays in on a reward and goes out without one, and goes out
+    rewardConsumptionSeconds into the next interval (time to drink a reward, inside the interval; nothing while always in). A lick counts from the response window's opening (trialStructure.stimulusToResponseWindowSeconds after
+    the first pip), so a positive stimulusToSpoutsInSeconds is at most that (lib's Spouts.check_fits); a negative one, the
+    trial's lead, is in whole 50 ms steps (the pips' grid from the trial start).")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class SpoutsSettings
+    {
+    
+        private bool _alwaysIn;
+    
+        private double _stimulusToSpoutsInSeconds;
+    
+        private double _rewardConsumptionSeconds;
+    
+        public SpoutsSettings()
+        {
+            _alwaysIn = true;
+            _rewardConsumptionSeconds = 1.5D;
+        }
+    
+        protected SpoutsSettings(SpoutsSettings other)
+        {
+            _alwaysIn = other._alwaysIn;
+            _stimulusToSpoutsInSeconds = other._stimulusToSpoutsInSeconds;
+            _rewardConsumptionSeconds = other._rewardConsumptionSeconds;
+        }
+    
+        /// <summary>
+        /// Always in: both spouts stay where Ready put them for the whole session, never moved by the task (this task's default)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("alwaysIn")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="alwaysIn")]
+        [System.ComponentModel.DescriptionAttribute("Always in: both spouts stay where Ready put them for the whole session, never mov" +
+            "ed by the task (this task\'s default)")]
+        public bool AlwaysIn
+        {
+            get
+            {
+                return _alwaysIn;
+            }
+            set
+            {
+                _alwaysIn = value;
+            }
+        }
+    
+        /// <summary>
+        /// From stimulus onset to moving the spouts in (the SpoutsIn cue), in seconds, signed like laserToStimulusSeconds: negative, the spouts in that long before the stimulus (the trial starts that much earlier; with rewardConsumptionSeconds at most itiMinSeconds); positive, at most the stimulus to the response window's opening
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("stimulusToSpoutsInSeconds", Required=Newtonsoft.Json.Required.Always)]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulusToSpoutsInSeconds")]
+        [System.ComponentModel.DescriptionAttribute(@"From stimulus onset to moving the spouts in (the SpoutsIn cue), in seconds, signed like laserToStimulusSeconds: negative, the spouts in that long before the stimulus (the trial starts that much earlier; with rewardConsumptionSeconds at most itiMinSeconds); positive, at most the stimulus to the response window's opening")]
+        public double StimulusToSpoutsInSeconds
+        {
+            get
+            {
+                return _stimulusToSpoutsInSeconds;
+            }
+            set
+            {
+                _stimulusToSpoutsInSeconds = value;
+            }
+        }
+    
+        /// <summary>
+        /// From the next interval's start (the outcome plus any timeout) to drawing the spouts out (the SpoutsOut cue), in seconds: time to drink a reward, inside the interval, which it never delays; with any lead of the spouts before the stimulus, at most itiMinSeconds
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("rewardConsumptionSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardConsumptionSeconds")]
+        [System.ComponentModel.DescriptionAttribute(@"From the next interval's start (the outcome plus any timeout) to drawing the spouts out (the SpoutsOut cue), in seconds: time to drink a reward, inside the interval, which it never delays; with any lead of the spouts before the stimulus, at most itiMinSeconds")]
+        public double RewardConsumptionSeconds
+        {
+            get
+            {
+                return _rewardConsumptionSeconds;
+            }
+            set
+            {
+                _rewardConsumptionSeconds = value;
+            }
+        }
+    
+        public System.IObservable<SpoutsSettings> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new SpoutsSettings(this)));
+        }
+    
+        public System.IObservable<SpoutsSettings> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new SpoutsSettings(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("AlwaysIn = " + _alwaysIn + ", ");
+            stringBuilder.Append("StimulusToSpoutsInSeconds = " + _stimulusToSpoutsInSeconds + ", ");
+            stringBuilder.Append("RewardConsumptionSeconds = " + _rewardConsumptionSeconds);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// When the tone and grating end (the lab's block, open_rigs.core.task StimulusTiming): durationSeconds from the first pip,
+    ///or responseToStimulusOffSeconds after the outcome (on a miss, the response window's end or the track's end), whichever comes
+    ///first; until then they go on following the wheel and the auto-progress after the outcome, held at the track's end. A cutoff
+    ///trial's cut stimuli stay off. Logged as stimulusOffTime (the earlier of this and a cutoff where neither stimulus plays).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
+    [System.ComponentModel.DescriptionAttribute(@"When the tone and grating end (the lab's block, open_rigs.core.task StimulusTiming): durationSeconds from the first pip,
+    or responseToStimulusOffSeconds after the outcome (on a miss, the response window's end or the track's end), whichever comes
+    first; until then they go on following the wheel and the auto-progress after the outcome, held at the track's end. A cutoff
+    trial's cut stimuli stay off. Logged as stimulusOffTime (the earlier of this and a cutoff where neither stimulus plays).")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class Stimulus
+    {
+    
+        private double? _durationSeconds;
+    
+        private double? _responseToStimulusOffSeconds;
+    
+        public Stimulus()
+        {
+            _responseToStimulusOffSeconds = 0D;
+        }
+    
+        protected Stimulus(Stimulus other)
+        {
+            _durationSeconds = other._durationSeconds;
+            _responseToStimulusOffSeconds = other._responseToStimulusOffSeconds;
+        }
+    
+        /// <summary>
+        /// The longest the stimulus lasts from its onset, in seconds; off before the next trial's stimulus can come (the soonest outcome plus the shortest penalty timeout, 0 where a reward can come, plus itiMinSeconds). Null: no cap, the stimulus ends only responseToStimulusOffSeconds after the response (both null is refused)
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("durationSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="durationSeconds")]
+        [System.ComponentModel.DescriptionAttribute(@"The longest the stimulus lasts from its onset, in seconds; off before the next trial's stimulus can come (the soonest outcome plus the shortest penalty timeout, 0 where a reward can come, plus itiMinSeconds). Null: no cap, the stimulus ends only responseToStimulusOffSeconds after the response (both null is refused)")]
+        public double? DurationSeconds
+        {
+            get
+            {
+                return _durationSeconds;
+            }
+            set
+            {
+                _durationSeconds = value;
+            }
+        }
+    
+        /// <summary>
+        /// From the response (the outcome; on a miss, the response window's end or the track's end) to the stimulus off, in seconds, unless the duration ends it first: 0 (the default), off at the outcome; null, the outcome does not end it (it runs durationSeconds); at most the shortest penalty timeout (0 where a reward can come, so every trial here) plus itiMinSeconds
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("responseToStimulusOffSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="responseToStimulusOffSeconds")]
+        [System.ComponentModel.DescriptionAttribute(@"From the response (the outcome; on a miss, the response window's end or the track's end) to the stimulus off, in seconds, unless the duration ends it first: 0 (the default), off at the outcome; null, the outcome does not end it (it runs durationSeconds); at most the shortest penalty timeout (0 where a reward can come, so every trial here) plus itiMinSeconds")]
+        public double? ResponseToStimulusOffSeconds
+        {
+            get
+            {
+                return _responseToStimulusOffSeconds;
+            }
+            set
+            {
+                _responseToStimulusOffSeconds = value;
+            }
+        }
+    
+        public System.IObservable<Stimulus> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Stimulus(this)));
+        }
+    
+        public System.IObservable<Stimulus> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new Stimulus(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("DurationSeconds = " + _durationSeconds + ", ");
+            stringBuilder.Append("ResponseToStimulusOffSeconds = " + _responseToStimulusOffSeconds);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    /// <summary>
+    /// A cutoff trial: which stimuli switch off, and where (a condition sets stimuli to make its trials cutoff ones).
     ///
     ///Each listed stimulus switches off once the mouse has run a track fraction of the trial's track (the fraction one of
     ///trackFractions, a list field); an unlisted stimulus stays on. Everything else about the trial is unchanged, so it is still
     ///rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"A stimulus-off trial: which stimuli switch off, and where (a condition sets stimuli to make its trials stimulus-off ones).
+    [System.ComponentModel.DescriptionAttribute(@"A cutoff trial: which stimuli switch off, and where (a condition sets stimuli to make its trials cutoff ones).
 
     Each listed stimulus switches off once the mouse has run a track fraction of the trial's track (the fraction one of
     trackFractions, a list field); an unlisted stimulus stays on. Everything else about the trial is unchanged, so it is still
     rewarded as normal: the animal has to keep going and find the reward zone without the stimulus.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class StimulusOff
+    public partial class StimulusCutoff
     {
     
-        private StimulusOffStimuli _stimuli;
+        private StimulusCutoffStimuli _stimuli;
     
         private System.Collections.Generic.List<double> _trackFractions;
     
-        public StimulusOff()
+        public StimulusCutoff()
         {
-            _stimuli = StimulusOffStimuli.None;
+            _stimuli = StimulusCutoffStimuli.None;
             _trackFractions = new System.Collections.Generic.List<double>();
         }
     
-        protected StimulusOff(StimulusOff other)
+        protected StimulusCutoff(StimulusCutoff other)
         {
             _stimuli = other._stimuli;
             _trackFractions = other._trackFractions;
@@ -1234,7 +1518,7 @@ namespace UclOpenCoenDomeNavigationTask
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimuli")]
         [System.ComponentModel.DescriptionAttribute("The stimuli that switch off: none (an ordinary trial), auditory (the tone), visua" +
             "l (the grating) or both")]
-        public StimulusOffStimuli Stimuli
+        public StimulusCutoffStimuli Stimuli
         {
             get
             {
@@ -1247,14 +1531,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial; 1 (the default) is the track's end, so never during the trial: a stimulus-off condition sets its own fractions
+        /// Where the stimuli switch off, as a fraction of the trial's track length, one drawn per trial; 1 (the default) is the track's end, so never during the trial: a cutoff condition sets its own fractions
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("trackFractions")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="trackFractions")]
         [System.ComponentModel.DescriptionAttribute("Where the stimuli switch off, as a fraction of the trial\'s track length, one draw" +
-            "n per trial; 1 (the default) is the track\'s end, so never during the trial: a st" +
-            "imulus-off condition sets its own fractions")]
+            "n per trial; 1 (the default) is the track\'s end, so never during the trial: a cu" +
+            "toff condition sets its own fractions")]
         public System.Collections.Generic.List<double> TrackFractions
         {
             get
@@ -1267,14 +1551,14 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
-        public System.IObservable<StimulusOff> Generate()
+        public System.IObservable<StimulusCutoff> Generate()
         {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new StimulusOff(this)));
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new StimulusCutoff(this)));
         }
     
-        public System.IObservable<StimulusOff> Generate<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<StimulusCutoff> Generate<TSource>(System.IObservable<TSource> source)
         {
-            return System.Reactive.Linq.Observable.Select(source, _ => new StimulusOff(this));
+            return System.Reactive.Linq.Observable.Select(source, _ => new StimulusCutoff(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
@@ -1371,13 +1655,13 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the stimulus-off points are judged on the wheel alone
+        /// Fraction of the track the tone and grating advance per second on their own from the trial start, added to what the wheel sets; 0: none. Moves the stimulus only: the track's end and the cutoff points are judged on the wheel alone
         /// </summary>
         [Newtonsoft.Json.JsonPropertyAttribute("autoProgressPerSecond")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="autoProgressPerSecond")]
         [System.ComponentModel.DescriptionAttribute("Fraction of the track the tone and grating advance per second on their own from t" +
             "he trial start, added to what the wheel sets; 0: none. Moves the stimulus only: " +
-            "the track\'s end and the stimulus-off points are judged on the wheel alone")]
+            "the track\'s end and the cutoff points are judged on the wheel alone")]
         public double AutoProgressPerSecond
         {
             get
@@ -1550,18 +1834,20 @@ namespace UclOpenCoenDomeNavigationTask
 
 
     /// <summary>
-    /// Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any
-    ///penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the
-    ///time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The response window counts from the first tone pip; null:
-    ///it never closes (optogenetics then refused, as the laser's cap is derived from it). The quiet waits count from the interval's
-    ///start (open_rigs.core.task LickQuietWait, WheelQuietWait).
+    /// Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs to this trial's first tone pip, with a
+    ///quiet mouse, from the last trial's outcome when rewarded (outcome, interval; the spouts out spouts.rewardConsumptionSeconds into it)
+    ///or its outcome plus its penalty timeout when penalised (outcome, timeout, interval); trial 1: from the first clock tick after Go. The response window opens stimulusToResponseWindowSeconds
+    ///after the first tone pip, licks before it not counted, and runs responseWindowSeconds from there; null: it never closes
+    ///(optogenetics then refused, as the laser's cap is derived from it). The quiet waits count from the interval's start
+    ///(open_rigs.core.task LickQuietWait, WheelQuietWait).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [System.ComponentModel.DescriptionAttribute(@"Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs from the last trial's outcome (after any
-    penalty timeout; trial 1: the first clock tick after Go) to this trial's first tone pip, with a quiet mouse. It includes the
-    time to drink a reward (Tom Childs' fixed 2 s before his 0 or 1 s). The response window counts from the first tone pip; null:
-    it never closes (optogenetics then refused, as the laser's cap is derived from it). The quiet waits count from the interval's
-    start (open_rigs.core.task LickQuietWait, WheelQuietWait).")]
+    [System.ComponentModel.DescriptionAttribute(@"Timing of each trial. The inter-trial interval (open_rigs.core.task Iti) runs to this trial's first tone pip, with a
+    quiet mouse, from the last trial's outcome when rewarded (outcome, interval; the spouts out spouts.rewardConsumptionSeconds into it)
+    or its outcome plus its penalty timeout when penalised (outcome, timeout, interval); trial 1: from the first clock tick after Go. The response window opens stimulusToResponseWindowSeconds
+    after the first tone pip, licks before it not counted, and runs responseWindowSeconds from there; null: it never closes
+    (optogenetics then refused, as the laser's cap is derived from it). The quiet waits count from the interval's start
+    (open_rigs.core.task LickQuietWait, WheelQuietWait).")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class TrialStructure
@@ -1579,11 +1865,14 @@ namespace UclOpenCoenDomeNavigationTask
     
         private double _itiMaxSeconds;
     
+        private double _stimulusToResponseWindowSeconds;
+    
         public TrialStructure()
         {
             _wheelQuietSeconds = 0D;
             _wheelQuietCm = 0D;
             _lickQuietSeconds = 0D;
+            _stimulusToResponseWindowSeconds = 0D;
         }
     
         protected TrialStructure(TrialStructure other)
@@ -1594,6 +1883,7 @@ namespace UclOpenCoenDomeNavigationTask
             _responseWindowSeconds = other._responseWindowSeconds;
             _itiMinSeconds = other._itiMinSeconds;
             _itiMaxSeconds = other._itiMaxSeconds;
+            _stimulusToResponseWindowSeconds = other._stimulusToResponseWindowSeconds;
         }
     
         /// <summary>
@@ -1708,6 +1998,26 @@ namespace UclOpenCoenDomeNavigationTask
             }
         }
     
+        /// <summary>
+        /// From stimulus onset (the first tone pip) to the response window opening, in seconds; responseWindowSeconds runs from that opening, and licks before it are not counted
+        /// </summary>
+        [Newtonsoft.Json.JsonPropertyAttribute("stimulusToResponseWindowSeconds")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulusToResponseWindowSeconds")]
+        [System.ComponentModel.DescriptionAttribute("From stimulus onset (the first tone pip) to the response window opening, in secon" +
+            "ds; responseWindowSeconds runs from that opening, and licks before it are not co" +
+            "unted")]
+        public double StimulusToResponseWindowSeconds
+        {
+            get
+            {
+                return _stimulusToResponseWindowSeconds;
+            }
+            set
+            {
+                _stimulusToResponseWindowSeconds = value;
+            }
+        }
+    
         public System.IObservable<TrialStructure> Generate()
         {
             return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new TrialStructure(this)));
@@ -1725,7 +2035,8 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("LickQuietSeconds = " + _lickQuietSeconds + ", ");
             stringBuilder.Append("ResponseWindowSeconds = " + _responseWindowSeconds + ", ");
             stringBuilder.Append("ItiMinSeconds = " + _itiMinSeconds + ", ");
-            stringBuilder.Append("ItiMaxSeconds = " + _itiMaxSeconds);
+            stringBuilder.Append("ItiMaxSeconds = " + _itiMaxSeconds + ", ");
+            stringBuilder.Append("StimulusToResponseWindowSeconds = " + _stimulusToResponseWindowSeconds);
             return true;
         }
     
@@ -1746,15 +2057,15 @@ namespace UclOpenCoenDomeNavigationTask
 
     /// <summary>
     /// Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,
-    ///reward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.
+    ///reward, penalty, optogenetics), then the spouts, the stimulus's end, the track, the reward zone, the wrong-lick limit and stimulus cutoff.
     ///
-    ///A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
+    ///A lick first counts from the response window's opening, trialStructure.stimulusToResponseWindowSeconds after the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute(@"Task parameters for the coen-dome-navigation corridor: the lab's blocks in the lab's order (the mix, timing, stimuli,
-    reward, penalty, sounds, optogenetics), then the track, the reward zone, the wrong-lick limit and stimulus off.
+    reward, penalty, optogenetics), then the spouts, the stimulus's end, the track, the reward zone, the wrong-lick limit and stimulus cutoff.
 
-    A lick first counts from the trial's first tone pip, where the response window starts. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
+    A lick first counts from the response window's opening, trialStructure.stimulusToResponseWindowSeconds after the trial's first tone pip. Auto-reward is given on the pip whose tone reaches the reward zone's floor (rewardZoneMinHz), no lick needed, and the trial's licks are ignored (outcomeReason rewardZoneReached); on the other trials only a lick in the zone is rewarded. A trial that runs out of time or track with the tone in the zone, or ends outside the zone, is penalised. The reward is given on the left spout's valve, planned from the valve's calibration (calibration\RewardValve-Left.json); an uncalibrated valve stops the workflow at Start.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class UclOpenCoenDomeNavigationTaskParameters
@@ -1778,9 +2089,11 @@ namespace UclOpenCoenDomeNavigationTask
     
         private Penalty _penalty;
     
-        private RewardTone _rewardTone;
-    
         private OptogeneticsSettings _optogenetics;
+    
+        private SpoutsSettings _spouts;
+    
+        private Stimulus _stimulus;
     
         private Track _track;
     
@@ -1790,7 +2103,7 @@ namespace UclOpenCoenDomeNavigationTask
     
         private int _wrongLickLimit;
     
-        private StimulusOff _stimulusOff;
+        private StimulusCutoff _stimulusCutoff;
     
         public UclOpenCoenDomeNavigationTaskParameters()
         {
@@ -1801,13 +2114,14 @@ namespace UclOpenCoenDomeNavigationTask
             _reward = new Reward();
             _autoRewardProbability = 1D;
             _penalty = new Penalty();
-            _rewardTone = new RewardTone();
             _optogenetics = new OptogeneticsSettings();
+            _spouts = new SpoutsSettings();
+            _stimulus = new Stimulus();
             _track = new Track();
             _rewardZoneMinHz = 18000D;
             _rewardZoneMaxHz = 24000D;
             _wrongLickLimit = 0;
-            _stimulusOff = new StimulusOff();
+            _stimulusCutoff = new StimulusCutoff();
         }
     
         protected UclOpenCoenDomeNavigationTaskParameters(UclOpenCoenDomeNavigationTaskParameters other)
@@ -1821,13 +2135,14 @@ namespace UclOpenCoenDomeNavigationTask
             _reward = other._reward;
             _autoRewardProbability = other._autoRewardProbability;
             _penalty = other._penalty;
-            _rewardTone = other._rewardTone;
             _optogenetics = other._optogenetics;
+            _spouts = other._spouts;
+            _stimulus = other._stimulus;
             _track = other._track;
             _rewardZoneMinHz = other._rewardZoneMinHz;
             _rewardZoneMaxHz = other._rewardZoneMaxHz;
             _wrongLickLimit = other._wrongLickLimit;
-            _stimulusOff = other._stimulusOff;
+            _stimulusCutoff = other._stimulusCutoff;
         }
     
         /// <summary>
@@ -1984,13 +2299,14 @@ namespace UclOpenCoenDomeNavigationTask
         }
     
         /// <summary>
-        /// The timeout and penalty sound a penalised trial gets; one out of time or track (a miss) penalty.noResponse's where not null (open_rigs.core.task Penalty)
+        /// What a penalised trial costs by its kind (open_rigs.core.task Penalty): incorrect, a trial ending outside the zone; noResponse, one out of time or track (a miss), which this task penalises, so never null
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
         [Newtonsoft.Json.JsonPropertyAttribute("penalty", Required=Newtonsoft.Json.Required.Always)]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="penalty")]
-        [System.ComponentModel.DescriptionAttribute("The timeout and penalty sound a penalised trial gets; one out of time or track (a" +
-            " miss) penalty.noResponse\'s where not null (open_rigs.core.task Penalty)")]
+        [System.ComponentModel.DescriptionAttribute("What a penalised trial costs by its kind (open_rigs.core.task Penalty): incorrect" +
+            ", a trial ending outside the zone; noResponse, one out of time or track (a miss)" +
+            ", which this task penalises, so never null")]
         public Penalty Penalty
         {
             get
@@ -2000,26 +2316,6 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _penalty = value;
-            }
-        }
-    
-        /// <summary>
-        /// The reward tone (src/sounds/reward_tone.bin), played on a rewarded trial at its levelDbfs (open_rigs.core.task RewardTone, OpenRigs.Audio PlayRewardTone)
-        /// </summary>
-        [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("rewardTone")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="rewardTone")]
-        [System.ComponentModel.DescriptionAttribute("The reward tone (src/sounds/reward_tone.bin), played on a rewarded trial at its l" +
-            "evelDbfs (open_rigs.core.task RewardTone, OpenRigs.Audio PlayRewardTone)")]
-        public RewardTone RewardTone
-        {
-            get
-            {
-                return _rewardTone;
-            }
-            set
-            {
-                _rewardTone = value;
             }
         }
     
@@ -2039,6 +2335,45 @@ namespace UclOpenCoenDomeNavigationTask
             set
             {
                 _optogenetics = value;
+            }
+        }
+    
+        /// <summary>
+        /// When the spouts move: always in, or the left spout in before the first pip and out after the reward
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("spouts")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="spouts")]
+        [System.ComponentModel.DescriptionAttribute("When the spouts move: always in, or the left spout in before the first pip and ou" +
+            "t after the reward")]
+        public SpoutsSettings Spouts
+        {
+            get
+            {
+                return _spouts;
+            }
+            set
+            {
+                _spouts = value;
+            }
+        }
+    
+        /// <summary>
+        /// When the tone and grating end: at the outcome, after it, or after a duration
+        /// </summary>
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [Newtonsoft.Json.JsonPropertyAttribute("stimulus")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulus")]
+        [System.ComponentModel.DescriptionAttribute("When the tone and grating end: at the outcome, after it, or after a duration")]
+        public Stimulus Stimulus
+        {
+            get
+            {
+                return _stimulus;
+            }
+            set
+            {
+                _stimulus = value;
             }
         }
     
@@ -2121,18 +2456,18 @@ namespace UclOpenCoenDomeNavigationTask
         /// Which stimuli switch off part way along the track, and where
         /// </summary>
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("stimulusOff")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulusOff")]
+        [Newtonsoft.Json.JsonPropertyAttribute("stimulusCutoff")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="stimulusCutoff")]
         [System.ComponentModel.DescriptionAttribute("Which stimuli switch off part way along the track, and where")]
-        public StimulusOff StimulusOff
+        public StimulusCutoff StimulusCutoff
         {
             get
             {
-                return _stimulusOff;
+                return _stimulusCutoff;
             }
             set
             {
-                _stimulusOff = value;
+                _stimulusCutoff = value;
             }
         }
     
@@ -2157,13 +2492,14 @@ namespace UclOpenCoenDomeNavigationTask
             stringBuilder.Append("Reward = " + _reward + ", ");
             stringBuilder.Append("AutoRewardProbability = " + _autoRewardProbability + ", ");
             stringBuilder.Append("Penalty = " + _penalty + ", ");
-            stringBuilder.Append("RewardTone = " + _rewardTone + ", ");
             stringBuilder.Append("Optogenetics = " + _optogenetics + ", ");
+            stringBuilder.Append("Spouts = " + _spouts + ", ");
+            stringBuilder.Append("Stimulus = " + _stimulus + ", ");
             stringBuilder.Append("Track = " + _track + ", ");
             stringBuilder.Append("RewardZoneMinHz = " + _rewardZoneMinHz + ", ");
             stringBuilder.Append("RewardZoneMaxHz = " + _rewardZoneMaxHz + ", ");
             stringBuilder.Append("WrongLickLimit = " + _wrongLickLimit + ", ");
-            stringBuilder.Append("StimulusOff = " + _stimulusOff);
+            stringBuilder.Append("StimulusCutoff = " + _stimulusCutoff);
             return true;
         }
     
@@ -2305,7 +2641,7 @@ namespace UclOpenCoenDomeNavigationTask
 
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.9.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
     [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-    public enum StimulusOffStimuli
+    public enum StimulusCutoffStimuli
     {
     
         [System.Runtime.Serialization.EnumMemberAttribute(Value="none")]
@@ -2374,9 +2710,9 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<PenaltyCost>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<PenaltyCostSound> source)
+        public System.IObservable<string> Process(System.IObservable<PenaltyFlash> source)
         {
-            return Process<PenaltyCostSound>(source);
+            return Process<PenaltyFlash>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<PenaltySound> source)
@@ -2394,9 +2730,19 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<RewardTone>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<StimulusOff> source)
+        public System.IObservable<string> Process(System.IObservable<SpoutsSettings> source)
         {
-            return Process<StimulusOff>(source);
+            return Process<SpoutsSettings>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<Stimulus> source)
+        {
+            return Process<Stimulus>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<StimulusCutoff> source)
+        {
+            return Process<StimulusCutoff>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<Track> source)
@@ -2439,11 +2785,13 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyCost>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyCostSound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyFlash>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Reward>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<SpoutsSettings>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Stimulus>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusCutoff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Track>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialCondition>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]
@@ -2528,9 +2876,9 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<PenaltyCost>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<PenaltyCostSound> source)
+        public System.IObservable<string> Process(System.IObservable<PenaltyFlash> source)
         {
-            return Process<PenaltyCostSound>(source);
+            return Process<PenaltyFlash>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<PenaltySound> source)
@@ -2548,9 +2896,19 @@ namespace UclOpenCoenDomeNavigationTask
             return Process<RewardTone>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<StimulusOff> source)
+        public System.IObservable<string> Process(System.IObservable<SpoutsSettings> source)
         {
-            return Process<StimulusOff>(source);
+            return Process<SpoutsSettings>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<Stimulus> source)
+        {
+            return Process<Stimulus>(source);
+        }
+
+        public System.IObservable<string> Process(System.IObservable<StimulusCutoff> source)
+        {
+            return Process<StimulusCutoff>(source);
         }
 
         public System.IObservable<string> Process(System.IObservable<Track> source)
@@ -2593,11 +2951,13 @@ namespace UclOpenCoenDomeNavigationTask
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<OptogeneticsSettings>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Penalty>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyCost>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyCostSound>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltyFlash>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PenaltySound>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Reward>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<RewardTone>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusOff>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<SpoutsSettings>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Stimulus>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<StimulusCutoff>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Track>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialCondition>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<TrialStructure>))]

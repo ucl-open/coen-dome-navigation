@@ -12,7 +12,7 @@
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a duration or other quantity ends in its
 # unit (itiSeconds, rewardOfferedUl); never a stored latency. Every distance is in track cm.
 #
-# The first 25 columns, harpTime to autoReward, are the lab's shared block, its core with the quietWait, optogenetics,
+# The first 28 columns, harpTime to autoReward, are the lab's shared block, its core with the quietWait, optogenetics,
 # conditions, stimulus and autoReward blocks, defined once in lib-open-rigs open_rigs.rigs.trials: coen-dome-decision-making and
 # coen-dome-navigation list them in this order with these types, units and descriptions, word for word
 # (tests/test_trial_columns.py holds both), so one analysis reads both tasks.
@@ -34,7 +34,7 @@ trialNumber:
 trialType:
   type: string
   values: [visual, auditory, audiovisualCoherent, neutral, visualTruncated, auditoryTruncated, audiovisualCoherentTruncated]
-  description: The label of the trial's condition (trialConditionId), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryLevelDbfs). Derived at Go from the condition's settings (the task's x-trial-types) - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither); a condition whose stimulusOff.stimuli is not none takes Truncated after its name (visualTruncated, auditoryTruncated, audiovisualCoherentTruncated; neutral has no stimulus, so no truncated form).
+  description: The label of the trial's condition (trialConditionId), in coen-dome-decision-making's words - a name for the rows and analysis groups that drives nothing; what the trial showed is its own columns (visualContrast, auditoryLevelDbfs). Derived at Go from the condition's settings (the task's x-trial-types) - visual (the grating alone), auditory (the tone sweep alone), audiovisualCoherent (both) or neutral (neither); a condition whose stimulusCutoff.stimuli is not none takes Truncated after its name (visualTruncated, auditoryTruncated, audiovisualCoherentTruncated; neutral has no stimulus, so no truncated form).
 outcome:
   type: string
   values: [correct, incorrect, noResponse, auto]
@@ -55,13 +55,18 @@ quietWaitSeconds:
 trialStartTime:
   type: double
   unit: s
-  description: 'Harp time the trial started: the end of its interval less the lead, max(laserToStimulusSeconds, 0) in the task file (Settings_Task) and 0 for a task file with no optogenetics block, plus quietWaitSeconds where the task has quiet waits.'
+  description: 'Harp time the trial started: the end of its interval less the lead, max(laserToStimulusSeconds, -spouts.stimulusToSpoutsInSeconds unless spouts.alwaysIn, 0) in the task file (Settings_Task), each 0 for a task file without its block, plus quietWaitSeconds where the task has quiet waits.'
   note: Step 0, the track's position zero.
 stimulusOnsetTime:
   type: double
   unit: s
   description: 'Harp time the workflow commanded the stimulus on, NaN if it never was: the first tick of the 1 ms Harp clock at or after trialStartTime plus the lead, in every experiment. The physical onset is in the hardware logs.'
   note: The trial's first tone pip and grating frame, as Tom Childs' CueOnsetHarp.
+stimulusOffTime:
+  type: double
+  unit: s
+  description: "Harp time the workflow commanded the stimulus off (OpenRigs.Trials StimulusTiming): the earlier of stimulusOnsetTime plus stimulus.durationSeconds and outcomeTime plus stimulus.responseToStimulusOffSeconds (unless null), at the first tick at or after it; known at the outcome, so logged in the row although it may come later. NaN if the stimulus never came on, or in a task whose stimulus the trial loop does not time. A task that ends it sooner itself says so (its note)."
+  note: "Off at the outcome by default (stimulus.responseToStimulusOffSeconds 0); with a later off the tone and grating go on following the wheel and the auto-progress after the outcome, held at the track's end, until then. Earlier on a cutoff trial that leaves neither the tone nor the grating playing (stimulusCutoff, auditoryCutoffPositionCm and visualCutoffPositionCm): the 50 ms pip step at which neither played any more, so the row logs the earlier of the two."
 outcomeTime:
   type: double
   unit: s
@@ -79,10 +84,13 @@ rewarded:
 penaltyTimeoutSeconds:
   type: double
   unit: s
-  description: 'The timeout after this trial when it was penalised, else 0: the trial''s penalty.timeoutSeconds, or on a miss its penalty.noResponse.timeoutSeconds unless null. The next interval starts after it (itiStartTime).'
+  description: 'The timeout after this trial when it was penalised, else 0: the trial''s penalty.incorrect.timeoutSeconds, or on a miss its penalty.noResponse.timeoutSeconds. The next interval starts after it (itiStartTime).'
+penaltyFlashBrightness:
+  type: double
+  description: 'The brightness of the penalty flash after this trial when it was penalised, else 0: the trial''s penalty.incorrect.flash.brightness, or on a miss its penalty.noResponse.flash.brightness, 0 to 1 of the projector''s full white after gamma correction; 0 when no flash played. A flash covers the whole projector field at its kind''s flash.rateHz (white the first half of each cycle) from the outcome for the penalty sound''s length (OpenRigs.Vision PlayPenaltyFlash).'
 penalised:
   type: bool
-  description: 'True when the trial was penalised: the timeout (penaltyTimeoutSeconds) and the penalty sound at the trial''s penalty.sound.levelDbfs, or on a miss its penalty.noResponse.sound.levelDbfs unless null (none when mute), followed its outcome. Which trials are penalised, and which are misses, is the task''s (its note).'
+  description: 'True when the trial was penalised: the timeout (penaltyTimeoutSeconds) and the penalty sound at the trial''s penalty.incorrect.sound.levelDbfs, or on a miss its penalty.noResponse.sound.levelDbfs (none when mute), followed its outcome. Which trials are penalised, and which are misses, is the task''s (its note).'
   note: A trial that runs out of time or track with the outcome frequency in the reward zone, or ends outside the zone (TrialLogic.cs TrialRules.End).
 laserCondition:
   type: int
@@ -113,7 +121,7 @@ auditoryLevelDbfs:
   type: double
   unit: dBFS
   description: The sound's level in dBFS RMS, the trial's auditoryStimulus.levelDbfs; NaN when no sound played (mute).
-  note: The trial's level even where a stimulus-off trial switched the tone off part way (auditoryOffPositionCm); each pip's own level, NaN once switched off, is WorkflowData_StimulusState's auditoryLevelDbfs.
+  note: The trial's level even where a cutoff trial switched the tone off part way (auditoryCutoffPositionCm); each pip's own level, NaN once switched off, is WorkflowData_StimulusState's auditoryLevelDbfs.
   copyOf: auditoryStimulus.levelDbfs
 auditoryInitialAzimuthDeg:
   type: double
@@ -149,11 +157,11 @@ outcomeVisualSpatialFrequencyCpd:
   type: double
   unit: cycles/deg
   description: The grating's spatial frequency at the outcome (outcomeTime).
-auditoryOffPositionCm:
+auditoryCutoffPositionCm:
   type: double
   unit: cm
-  description: Position along the track, in track cm, where the tone switched off on a stimulus-off trial (its condition's stimulusOff.stimuli auditory or both, at one of stimulusOff.trackFractions of the track); NaN when it never did.
-visualOffPositionCm:
+  description: Position along the track, in track cm, where the tone switched off on a cutoff trial (its condition's stimulusCutoff.stimuli auditory or both, at one of stimulusCutoff.trackFractions of the track); NaN when it never did.
+visualCutoffPositionCm:
   type: double
   unit: cm
-  description: Position along the track, in track cm, where the grating switched off on a stimulus-off trial (its condition's stimulusOff.stimuli visual or both, at one of stimulusOff.trackFractions of the track); NaN when it never did.
+  description: Position along the track, in track cm, where the grating switched off on a cutoff trial (its condition's stimulusCutoff.stimuli visual or both, at one of stimulusCutoff.trackFractions of the track); NaN when it never did.

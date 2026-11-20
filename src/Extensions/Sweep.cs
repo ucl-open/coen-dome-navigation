@@ -108,7 +108,7 @@ public class StimulusFrame
 public class GratingState
 {
     public double SpatialFrequencyCpd; // the pip's StimulusStateRow.visualSpatialFrequencyCpd
-    public double Opacity;             // 1, or 0 when switched off (StimulusStateRow.visualContrast), at contrast 0 or after the outcome
+    public double Opacity;             // 1, or 0 when switched off (StimulusStateRow.visualContrast), at contrast 0 or from the StimulusOff
     public double Contrast;            // the trial's visualContrast
     public double PhaseRad;            // the trial's visualPhaseRad
 }
@@ -183,9 +183,9 @@ public class StimulusStateRow
     public int trialNumber;
     public double positionCm;        // track cm along the track
     public double auditoryFrequencyHz;
-    public double auditoryLevelDbfs; // the pip's level: the trial's auditoryLevelDbfs, NaN when mute or while a stimulus-off trial has the tone off
+    public double auditoryLevelDbfs; // the pip's level: the trial's auditoryLevelDbfs, NaN when mute or while a cutoff trial has the tone off
     public double visualSpatialFrequencyCpd;
-    public double visualContrast;    // the contrast shown: the trial's visualContrast, 0 once a stimulus-off trial has switched the grating off
+    public double visualContrast;    // the contrast shown: the trial's visualContrast, 0 once a cutoff trial has switched the grating off
 }
 
 [Combinator]
@@ -219,7 +219,7 @@ public class CreateStimulusStateRow
 }
 
 [Combinator]
-[Description("The grating's state from the trial events (the Grating subject): each pip's (an Update event) as it comes, and at each Outcome the last pip's at opacity 0, hiding the grating until the next trial's first pip.")]
+[Description("The grating's state from the trial events (the Grating subject): each pip's (an Update event) as it comes, after the outcome too until the stimulus goes off, and at each StimulusOff (OpenRigs.Trials StimulusTiming: the task's stimulus block) the last pip's at opacity 0, hiding the grating until the next trial's first pip.")]
 [WorkflowElementCategory(ElementCategory.Transform)]
 public class GratingStates
 {
@@ -231,7 +231,7 @@ public class GratingStates
             return source.Select(e =>
             {
                 if (e.Kind == TrialEventKind.Update) return last = e.Update.Grating;
-                if (e.Kind == TrialEventKind.Outcome && last != null) return new GratingState { SpatialFrequencyCpd = last.SpatialFrequencyCpd, Opacity = 0, Contrast = last.Contrast, PhaseRad = last.PhaseRad };
+                if (e.Kind == TrialEventKind.StimulusOff && last != null) return new GratingState { SpatialFrequencyCpd = last.SpatialFrequencyCpd, Opacity = 0, Contrast = last.Contrast, PhaseRad = last.PhaseRad };
                 return null;
             }).Where(g => g != null);
         });

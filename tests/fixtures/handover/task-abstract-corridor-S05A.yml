@@ -6,7 +6,7 @@ taskParameters:
     code: S05A
     version: 3hk7
     path: A
-    label: Stimulus Off
+    label: Stimulus Cutoff
     sha256: handover
   trialConditions:
   - weight: 84
@@ -17,13 +17,14 @@ taskParameters:
     set:
       visualStimulus.contrasts:
       - 0
-      stimulusOff.stimuli: both
-      stimulusOff.trackFractions:
+      stimulusCutoff.stimuli: both
+      stimulusCutoff.trackFractions:
       - 0.4
       - 0.6
   trialStructure:
-    itiMinSeconds: 2.0
-    itiMaxSeconds: 3.0
+    itiMinSeconds: 2.5
+    itiMaxSeconds: 3.5
+    stimulusToResponseWindowSeconds: 0
     responseWindowSeconds: 12.0
     lickQuietSeconds: 1.0
     wheelQuietSeconds: 0
@@ -42,13 +43,24 @@ taskParameters:
     sizeUl: 3.0
     largeMultiplier: 2
     largeProbability: 0
+    tone:
+      levelDbfs: -55
   autoRewardProbability: 0.0
   penalty:
-    timeoutSeconds: 2.0
-    sound:
-      levelDbfs: -45
-  rewardTone:
-    levelDbfs: -55
+    incorrect:
+      timeoutSeconds: 4.0
+      sound:
+        levelDbfs: -35
+      flash:
+        brightness: 0
+        rateHz: 10
+    noResponse:
+      timeoutSeconds: 4.0
+      sound:
+        levelDbfs: -35
+      flash:
+        brightness: 0
+        rateHz: 10
   optogenetics:
     enabled: false
     zapitConditionsPath: ''
@@ -56,6 +68,13 @@ taskParameters:
     laserOnProbability: 0.4
     laserToStimulusSeconds: 0.1
     trialsBeforeLaser: 20
+  spouts:
+    alwaysIn: true
+    stimulusToSpoutsInSeconds: -0.5
+    rewardConsumptionSeconds: 1.5
+  stimulus:
+    durationSeconds: null
+    responseToStimulusOffSeconds: 0
   track:
     lengthsCm:
     - 80
@@ -66,7 +85,7 @@ taskParameters:
   rewardZoneMinHz: 15248
   rewardZoneMaxHz: 21248
   wrongLickLimit: 5
-  stimulusOff:
+  stimulusCutoff:
     stimuli: none
     trackFractions:
     - 1.0
