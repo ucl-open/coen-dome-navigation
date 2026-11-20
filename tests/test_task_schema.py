@@ -110,7 +110,7 @@ def test_the_task_file_s_conditions_show_what_their_old_types_did():
         {"weight": 0, "set": {}},
     ]
     assert params["visualStimulus"]["contrasts"] == [1.0]
-    assert params["auditoryStimulus"] == {"levelDbfs": -55, "elevationDeg": 0, "initialAzimuthsDeg": ["all"]}
+    assert params["auditoryStimulus"] == {"levelDbfs": -45, "elevationDeg": 0, "initialAzimuthsDeg": ["all"]}
     model = UclOpenCoenDomeNavigationTaskParameters.model_validate(params)
     assert [model.derive_trial_type(c) for c in model.trial_conditions] == ["visual", "auditory", "audiovisualCoherent"]
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
@@ -697,12 +697,12 @@ def test_a_condition_sets_its_reward_auto_reward_and_where_the_pips_play():
 
 def test_every_sound_s_level_is_a_condition_s_and_the_plan_s_values():
     # Every sound's level is condition-level (P19), none a session field; the task file's levels are the lab's 5 dB steps
-    # (stimulus -55, reward tone -55, Tom's, set as lib's default is mute; penalty -35) and the background noise has no task
+    # (stimulus -45, reward tone -55, Tom's, set as lib's default is mute; penalty -35) and the background noise has no task
     # setting (the lab's -60).
     assert not {"reward", "penalty", "auditoryStimulus"} & {path.split(".")[0] for path in SESSION_FIELDS}
     params = task()["taskParameters"]
     assert (params["auditoryStimulus"]["levelDbfs"], params["reward"]["tone"]["levelDbfs"], params["penalty"]["incorrect"]["sound"]["levelDbfs"],
-            params["penalty"]["noResponse"]["sound"]["levelDbfs"]) == (-55, -55, -35, -35)
+            params["penalty"]["noResponse"]["sound"]["levelDbfs"]) == (-45, -55, -35, -35)
     assert "backgroundNoise" not in params and "rewardTone" not in params
     conditions = [{"weight": 1, "set": {"visualStimulus.contrasts": [0], "reward.tone.levelDbfs": -50, "penalty.incorrect.sound.levelDbfs": "mute"}},
                   {"weight": 1, "set": {"visualStimulus.contrasts": [0], "reward.tone.levelDbfs": "mute", "penalty.noResponse.sound.levelDbfs": -40}}]

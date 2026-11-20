@@ -39,7 +39,7 @@ taskParameters:
   # Every sound plays at a level in dBFS RMS of the sound as stored, before equalisation (lib-open-rigs OpenRigs.Audio
   # SoundLevel); mute plays nothing. Each is condition-level; the background noise is the lab's constant, -60. The sweep is src\sounds\sweep.json's, made with the tone files (generate-waveforms).
   auditoryStimulus:           # the tone sweep's pips
-    levelDbfs: -55            # dBFS RMS; mute: no tone
+    levelDbfs: -45            # dBFS RMS; mute: no tone
     elevationDeg: 0           # the elevation the nearest speaker is found at
     initialAzimuthsDeg: [all]   # one picked per trial: all, every rig.yml speaker; a number, rig.yml's speaker nearest that azimuth
   reward:
