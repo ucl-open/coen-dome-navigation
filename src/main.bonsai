@@ -158,6 +158,7 @@
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:DomeHardware.bonsai">
         <Description>The dome's devices (OpenRigs.Devices DomeHardware: every device as a piece, each logging itself; the cameras triggered once all three acquire; the speakers and their mixer; the projector, DisplayDevice a launch property), with Ready once the Harp clock is set, the spouts are homed, each camera has sent a frame and the mixer has started, and a stop naming what never came after 180 s. Every dome device as a piece, named as in the data (lib-open-rigs Building Blocks): the Ready gate, the timestamp generator's clock, the Behavior board with its reward lines, Zapit line and wheel, both Lickety Splits, the lick spout stage, the three cameras, which start triggering once all three acquire, the speakers (SpeakerMixer) and the projector (ProjectorDisplay, stimuli on DrawStimuli).</Description>
+        <WorkflowStages>LabClockChecked</WorkflowStages>
       </Expression>
       <Expression xsi:type="GroupWorkflow">
         <Name>Display</Name>
@@ -569,6 +570,9 @@
             <Edge From="46" To="47" Label="Source1" />
           </Edges>
         </Workflow>
+      </Expression>
+      <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:LabClockReady.bonsai">
+        <Description>The lab clock checked at Start (OpenRigs.Logging LabClockReady): a clock that disagrees with the lab's stops the workflow before Ready; it announces LabClockChecked, which ReadyGate waits for (WorkflowStages).</Description>
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:ExperimentRecords.bonsai">
         <Description>The controller's events (LogControlEvents), every Harp device in rig.yml checked at Start and recorded (RecordHarpDevices: the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits), and manifest.json (ExperimentManifest: rig.yml, every file it names and this mouse's spout positions ({RigFiles}), schemas\trial-columns.yml and, for WorkflowData_StimulusState, schemas\stimulus-state-columns.yml (StreamColumns), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files, WorkflowData (Trials, Events and StimulusState) and Settings_ZapitConditions in an optogenetics experiment). Last but LiveView, as it finds each device by the subjects published before it.</Description>
