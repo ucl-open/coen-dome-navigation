@@ -89,6 +89,7 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Name>CheckTaskAtGo</Name>
+              <Description>The task file's text checked once, at Go, with rig.yml and the sweep, and the trials' rules built from it (TrialRules, tested C#): a curriculum empty or malformed, a trial condition that cannot be built, a reward zone outside the sweep, the optogenetics rules and the Zapit conditions file. A problem stops the workflow here, naming each, before the first trial.</Description>
               <Combinator xsi:type="ext:CheckTaskAtGo" />
             </Expression>
             <Expression xsi:type="rx:AsyncSubject">
@@ -358,6 +359,7 @@
             </Expression>
             <Expression xsi:type="Combinator">
               <Name>RunTrials</Name>
+              <Description>The trials (TrialRules, tested C#, run by lib-open-rigs' TrialLoop) on the Harp clock: each drawn at its interval's start, a hardware-triggered Zapit armed during it (Arm), started at the interval's end less the lead or later until the quiet waits hold, then run along the virtual track with a pip every 50 ms until the outcome. Inputs: the rules, the clock, the wheel, the licks, Zapit's replies.</Description>
               <Combinator xsi:type="ext:RunTrials" />
             </Expression>
             <Expression xsi:type="MulticastSubject">

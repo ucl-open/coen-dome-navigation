@@ -61,3 +61,9 @@ def test_the_stimulus_state_columns_are_the_row_s_fields():
     workflow = (root / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
     assert workflow.count(r"<StreamColumns>WorkflowData_StimulusState=schemas\stimulus-state-columns.yml</StreamColumns>") == 1
 
+
+
+def test_no_note_keeps_the_removed_start_delay():
+    # P3D-L2: 3f52d39 replaced the 0.5 s delay with OnNextTick; ExperimentManifest copies these notes into every manifest.
+    columns = yaml.safe_load((Path(__file__).parents[1] / "schemas" / "trial-columns.yml").read_text(encoding="utf-8"))
+    assert not [name for name, column in columns.items() if "0.5 s after the experiment folder" in str(column.get("note", ""))]

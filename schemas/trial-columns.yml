@@ -43,7 +43,7 @@ itiStartTime:
   type: double
   unit: s
   description: 'Harp time the inter-trial interval before this trial began: the last trial''s trialEndTime (its outcomeTime in a log without trialEndTime) plus its penaltyTimeoutSeconds, exactly; on trial 1 the first Harp clock tick once the trials started.'
-  note: Trials start 0.5 s after the experiment folder exists and the tones are loaded.
+  note: Trial 1's interval starts at the first Harp clock tick once the experiment folder exists and the tones are loaded (OnNextTick).
 itiSeconds:
   type: double
   unit: s
