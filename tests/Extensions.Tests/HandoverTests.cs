@@ -168,7 +168,7 @@ public class HandoverTests
                 if (set != null) foreach (var key in set.Keys) allowed.Add(key.ToString());
                 foreach (var group in condition.Pairs ?? new List<List<string>>()) foreach (var path in group) allowed.Add(path);
             }
-            var json = new TrialRules(golden.Text, Fixture.Sweep(), true, path => new ZapitConditionsFile(2, 0.0), Fixture.Speakers()).CombinationsJson;
+            var json = new TrialRules(golden.Text, Fixture.Sweep(), true, path => new ZapitConditionsFile(new[] { "-0.7 1.5;-0.7 -1.5", "1.5 1;1.5 -1" }, 0.0), Fixture.Speakers()).CombinationsJson;
             var built = Built(golden);
             var own = TaskYaml.Flatten(golden.Task, TaskSchema.ListFields);
             var rows = (Newtonsoft.Json.Linq.JArray)Newtonsoft.Json.Linq.JObject.Parse(json)["rows"];

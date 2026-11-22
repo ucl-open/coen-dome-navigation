@@ -11,14 +11,14 @@ Use a `test` mouse throughout; keep the laser shutter closed (or 0 mW) until ste
 ## 1. Optogenetics off
 
 app-rig-control, `test` mouse, Training Stage 4, optogenetics unticked; ~20 trials.
-**Pass:** task as before; nothing in Zapit's window; no `ZapitReply` rows in `WorkflowData_Events` and no `Settings_ZapitConditions` file; trial rows `laserPowerMw` 0, `laserCondition` 0; the trigger line (and the masking LEDs) low throughout: no DO3 edges in the Behavior board log.
+**Pass:** task as before; nothing in Zapit's window; no `ZapitReply` rows in `WorkflowData_Events` and no `Settings_ZapitConditions` file; trial rows `laserPowerMw` 0, `laserCondition` 0, `laserPointsMm` empty; the trigger line (and the masking LEDs) low throughout: no DO3 edges in the Behavior board log.
 
 ## 2. Optogenetics on
 
 Same, optogenetics ticked with `zapitConditionsPath` and `laserPowerMw`; at least 30 trials (the first 20, `trialsBeforeLaser`, are all 0 mW: galvos move, laser off). With nobody at the wheel every trial ends as NoResponse 12 s after its first pip, when the stage's response window (`responseWindowSeconds`) closes.
 **Pass:**
 - `ZapitReply` rows in `WorkflowData_Events`: StartStimulus then StopStimulus on every trial, alternating (the command in `Detail`), and no error in any `Detail`.
-- Trial rows: `laserCondition` on every trial; `laserPowerMw` the task's `laserPowerMw` on about 40% of trials after the first 20, 0 on the rest.
+- Trial rows: `laserCondition` on every trial, with its points from the conditions file in `laserPointsMm`; `laserPowerMw` the task's `laserPowerMw` on about 40% of trials after the first 20, 0 on the rest.
 - `Settings\Settings_ZapitConditions_<time>.json` in the experiment folder, holding the config's path and its text.
 - No "Not ready to stimulate" in MATLAB.
 

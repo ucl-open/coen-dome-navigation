@@ -389,7 +389,7 @@ public class TrialDraw
     readonly EqualisedSpeakerArray speakers;
     readonly List<BuiltTrialCondition> conditions;
     readonly Random random;
-    readonly int conditionCount;
+    readonly ZapitConditionsFile zapitConditionsFile;   // null without optogenetics
     int drawn;
 
     /// <summary>The seed the random stream started from: the task's rngSeed, or one drawn when it is null.</summary>
@@ -415,7 +415,7 @@ public class TrialDraw
         if (opto.Enabled)
         {
             var file = zapitConditions != null ? zapitConditions(opto.ZapitConditionsPath) : ZapitConditions.Check(opto.ZapitConditionsPath);
-            conditionCount = file.Count;
+            zapitConditionsFile = file;
             MaxRampDownSeconds = file.MaxRampDownSeconds;
             var weighted = Weighted(conditions).ToList();
             LaserCapSeconds = weighted.Max(c => c.Task.TrialStructure.StimulusToResponseWindowSeconds + c.Task.TrialStructure.ResponseWindowSeconds.Value + c.Task.Optogenetics.LaserToStimulusSeconds) + TrialRules.LaserCapMarginSeconds;
@@ -637,8 +637,8 @@ public class TrialDraw
         {
             // Every trial sends Zapit a condition; laser-off trials at 0 mW (Pip, decision 11).
             var opto = p.Optogenetics;
-            ZapitTrial.Draw(random, t.trialNumber, conditionCount, opto.TrialsBeforeLaser, opto.LaserOnProbability, opto.LaserPowerMw.Value,
-                out t.laserCondition, out t.laserOn, out t.laserPowerMw);
+            ZapitTrial.Draw(random, t.trialNumber, zapitConditionsFile, opto.TrialsBeforeLaser, opto.LaserOnProbability, opto.LaserPowerMw.Value,
+                out t.laserCondition, out t.laserPointsMm, out t.laserOn, out t.laserPowerMw);
         }
         // The reward: a large one with the combination's largeProbability.
         var large = random.NextDouble() < p.Reward.LargeProbability;

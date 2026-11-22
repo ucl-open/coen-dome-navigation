@@ -20,6 +20,7 @@ public class TrialRow
     public double penaltyFlashBrightness;   // 0: no flash
     public bool penalised;
     public int laserCondition;
+    public string laserPointsMm;
     public double laserPowerMw;
     public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
     public int trialConditionId;        // the 0-based index of its condition in the task's trialConditions

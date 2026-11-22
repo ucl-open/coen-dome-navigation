@@ -12,7 +12,7 @@
 # Naming: camelCase; a Harp time ends in Time and is in seconds; a duration or other quantity ends in its
 # unit (itiSeconds, rewardOfferedUl); never a stored latency. Every distance is in track cm.
 #
-# The first 28 columns, harpTime to autoReward, are the lab's shared block, its core with the quietWait, optogenetics,
+# The first 29 columns, harpTime to autoReward, are the lab's shared block, its core with the quietWait, optogenetics,
 # conditions, stimulus and autoReward blocks, defined once in lib-open-rigs open_rigs.rigs.trials: coen-dome-decision-making and
 # coen-dome-navigation list them in this order with these types, units and descriptions, word for word
 # (tests/test_trial_columns.py holds both), so one analysis reads both tasks.
@@ -95,6 +95,10 @@ penalised:
 laserCondition:
   type: int
   description: 'The Zapit condition sent to Zapit this trial (its conditions file''s number, from 1), laser on or off: every trial of an optogenetics experiment has one, so laser on is laserPowerMw > 0, not laserCondition > 0. 0 without optogenetics.'
+laserPointsMm:
+  type: string
+  unit: mm
+  description: 'Where Zapit aimed the laser this trial: laserCondition''s points in the conditions file (Settings_ZapitConditions), in mm as written there, each point its AP then its ML separated by a space, points in the file''s order separated by ; (stimLocations01 with ML [1.5, -1.5] and AP [-0.7, -0.7] is -0.7 1.5;-0.7 -1.5). Filled whenever laserCondition is above 0, laser on or off (at 0 mW the galvos still move there); empty without optogenetics.'
 laserPowerMw:
   type: double
   unit: mW

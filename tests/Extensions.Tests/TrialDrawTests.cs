@@ -122,7 +122,7 @@ static class Fixture
 
     public static TrialRules Setup(string taskText, bool hardware = true)
     {
-        return TrialRules.Create(taskText, Sweep(), hardware, path => new ZapitConditionsFile(4, RampDown), Speakers());
+        return TrialRules.Create(taskText, Sweep(), hardware, path => new ZapitConditionsFile(new[] { "-0.7 1.5;-0.7 -1.5", "1.5 1;1.5 -1", "-4 2.4;-4 -2.4", "0.8 0.71" }, RampDown), Speakers());
     }
 
     public static TrialDraw Draw(UclOpenCoenDomeNavigationTaskParameters task, bool speakers = true)
@@ -132,7 +132,7 @@ static class Fixture
 
     public static TrialDraw Draw(string taskText, bool speakers = true)
     {
-        return new TrialDraw(taskText, Sweep(), path => new ZapitConditionsFile(4, RampDown), speakers ? Speakers() : null);
+        return new TrialDraw(taskText, Sweep(), path => new ZapitConditionsFile(new[] { "-0.7 1.5;-0.7 -1.5", "1.5 1;1.5 -1", "-4 2.4;-4 -2.4", "0.8 0.71" }, RampDown), speakers ? Speakers() : null);
     }
 
     /// <summary>rig.yml's speakerArray: left (-90 deg, channel 0), right (90, channel 1) and centre (0, channel 2), all at
@@ -650,6 +650,8 @@ public class TrialDrawTests
         var draw = Fixture.Draw(task);
         var trials = Enumerable.Range(0, 500).Select(_ => draw.Next()).ToList();
         Assert.IsTrue(trials.All(t => t.laserCondition >= 1 && t.laserCondition <= 4));
+        var points = new[] { "-0.7 1.5;-0.7 -1.5", "1.5 1;1.5 -1", "-4 2.4;-4 -2.4", "0.8 0.71" };
+        Assert.IsTrue(trials.All(t => t.laserPointsMm == points[t.laserCondition - 1]), "each trial carries its condition's points");
         Assert.IsTrue(trials.Take(20).All(t => !t.laserOn));
         Assert.IsTrue(trials.Where(t => !t.laserOn).All(t => t.laserPowerMw == 0));
         Assert.IsTrue(trials.Where(t => t.laserOn).All(t => t.laserPowerMw == 2.0));
@@ -1430,7 +1432,7 @@ public class TrialRulesTests
         var draw = Fixture.Draw(task);
         Assert.AreEqual(15.0 + 0.15 + 0.25, draw.LaserCapSeconds, 1e-9);
         Assert.AreEqual(Fixture.RampDown, draw.MaxRampDownSeconds);
-        var rules = TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, 0.6), Fixture.Speakers());
+        var rules = TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(new[] { "-0.7 1.5;-0.7 -1.5", "1.5 1;1.5 -1", "-4 2.4;-4 -2.4", "0.8 0.71" }, 0.6), Fixture.Speakers());
         Assert.AreEqual(0.6, rules.Laser.TriggerHoldSeconds);
         Assert.AreEqual(15.0 + 0.15 + 0.25, rules.Laser.LaserCapSeconds, 1e-9);
         Assert.AreEqual(double.PositiveInfinity, Fixture.Draw(Fixture.Task(4)).LaserCapSeconds, "without optogenetics: no cap");
@@ -1444,12 +1446,12 @@ public class TrialRulesTests
         var lead = task.Optogenetics.LaserToStimulusSeconds;
         var maxRampDown = task.TrialStructure.ItiMinSeconds - lead - ZapitTrial.ReplyMarginSeconds;   // 2.2 s
         Fixture.Opto(task);
-        TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, maxRampDown), Fixture.Speakers());   // exactly the max: allowed
-        var message = Assert.ThrowsException<InvalidOperationException>(() => TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, maxRampDown + 0.1), Fixture.Speakers())).Message;
+        TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(new[] { "-0.7 1.5;-0.7 -1.5", "1.5 1;1.5 -1", "-4 2.4;-4 -2.4", "0.8 0.71" }, maxRampDown), Fixture.Speakers());   // exactly the max: allowed
+        var message = Assert.ThrowsException<InvalidOperationException>(() => TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(new[] { "-0.7 1.5;-0.7 -1.5", "1.5 1;1.5 -1", "-4 2.4;-4 -2.4", "0.8 0.71" }, maxRampDown + 0.1), Fixture.Speakers())).Message;
         StringAssert.Contains(message, "max ramp-down");
         StringAssert.Contains(message, "itiMinSeconds - laserToStimulusSeconds");
         task.Optogenetics.Enabled = false;
-        TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(4, 99.0), Fixture.Speakers());   // the file is not read without optogenetics
+        TrialRules.Create(Fixture.Text(task), Fixture.Sweep(), true, path => new ZapitConditionsFile(new[] { "-0.7 1.5;-0.7 -1.5", "1.5 1;1.5 -1", "-4 2.4;-4 -2.4", "0.8 0.71" }, 99.0), Fixture.Speakers());   // the file is not read without optogenetics
     }
 
     [TestMethod]
