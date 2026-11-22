@@ -64,3 +64,13 @@ What is still to do, then what has been decided and why. Closed work, audit roun
 ### Audit 18 Nov 2026: not recommended
 
 - Amplitude only for the stimulus sounds: reward tone, background and penalty stay levelDbfs (lib-open-rigs' shared blocks; the plan settled it).
+
+## Audit 2026-11-22 (/audit-rigs, pipeline)
+
+Changed (017c8b1): `itiStartTime`'s note says trial 1 starts on the next Harp tick, not 0.5 s after (P3D-L2, tested); CheckTaskAtGo and RunTrials carry a Description (P3D-L7); this file drops released items and marks retired names (P3D-L4).
+
+Deferred: none.
+
+Not changed, do not raise again without new information:
+
+- None in this repo this round.
