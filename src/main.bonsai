@@ -18,7 +18,7 @@
   <Workflow>
     <Nodes>
       <Expression xsi:type="ExternalizedMapping">
-        <Property Name="ConfigRoot" Description="The root under which each machine has its own configuration directory, &lt;ConfigRoot&gt;\&lt;MACHINE-NAME&gt;\rig.yml, read by ReadLabRig, which publishes it to every device piece; the launch's own, which app-rig-control always sets to C:\Coen-Lab-Local\RigConfigs. ExperimentRecords and LiveView are not mapped from here: each reads that root as its own ConfigRoot, as a mapping edge into LiveView's StreamDevices would build it before the devices it streams." />
+        <Property Name="ConfigRoot" Description="The root under which each machine has its own configuration directory, &lt;ConfigRoot&gt;\&lt;MACHINE-NAME&gt;\rig.yml, read by ReadLabRig, which publishes it to every device piece; the launch's own, which app-rig-control always sets to C:\Coen-Lab-Local\RigConfigs. ExperimentRecords and LiveView take it from ReadLabRig." />
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Devices:ReadLabRig.bonsai">
         <Description>This machine's rig.yml (ConfigRoot\MACHINE\rig.yml) read once into the lab rig model: RigConfigs, RigFile and ConfigRoot, which every device piece reads. First, before anything that reads them.</Description>
@@ -576,7 +576,6 @@
       </Expression>
       <Expression xsi:type="IncludeWorkflow" Path="OpenRigs.Logging:ExperimentRecords.bonsai">
         <Description>The controller's events (LogControlEvents), every Harp device in rig.yml checked at Start and recorded (RecordHarpDevices: the Behavior board, the timestamp generator, both stepper drivers and both Lickety Splits), and manifest.json (ExperimentManifest: rig.yml, every file it names and this mouse's spout positions ({RigFiles}), schemas\trial-columns.yml and, for WorkflowData_StimulusState, schemas\stimulus-state-columns.yml (StreamColumns), and what the experiment must leave: a folder for each device in rig.yml, the Harp device records, the three settings files, WorkflowData (Trials, Events and StimulusState) and Settings_ZapitConditions in an optogenetics experiment). Last but LiveView, as it finds each device by the subjects published before it.</Description>
-        <ConfigRoot>C:\Coen-Lab-Local\RigConfigs</ConfigRoot>
         <IngestScript>coen-dome-navigation</IngestScript>
         <ExpectedFiles>auto;harp;Settings/Settings_Rig_;Settings/Settings_Task_;Settings/Settings_Combinations_;Settings/Settings_Experiment_;WorkflowData/WorkflowData_Trials_;WorkflowData/WorkflowData_Events_;WorkflowData/WorkflowData_StimulusState_;Settings/Settings_ZapitConditions_?Optogenetics</ExpectedFiles>
         <StreamColumns>WorkflowData_StimulusState=schemas\stimulus-state-columns.yml</StreamColumns>
@@ -584,7 +583,6 @@
       <Expression xsi:type="lv:StreamDevices">
         <Name>LiveView</Name>
         <Description>Streams every device in this machine's rig.yml that the workflow publishes, over ZeroMQ, for the live view (OpenRigs.LiveView): data on TCP 5556, video on 5558, from Start, in ready mode too. The three cameras as Camera-Face/Pupil/Body.video, 5 JPEG frames a second at 320 x 240, and the Behavior board's encoder from BehaviorBoard-Main.Data, 10 a second; each rate and size can be changed in rig.yml under the device's liveView:. Also elapsed, seconds since the experiment folder appeared, and liveview, this workflow and its commit. Every message carries the rig and the session key, ready until the experiment folder exists. Last in the workflow, because it streams only subjects built before it. A port already in use stops the workflow at Start.</Description>
-        <lv:ConfigRoot>C:\Coen-Lab-Local\RigConfigs</lv:ConfigRoot>
         <lv:DataPort>5556</lv:DataPort>
         <lv:VideoPort>5558</lv:VideoPort>
       </Expression>
