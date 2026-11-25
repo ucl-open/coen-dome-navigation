@@ -10,7 +10,7 @@
     <PackageReference Include="OpenRigs.Core" Version="0.1.1-coen-lab.45" />
     <PackageReference Include="OpenRigs.Audio" Version="0.1.1-coen-lab.26" />
     <PackageReference Include="OpenRigs.Devices" Version="0.1.1-coen-lab.71" />
-    <PackageReference Include="OpenRigs.Trials" Version="0.1.1-coen-lab.22" />
+    <PackageReference Include="OpenRigs.Trials" Version="0.1.1-coen-lab.23" />
   </ItemGroup>
 
 </Project>
