@@ -10,7 +10,6 @@ What is still to do, then what has been decided and why. Closed work, audit roun
   - The background noise heard from Ready; every sound's loudness at the mouse, now each speaker's filter equalises the pips and reward tone.
   - `config\main.layout` saved in the editor on a machine with the Spinnaker SDK, then committed (`.bonsai\Setup.ps1` copies it).
   - The ZapitTrigger line (DO3) on the scope or in the Behavior board and Zapit logs: rises `laserToStimulusSeconds` before the first pip, falls the Zapit file's max ramp-down after the outcome, the masking light lit throughout and Zapit started on the rising edge (`docs\zapit-rig-test.md` step 3). Then a Stop mid-trial, from app-rig-control and from the editor: the masking LEDs go off within a second.
-  - Zapit's StopStimulus round trip timed, then added to the arming rule (lib-open-rigs' `LaserTiming` and task.py's `_the_next_trial_is_armed_in_time`): `ZapitClient` sends one command at a time, so the next arm waits for that reply (about 1 s on 9 Nov 2026).
   - Lick thresholds at 0 (every dome's rig.yml): a run with nobody at the spouts, where any lick logged is false; then set rig.yml from it.
   - One StepperDriver-A homing timeout in about 104 launches (001DB): likely a switch or cable.
   - No experiment ends `completed`: nothing reports `Finished`, so every manifest says `stopped`. Needs a session end (a trial count or duration in the task file).

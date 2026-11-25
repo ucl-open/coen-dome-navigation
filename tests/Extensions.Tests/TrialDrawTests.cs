@@ -1396,7 +1396,7 @@ public class TrialRulesTests
     }
 
     // The line falls the conditions file's max ramp-down after the outcome, on the Harp clock (TrialLoop's TriggerOff, which replaced
-    // TaskLogic's HarpDelay), and the next trial is armed then.
+    // TaskLogic's HarpDelay), and the next trial is armed then, Zapit's reply to the stop being in (lib-open-rigs' StopReplyMarginSeconds, under the hold).
     [TestMethod]
     public void TheTriggerLineFallsTriggerHoldSecondsAfterTheOutcomeAndTheNextIsArmedThen()
     {
@@ -1408,6 +1408,7 @@ public class TrialRulesTests
         rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StartStimulus, Value = arm.Trial.laserCondition, LaserOn = arm.Trial.laserOn ? 1 : 0 });
         rig.RunTo(TrialEventKind.Trigger);
         rig.Wheel(1000);   // the end of the track ends the trial
+        rig.Loop.OnZapitReply(new ZapitReply { Command = ZapitCommandType.StopStimulus });   // Zapit answers the outcome's stop at once
         var outcome = rig.Events.Single(e => e.Kind == TrialEventKind.Outcome);
         var off = rig.RunTo(TrialEventKind.TriggerOff);
         Assert.AreEqual(outcome.Seconds + Fixture.RampDown, off.Seconds, 0.0011);
