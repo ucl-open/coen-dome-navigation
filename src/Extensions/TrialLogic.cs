@@ -1,6 +1,7 @@
 using Bonsai;
 using OpenRigs.Core;
 using OpenRigs.Trials;
+using OpenRigs.Opto.ZapitMatlab;
 using OpenRigs.Devices;
 using OpenRigs.Devices.Zapit;
 using System;
@@ -690,6 +691,6 @@ public class RunTrials
     public IObservable<TrialEvent<Trial, StimulusFrame, TrialOutcome>> Process(IObservable<TrialRules> rules, IObservable<double> clock,
         IObservable<double> wheelCm, IObservable<bool> lickLeft, IObservable<bool> lickRight, IObservable<ZapitReply> zapitReplies)
     {
-        return TrialLoop.Observe(rules, clock, new[] { lickLeft, lickRight }, zapitReplies, wheelCm);
+        return ZapitMatlabOpto.Observe(rules, clock, new[] { lickLeft, lickRight }, zapitReplies, wheelCm);
     }
 }

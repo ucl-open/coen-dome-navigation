@@ -22,7 +22,7 @@ TEXT = (ROOT / "src" / "main.bonsai").read_text(encoding="utf-8-sig")
 MAIN = ET.fromstring(TEXT.encode("utf-8"))
 OUTCOME_EFFECTS = "OpenRigs.Trials:TrialOutcomeEffects.bonsai"
 PLAY_REWARD_TONE = "OpenRigs.Audio:PlayRewardTone.bonsai"
-ZAPIT_TRIALS = "OpenRigs.Trials:ZapitTrials.bonsai"
+ZAPIT_TRIALS = "OpenRigs.Opto.ZapitMatlab:ZapitTrials.bonsai"
 PLAY_PENALTY_FLASH = "OpenRigs.Vision:PlayPenaltyFlash.bonsai"
 
 
@@ -129,7 +129,7 @@ def _picked(nodes: list[ET.Element], i: int) -> str | None:
 
 
 def test_zapit_s_trials_are_the_shared_include_fed_the_rules():
-    # OpenRigs.Trials ZapitTrials, once, given TrialRules: in an optogenetics experiment only (the rules' Laser, so a rig.yml
+    # OpenRigs.Opto.ZapitMatlab ZapitTrials, once, given TrialRules: in an optogenetics experiment only (the rules' Laser, so a rig.yml
     # without a zapit block works) each trial's StartStimulus (at Arm on a hardware-triggered rig, rig.yml's
     # zapit.hardwareTriggered through the rules' LaserTiming, else at the Trigger), the laser's stop at the outcome, LaserCap or
     # LaserBackstop, and the ZapitTrigger line raised at Trigger and cleared at TriggerOff. None of it is built here.
