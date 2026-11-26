@@ -7,11 +7,11 @@
 
   <ItemGroup>
     <PackageReference Include="OpenCV.Net" Version="3.4.2" />
-    <PackageReference Include="OpenRigs.Core" Version="0.1.1-coen-lab.45" />
+    <PackageReference Include="OpenRigs.Core" Version="0.1.1-zapit-native.29" />
     <PackageReference Include="OpenRigs.Audio" Version="0.1.1-coen-lab.26" />
-    <PackageReference Include="OpenRigs.Devices" Version="0.1.1-zapit-native.28" />
-    <PackageReference Include="OpenRigs.Trials" Version="0.1.1-zapit-native.28" />
-    <PackageReference Include="OpenRigs.Opto.ZapitMatlab" Version="0.1.1-zapit-native.28" />
+    <PackageReference Include="OpenRigs.Devices" Version="0.1.1-zapit-native.29" />
+    <PackageReference Include="OpenRigs.Trials" Version="0.1.1-zapit-native.29" />
+    <PackageReference Include="OpenRigs.Opto.ZapitMatlab" Version="0.1.1-zapit-native.29" />
   </ItemGroup>
 
 </Project>
