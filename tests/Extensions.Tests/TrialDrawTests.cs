@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenRigs.Core;
 using OpenRigs.Trials;
+using OpenRigs.Opto.ZapitMatlab;
 using OpenRigs.Devices.Rigs;
 using OpenRigs.Devices.Zapit;
 using System;
@@ -161,7 +162,7 @@ class Rig
 
     public Rig(TrialRules rules)
     {
-        Loop = new TrialLoop<Trial, StimulusFrame, TrialOutcome>(rules, true);
+        Loop = new TrialLoop<Trial, StimulusFrame, TrialOutcome>(rules, true, ZapitMatlabOptoSystem.Instance);
     }
 
     public void Until(double seconds, Func<bool> stop = null)
