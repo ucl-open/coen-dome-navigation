@@ -23,6 +23,8 @@ public class TrialRow
     public string laserPointsMm;
     public double laserPowerMw;
     public double laserTriggerTime;     // NaN without optogenetics or on a trial that ended before its trigger
+    public bool laserOn;
+    public bool laserStarted;
     public int trialConditionId;        // the 0-based index of its condition in the task's trialConditions
     public int trialCombinationId;      // its combination's row in Settings_Combinations
     public double visualInitialContrast;   // 0: no grating
