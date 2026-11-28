@@ -40,4 +40,4 @@ Laser trials reach the set power; laser-off trials stay dark; at every offset th
 
 ## If Bonsai dies mid-experiment
 
-Nothing tells Zapit, and a continuous stimulus keeps playing: stop it in Zapit straight away (Stop in the GUI, or `hZP.stopOptoStim`) or close the shutter. Stopping the workflow, or an error, is fine: Bonsai sends StopStimulus itself. Stopped mid-trial, the trigger line (and the masking LEDs) is cleared as the workflow stops (DomeHardware's ZapitTriggerLine); a Bonsai killed outright cannot clear it.
+Nothing tells Zapit, and a continuous stimulus keeps playing: stop it in Zapit straight away (Stop in the GUI, or `hZP.stopOptoStim`) or close the shutter. Stopping the workflow, or an error, is fine: Bonsai sends StopStimulus itself. Stopped or killed mid-trial, the trigger line (and the masking LEDs) goes low on its own once its pulse width in rig.yml has passed (10 s on the domes): the board runs it in pulse mode (lib-open-rigs #16).
